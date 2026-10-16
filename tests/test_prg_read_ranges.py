@@ -26,9 +26,9 @@ class ReadRangeTests(VerifiedCaptureTests):
         with self.trace.open('w',newline='',encoding='utf8') as out:
             writer=csv.writer(out,delimiter='\t')
             writer.writerow(FIELDS)
-            writer.writerows([['10','1','READ','E000','AA','15'],
+            writer.writerows([['10','1','READ','E000','unknown','15'],
                               ['10','2','SELECT','8000','06','unknown'],
-                              ['10','3','READ','E001','BB','15']])
+                              ['10','3','READ','E001','unknown','15']])
         import re
         self.meta.write_text(re.sub(r'events_recorded=[0-9]+',
                                     'events_recorded=3',self.meta.read_text()))
