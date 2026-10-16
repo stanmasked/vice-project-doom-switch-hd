@@ -115,26 +115,3 @@ class PpuPacketTests(unittest.TestCase):
             validate_handlers(bytes(b))
 
 if __name__=='__main__':unittest.main()
-,'').replace('(','').replace(')',''),16)
-                mode=('rel' if op.startswith('B') else
-                    'indy' if arg[0].startswith('(') else
-                    'absx' if arg[0].endswith(',X') and value>255 else
-                    'absy' if arg[0].endswith(',Y') and value>255 else
-                    'zp' if value<=255 else 'abs')
-                if mode=='rel':
-                    raw=[(value-(pc+2))&255]
-                elif mode=='indy':
-                    raw=[value]
-                elif mode=='zp':
-                    raw=[value]
-                else:
-                    raw=[value&255,value>>8]
-            try: opcode=by_op[(op,mode)]
-            except KeyError as e: raise AssertionError((pc,expected,mode)) from e
-            b[pc-0xe000:pc-0xe000+1+len(raw)]=bytes([opcode,*raw])
-        self.assertEqual(validate_handlers(b),len(HANDLER_ANCHORS))
-        b[0xe74d-0xe000]=0
-        with self.assertRaisesRegex(ValueError,'Handler instruction mismatch'):
-            validate_handlers(bytes(b))
-
-if __name__=='__main__':unittest.main()
