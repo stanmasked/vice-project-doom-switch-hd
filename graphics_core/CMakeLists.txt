@@ -34,6 +34,11 @@ add_custom_command(OUTPUT ${DEMO_BACKDROP_HEADER} ${DEMO_BACKDROP_BINARY}
   DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/../tools/build_demo_backdrop.py
   VERBATIM)
 add_custom_target(vpd_demo_backdrop DEPENDS ${DEMO_BACKDROP_HEADER} ${DEMO_BACKDROP_BINARY})
+add_executable(vpd_backdrop_source_test ../tests/test_backdrop_source.cpp)
+target_include_directories(vpd_backdrop_source_test PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/generated)
+add_dependencies(vpd_backdrop_source_test vpd_demo_backdrop)
+target_link_libraries(vpd_backdrop_source_test PRIVATE vpd_scene_renderer)
+add_test(NAME backdrop_parallax_and_reload COMMAND vpd_backdrop_source_test)
 add_executable(vpd_terrain_source_test ../tests/test_terrain_source.cpp)
 target_include_directories(vpd_terrain_source_test PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/generated)
 add_dependencies(vpd_terrain_source_test vpd_demo_terrain)
