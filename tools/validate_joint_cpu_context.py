@@ -12,6 +12,7 @@ FIELDS=['frame','seq','kind','address','value','bank','a','x','y','s','p']
 PCS={0xE479,0xE4E6,0xE4F3,0x835B,0xC906}
 PROVENANCE={
     'format':'vice_stage53_joint_context_v1',
+    'rom_header_profile':'ines_mapper4_prg128k',
     'initial_mmc3_mode':'unknown',
     'register_provenance':'callback_time_optional_samples',
     'register_api':'memory.getregister',
@@ -29,6 +30,8 @@ def validate(trace,meta):
         fields[k]=v
     if any(fields.get(k)!=v for k,v in PROVENANCE.items()):
         raise ValueError('Untrusted provenance')
+    if fields.get('rom_md5_pin') not in ('matched','not_supplied'):
+        raise ValueError('Invalid ROM pin metadata')
     for key in ('events_recorded','events_dropped'):
         if not re.fullmatch(r'[0-9]+',fields.get(key,'')):
             raise ValueError('Invalid event count')
