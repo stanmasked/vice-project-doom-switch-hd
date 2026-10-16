@@ -45,6 +45,14 @@ jobs:
           python -m unittest discover -s tests -p 'test_prg_identity_gate.py' -v
           python -m unittest discover -s tests -p 'test_stage60_integration.py' -v
           } 2>&1 | tee stage55-60.log
+      - name: Stage 69-70 READ provenance and legacy trace rejection
+        id: provenance_regressions
+        if: always()
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          python -m unittest discover -s tests -p 'test_stage70_read_provenance_pipeline.py' -v 2>&1 | tee stage69-70.log
       - name: Upload Python failure diagnostics
         if: always()
         uses: actions/upload-artifact@v4
@@ -53,6 +61,7 @@ jobs:
           path: |
             stage38-54.log
             stage55-60.log
+            stage69-70.log
           if-no-files-found: warn
           retention-days: 7
       - name: Report Python regression failures after artifact upload
@@ -61,10 +70,12 @@ jobs:
         env:
           EARLY_OUTCOME: ${{ steps.early_regressions.outcome }}
           LATE_OUTCOME: ${{ steps.late_regressions.outcome }}
+          PROVENANCE_OUTCOME: ${{ steps.provenance_regressions.outcome }}
         run: |
           echo "Earlier group: $EARLY_OUTCOME"
           echo "Later group: $LATE_OUTCOME"
-          test "$EARLY_OUTCOME" = success && test "$LATE_OUTCOME" = success
+          echo "READ provenance group: $PROVENANCE_OUTCOME"
+          test "$EARLY_OUTCOME" = success && test "$LATE_OUTCOME" = success && test "$PROVENANCE_OUTCOME" = success
   code-and-tests:
     runs-on: ubuntu-latest
     steps:
