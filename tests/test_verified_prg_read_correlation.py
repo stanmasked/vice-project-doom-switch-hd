@@ -10,7 +10,7 @@ class Stage58Tests(BankByteVerificationTests):
     def setup_neighbor(self):
         self.case.rows.append(['19','5','EXEC','835B','unknown','12',
                                '01','02','03','04','unknown'])
-        self.case.rows.append(['19','6','READ','835C','AB','12',
+        self.case.rows.append(['19','6','READ','835C','unknown','12',
                                '01','02','03','04','unknown'])
         self.case.write_rows()
         self.case.meta.write_text(self.case.meta.read_text().replace(
