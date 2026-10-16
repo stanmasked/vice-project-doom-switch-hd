@@ -17,7 +17,7 @@ class Stage56Tests(JointContextTests):
     def test_direct_neighbor_match_remains_hypothesis(self):
         self.rows=[
             ["19","1","EXEC","835B","unknown","unknown","01","02","03","04","unknown"],
-            ["19","2","READ","835C","AB","unknown","01","02","03","04","unknown"]]
+            ["19","2","READ","835C","unknown","unknown","01","02","03","04","unknown"]]
         self.write_rows()
         self.meta.write_text(self.meta.read_text().replace("events_recorded=4","events_recorded=2"))
         out=compare(self.trace,self.meta,exec_seq=1,opcode_hex="AD5C83")
