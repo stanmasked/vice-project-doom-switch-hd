@@ -16,8 +16,11 @@ ppu={readbyterange=function(addr,n)assert(addr==0 and n==16384);return string.re
 rom={gethash=function(which)assert(which=='md5');return 'abcd1234' end}
 local sampled_pixels=0
 local cpu_clock=100000
+local without_clock=arg and arg[1]=='--no-clock'
 -- FCEUX debugger counts CPU cycles since power-on or counter reset.
-debugger={getcyclescount=function() cpu_clock=cpu_clock+3; return cpu_clock end}
+if not without_clock then
+ debugger={getcyclescount=function() cpu_clock=cpu_clock+3; return cpu_clock end}
+end
 emu={framecount=function()return frame end,
  registerafter=function(cb)after=cb end,
  registerexit=function(cb)exit=cb end,
@@ -60,17 +63,22 @@ assert(text:find('dropped_register_writes=5',1,true),text)
 assert(text:find('register_log_complete=no',1,true),text)
 assert(text:find('chr_r0=06',1,true),text)
 assert(text:find('screen_reference=yes',1,true),text)
-assert(text:find('cycle_trace_available=yes',1,true),text)
+assert(text:find('cycle_trace_available='..(without_clock and 'no' or 'yes'),1,true),text)
 assert(text:find('invalid_screen_palette_values=',1,true),text)
 assert(text:find('chr_ram_0=B7',1,true),text)
-local times=read(p..'/mmc3_ppu_cycles.tsv')
-assert(times:find('frame\tcpu_cycle\taddress\tvalue\tkind',1,true))
-assert(times:find('0\t100012\t2002\t00\tR',1,true),times:sub(1,240))
-assert(times:find('\t8001\t06\tW',1,true))
+if without_clock then
+  assert(io.open(p..'/mmc3_ppu_cycles.tsv','rb')==nil,
+         'Cycle log created without FCEUX debugger clock')
+else
+  local times=read(p..'/mmc3_ppu_cycles.tsv')
+  assert(times:find('frame\tcpu_cycle\taddress\tvalue\tkind',1,true))
+  assert(times:find('0\t100012\t2002\t00\tR',1,true),times:sub(1,240))
+  assert(times:find('\t8001\t06\tW',1,true))
+end
 local log=read(p..'/mmc3_video_writes.tsv')
 assert(log:find('frame\taddress\tvalue',1,true))
 assert(log:find('0\t8001\t14',1,true))
 assert(log:find('0\t2002\t00',1,true))
 assert(log:find('120\t8001\t06',1,true))
-print('PASS: two captures, MMC3 register tracking, overflow reporting and PPUSTATUS read marker')
+print('PASS: FCEUX capture (CPU clock '..(without_clock and 'absent' or 'present')..'), register writes, overflow, PPUSTATUS marker')
 assert(os.execute('rm -rf '..VPD_CAPTURE_DIRECTORY))
