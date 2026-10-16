@@ -19,6 +19,8 @@ jobs:
       - name: Compile Python files
         run: python -m compileall -q tools tests
       - name: Stage 38-54 trace and mapper regression group
+        id: early_regressions
+        continue-on-error: true
         shell: bash
         run: |
           set -o pipefail
@@ -30,6 +32,9 @@ jobs:
           python -m unittest discover -s tests -p 'test_joint_cpu_context_validation.py' -v
           } 2>&1 | tee stage38-54.log
       - name: Stage 55-60 instruction and integration regression group
+        id: late_regressions
+        if: always()
+        continue-on-error: true
         shell: bash
         run: |
           set -o pipefail
@@ -50,6 +55,16 @@ jobs:
             stage55-60.log
           if-no-files-found: warn
           retention-days: 7
+      - name: Report Python regression failures after artifact upload
+        if: always()
+        shell: bash
+        env:
+          EARLY_OUTCOME: ${{ steps.early_regressions.outcome }}
+          LATE_OUTCOME: ${{ steps.late_regressions.outcome }}
+        run: |
+          echo "Earlier group: $EARLY_OUTCOME"
+          echo "Later group: $LATE_OUTCOME"
+          test "$EARLY_OUTCOME" = success && test "$LATE_OUTCOME" = success
   code-and-tests:
     runs-on: ubuntu-latest
     steps:
