@@ -14,11 +14,14 @@
 - [ ] Recover level formats, collision metadata and state transitions.
 - [ ] Record confidence levels and local-ROM reproducibility.
 
-## M2: first independent native scene
-- [ ] Model fixed-step deterministic simulation without an NES interpreter.
-- [ ] Convert one validated scene into original game-independent scene data.
-- [ ] Match character motion/collisions/animation to recorded reference behavior.
-- [ ] Add deterministic replay/behavioral tests.
+## M2: first independent native scene — scaffold verified
+- [x] Model fixed-step deterministic simulation without an NES interpreter.
+- [x] Create an independently authored 64x15 collision test scene (not original stage data).
+- [x] Add deterministic replay/behavioral tests in Debug + Release (Actions #38829149333).
+- [x] Build independent controllable ASCII scene into native Switch NRO (Actions #38829200654).
+- [ ] Recover authentic scene geometry and player motion from ROM-local reference traces.
+- [ ] Match character motion/collisions/animation to measured original behavior.
+- [ ] Replace the ASCII console output with an actual HD renderer.
 
 ## M3: first genuinely HD scene
 - [ ] Create new hand-authored characters, backgrounds and effects.
@@ -28,8 +31,9 @@
 ## M4: Switch platform validation
 - [x] Compile a ROM-free libnx diagnostic .nro in devkitPro CI (#38828228022).
 - [x] Validate NRO magic/size and upload artifact to GitHub Actions.
+- [x] Build native ROM-free ASCII scene diagnostic NRO (Actions #38829200654).
 - [ ] Test this ROM-free probe on physical Switch hardware.
 - [ ] Integrate the actual native scene, controller, renderer and audio.
 - [ ] Profile hardware performance in handheld and docked mode.
 
-**Caution:** The working diagnostic .nro is a console probe, not a port/remake. The experimental SDL2 CHR viewer build has not yet been verified.
+**Caution:** The new .nro is an independent ASCII test-scene prototype, not the original game, not an HD remake, and not hardware-validated. The SDL2 CHR viewer build remains unverified. See docs/NATIVE_SIMULATION.md.
