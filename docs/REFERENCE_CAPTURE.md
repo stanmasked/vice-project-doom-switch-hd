@@ -141,3 +141,18 @@ See [STAGE_MAP_EVIDENCE.md](STAGE_MAP_EVIDENCE.md) for the strict
 manifest, camera measurement requirements, sample commands and
 limitations. No real first-stage camera values or collision map have
 been recovered by these tests.
+
+## Stage 33: validated PPU scroll-source instructions
+
+Local static analysis of the owned original ROM found an exact
+fixed-bank $E8DE routine that reads RAM $0B then writes PPU $2005,
+reads RAM $0D and writes PPU $2005 again. $0C supplies the low bit
+of the PPUCTRL calculation. This is a **verified scroll-register
+source**, not independently confirmed world-camera data.
+
+The local FCEUX Lua metadata now includes
+`scroll_emitter_ram_0b`, `scroll_emitter_ram_0c`, and
+`scroll_emitter_ram_0d`. These are snapshot-time RAM values.
+The script marks their provenance as static-only; only CPU-cycle
+runtime verification can prove the emitter executed. See
+[SCROLL_SOURCE_AUDIT.md](SCROLL_SOURCE_AUDIT.md).

@@ -297,3 +297,15 @@ configurable to obtain overlapping observations.
 have not yet been extracted; the new tool requires actual FCEUX captures
 with independently measured camera/scroll positions. It does not add
 proprietary data or claim the native Switch test stage is authentic.
+
+## Stage 33 — static evidence for first-stage scroll research
+
+The [ROM-local audit tool](tools/audit_ppu_scroll_sources.py)
+identifies the $E8DE fixed-bank PPU scrolling routine's instruction
+sources ($0B, $0D and $0C), verifies ten opcode anchors and runs
+six new synthetic tests. The [full findings](docs/SCROLL_SOURCE_AUDIT.md)
+separate *register-source evidence* from still-unverified world-camera
+behavior. Local ROM-derived reports stay private.
+
+No authentic first-stage geometry has been reconstructed. The Switch
+graphical test NRO is unchanged by this research-only milestone.

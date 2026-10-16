@@ -41,6 +41,9 @@
 - [x] Reject missing ROM identity, incomplete capture log, misaligned tile phase and invalid PPU frames; five invented-snapshot tests.
 - [x] Enable opt-in dense first-stage FCEUX capture (e.g. 8 frames / 96 samples), synthetic Lua mock in CI.
 - [ ] Record **real** first-stage PPU frames with verified camera/scroll, and populate the evidence-gated tile mosaic.
+- [x] Stage 33: verify fixed-bank $E8DE PPU scroll procedure; $0B and $0D feed the two $2005 writes, $0C contributes one PPUCTRL bit ([SCROLL_SOURCE_AUDIT.md](SCROLL_SOURCE_AUDIT.md)).
+- [x] Audit literal PPU port writer candidates without treating all byte matches as executable; six ROM-free negative/positive tests.
+- [x] Capture $0B/$0C/$0D zero-page values in FCEUX metadata with explicit postframe/static-source caveat, synthetic Lua mock.
 - [ ] Independently identify actual collision metatiles and event/entity positions; observed PPU tile IDs alone are not collisions.
 - [ ] Record confidence levels and local-ROM reproducibility.
 
