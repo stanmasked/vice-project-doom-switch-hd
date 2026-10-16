@@ -51,6 +51,7 @@ The original fixed bank's documented control flow is in [VIDEO_PIPELINE.md](VIDE
 - [x] Add ROM-free native software raster renderer at 1280x720 (independent art).
 - [x] Cross-build graphical libnx NRO and upload artifact (Actions #38921850038).
 - [x] Guard 1280x720 renderer against stride overflow, incorrect dimensions and regressions via golden screenshot hash.
+- [x] Host integration test proves the real fixed-step game simulation drives the renderer and camera (Actions #38922369314).
 - [ ] Replace procedural test scene with original behavior and newly authored HD artwork.
 
 ## M3: first genuinely HD scene

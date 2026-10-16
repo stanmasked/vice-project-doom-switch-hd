@@ -112,7 +112,10 @@ This is a diagnostic, not Vice: Project Doom gameplay or actual final HD art.
 
 - Portable host C++ test checks buffer boundaries, golden pixel checksum,
   deterministic scene output, camera motion and invalid input.
-- The [graphical NRO GitHub Actions run](https://github.com/stanmasked/vice-project-doom-switch-hd/actions/runs/38921850038)
+- A second host integration test exercises the **actual game_core** simulation,
+  including 200 ticks of movement and jump input, then verifies deterministic
+  scene changes through the raster renderer.
+- The [graphical NRO GitHub Actions run](https://github.com/stanmasked/vice-project-doom-switch-hd/actions/runs/38922369314)
   cross-builds and uploads `vpd-native-raster-scene`, a ROM-free NRO.
 - For build and control details, see [switch_graphical/README.md](switch_graphical/README.md).
 
