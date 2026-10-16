@@ -34,7 +34,7 @@ local lines={}
 for line in f:lines() do lines[#lines+1]=line end
 f:close()
 assert(#lines==3,'expected header + exactly two events')
-assert(lines[2]:find('50\t1\tREAD\t00AA\t11\t11\t22\t33\t44',1,true))
+assert(lines[2]:find('50\t1\tREAD\t00AA\tunknown\t11\t22\t33\t44',1,true))
 assert(lines[3]:find('50\t2\tWRITE\t00AB\t99\t11\t22\t33\t44',1,true))
 assert(callback_recursions==8,'four sampled bytes per event should invoke callbacks once')
 local m=assert(io.open(dir..'/stage41_pointer_access.meta.txt'))
