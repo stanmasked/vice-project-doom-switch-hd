@@ -4,6 +4,7 @@
 #include <stdexcept>
 #define CHECK(expr) do { if (!(expr)) throw std::runtime_error(#expr); } while (0)
 #include <cstdint>
+#include <algorithm>
 #include <cstdio>
 #include <vector>
 #include <cstring>
@@ -43,5 +44,25 @@ int main(){
     CHECK(!vpd::blitAtlasFrame(image.data(),w,h,stride,a,4,0,0,1));
     CHECK(!vpd::blitAtlasFrame(image.data(),w,h,stride,a,0,0,0,0));
     CHECK(!vpd::blitAtlasFrame(nullptr,w,h,stride,a,0,0,0,1));
+    // Verify that the whole scene uses the actual atlas animation frames.
+    std::vector<uint32_t> scene(vpd::kSceneWidth*vpd::kSceneHeight);
+    vpd::SceneView view;
+    view.player_x_px=95;
+    view.player_y_px=140;
+    view.grounded=true;
+    view.moving=true;
+    view.sprite_atlas=&a;
+    view.frame=0;
+    CHECK(vpd::drawScene(scene.data(),vpd::kSceneWidth,vpd::kSceneHeight,
+                         vpd::kSceneWidth,view));
+    uint64_t run1=hash(scene);
+    view.frame=8;
+    CHECK(vpd::drawScene(scene.data(),vpd::kSceneWidth,vpd::kSceneHeight,
+                         vpd::kSceneWidth,view));
+    CHECK(hash(scene)!=run1);
+    view.grounded=false;
+    CHECK(vpd::drawScene(scene.data(),vpd::kSceneWidth,vpd::kSceneHeight,
+                         vpd::kSceneWidth,view));
+    CHECK(hash(scene)!=run1);
     puts("PASS: VPAT v1 header validation, CRC, blitting, frame differences, clipping and guards");
 }
