@@ -14,6 +14,7 @@ PROVENANCE={
     'format':'vice_stage53_joint_context_v1',
     'rom_header_profile':'ines_mapper4_prg128k_chr128k',
     'initial_mmc3_mode':'unknown',
+    'mmc3_write_coverage':'full_8000_9fff_even_odd',
     'register_provenance':'callback_time_optional_samples',
     'register_api':'memory.getregister',
     'callback_contract':'address_size_value_v1',
@@ -71,7 +72,7 @@ def validate(trace,meta):
                 if addr not in PCS or value is not None:raise ValueError('Invalid EXEC')
             elif kind=='READ':
                 if addr<0x8000 or value is not None:raise ValueError('Invalid READ value provenance')
-            elif addr!=(0x8000 if kind=='SELECT' else 0x8001) or value is None:
+            elif not (0x8000<=addr<=0x9FFF) or addr%2!=(0 if kind=='SELECT' else 1) or value is None:
                 raise ValueError('Invalid MMC3 write')
             if kind=='SELECT':selected=value
             if kind=='DATA' and selected is not None:
