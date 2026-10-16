@@ -80,3 +80,22 @@ full emulator or accurate live rendered stage. See
   plus Python unit tests, without including the game's original assets.
 
 Authentic first-stage captures and on-hardware Switch testing are **not done**.
+
+
+## Stage 19: rendered-screen reference and MMC3 frame log
+
+The FCEUX Lua capture can now save the *emulator's rendered screen*, not just
+the end-of-frame PPU address space. The ROM-free comparison tool
+[compare_rendered_frame.py](tools/compare_rendered_frame.py) compares captured
+NES palette indices with our static reconstruction, producing mismatch
+heatmaps and a per-scanline summary. The RGB image is preserved independently
+for reference.
+
+[analyze_mmc3_frame_log.py](tools/analyze_mmc3_frame_log.py) reconstructs
+ordered MMC3 CHR R0-R5 writes and available 1KiB bank maps across logged
+frames. It **cannot** recover scanline/cycle positions from a frame-number
+TSV, nor fill in missing initial register values.
+
+Local synthetic tests, FCEUX API mocks, and GitHub CI pass; **the original
+first level has not been captured in FCEUX**. All real-game images, memory
+dumps, and logs remain local and private. See [capture documentation](docs/REFERENCE_CAPTURE.md).

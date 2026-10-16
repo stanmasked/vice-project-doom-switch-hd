@@ -22,6 +22,9 @@
 - [x] Validate the real Lua capture script against a synthetic FCEUX API (GitHub CI #38866707731).
 - [x] Fix silent register log truncation; capture metadata now reports write losses.
 - [x] Add static OAM sprite preview with 8x8/8x16, flips, palette, transparency and priority (CI #38866828175).
+- [x] Reference rendered-screen capture contract (RGB and NES palette indices), synthetic Lua mock CI #38914936801.
+- [x] Palette-index screen-vs-PPU comparison and 6 invented-data tests, CI #38915109352.
+- [x] Frame-level MMC3 R0-R5 register-log reconstruction and 4 synthetic tests, CI #38915678628.
 - [ ] **Run** FCEUX capture during title and first-stage transitions; no verified live captures yet.
 - [ ] Capture actual queued packets, palette RAM and PPU state during **runtime**.
 - [ ] Recover real PPU palettes, nametables, metatiles and OAM frames.
