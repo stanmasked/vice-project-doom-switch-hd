@@ -84,6 +84,12 @@ assert(text:find('scroll_emitter_ram_0b=21',1,true),text)
 assert(text:find('scroll_emitter_ram_0c=24',1,true),text)
 assert(text:find('scroll_emitter_ram_0d=27',1,true),text)
 assert(text:find('scroll_emitter_provenance=static_emitter_e8de_not_confirmed_runtime',1,true))
+assert(text:find('stage35_candidate_index_ram_92=B6',1,true),text)
+assert(text:find('stage35_candidate_pointer_ram_aa=FE',1,true),text)
+assert(text:find('stage35_candidate_pointer_ram_ab=01',1,true),text)
+assert(text:find('stage35_candidate_descriptor_ram_a8=F8',1,true),text)
+assert(text:find('stage35_candidate_descriptor_ram_a9=FB',1,true),text)
+assert(text:find('stage35_pointer_provenance=static_bank12_candidate_not_runtime_proven',1,true),text)
 if without_clock then
   assert(io.open(p..'/mmc3_ppu_cycles.tsv','rb')==nil,
          'Cycle log created without FCEUX debugger clock')

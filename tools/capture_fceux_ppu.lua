@@ -137,6 +137,12 @@ local function capture_metadata(frame)
         'scroll_emitter_ram_0c='..hx(memory.readbyte(0x0C)),
         'scroll_emitter_ram_0d='..hx(memory.readbyte(0x0D)),
         'scroll_emitter_provenance=static_emitter_e8de_not_confirmed_runtime',
+        'stage35_candidate_index_ram_92='..hx(memory.readbyte(0x92)),
+        'stage35_candidate_pointer_ram_aa='..hx(memory.readbyte(0xAA)),
+        'stage35_candidate_pointer_ram_ab='..hx(memory.readbyte(0xAB)),
+        'stage35_candidate_descriptor_ram_a8='..hx(memory.readbyte(0xA8)),
+        'stage35_candidate_descriptor_ram_a9='..hx(memory.readbyte(0xA9)),
+        'stage35_pointer_provenance=static_bank12_candidate_not_runtime_proven',
         'queue_index_16='..hx(memory.readbyte(0x16)),
     }
     for r=0,5 do
