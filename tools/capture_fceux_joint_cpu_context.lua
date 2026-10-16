@@ -5,6 +5,8 @@ local MAX=rawget(_G,'VPD_STAGE53_MAX_EVENTS') or 20000
 assert(type(MAX)=='number' and MAX==math.floor(MAX) and MAX>=1 and MAX<=500000)
 assert(memory and memory.registerexec and memory.registerread and memory.registerwrite)
 assert(emu and emu.framecount and emu.registerexit)
+local preflight=dofile('tools/fceux_rom_preflight.lua').inspect(
+  rawget(_G,'VPD_STAGE53_EXPECTED_ROM_MD5'))
 local file=assert(io.open(DIR..'/stage53_joint_context.tsv','wb'))
 assert(file:write('frame\tseq\tkind\taddress\tvalue\tbank\ta\tx\ty\ts\tp\n'))
 local selected,r6,r7=nil,nil,nil
@@ -77,6 +79,8 @@ emu.registerexit(function()
   local m=assert(io.open(DIR..'/stage53_joint_context.meta.txt','wb'))
   assert(m:write(table.concat({
     'format=vice_stage53_joint_context_v1',
+    'rom_header_profile='..preflight.profile,
+    'rom_md5_pin='..preflight.md5_pin,
     'events_recorded='..count,'events_dropped='..dropped,
     'complete='..(dropped==0 and callback_errors==0 and 'yes' or 'no'),
     'callback_errors='..callback_errors,
