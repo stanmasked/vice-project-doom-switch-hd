@@ -16,3 +16,8 @@ decoder or verified gameplay map.
 Seven ROM-free regression tests are discoverable in Python CI. Live FCEUX
 read-callback behavior and actual first-level source evidence are not
 confirmed; no copyrighted game files are committed.
+
+Stage66: the validator now requires `register_api=memory.getregister` in
+metadata. Logs produced by the earlier `emu.getregister` implementation
+cannot be trusted as verified CPU register snapshots and must be recaptured.
+This does not imply genuine FCEUX live capture has already been checked.
