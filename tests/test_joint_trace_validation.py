@@ -19,13 +19,14 @@ class JointTraceValidationTests(unittest.TestCase):
             ['9','2','SELECT','8000','06','unknown'],
             ['9','3','DATA','8001','0C','12'],
             ['9','4','EXEC','835B','unknown','12'],
-            ['9','5','READ','835C','AA','12']]
+            ['9','5','READ','835C','unknown','12']]
         self.write_rows()
         self.meta.write_text('\n'.join([
             'format=vice_stage49_joint_v1','events_recorded=5',
             'events_dropped=0','complete=yes',
             'exec_context=selected_pc_hooks_only',
-            'read_causality=not_proven'])+'\n',encoding='utf8')
+            'read_causality=not_proven',
+            'read_value_provenance=address_only_fceux_zero_sentinel'])+'\n',encoding='utf8')
     def write_rows(self):
         with self.trace.open('w',newline='',encoding='utf8') as f:
             writer=csv.writer(f,delimiter='\t')
@@ -35,6 +36,11 @@ class JointTraceValidationTests(unittest.TestCase):
         self.assertEqual(result['unknown_bank_reads'],0)
         self.assertEqual(result['counts']['READ'],1)
         self.assertFalse(result['cpu_read_causality_proven'])
+    def test_forged_read_byte_rejected(self):
+        self.rows[4][4]='AA';self.write_rows()
+        with self.assertRaisesRegex(ValueError,'READ value provenance'):
+            validate(self.trace,self.meta)
+
     def test_wrong_bank_rejected(self):
         self.rows[4][5]='14';self.write_rows()
         with self.assertRaisesRegex(ValueError,'bank mismatch'):validate(self.trace,self.meta)
