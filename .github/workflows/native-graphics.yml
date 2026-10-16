@@ -7,6 +7,10 @@ on:
       - 'switch_graphical/**'
       - 'tests/test_scene_renderer.cpp'
       - 'tests/test_graphics_integration.cpp'
+      - 'tests/test_asset_atlas.cpp'
+      - 'tests/test_vpat_packer.py'
+      - 'tools/build_demo_atlas.py'
+      - 'tools/pack_vpat.py'
       - 'tests/check_nro.py'
       - '.github/workflows/native-graphics.yml'
   pull_request:
@@ -16,6 +20,10 @@ on:
       - 'switch_graphical/**'
       - 'tests/test_scene_renderer.cpp'
       - 'tests/test_graphics_integration.cpp'
+      - 'tests/test_asset_atlas.cpp'
+      - 'tests/test_vpat_packer.py'
+      - 'tools/build_demo_atlas.py'
+      - 'tools/pack_vpat.py'
       - 'tests/check_nro.py'
       - '.github/workflows/native-graphics.yml'
   workflow_dispatch:
