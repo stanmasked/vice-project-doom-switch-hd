@@ -49,3 +49,15 @@ NES RGB reference palette colors are approximate.
 With the first playable scene's snapshots and register log, identify actual
 background CHR patterns, palette data and visible nametable sections, then
 reproduce the scene as independent native geometry and new HD artwork.
+
+
+## Comparing adjacent captures
+
+For two captured frames, run the ROM-free comparison tool:
+
+    python3 tools/compare_ppu_captures.py private/frame_000240 private/frame_000360 --out private/frame_diff.json
+
+It reports changed CHR 1KiB pattern pages, nametable tile bounding boxes,
+attribute byte differences, palette entries, CHR register RAM values,
+the number of changed PPU queue bytes, and 4-byte OAM-source slots in RAM $0700.
+The report is a **summary**, not a reconstruction of scanline IRQ state.
