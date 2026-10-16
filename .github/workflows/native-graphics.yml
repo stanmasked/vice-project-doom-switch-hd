@@ -9,6 +9,7 @@ on:
       - 'tests/test_graphics_integration.cpp'
       - 'tests/test_asset_atlas.cpp'
       - 'tests/test_vpat_packer.py'
+      - 'tests/test_terrain_generator.py'
       - 'tools/build_demo_atlas.py'
       - 'tools/build_demo_terrain.py'
       - 'tests/test_terrain_source.cpp'

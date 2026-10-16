@@ -117,3 +117,20 @@ Reload with X. A v2 animation file for a different same-size atlas
 is refused; existing loaded textures/animation remain unchanged.
 Previous VANM v1 files continue working but do not provide this check.
 For details see [EXTERNAL_ANIMATION.md](../docs/EXTERNAL_ANIMATION.md).
+
+## Stage 28 — independent environment tiles
+
+The embedded graphic scene draws solid platforms with four original,
+code-authored tile patterns. This is a *separate* VPAT resource, not part
+of the hero's animation bundle.
+
+Put your replacement at `sdmc:/switch/vice_project_doom/terrain.vpat`.
+**ZL** revalidates and reloads the ground tiles; **ZR** reverts only
+environment artwork to the embedded default. Existing hero **X/Y**
+controls are unchanged. A failed ground update preserves the last valid
+resource. See [TERRAIN_PIPELINE.md](../docs/TERRAIN_PIPELINE.md).
+
+Tiles must consist of four square cells with sides 4/8/16/32
+pixels. Their displayed size is 32×32; changing art does not change
+solid world tiles. This scene remains an invented demo, not the authentic
+Vice: Project Doom stage.

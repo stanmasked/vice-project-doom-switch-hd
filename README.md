@@ -212,3 +212,20 @@ supports the `--atlas` argument to produce a bound VANM v2.
 VANM v1 remains readable for older stage-26 SD bundles, but does not
 bind to exact pixel content. CRC32 is an accidental-mismatch check,
 **not a security signature**. See [VANM v2 documentation](docs/EXTERNAL_ANIMATION.md).
+
+## Stage 28 — independent terrain texture atlas
+
+The native Switch diagnostic now uses a **separate procedural terrain VPAT**
+for solid platforms. It is deliberately independent from the hero's
+VPAT+VANM resource pair: art changes can be previewed without changing the
+collision geometry, hero animation or the code.
+
+An optional independently authored terrain atlas can be installed at
+`sdmc:/switch/vice_project_doom/terrain.vpat`. Press **ZL** to reload
+it, **ZR** to restore the embedded terrain; **X/Y** still control the hero
+bundle. All terrain cells are displayed at 32×32 screen pixels.
+
+Four tile variants and validation/rollback rules are documented in
+[TERRAIN_PIPELINE.md](docs/TERRAIN_PIPELINE.md). The original first stage
+has **not** been extracted or recreated; no physical Switch runtime
+test has been performed.

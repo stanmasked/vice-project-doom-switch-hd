@@ -58,6 +58,9 @@ The original fixed bank's documented control flow is in [VIDEO_PIPELINE.md](VIDE
 - [x] Separate animation clips and state transitions from the raster scene (see [ANIMATION_CONTROLLER.md](ANIMATION_CONTROLLER.md)).
 - [x] Add transactional external VPAT loading from SDMC with embedded fallback (Stage 25).
 - [x] Test corruption/oversized/wrong-frame rejection, atomic rollback and NRO cross-build.
+- [x] Render invented collision platforms using a separately authored four-tile terrain VPAT atlas (stage 28).
+- [x] Support independent ZL/ZR SD reload/fallback for terrain alongside existing X/Y character bundle controls.
+- [x] Verify geometry validation, corrupted resource rejection and rollback in host tests, native NRO cross-build (#38932788496).
 - [ ] Replace procedural test scene with original behavior and newly authored HD artwork.
 
 ## M3: first genuinely HD scene
@@ -71,6 +74,7 @@ The original fixed bank's documented control flow is in [VIDEO_PIPELINE.md](VIDE
 - [x] Host test and native cross-build of bundle loader; see [EXTERNAL_ANIMATION.md](EXTERNAL_ANIMATION.md).
 - [x] Add VANM v2 optional pixel-content CRC binding, same-count wrong-atlas rejection and legacy v1 compatibility (stage 27).
 - [x] C++/Python regression: cross-file checksum and rollback when unrelated art uses the same frame layout.
+- [x] Add editable independently authored terrain textures and safe hot reload; see [TERRAIN_PIPELINE.md](TERRAIN_PIPELINE.md).
 - [ ] Add detailed original HD character art and measure authentic animation timings.
 - [x] Allow opt-in author-created external 4-frame VPAT pixel replacement via SD, X reload and Y fallback.
 - [ ] Optimize HD rendering and validate speed on Switch hardware.
