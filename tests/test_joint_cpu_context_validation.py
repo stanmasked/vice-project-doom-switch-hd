@@ -53,7 +53,7 @@ class JointContextTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,'count mismatch'):validate(self.trace,self.meta)
     def test_legacy_capture_missing_register_api_rejected(self):
         self.meta.write_text(self.meta.read_text().replace(
-            'register_api=memory.getregister\\n',''))
+            'register_api=memory.getregister\n',''))
         with self.assertRaisesRegex(ValueError,'provenance'):
             validate(self.trace,self.meta)
 
