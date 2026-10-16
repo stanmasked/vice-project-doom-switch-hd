@@ -26,6 +26,8 @@ class JointContextTests(unittest.TestCase):
             'events_dropped=0','complete=yes','initial_mmc3_mode=unknown',
             'register_provenance=callback_time_optional_samples',
             'register_api=memory.getregister',
+            'rom_header_profile=ines_mapper4_prg128k',
+            'rom_md5_pin=not_supplied',
             'callback_contract=address_size_value_v1',
             'callback_errors=0',
             'effective_address=not_proven','read_causality=not_proven'])+'\n')
@@ -70,6 +72,18 @@ class JointContextTests(unittest.TestCase):
             'callback_errors=0','callback_errors=1').replace(
             'complete=yes','complete=no'))
         with self.assertRaisesRegex(ValueError,'Incomplete'):
+            validate(self.trace,self.meta)
+
+    def test_missing_rom_preflight_rejected(self):
+        self.meta.write_text(self.meta.read_text().replace(
+            'rom_header_profile=ines_mapper4_prg128k\n',''))
+        with self.assertRaisesRegex(ValueError,'provenance'):
+            validate(self.trace,self.meta)
+
+    def test_invalid_rom_pin_rejected(self):
+        self.meta.write_text(self.meta.read_text().replace(
+            'rom_md5_pin=not_supplied','rom_md5_pin=untrusted'))
+        with self.assertRaisesRegex(ValueError,'ROM pin'):
             validate(self.trace,self.meta)
 
     def test_forged_provenance(self):
