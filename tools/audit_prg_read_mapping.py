@@ -7,6 +7,7 @@ No ROM bytes are stored in this tool.
 import argparse
 import csv
 import json
+import re
 from pathlib import Path
 from analyze_dispatch_execution import mapping, numeric, hx
 
@@ -68,12 +69,46 @@ def audit(path):
         ]
     }
 
+def audit_verified(path, meta_path):
+    """Require and cross-check same-session capture metadata."""
+    props={}
+    for line in Path(meta_path).read_text(encoding='utf8').splitlines():
+        if not line or '=' not in line:
+            raise ValueError('Malformed capture metadata')
+        key,value=line.split('=',1)
+        if key in props: raise ValueError('Duplicate capture metadata key')
+        props[key]=value
+    required={'format':'vice_stage45_prg_reads_v1',
+              'initial_mmc3_mode':'unknown',
+              'read_provenance':'registerread_callback_no_pc_proof'}
+    if any(props.get(k)!=v for k,v in required.items()):
+        raise ValueError('Invalid capture provenance')
+    for name in ('events_recorded','events_dropped'):
+        if not re.fullmatch(r'[0-9]+',props.get(name,'')):
+            raise ValueError('Invalid capture count')
+    if props.get('complete') not in ('yes','no'):
+        raise ValueError('Invalid completeness value')
+    dropped=int(props['events_dropped'])
+    if props['complete']!=('yes' if dropped==0 else 'no'):
+        raise ValueError('Contradictory capture completeness')
+    if dropped or props['complete']!='yes':
+        raise ValueError('Incomplete PRG capture cannot certify evidence')
+    result=audit(path)
+    actual=sum(result['event_counts'].values())
+    if actual!=int(props['events_recorded']):
+        raise ValueError('Capture event count mismatch')
+    result['capture_metadata_verified']=True
+    result['capture_complete']=True
+    result['events_recorded']=actual
+    return result
+
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('trace',type=Path)
     p.add_argument('--out',type=Path)
+    p.add_argument('--meta',type=Path)
     args=p.parse_args()
-    result=audit(args.trace)
+    result=audit_verified(args.trace,args.meta or args.trace.with_suffix('.meta.txt'))
     if args.out:
         args.out.parent.mkdir(parents=True,exist_ok=True)
         args.out.write_text(json.dumps(result,indent=2)+'\n',encoding='utf8')
