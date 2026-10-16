@@ -9,7 +9,7 @@ import csv
 import json
 from pathlib import Path
 
-from analyze_dispatch_execution import FIELDS, analyze, byte, hx, numeric
+from analyze_dispatch_execution import FIELDS, analyze, hx, numeric
 
 ANCHORS = ['video_frame', 'trace_frame', 'label']
 SAMPLES = ('ram_07', 'ram_90', 'ram_91', 'ram_92', 'ram_aa', 'ram_ab', 'ram_a8', 'ram_a9')
@@ -68,8 +68,8 @@ def correlate(trace_path, meta_path, anchors_path, radius=1):
         dispatch = [e for e in nearby if e['kind']=='EXEC']
         results.append({**a, 'radius_frames': radius, 'events': len(nearby),
                         'dispatcher_executions': collections.Counter(e['cpu_address'] for e in dispatch),
-                        'unknown_bank_events': sum(e['physical_prg_bank'] is None and
-                                                   int(e['cpu_address'][1:],16)>=0x8000 for e in nearby),
+                        'unknown_bank_executions': sum(e['kind']=='EXEC' and e['physical_prg_bank'] is None and
+                                                      int(e['cpu_address'][1:],16)>=0x8000 for e in nearby),
                         'timeline': nearby})
     return {
         'schema': 1, 'source': 'user-verified video anchors + FCEUX stage38 execution callbacks',
