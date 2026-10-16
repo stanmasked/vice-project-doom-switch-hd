@@ -44,6 +44,14 @@ int main(){
     CHECK(!vpd::blitAtlasFrame(image.data(),w,h,stride,a,4,0,0,1));
     CHECK(!vpd::blitAtlasFrame(image.data(),w,h,stride,a,0,0,0,0));
     CHECK(!vpd::blitAtlasFrame(nullptr,w,h,stride,a,0,0,0,1));
+    // Facing left must mirror opaque sprite pixels without corruption.
+    std::fill(image.begin(),image.end(),0xff202030u);
+    CHECK(vpd::blitAtlasFrame(image.data(),w,h,stride,a,0,3,3,2,false));
+    const auto normal=hash(image);
+    std::fill(image.begin(),image.end(),0xff202030u);
+    CHECK(vpd::blitAtlasFrame(image.data(),w,h,stride,a,0,3,3,2,true));
+    CHECK(hash(image)!=normal);
+    CHECK(vpd::blitAtlasFrame(image.data(),w,h,stride,a,0,-47,2,2,true));
     // Verify that the whole scene uses the actual atlas animation frames.
     std::vector<uint32_t> scene(vpd::kSceneWidth*vpd::kSceneHeight);
     vpd::SceneView view;

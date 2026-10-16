@@ -11,6 +11,10 @@ on:
       - 'tests/test_vpat_packer.py'
       - 'tools/build_demo_atlas.py'
       - 'tools/pack_vpat.py'
+      - 'tools/build_animation_manifest.py'
+      - 'assets/demo_animation.json'
+      - 'tests/test_animation.cpp'
+      - 'tests/test_animation_manifest.py'
       - 'tests/check_nro.py'
       - '.github/workflows/native-graphics.yml'
   pull_request:

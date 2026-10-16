@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.16)
 project(vpd_scene_renderer LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-add_library(vpd_scene_renderer STATIC scene_renderer.cpp asset_atlas.cpp)
+add_library(vpd_scene_renderer STATIC scene_renderer.cpp asset_atlas.cpp animation.cpp)
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
 target_include_directories(vpd_scene_renderer PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
@@ -14,6 +14,18 @@ add_custom_command(OUTPUT ${DEMO_HEADER}
   DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/../tools/build_demo_atlas.py
   VERBATIM)
 add_custom_target(vpd_demo_atlas DEPENDS ${DEMO_HEADER})
+set(DEMO_ANIMATION_HEADER ${CMAKE_CURRENT_BINARY_DIR}/generated/demo_animation.hpp)
+add_custom_command(OUTPUT ${DEMO_ANIMATION_HEADER}
+  COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/../tools/build_animation_manifest.py
+          ${CMAKE_CURRENT_SOURCE_DIR}/../assets/demo_animation.json ${DEMO_ANIMATION_HEADER}
+  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/../assets/demo_animation.json
+          ${CMAKE_CURRENT_SOURCE_DIR}/../tools/build_animation_manifest.py
+  VERBATIM)
+add_custom_target(vpd_demo_animation DEPENDS ${DEMO_ANIMATION_HEADER})
+add_executable(vpd_animation_test ../tests/test_animation.cpp)
+target_include_directories(vpd_animation_test PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/generated)
+add_dependencies(vpd_animation_test vpd_demo_animation)
+target_link_libraries(vpd_animation_test PRIVATE vpd_scene_renderer)
 add_executable(vpd_asset_atlas_test ../tests/test_asset_atlas.cpp)
 target_include_directories(vpd_asset_atlas_test PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/generated)
 add_dependencies(vpd_asset_atlas_test vpd_demo_atlas)
@@ -23,6 +35,7 @@ target_link_libraries(vpd_scene_renderer_test PRIVATE vpd_scene_renderer)
 enable_testing()
 add_test(NAME scene_renderer_unit COMMAND vpd_scene_renderer_test)
 add_test(NAME asset_atlas_unit COMMAND vpd_asset_atlas_test)
+add_test(NAME animation_unit COMMAND vpd_animation_test)
 
 # Integrate the same portable deterministic simulation as the libnx NRO.
 add_subdirectory(../game_core "${CMAKE_CURRENT_BINARY_DIR}/native_game_core")

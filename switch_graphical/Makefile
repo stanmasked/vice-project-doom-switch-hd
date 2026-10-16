@@ -10,11 +10,14 @@ LDFLAGS := -specs=$(DEVKITPRO)/libnx/switch.specs -Wl,--gc-sections -Wl,-Map,$(T
 LDLIBS := -L$(DEVKITPRO)/libnx/lib -lnx
 .PHONY: all clean
 all: $(TARGET).nro
+generated/demo_animation.hpp: ../tools/build_animation_manifest.py ../assets/demo_animation.json
+	mkdir -p generated
+	python3 ../tools/build_animation_manifest.py ../assets/demo_animation.json $@
 generated/demo_atlas.hpp: ../tools/build_demo_atlas.py
 	mkdir -p generated
 	python3 $< $@
-$(TARGET).elf: generated/demo_atlas.hpp source/main.cpp ../game_core/simulation.cpp ../game_core/simulation.hpp ../graphics_core/scene_renderer.cpp ../graphics_core/scene_renderer.hpp ../graphics_core/asset_atlas.cpp ../graphics_core/asset_atlas.hpp
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) source/main.cpp ../game_core/simulation.cpp ../graphics_core/scene_renderer.cpp ../graphics_core/asset_atlas.cpp $(LDLIBS) -o $@
+$(TARGET).elf: generated/demo_atlas.hpp generated/demo_animation.hpp source/main.cpp ../game_core/simulation.cpp ../game_core/simulation.hpp ../graphics_core/scene_renderer.cpp ../graphics_core/scene_renderer.hpp ../graphics_core/asset_atlas.cpp ../graphics_core/asset_atlas.hpp ../graphics_core/animation.cpp ../graphics_core/animation.hpp
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) source/main.cpp ../game_core/simulation.cpp ../graphics_core/scene_renderer.cpp ../graphics_core/asset_atlas.cpp ../graphics_core/animation.cpp $(LDLIBS) -o $@
 $(TARGET).nacp:
 	nacptool --create "VPD Native Raster Test" "Homebrew Research" "0.3.0" $@
 $(TARGET).nro: $(TARGET).elf $(TARGET).nacp
