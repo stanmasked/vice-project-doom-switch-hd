@@ -12,6 +12,12 @@ assert(type(emu)=='table' and type(emu.framecount)=='function' and
 local hash=rom.gethash('md5')
 assert(type(hash)=='string' and hash:match('^[0-9a-fA-F]+$') and #hash==32,
        'Expected 32-digit ROM MD5')
+-- Invalidate metadata from an earlier session BEFORE replacing its TSV.
+-- A crash or callback exception must never reuse an old complete=yes.
+local meta_path=DIR..'/stage41_pointer_access.meta.txt'
+local pending=assert(io.open(meta_path,'wb'))
+assert(pending:write('capture_in_progress=yes\\n'))
+assert(pending:close())
 local file=assert(io.open(DIR..'/stage41_pointer_access.tsv','wb'))
 assert(file:write('frame\tseq\tkind\taddress\tvalue\taa\tab\ta8\ta9\n'))
 local seq,count,dropped,callback_errors=0,0,0,0
@@ -55,7 +61,7 @@ for _,p in ipairs({0xAA,0xAB,0xA8,0xA9}) do
 end
 emu.registerexit(function()
   assert(file:close())
-  local out=assert(io.open(DIR..'/stage41_pointer_access.meta.txt','wb'))
+  local out=assert(io.open(meta_path,'wb'))
   assert(out:write(table.concat({
     'format=vice_stage41_pointer_access_v1','rom_md5='..hash,
     'events_recorded='..count,'events_dropped='..dropped,
