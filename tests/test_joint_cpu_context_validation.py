@@ -25,6 +25,7 @@ class JointContextTests(unittest.TestCase):
             'format=vice_stage53_joint_context_v1','events_recorded=4',
             'events_dropped=0','complete=yes','initial_mmc3_mode=unknown',
             'register_provenance=callback_time_optional_samples',
+            'register_api=memory.getregister',
             'effective_address=not_proven','read_causality=not_proven'])+'\n')
     def write_rows(self):
         with self.trace.open('w',newline='',encoding='utf8') as f:
@@ -50,6 +51,12 @@ class JointContextTests(unittest.TestCase):
     def test_metadata_mismatch(self):
         self.meta.write_text(self.meta.read_text().replace('events_recorded=4','events_recorded=5'))
         with self.assertRaisesRegex(ValueError,'count mismatch'):validate(self.trace,self.meta)
+    def test_legacy_capture_missing_register_api_rejected(self):
+        self.meta.write_text(self.meta.read_text().replace(
+            'register_api=memory.getregister\\n',''))
+        with self.assertRaisesRegex(ValueError,'provenance'):
+            validate(self.trace,self.meta)
+
     def test_forged_provenance(self):
         self.meta.write_text(self.meta.read_text().replace('read_causality=not_proven','read_causality=proven'))
         with self.assertRaisesRegex(ValueError,'provenance'):validate(self.trace,self.meta)
