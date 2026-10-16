@@ -9,8 +9,8 @@ local file=assert(io.open(DIR..'/stage52_cpu_context.tsv','wb'))
 assert(file:write('frame\tseq\tpc\ta\tx\ty\ts\tp\tregister_status\n'))
 local count,dropped=0,0
 local function sample(name)
-  if type(emu.getregister)~='function' then return 'unknown' end
-  local ok,value=pcall(emu.getregister,name)
+  if type(memory.getregister)~='function' then return 'unknown' end
+  local ok,value=pcall(memory.getregister,name:lower())
   if not ok or type(value)~='number' or value~=math.floor(value)
     or value<0 or value>255 then return 'unknown' end
   return string.format('%02X',value)
@@ -36,6 +36,7 @@ emu.registerexit(function()
     'events_recorded='..count,'events_dropped='..dropped,
     'complete='..(dropped==0 and 'yes' or 'no'),
     'provenance=sparse_registerexec_samples',
+    'register_api=memory.getregister',
     'effective_address=not_recorded',
     'instruction_opcode=not_recorded'
   },'\n')..'\n'))
