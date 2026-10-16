@@ -19,7 +19,7 @@ assert(type(rom_md5)=='string' and #rom_md5>0,'Missing ROM identity')
 -- A crash or callback exception must never reuse an old complete=yes.
 local meta_path=DIR..'/stage38_dispatch_exec.meta.txt'
 local pending=assert(io.open(meta_path,'wb'))
-assert(pending:write('capture_in_progress=yes\\n'))
+assert(pending:write('capture_in_progress=yes\n'))
 assert(pending:close())
 local file=assert(io.open(DIR..'/stage38_dispatch_exec.tsv','wb'))
 local fields={'frame','seq','cpu_cycle','kind','cpu_address','value','mmc3_mode',
