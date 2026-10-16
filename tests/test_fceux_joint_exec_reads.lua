@@ -16,6 +16,8 @@ writes[0x8001](0x8001,1,12)        -- map bank 12
 execs[0x835B]()                    -- mapped execution
 reads(0x835C,1,0)               -- observed next read, causality not proven
 reads(0x835D,1,0)               -- overflow
+local ok,err=pcall(reads,0x835B,1,0x7F)
+assert(not ok and tostring(err):find('zero-sentinel',1,true))
 exit()
 local f=assert(io.open(folder..'/stage49_joint.tsv'))
 local lines={};for l in f:lines() do lines[#lines+1]=l end;f:close()
@@ -26,6 +28,7 @@ assert(lines[6]=='9\t5\tREAD\t835C\tunknown\t12')
 local m=assert(io.open(folder..'/stage49_joint.meta.txt'))
 local meta=m:read('*a');m:close()
 assert(meta:find('events_dropped=1',1,true))
+assert(meta:find('callback_errors=1',1,true))
 assert(meta:find('complete=no',1,true))
 assert(meta:find('read_causality=not_proven',1,true))
 assert(meta:find('read_value_provenance=address_only_fceux_zero_sentinel',1,true))
