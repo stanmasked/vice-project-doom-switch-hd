@@ -60,7 +60,10 @@ memory={
    assert(a==0x8000 and size==0x8000)
    read53=fn
  end,
- registerwrite=function(a,fn)writes53[a]=fn end,
+ registerwrite=function(a,size,fn)
+   assert(a==0x8000 and size==0x2000)
+   writes53[0x8000]=fn;writes53[0x8001]=fn
+ end,
  getregister=getregister
 }
 emu={
@@ -68,8 +71,8 @@ emu={
  registerexit=function(fn)exit53=fn end
 }
 dofile('tools/capture_fceux_joint_cpu_context.lua')
-writes53[0x8000](0x8000,1,0x06)
-writes53[0x8001](0x8001,1,0x0C)
+writes53[0x8000](0x8002,1,0x06)
+writes53[0x8001](0x8003,1,0x0C)
 exec53[0x835B](0x835B,1,0)
 read53(0x835C,1,0)
 exit53()
