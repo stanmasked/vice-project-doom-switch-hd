@@ -19,7 +19,7 @@ emu={
  getregister=function() error('wrong emu API used') end
 }
 dofile('tools/capture_fceux_joint_cpu_context.lua')
-hooks[0x835B]()
+hooks[0x835B](0x835B,1,0)
 writes[0x8000](0x8000,1,6)
 writes[0x8001](0x8001,1,12)
 hooks.read(0x835C,1,0xAB)
@@ -35,6 +35,8 @@ local data=m:read('*a');m:close()
 assert(data:find('events_dropped=1',1,true))
 assert(data:find('read_causality=not_proven',1,true))
 assert(data:find('register_api=memory.getregister',1,true))
+assert(data:find('callback_errors=0',1,true))
+assert(data:find('callback_contract=address_size_value_v1',1,true))
 os.remove(dir..'/stage53_joint_context.tsv')
 os.remove(dir..'/stage53_joint_context.meta.txt')
 assert(os.execute('rmdir "'..dir..'"'))
