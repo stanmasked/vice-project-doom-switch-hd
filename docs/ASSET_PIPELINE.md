@@ -102,3 +102,17 @@ states, and check display performance on physical Switch hardware.
 Reconstructing authentic first-stage palette, geometry and behavior
 from locally observed reference traces remains an independent unresolved
 research task.
+
+## Stage 24 — animation metadata separated from VPAT
+
+An independently authored JSON clip manifest (currently
+[demo_animation.json](../assets/demo_animation.json)) maps logical animation
+states to VPAT frame IDs and integer simulation-tick durations. It is
+compiled to constexpr C++ before the NRO build via
+[build_animation_manifest.py](../tools/build_animation_manifest.py).
+No dynamic JSON parsing or allocation is required during gameplay.
+
+The portable [AnimationPlayer](../graphics_core/animation.hpp) handles
+state changes and looping without modifying sprite texture encoding.
+See [ANIMATION_CONTROLLER.md](ANIMATION_CONTROLLER.md) for the schema,
+safety checks and tests. All current frame durations are placeholders.

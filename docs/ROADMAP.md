@@ -55,13 +55,17 @@ The original fixed bank's documented control flow is in [VIDEO_PIPELINE.md](VIDE
 - [x] Implement validated sprite atlas decoding, alpha compositing, clipping and four-frame animation on native raster NRO (Actions #38924413702).
 - [x] Build synthetic 96x32 RGBA atlas at compile-time and import newly authored PNG sprite sheets with VPAT PNG converter.
 - [x] Verify malformed sprite data and pose changes with C++ tests; PNG importer has 5 ROM-free tests.
+- [x] Separate animation clips and state transitions from the raster scene (see [ANIMATION_CONTROLLER.md](ANIMATION_CONTROLLER.md)).
 - [ ] Replace procedural test scene with original behavior and newly authored HD artwork.
 
 ## M3: first genuinely HD scene
 - [ ] Create new hand-authored characters, backgrounds and effects.
 - [x] Validate native RGBA8888 framebuffer drawing, synthetic background, collision geometry and camera.
 - [x] Build an independently authored sprite atlas import/render infrastructure (see [ASSET_PIPELINE.md](ASSET_PIPELINE.md)).
-- [ ] Add author-created detailed HD characters, animation timing metadata and optimized HD rendering.
+- [x] Implement a data-driven, validated author-authored animation timing manifest; compiled C++ controller, four states and horizontal mirroring.
+- [x] Verify deterministic full-stack simulation → animation → sprite atlas → raster output in CI (Actions #38926608121).
+- [ ] Add detailed original HD character art and measure authentic animation timings.
+- [ ] Optimize HD rendering and validate speed on Switch hardware.
 - [ ] Evaluate quality against reference scene and original timing.
 
 ## M4: Switch platform validation

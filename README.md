@@ -140,3 +140,22 @@ C++ resource header, so texture authors do not have to modify renderer code.
 See [asset pipeline](docs/ASSET_PIPELINE.md) and
 [switch_graphical](switch_graphical/README.md). Original NES artwork,
 accurate gameplay and on-device performance validation are still outstanding.
+
+## Stage 24 — frame-timed animation controller
+
+Authored sprite animations are now configured through
+[assets/demo_animation.json](assets/demo_animation.json), validated by
+[tools/build_animation_manifest.py](tools/build_animation_manifest.py)
+and compiled into constexpr C++ tables. The renderer accepts an explicit
+resolved sprite frame; an independent `AnimationPlayer` handles idle,
+run, rise and fall states, clip loops, transition resets and left/right
+facing. Horizontal mirroring uses the existing ROM-free VPAT atlas.
+
+The console's **same** simulated movement/gravity and the C++ sprite
+renderer are covered by a full deterministic gameplay → animation →
+atlas → raster regression. The latest devkitPro build publishes another
+native diagnostic NRO. See [animation documentation](docs/ANIMATION_CONTROLLER.md).
+
+The four atlas frames and JSON durations are **author-invented tests**;
+original Vice: Project Doom animation timing, final HD character art,
+runtime asset streaming and physical-console performance remain open.

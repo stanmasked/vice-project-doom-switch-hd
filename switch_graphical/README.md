@@ -55,3 +55,20 @@ python3 -m unittest discover -s tests -p test_vpat_packer.py -v
 
 Embedded sprites are **not** the original Vice: Project Doom sprites,
 and the developer animation cadence is not taken from the original game.
+
+## Stage 24 — data-driven animation
+
+The Switch build now compiles two generated source headers:
+`generated/demo_atlas.hpp` from independently authored pixel poses and
+`generated/demo_animation.hpp` from
+[assets/demo_animation.json](../assets/demo_animation.json).
+
+An `AnimationPlayer` runs **once per simulation tick** after movement and
+collisions. It selects idle, run, rise or fall, advances by frame durations
+specified in the manifest, and preserves facing direction when standing
+still or airborne. The renderer only consumes resolved `sprite_frame`
+and `facing_left` fields; no JSON parser runs on the Switch.
+
+Tests cover transitions, looping, invalid metadata and a deterministic
+200-tick replay through sprite rasterization. See
+[ANIMATION_CONTROLLER.md](../docs/ANIMATION_CONTROLLER.md).
