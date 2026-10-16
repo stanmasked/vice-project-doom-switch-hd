@@ -15,13 +15,14 @@ class PointerValidationTests(unittest.TestCase):
         self.log=folder/'stage41_pointer_access.tsv'
         self.meta=folder/'stage41_pointer_access.meta.txt'
         self.rows=[
-            ['50','1','READ','00AA','11','11','22','33','44'],
+            ['50','1','READ','00AA','unknown','11','22','33','44'],
             ['50','2','WRITE','00AB','99','11','22','33','44']]
         self.write_rows()
         self.meta.write_text('\n'.join([
             'format=vice_stage41_pointer_access_v1',
             'rom_md5='+'a'*32,
-            'events_recorded=2','events_dropped=0','complete=yes',
+            'events_recorded=2','events_dropped=0','callback_errors=0','complete=yes',
+            'read_value_provenance=address_only_fceux_zero_sentinel',
             'execution_pc=not_instrumented',
             'meaning=pointer_byte_access_not_dereference'])+'\n',encoding='utf8')
 
@@ -37,6 +38,16 @@ class PointerValidationTests(unittest.TestCase):
         self.assertEqual(result['ram_byte_writes'],1)
         self.assertFalse(result['prg_rom_reads_observed'])
         self.assertFalse(result['effective_addresses_observed'])
+
+    def test_read_callback_byte_fabrication_rejected(self):
+        self.rows[0][4]='11';self.write_rows()
+        with self.assertRaisesRegex(ValueError,'provenance'):
+            validate(self.log,self.meta)
+
+    def test_callback_error_marks_incomplete(self):
+        self.meta.write_text(self.meta.read_text().replace(
+            'callback_errors=0','callback_errors=1').replace('complete=yes','complete=no'))
+        self.assertFalse(validate(self.log,self.meta)['complete'])
 
     def test_gaps_invalid(self):
         self.rows[1][1]='3';self.write_rows()
