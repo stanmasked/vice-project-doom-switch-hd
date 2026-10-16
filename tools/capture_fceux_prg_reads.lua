@@ -11,6 +11,12 @@ local file=assert(io.open(DIR..'/stage45_prg_reads.tsv','wb'))
 assert(file:write('frame\tseq\tkind\tcpu_address\tvalue\tmapped_bank\n'))
 local selected,r6,r7=nil,nil,nil
 local count,dropped,callback_errors=0,0,0
+local function checked(ok,reason)
+  if not ok then
+    callback_errors=callback_errors+1
+    error('Unsupported FCEUX callback contract: '..reason,2)
+  end
+end
 local function bank(addr)
   if addr>=0xE000 then return 15 end
   if selected==nil then return nil end
@@ -40,19 +46,17 @@ local function log(kind,addr,value)
     b and tostring(b) or 'unknown'},'\t')..'\n'))
 end
 memory.registerwrite(0x8000,0x2000,function(a,size,value)
-  assert(type(a)=='number' and a==math.floor(a) and a>=0x8000 and a<=0x9FFF
-    and size==1, 'Invalid mirrored MMC3 write callback')
+  checked(type(a)=='number' and a==math.floor(a) and a>=0x8000 and a<=0x9FFF
+    and size==1 and type(value)=='number' and value==math.floor(value)
+    and value>=0 and value<=255,'mirrored MMC3 write address/size/byte')
   log(a%2==0 and 'SELECT' or 'DATA',a,value)
 end)
 -- Record all cartridge CPU-window reads, not just pointer-byte RAM reads.
 -- Hardware/ROM identity and real callback semantics require live FCEUX checks.
 memory.registerread(0x8000,0x8000,function(addr,size,value)
-  assert(type(addr)=='number' and addr>=0x8000 and addr<=0xFFFF,
-    'Invalid PRG CPU read address')
-  if size~=1 or value~=0 then
-    callback_errors=callback_errors+1
-    error('Unsupported FCEUX READ callback zero sentinel')
-  end
+  checked(type(addr)=='number' and addr==math.floor(addr)
+    and addr>=0x8000 and addr<=0xFFFF and size==1 and value==0,
+    'READ callback address/size/zero sentinel')
   log('READ',addr,nil)
 end)
 emu.registerexit(function()
