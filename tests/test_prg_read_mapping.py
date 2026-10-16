@@ -20,7 +20,7 @@ def fixture(path):
             if selected%8==6:r6=value
             if selected%8==7:r7=value
         bank,_=mapping(addr,selected,r6,r7)
-        events.append(['10',str(len(events)+1),kind,f'{addr:04X}',f'{value:02X}',
+        events.append(['10',str(len(events)+1),kind,f'{addr:04X}','unknown' if kind=='READ' else f'{value:02X}',
                        'unknown' if bank is None else str(bank)])
     with path.open('w',newline='',encoding='utf8') as f:
         w=csv.writer(f,delimiter='\t');w.writerow(FIELDS);w.writerows(events)
@@ -42,6 +42,11 @@ class PrgReadTests(unittest.TestCase):
         self.assertEqual([r['bank'] for r in result['reads']],[None,12,14,14])
         self.assertEqual(result['reads'][1]['physical_prg_offset'],12*8192+0x35B)
         self.assertEqual(result['reads'][2]['physical_prg_offset'],14*8192+0x906)
+    def test_forged_rom_byte_refused(self):
+        self.rows[0][4]='AA';self.rewrite()
+        with self.assertRaisesRegex(ValueError,'READ value provenance'):
+            audit(self.path)
+
     def test_forged_bank_refused(self):
         self.rows[3][5]='14';self.rewrite()
         with self.assertRaisesRegex(ValueError,'bank disagrees'):audit(self.path)
