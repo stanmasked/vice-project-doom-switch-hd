@@ -73,11 +73,10 @@ end
 memory.registerread(0x8000,0x8000,function(a,size,value)
   bus('READ',nil,a,size,value)
 end)
-memory.registerwrite(0x8000,function(a,size,value)
-  bus('SELECT',0x8000,a,size,value)
-end)
-memory.registerwrite(0x8001,function(a,size,value)
-  bus('DATA',0x8001,a,size,value)
+memory.registerwrite(0x8000,0x2000,function(a,size,value)
+  checked(type(a)=='number' and a==math.floor(a)
+    and a>=0x8000 and a<=0x9FFF, 'MMC3 write outside mirrored window')
+  bus(a%2==0 and 'SELECT' or 'DATA',nil,a,size,value)
 end)
 emu.registerexit(function()
   assert(file:close())
@@ -92,6 +91,7 @@ emu.registerexit(function()
     'callback_contract=address_size_value_v1',
     'read_value_provenance=address_only_fceux_zero_sentinel',
     'initial_mmc3_mode=unknown',
+    'mmc3_write_coverage=full_8000_9fff_even_odd',
     'register_provenance=callback_time_optional_samples',
     'register_api=memory.getregister',
     'effective_address=not_proven',
