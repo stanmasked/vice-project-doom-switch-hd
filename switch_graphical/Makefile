@@ -13,11 +13,14 @@ all: $(TARGET).nro
 generated/demo_animation.hpp: ../tools/build_animation_manifest.py ../assets/demo_animation.json
 	mkdir -p generated
 	python3 ../tools/build_animation_manifest.py ../assets/demo_animation.json $@
+generated/demo_terrain.hpp: ../tools/build_demo_terrain.py
+	mkdir -p generated
+	python3 $< $@
 generated/demo_atlas.hpp: ../tools/build_demo_atlas.py
 	mkdir -p generated
 	python3 $< $@
-$(TARGET).elf: generated/demo_atlas.hpp generated/demo_animation.hpp source/main.cpp ../game_core/simulation.cpp ../game_core/simulation.hpp ../graphics_core/scene_renderer.cpp ../graphics_core/scene_renderer.hpp ../graphics_core/asset_atlas.cpp ../graphics_core/asset_atlas.hpp ../graphics_core/animation.cpp ../graphics_core/animation.hpp ../graphics_core/asset_source.cpp ../graphics_core/asset_source.hpp ../graphics_core/animation_resource.cpp ../graphics_core/animation_resource.hpp ../graphics_core/asset_bundle.cpp ../graphics_core/asset_bundle.hpp
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) source/main.cpp ../game_core/simulation.cpp ../graphics_core/scene_renderer.cpp ../graphics_core/asset_atlas.cpp ../graphics_core/animation.cpp ../graphics_core/asset_source.cpp ../graphics_core/animation_resource.cpp ../graphics_core/asset_bundle.cpp $(LDLIBS) -o $@
+$(TARGET).elf: generated/demo_atlas.hpp generated/demo_animation.hpp generated/demo_terrain.hpp source/main.cpp ../game_core/simulation.cpp ../game_core/simulation.hpp ../graphics_core/scene_renderer.cpp ../graphics_core/scene_renderer.hpp ../graphics_core/asset_atlas.cpp ../graphics_core/asset_atlas.hpp ../graphics_core/animation.cpp ../graphics_core/animation.hpp ../graphics_core/asset_source.cpp ../graphics_core/asset_source.hpp ../graphics_core/animation_resource.cpp ../graphics_core/animation_resource.hpp ../graphics_core/asset_bundle.cpp ../graphics_core/asset_bundle.hpp ../graphics_core/terrain_source.cpp ../graphics_core/terrain_source.hpp
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) source/main.cpp ../game_core/simulation.cpp ../graphics_core/scene_renderer.cpp ../graphics_core/asset_atlas.cpp ../graphics_core/animation.cpp ../graphics_core/asset_source.cpp ../graphics_core/animation_resource.cpp ../graphics_core/asset_bundle.cpp ../graphics_core/terrain_source.cpp $(LDLIBS) -o $@
 $(TARGET).nacp:
 	nacptool --create "VPD Native Raster Test" "Homebrew Research" "0.3.0" $@
 $(TARGET).nro: $(TARGET).elf $(TARGET).nacp

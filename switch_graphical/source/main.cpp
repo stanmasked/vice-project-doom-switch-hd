@@ -7,6 +7,8 @@
 #include "animation.hpp"
 #include "demo_animation.hpp"
 #include "demo_atlas.hpp"
+#include "demo_terrain.hpp"
+#include "terrain_source.hpp"
 #include <cstdint>
 namespace {
 bool solidAt(void* context,int x,int y) {
@@ -38,6 +40,16 @@ int main(int,char**) {
     const bool has_sd=we_mounted_sd || fsdevGetDeviceFileSystem("sdmc")!=nullptr;
     if(has_sd)assets.reload(kExternalAtlasPath,kExternalAnimationPath);
     bool reload_failed=false;
+    constexpr const char* kExternalTerrainPath=
+        "sdmc:/switch/vice_project_doom/terrain.vpat";
+    vpd::TerrainSource terrain;
+    if(!terrain.initialize(vpd_terrain::kAtlasBlob,vpd_terrain::kAtlasBytes)) {
+        framebufferClose(&fb);
+        if(we_mounted_sd)fsdevUnmountDevice("sdmc");
+        return 5;
+    }
+    if(has_sd)terrain.reload(kExternalTerrainPath);
+    bool terrain_reload_failed=false;
     vpd::AnimationPlayer animation;
     vpd::Simulation game;
     while(appletMainLoop()){
@@ -57,6 +69,14 @@ int main(int,char**) {
             assets.reset();
             animation.reset();
             reload_failed=false;
+        }
+        if(pressed&HidNpadButton_ZL) {
+            terrain_reload_failed= !has_sd ||
+                terrain.reload(kExternalTerrainPath)!=vpd::TerrainReload::Loaded;
+        }
+        if(pressed&HidNpadButton_ZR) {
+            terrain.reset();
+            terrain_reload_failed=false;
         }
         uint8_t input=0;
         if(buttons&(HidNpadButton_Left|HidNpadButton_StickLLeft))input|=vpd::Left;
@@ -80,6 +100,9 @@ int main(int,char**) {
                 vpd::MotionSample{actor.grounded,actor.vx!=0,actor.vy,actor.vx}))break;
         view.sprite_frame=animation.frame(assets.animation());
         view.facing_left=animation.facingLeft();
+        view.terrain_atlas=&terrain.atlas();
+        view.external_terrain_asset=terrain.external();
+        view.terrain_reload_failed=terrain_reload_failed;
         const bool drawn=vpd::drawScene(pixels,vpd::kSceneWidth,
                 vpd::kSceneHeight,static_cast<int>(stride/sizeof(uint32_t)),view);
         framebufferEnd(&fb);

@@ -1,5 +1,6 @@
 #include "scene_renderer.hpp"
 #include "asset_atlas.hpp"
+#include "terrain_source.hpp"
 #include <cstdint>
 #include <algorithm>
 
@@ -167,6 +168,8 @@ bool drawScene(uint32_t* target,int width,int height,int stride_pixels,
         s.rect(x,y,n%11==0?4:2,2,rgba(145+(n%54),141+(n%25),159+(n%33)));
     }
     skyline(s,view.camera_x_px);
+    const int environment_scale=view.terrain_atlas?
+        terrainScale(*view.terrain_atlas):-1;
     int left=floorDiv(view.camera_x_px,16)-1;
     int right=left+43;
     for(int ty=0;ty<15;++ty){
@@ -174,7 +177,17 @@ bool drawScene(uint32_t* target,int width,int height,int stride_pixels,
             if(view.solid_at && view.solid_at(view.map_context,tx,ty)){
                 int sx=(tx*16-view.camera_x_px)*2;
                 int sy=(ty*16+80)*2;
-                tile(s,sx,sy,tx,ty);
+                bool drawn=false;
+                if(environment_scale>0){
+                    const unsigned frame=terrainFrame(
+                        view.solid_at(view.map_context,tx,ty-1),
+                        view.solid_at(view.map_context,tx-1,ty),
+                        view.solid_at(view.map_context,tx+1,ty),tx,ty);
+                    drawn=blitAtlasFrame(target,width,height,stride_pixels,
+                                         *view.terrain_atlas,frame,sx,sy,
+                                         environment_scale);
+                }
+                if(!drawn)tile(s,sx,sy,tx,ty);
             }
         }
     }
@@ -199,6 +212,14 @@ bool drawScene(uint32_t* target,int width,int height,int stride_pixels,
     s.rect(932,47,83,8,rgba(87,184,194));
     if(view.external_animation_source)
         s.text(788,54,"ANIM: SD OVERRIDE",rgba(164,210,193),2);
+    if(view.terrain_atlas) {
+        const char* terrain_message=view.terrain_reload_failed ?
+            "TERRAIN: FAILED" : (view.external_terrain_asset ?
+            "TERRAIN: SD" : "TERRAIN: EMBEDDED");
+        s.text(951,100,terrain_message,
+               view.terrain_reload_failed?rgba(243,121,104):
+               rgba(153,218,195),2);
+    }
     s.rect(0,689,1280,31,rgba(13,19,33));
     s.text(25,697,"MOVE : D PAD  /  JUMP : A OR B  /  EXIT : PLUS",rgba(173,184,207),2);
     s.text(760,697,view.asset_reload_failed?"RELOAD FAILED":

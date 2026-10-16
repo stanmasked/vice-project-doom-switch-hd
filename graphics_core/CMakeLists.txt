@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.16)
 project(vpd_scene_renderer LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-add_library(vpd_scene_renderer STATIC scene_renderer.cpp asset_atlas.cpp animation.cpp asset_source.cpp animation_resource.cpp asset_bundle.cpp)
+add_library(vpd_scene_renderer STATIC scene_renderer.cpp asset_atlas.cpp animation.cpp asset_source.cpp animation_resource.cpp asset_bundle.cpp terrain_source.cpp)
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
 target_include_directories(vpd_scene_renderer PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
@@ -16,6 +16,15 @@ add_custom_command(OUTPUT ${DEMO_HEADER} ${DEMO_ATLAS_BINARY}
   DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/../tools/build_demo_atlas.py
   VERBATIM)
 add_custom_target(vpd_demo_atlas DEPENDS ${DEMO_HEADER} ${DEMO_ATLAS_BINARY})
+set(DEMO_TERRAIN_HEADER ${CMAKE_CURRENT_BINARY_DIR}/generated/demo_terrain.hpp)
+set(DEMO_TERRAIN_BINARY ${CMAKE_CURRENT_BINARY_DIR}/generated/demo_terrain.vpat)
+add_custom_command(OUTPUT ${DEMO_TERRAIN_HEADER} ${DEMO_TERRAIN_BINARY}
+  COMMAND ${Python3_EXECUTABLE}
+          ${CMAKE_CURRENT_SOURCE_DIR}/../tools/build_demo_terrain.py
+          ${DEMO_TERRAIN_HEADER} --raw ${DEMO_TERRAIN_BINARY}
+  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/../tools/build_demo_terrain.py
+  VERBATIM)
+add_custom_target(vpd_demo_terrain DEPENDS ${DEMO_TERRAIN_HEADER} ${DEMO_TERRAIN_BINARY})
 set(DEMO_ANIMATION_HEADER ${CMAKE_CURRENT_BINARY_DIR}/generated/demo_animation.hpp)
 add_custom_command(OUTPUT ${DEMO_ANIMATION_HEADER}
   COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/../tools/build_animation_manifest.py

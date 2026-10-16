@@ -16,6 +16,9 @@ struct SceneView {
     bool external_sprite_asset=false;
     bool asset_reload_failed=false;
     bool external_animation_source=false;
+    const SpriteAtlas* terrain_atlas=nullptr;
+    bool external_terrain_asset=false;
+    bool terrain_reload_failed=false;
 };
 constexpr int kSceneWidth=1280;
 constexpr int kSceneHeight=720;
