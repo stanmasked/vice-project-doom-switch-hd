@@ -265,3 +265,19 @@ A separate synthetic 48×64 editable art sheet and SD-ready VPAT are
 available in the conversation. This is **not** recovered NES visual
 data; real first-stage scenery and Switch hardware performance are
 still outstanding.
+
+## Stage 31 — editable level prop placements
+
+The native Switch diagnostic now loads decoration coordinates, front/rear
+layer choice, frame ranges and per-object animation periods from a separate
+VLAY v1 scene file. The JSON authoring source and binary packer are in
+assets/demo_decor_layout.json and tools/pack_decor_layout.py.
+
+External layouts belong at sdmc:/switch/vice_project_doom/decor_layout.vlay.
+Press Minus to reload them or the right-stick button (R3) to restore
+built-in placements. Up/Down still change only decorative pixel art.
+Invalid layouts do not discard the previously accepted positions.
+
+See docs/LEVEL_PLACEMENTS.md for file structure, schema, examples and
+limits. All default object positions and animation periods remain
+invented diagnostics, not the actual Vice: Project Doom first stage.

@@ -166,3 +166,17 @@ See [DECOR_EFFECTS.md](../docs/DECOR_EFFECTS.md) for authoring, the
 supported sprite sizes, scene ordering, automated tests, and boundaries.
 The graphics and effects are placeholders, not faithfully restored
 original NES game content.
+
+## Stage 31 — reload placement data separately from decoration art
+
+Object placements now come from a VLAY v1 resource. Editing a JSON layout
+and rebuilding only decor_layout.vlay lets you change world positions,
+rear/front layers, frame IDs and animation tick durations without
+recompiling the NRO or changing decor.vpat.
+
+Optional SD resource: sdmc:/switch/vice_project_doom/decor_layout.vlay
+Minus reloads this file, and a right-stick press (R3) restores defaults.
+Up/Down remain dedicated to the decoration image atlas.
+
+Read docs/LEVEL_PLACEMENTS.md for the binary schema and safety rules.
+These positions are diagnostic fixtures, not reconstructed original map data.

@@ -119,3 +119,14 @@ All game map positions and object timing values remain independently
 invented. The project has **not** measured original level effects or
 created production HD character/scene art. The NRO is built by CI, but
 the decorations have not been run or profiled on physical Switch hardware.
+
+## Stage 31 — data-driven locations and animation periods
+
+The earlier C++ hardcoded demonstration has a separate data-driven
+runtime path using VLAY v1. The actual native diagnostic now consumes
+authored world placement records from JSON-generated constexpr defaults
+or from decor_layout.vlay on SD. The legacy drawing helper is retained
+only for backwards-compatible host tests, not the Switch scene.
+
+See LEVEL_PLACEMENTS.md for world coordinate projection, per-object
+timings, binary record layout, upper limits and SD control bindings.

@@ -67,6 +67,9 @@ The original fixed bank's documented control flow is in [VIDEO_PIPELINE.md](VIDE
 - [x] Add independent 4-frame RGBA decorative object atlas with animations, world scroll and back/front layer ordering (Stage 30).
 - [x] Allow independent Up/Down SD reload/fallback for decor.vpat with malformed-resource rollback and automated regression.
 - [x] Validate decor effects in native libnx NRO and C++ render tests (Actions #38936912738).
+- [x] Move synthetic decoration positions, layers, frame assignments and animation periods to authored VLAY layout data (Stage 31).
+- [x] Support an optional SD VLAY layout with Minus reload and R3 reset; validate CRC, bounds and last-good rollback.
+- [x] Verify native Switch NRO and twelve host C++ graphics regressions (Actions #38938449747).
 - [ ] Replace procedural test scene with original behavior and newly authored HD artwork.
 
 ## M3: first genuinely HD scene
@@ -83,6 +86,7 @@ The original fixed bank's documented control flow is in [VIDEO_PIPELINE.md](VIDE
 - [x] Add editable independently authored terrain textures and safe hot reload; see [TERRAIN_PIPELINE.md](TERRAIN_PIPELINE.md).
 - [x] Independently reload two background layers without changing collision map or hero/terrain; see [PARALLAX_BACKGROUNDS.md](PARALLAX_BACKGROUNDS.md).
 - [x] Add reproducible synthetic industrial lamps and fans, alpha effects and deterministic frame durations; see [DECOR_EFFECTS.md](DECOR_EFFECTS.md).
+- [x] Add editable ROM-free placement manifest and VLAY binary packer for decoration authoring.
 - [ ] Add detailed original HD character art and measure authentic animation timings.
 - [x] Allow opt-in author-created external 4-frame VPAT pixel replacement via SD, X reload and Y fallback.
 - [ ] Optimize HD rendering and validate speed on Switch hardware.
