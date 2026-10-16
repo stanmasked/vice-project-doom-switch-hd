@@ -44,6 +44,10 @@
 - [x] Stage 33: verify fixed-bank $E8DE PPU scroll procedure; $0B and $0D feed the two $2005 writes, $0C contributes one PPUCTRL bit ([SCROLL_SOURCE_AUDIT.md](SCROLL_SOURCE_AUDIT.md)).
 - [x] Audit literal PPU port writer candidates without treating all byte matches as executable; six ROM-free negative/positive tests.
 - [x] Capture $0B/$0C/$0D zero-page values in FCEUX metadata with explicit postframe/static-source caveat, synthetic Lua mock.
+- [x] Stage 34: verify eight exact ROM writer signatures for $0B/$0C/$0D across physical PRG banks 14 and 15 ([SCROLL_WRITERS.md](SCROLL_WRITERS.md)).
+- [x] Trace the packed-byte transformation from ($AA),Y and distinguish two-byte increment/decrement operations on $0B/$0C from separate $0D updates.
+- [x] Add six ROM-free synthetic regression cases, mutation rejection and MMC3 bank-mode caveats.
+- [ ] Dynamically trace the pointer ($AA),Y, bank switching and writer execution in the actual first level.
 - [ ] Independently identify actual collision metatiles and event/entity positions; observed PPU tile IDs alone are not collisions.
 - [ ] Record confidence levels and local-ROM reproducibility.
 

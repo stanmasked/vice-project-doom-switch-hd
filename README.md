@@ -309,3 +309,18 @@ behavior. Local ROM-derived reports stay private.
 
 No authentic first-stage geometry has been reconstructed. The Switch
 graphical test NRO is unchanged by this research-only milestone.
+
+## Stage 34 — origins of PPU scroll input bytes
+
+A second [original-ROM audit](tools/audit_scroll_writers.py) now
+verifies **eight** separate 6502 writer regions in physical PRG
+banks 14 and 15, including zero initialization, a packed-byte
+decoder and increment/decrement paths for zero-page $0B/$0C/$0D.
+Six new invented-ROM tests passed locally. See
+[SCROLL_WRITERS.md](docs/SCROLL_WRITERS.md).
+
+Important: $0B/$0C behave as a 16-bit arithmetic pair in several
+routines, while $0D has independent update sites. This is not
+proof of world camera X/Y or authentic stage geometry. GitHub Actions
+has been failing to provision a runner at stage 33–34 commits;
+do not mistake those infrastructure failures for passing CI.
