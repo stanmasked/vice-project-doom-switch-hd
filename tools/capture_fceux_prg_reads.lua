@@ -21,8 +21,12 @@ local function bank(addr)
   return nil
 end
 local function log(kind,addr,value)
-  assert(type(value)=='number' and value==math.floor(value) and
-    value>=0 and value<=255,'FCEUX callback byte unavailable')
+  if kind=='READ' then
+    assert(value==nil,'READ value must not be treated as ROM data')
+  else
+    assert(type(value)=='number' and value==math.floor(value) and
+      value>=0 and value<=255,'FCEUX mapper write byte unavailable')
+  end
   if kind=='SELECT' then selected=value
   elseif kind=='DATA' and selected~=nil then
     if selected%8==6 then r6=value end
@@ -32,7 +36,7 @@ local function log(kind,addr,value)
   count=count+1
   local b=bank(addr)
   assert(file:write(table.concat({tostring(emu.framecount()),tostring(count),
-    kind,string.format('%04X',addr),string.format('%02X',value),
+    kind,string.format('%04X',addr),value and string.format('%02X',value) or 'unknown',
     b and tostring(b) or 'unknown'},'\t')..'\n'))
 end
 memory.registerwrite(0x8000,function(a,size,value) log('SELECT',0x8000,value) end)
@@ -42,7 +46,8 @@ memory.registerwrite(0x8001,function(a,size,value) log('DATA',0x8001,value) end)
 memory.registerread(0x8000,0x8000,function(addr,size,value)
   assert(type(addr)=='number' and addr>=0x8000 and addr<=0xFFFF,
     'Invalid PRG CPU read address')
-  log('READ',addr,value)
+  assert(size==1 and value==0,'Unsupported FCEUX READ callback sentinel')
+  log('READ',addr,nil)
 end)
 emu.registerexit(function()
   assert(file:close())
@@ -53,7 +58,8 @@ emu.registerexit(function()
     'events_dropped='..dropped,
     'complete='..(dropped==0 and 'yes' or 'no'),
     'initial_mmc3_mode=unknown',
-    'read_provenance=registerread_callback_no_pc_proof'
+    'read_provenance=registerread_callback_no_pc_proof',
+    'read_value_provenance=address_only_fceux_zero_sentinel'
   },'\n')..'\n'))
   assert(meta:close())
 end)
