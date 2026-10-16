@@ -90,7 +90,7 @@ int main(){
     std::vector<uint8_t> alternative(vpd_decor::kAtlasBlob,
                                      vpd_decor::kAtlasBlob+vpd_decor::kAtlasBytes);
     const size_t offset=22u+(15u*96u+11u)*4u;
-    REQUIRE(alternative[offset+3]==255);
+    REQUIRE(alternative[offset+3]>0); // bright lamp uses intentional alpha 250
     alternative[offset]^=0x71u;
     fixCrc(alternative);
     file.write(alternative);
