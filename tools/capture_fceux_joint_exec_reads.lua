@@ -9,7 +9,7 @@ assert(emu and emu.framecount and emu.registerexit)
 -- A crash or callback exception must never reuse an old complete=yes.
 local meta_path=DIR..'/stage49_joint.meta.txt'
 local pending=assert(io.open(meta_path,'wb'))
-assert(pending:write('capture_in_progress=yes\\n'))
+assert(pending:write('capture_in_progress=yes\n'))
 assert(pending:close())
 local output=assert(io.open(DIR..'/stage49_joint.tsv','wb'))
 assert(output:write('frame\tseq\tkind\taddress\tvalue\tphysical_bank\n'))
