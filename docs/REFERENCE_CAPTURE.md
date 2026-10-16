@@ -178,3 +178,13 @@ index `$92` and pointer `$AA/$AB`. The documentation
 [INDEX_92_AUDIT.md](INDEX_92_AUDIT.md) explains why a 0..21
 fixed-bank wrap does **not** bound all uses of `$92`.
 The snapshot-time values do not prove instructions executed.
+
+## Stage 37: what to confirm in a real first-level recording
+
+[INDEX_STATE_DISPATCH.md](INDEX_STATE_DISPATCH.md) establishes a
+fixed-bank dispatch table and branch path controlling candidate
+index RAM $92. The next live FCEUX session should correlate RAM
+$90/$91/$07 with actual execution of $E479, $E4E6, $E4F3 and
+$E50F/$E519, while also logging mapper bank mode and pointer
+$AA/$AB. Merely observing the RAM bytes in a postframe snapshot
+does not prove these routines executed or what their bits represent.

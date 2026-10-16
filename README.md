@@ -351,3 +351,19 @@ of 22 game levels** or the global index domain.
 fabricated-ROM tests are committed. Live execution, authentic level
 format and camera semantics remain unproven. GitHub Actions runner
 provisioning is still being checked; hosted CI success is not assumed.
+
+## Stage 37 — conditional state dispatch feeding the RAM $92 index
+
+The [strict index dispatch audit](tools/audit_index_dispatch.py)
+confirms **nine** original-ROM 6502 instruction groups and **seven**
+static branch/table destinations. RAM $90 value 13 selects table
+entry $E4C0, leading to $E4E6; when RAM $91 is nonzero this
+branches to $E4F3. That code checks RAM $07 bit 7 first, then
+bit 2 before bit 3 to choose among special-state, decrement and
+increment paths. Bit 2 wins if both are set.
+
+This is **a verified conditional code path**, not measured execution
+during authentic first-stage gameplay. ROM-free regression tests
+passed locally; [documentation](docs/INDEX_STATE_DISPATCH.md)
+lists every verified destination, mapping caveats and remaining
+runtime unknowns. The existing native Switch NRO is unchanged.

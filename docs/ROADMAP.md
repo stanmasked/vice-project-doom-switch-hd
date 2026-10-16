@@ -54,6 +54,9 @@
 - [x] Prove wrap only for one code path, preserving the stage-35 carry caveat and unknown global index domain.
 - [x] Add seven ROM-free synthetic audit tests, including mutated anchors and out-of-domain transitions.
 - [x] Sample RAM $90/$91/$93 beside $92 in FCEUX postframe metadata with explicit static-only provenance.
+- [x] Stage 37: anchor the fixed-bank state dispatcher $E479, table entry $E4C0 -> $E4E6, gate $E4E8 -> $E4F3 and RAM $07 bit-7/2/3 branch priorities ([INDEX_STATE_DISPATCH.md](INDEX_STATE_DISPATCH.md)).
+- [x] Verify nine original 6502 instruction signatures, seven relative/table destinations and seven synthetic host tests, including conflicting RAM $07 bits.
+- [ ] Identify runtime states selected through RAM $90/$91 and verify the physical meaning of RAM $07 bits in live FCEUX.
 - [ ] Dynamically trace the pointer ($AA),Y, bank switching and writer execution in the actual first level.
 - [ ] Independently identify actual collision metatiles and event/entity positions; observed PPU tile IDs alone are not collisions.
 - [ ] Record confidence levels and local-ROM reproducibility.
