@@ -5,6 +5,8 @@
 local OUTPUT_DIRECTORY = rawget(_G, 'VPD_CAPTURE_DIRECTORY') or 'private'
 local FRAME_INTERVAL = 120
 local MAX_CAPTURES = 24
+-- Default-on renderer reference. Disable by setting VPD_CAPTURE_SCREEN=false.
+local CAPTURE_SCREEN = rawget(_G, 'VPD_CAPTURE_SCREEN') ~= false
 local MAX_EVENTS_PER_FRAME = 12000
 local MAX_TOTAL_EVENTS = 250000
 
@@ -14,6 +16,7 @@ local writes_this_frame, total_writes = 0, 0
 local dropped_writes = 0
 local buffered = {}
 local chr_reg = {}
+local invalid_screen_palette_values = 0
 local mmc3_select, ppuctrl, ppumask = nil, nil, nil
 
 local function hx(value)
@@ -66,7 +69,10 @@ end
 
 local function capture_metadata(frame)
     local result = {
-        'format=fceux_ppu_snapshot_v2',
+        'format=fceux_ppu_snapshot_v3',
+        'screen_reference='..(CAPTURE_SCREEN and 'yes' or 'no'),
+        'screen_size=256x240',
+        'invalid_screen_palette_values='..tostring(invalid_screen_palette_values),
         'frame='..tostring(frame),
         'rom_md5='..tostring(rom.gethash('md5')),
         'ppuctrl='..hx(ppuctrl),
@@ -82,6 +88,38 @@ local function capture_metadata(frame)
         result[#result+1] = 'chr_ram_'..r..'='..hx(memory.readbyte(0x3D+r))
     end
     return table.concat(result, '\n')..'\n'
+end
+
+local function capture_rendered_screen(prefix)
+    -- The fourth result from emu.getscreenpixel is the NES palette
+    -- index (0-63) or FCEUX's unavailable sentinel (254).
+    if not CAPTURE_SCREEN then return end
+    assert(type(emu.getscreenpixel) == 'function',
+           'FCEUX emu.getscreenpixel required for reference capture')
+    local rgb_rows, pal_rows = {}, {}
+    invalid_screen_palette_values = 0
+    for y=0,239 do
+        local rgb_row, pal_row = {}, {}
+        for x=0,255 do
+            local r,g,b,pal = emu.getscreenpixel(x,y,true)
+            assert(type(r)=='number' and type(g)=='number' and
+                   type(b)=='number' and type(pal)=='number',
+                   'Invalid emu.getscreenpixel return')
+            assert(r>=0 and r<=255 and g>=0 and g<=255 and b>=0 and b<=255,
+                   'Invalid emulated RGB component')
+            assert((pal>=0 and pal<=63) or pal==254,
+                   'Invalid NES palette value from FCEUX')
+            if pal==254 then
+                invalid_screen_palette_values=invalid_screen_palette_values+1
+            end
+            rgb_row[#rgb_row+1]=string.char(r,g,b)
+            pal_row[#pal_row+1]=string.char(pal)
+        end
+        rgb_rows[#rgb_rows+1]=table.concat(rgb_row)
+        pal_rows[#pal_rows+1]=table.concat(pal_row)
+    end
+    write_binary(prefix..'.screen.rgb.bin',table.concat(rgb_rows))
+    write_binary(prefix..'.screen.pal.bin',table.concat(pal_rows))
 end
 
 local function capture_frame()
@@ -101,6 +139,7 @@ local function capture_frame()
     local prefix = OUTPUT_DIRECTORY..'/frame_'..string.format('%06d', frame)
     write_binary(prefix..'.ppu.bin', ppu_bytes)
     write_binary(prefix..'.ram.bin', ram_bytes)
+    capture_rendered_screen(prefix)
     write_binary(prefix..'.meta.txt', capture_metadata(frame))
     frames_captured = frames_captured + 1
     emu.message('Private PPU/RAM capture '..frames_captured..'/'..MAX_CAPTURES)
