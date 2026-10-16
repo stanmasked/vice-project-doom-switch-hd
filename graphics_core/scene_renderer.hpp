@@ -11,6 +11,8 @@ struct SceneView {
     bool (*solid_at)(void*,int,int)=nullptr;
     const SpriteAtlas* sprite_atlas=nullptr;
     bool moving=false;
+    int sprite_frame=-1; // explicit animation player override; -1 means legacy default
+    bool facing_left=false;
 };
 constexpr int kSceneWidth=1280;
 constexpr int kSceneHeight=720;

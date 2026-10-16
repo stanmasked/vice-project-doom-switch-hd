@@ -3,6 +3,8 @@
 #include "simulation.hpp"
 #include "scene_renderer.hpp"
 #include "asset_atlas.hpp"
+#include "animation.hpp"
+#include "demo_animation.hpp"
 #include "demo_atlas.hpp"
 #include <cstdint>
 namespace {
@@ -24,6 +26,11 @@ int main(int,char**) {
     if(!vpd::openAtlas(atlas,vpd_demo::kAtlasBlob,vpd_demo::kAtlasBytes)) {
         framebufferClose(&fb);return 4;
     }
+    if(!vpd::validAnimationBank(vpd_demo::kAnimationBank) ||
+       vpd_demo::kAnimationBank.atlas_frame_count!=atlas.frame_count) {
+        framebufferClose(&fb);return 5;
+    }
+    vpd::AnimationPlayer animation;
     vpd::Simulation game;
     while(appletMainLoop()){
         padUpdate(&pad);
@@ -43,7 +50,11 @@ int main(int,char**) {
             const_cast<vpd::Scene*>(&game.scene()),solidAt
         };
         view.sprite_atlas=&atlas;
-        view.moving=(input&(vpd::Left|vpd::Right))!=0;
+        view.moving=actor.vx!=0;
+        if(!animation.tick(vpd_demo::kAnimationBank,
+                vpd::MotionSample{actor.grounded,actor.vx!=0,actor.vy,actor.vx}))break;
+        view.sprite_frame=animation.frame(vpd_demo::kAnimationBank);
+        view.facing_left=animation.facingLeft();
         const bool drawn=vpd::drawScene(pixels,vpd::kSceneWidth,
                 vpd::kSceneHeight,static_cast<int>(stride/sizeof(uint32_t)),view);
         framebufferEnd(&fb);

@@ -13,5 +13,6 @@ constexpr size_t kVpatHeaderBytes=22;
 bool openAtlas(SpriteAtlas& out,const uint8_t* bytes,size_t size);
 // Alpha-blended nearest-neighbor frame. Returns false for invalid arguments.
 bool blitAtlasFrame(uint32_t* target,int width,int height,int stride,
-                    const SpriteAtlas& atlas,unsigned frame,int x,int y,int scale);
+                    const SpriteAtlas& atlas,unsigned frame,int x,int y,int scale,
+                    bool flip_x=false);
 }

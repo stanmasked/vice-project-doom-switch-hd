@@ -182,9 +182,11 @@ bool drawScene(uint32_t* target,int width,int height,int stride_pixels,
     int player_y=(view.player_y_px+80)*2;
     // Atlas-driven sprite when supplied, preserving old fallback for tests.
     if(view.sprite_atlas && view.sprite_atlas->pixels) {
-        unsigned sprite_frame=!view.grounded?3u : view.moving?1u+((view.frame/8)&1u):0u;
+        unsigned sprite_frame=view.sprite_frame>=0?
+            static_cast<unsigned>(view.sprite_frame):
+            (!view.grounded?3u : view.moving?1u+((view.frame/8)&1u):0u);
         if(!blitAtlasFrame(target,width,height,stride_pixels,*view.sprite_atlas,
-                           sprite_frame,player_x-4,player_y-12,2))
+                           sprite_frame,player_x-4,player_y-12,2,view.facing_left))
             drawHero(s,player_x,player_y,view.frame,view.grounded);
     } else drawHero(s,player_x,player_y,view.frame,view.grounded);
     s.rect(0,0,1280,76,rgba(14,23,43));

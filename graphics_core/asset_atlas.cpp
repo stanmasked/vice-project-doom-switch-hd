@@ -33,7 +33,7 @@ bool openAtlas(SpriteAtlas& out,const uint8_t* bytes,size_t size){
     return true;
 }
 bool blitAtlasFrame(uint32_t* target,int width,int height,int stride,
-                    const SpriteAtlas& a,unsigned frame,int x,int y,int scale){
+                    const SpriteAtlas& a,unsigned frame,int x,int y,int scale,bool flip_x){
     if(!target||width<=0||height<=0||stride<width||!a.pixels||
        !a.width||!a.height||!a.frame_width||!a.frame_height||
        a.frame_width>a.width||a.frame_height>a.height||
@@ -52,7 +52,8 @@ bool blitAtlasFrame(uint32_t* target,int width,int height,int stride,
     for(int py=sy0;py<sy1;++py){
         int from_y=tile_y+static_cast<int>((int64_t(py)-ry0)/scale);
         for(int px=sx0;px<sx1;++px){
-            int from_x=tile_x+static_cast<int>((int64_t(px)-rx0)/scale);
+            int local_x=static_cast<int>((int64_t(px)-rx0)/scale);
+            int from_x=tile_x+(flip_x?int(a.frame_width)-1-local_x:local_x);
             size_t i=(size_t(from_y)*a.width+from_x)*4;
             unsigned alpha=a.pixels[i+3];
             if(alpha==0)continue;
