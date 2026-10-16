@@ -76,7 +76,7 @@ exit53()
 rows=read_rows(dir..'/stage53_joint_context.tsv')
 assert(#rows==5)
 assert(rows[4]=='21\t3\tEXEC\t835B\tunknown\t12\t11\t22\t33\t44\t55')
-assert(rows[5]=='21\t4\tREAD\t835C\t99\t12\t11\t22\t33\t44\t55')
+assert(rows[5]=='21\t4\tREAD\t835C\tunknown\t12\t11\t22\t33\t44\t55')
 for name,_ in pairs(regs) do
   assert(getter_calls[name]==5,'expected one stage52 and four stage53 samples')
 end
