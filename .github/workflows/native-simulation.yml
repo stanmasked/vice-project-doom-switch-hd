@@ -1,0 +1,30 @@
+name: Deterministic native simulation
+on:
+  push:
+    paths:
+      - 'game_core/**'
+      - 'tests/test_simulation.cpp'
+      - '.github/workflows/native-simulation.yml'
+  pull_request:
+    paths:
+      - 'game_core/**'
+      - 'tests/test_simulation.cpp'
+      - '.github/workflows/native-simulation.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  simulation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      matrix:
+        configuration: [Debug, Release]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: cmake -S game_core -B build/game_core -DCMAKE_BUILD_TYPE=${{ matrix.configuration }}
+      - name: Build
+        run: cmake --build build/game_core --parallel 2
+      - name: Test deterministic scene
+        run: ctest --test-dir build/game_core --output-on-failure
