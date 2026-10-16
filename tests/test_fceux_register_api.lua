@@ -1,3 +1,10 @@
+rom={
+ readbyteunsigned=function(i)
+   local header={[0]=0x4e,[1]=0x45,[2]=0x53,[3]=0x1a,
+     [4]=8,[5]=8,[6]=0x40,[7]=0}
+   return header[i] or 0
+ end
+}
 -- End-to-end synthetic regression for documented FCEUX memory.getregister API.
 -- This test intentionally exposes no emu.getregister implementation.
 local dir=os.tmpname();os.remove(dir)
