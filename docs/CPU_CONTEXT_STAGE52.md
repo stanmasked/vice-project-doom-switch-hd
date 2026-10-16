@@ -2,7 +2,7 @@
 
 `tools/capture_fceux_cpu_context.lua` is a **separate** opt-in FCEUX
 register-execution probe for five selected CPU addresses. Its events
-contain A/X/Y/S/P when `emu.getregister` is available and returns a valid
+contain A/X/Y/S/P when `memory.getregister` is available and returns a valid
 byte, otherwise `unknown`. It also records a status showing whether all
 five registers were sampled.
 
@@ -18,7 +18,7 @@ Outputs are `stage52_cpu_context.tsv` and its `.meta.txt` partner.
 The meta file records overflow and declares that instruction opcodes and
 effective addresses are **not recorded**. Captures from this tracer and
 stage49 cannot be merged as if they were the same execution session.
-CPU register getter availability and callback timing require validation
+CPU register names are lowercase (`a`, `x`, `y`, `s`, `p`); the FCEUX API is `memory.getregister`, not `emu.getregister`. Callback timing still requires validation
 against the installed FCEUX version.
 
 A ROM-free Lua mock covers available/unavailable registers and overflow;
