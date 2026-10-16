@@ -48,7 +48,7 @@ class JointContextTests(unittest.TestCase):
 
     def test_missing_read_value_provenance_rejected(self):
         self.meta.write_text(self.meta.read_text().replace(
-            'read_value_provenance=address_only_fceux_zero_sentinel\\n',''))
+            'read_value_provenance=address_only_fceux_zero_sentinel\n',''))
         with self.assertRaisesRegex(ValueError,'provenance'):
             validate(self.trace,self.meta)
 
