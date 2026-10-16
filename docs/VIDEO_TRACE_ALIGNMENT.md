@@ -48,3 +48,16 @@ changes around player movement, scrolling, loader transitions and bank writes.
 Compare candidate byte streams against independently observed PPU screens
 before naming collision or stage geometry. Never commit game assets, ROM
 dumps, original frames or trace artifacts containing extracted game data.
+
+## Capture-window diagnostic (stage 39 hardening)
+
+The JSON now includes `trace_recorded_frame_span`, plus per-anchor
+`trace_frame_within_recorded_span` and `anchor_has_instrumented_events`.
+An anchor outside the recorded span is not corroborated by the trace.
+An in-range anchor with zero callback events is **not** proof that the
+original game was idle; the logger observes selected addresses only.
+Even a completely valid synthetic test cannot establish video identity.
+
+GitHub Actions is configured to run `test_video_trace_alignment.py`
+explicitly, but the result is not considered verified until a passing
+workflow run or a locally executed test report is available.
