@@ -44,6 +44,8 @@ jobs:
         run: lua5.4 tests/test_fceux_prg_reads.lua
       - name: Exercise stage49 joint PC/read/MMC3 callback mock
         run: lua5.4 tests/test_fceux_joint_exec_reads.lua
+      - name: Test stage52 optional CPU context capture with synthetic callbacks
+        run: lua5.4 tests/test_fceux_cpu_context.lua
       - name: Reject ROMs, PPU snapshots, original art exports and binaries
         shell: bash
         run: |
