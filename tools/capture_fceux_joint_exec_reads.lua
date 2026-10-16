@@ -49,8 +49,11 @@ memory.registerread(0x8000,0x8000,function(a,size,v)
   end
   log('READ',a,nil)
 end)
-memory.registerwrite(0x8000,function(a,size,v) log('SELECT',0x8000,v) end)
-memory.registerwrite(0x8001,function(a,size,v) log('DATA',0x8001,v) end)
+memory.registerwrite(0x8000,0x2000,function(a,size,v)
+  assert(type(a)=='number' and a==math.floor(a) and a>=0x8000 and a<=0x9FFF
+    and size==1, 'Invalid mirrored MMC3 callback')
+  log(a%2==0 and 'SELECT' or 'DATA',a,v)
+end)
 emu.registerexit(function()
   assert(output:close())
   local m=assert(io.open(DIR..'/stage49_joint.meta.txt','wb'))
@@ -61,6 +64,7 @@ emu.registerexit(function()
     'complete='..(dropped==0 and callback_errors==0 and 'yes' or 'no'),
     'callback_errors='..callback_errors,
     'exec_context=selected_pc_hooks_only',
+    'mmc3_write_coverage=full_8000_9fff_even_odd',
     'read_causality=not_proven',
     'read_value_provenance=address_only_fceux_zero_sentinel'
   },'\n')..'\n'))
