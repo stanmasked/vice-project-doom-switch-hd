@@ -39,8 +39,11 @@ local function log(kind,addr,value)
     kind,string.format('%04X',addr),value and string.format('%02X',value) or 'unknown',
     b and tostring(b) or 'unknown'},'\t')..'\n'))
 end
-memory.registerwrite(0x8000,function(a,size,value) log('SELECT',0x8000,value) end)
-memory.registerwrite(0x8001,function(a,size,value) log('DATA',0x8001,value) end)
+memory.registerwrite(0x8000,0x2000,function(a,size,value)
+  assert(type(a)=='number' and a==math.floor(a) and a>=0x8000 and a<=0x9FFF
+    and size==1, 'Invalid mirrored MMC3 write callback')
+  log(a%2==0 and 'SELECT' or 'DATA',a,value)
+end)
 -- Record all cartridge CPU-window reads, not just pointer-byte RAM reads.
 -- Hardware/ROM identity and real callback semantics require live FCEUX checks.
 memory.registerread(0x8000,0x8000,function(addr,size,value)
@@ -62,6 +65,7 @@ emu.registerexit(function()
     'complete='..(dropped==0 and callback_errors==0 and 'yes' or 'no'),
     'callback_errors='..callback_errors,
     'initial_mmc3_mode=unknown',
+    'mmc3_write_coverage=full_8000_9fff_even_odd',
     'read_provenance=registerread_callback_no_pc_proof',
     'read_value_provenance=address_only_fceux_zero_sentinel'
   },'\n')..'\n'))
