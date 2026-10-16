@@ -200,7 +200,7 @@ local function capture_frame()
     -- If the frame capture fails mid-write, old complete metadata cannot
     -- certify a partial replacement of the same frame_NNNNNN.* files.
     local prefix = OUTPUT_DIRECTORY..'/frame_'..string.format('%06d', frame)
-    write_binary(prefix..'.meta.txt','capture_in_progress=yes\\n')
+    write_binary(prefix..'.meta.txt','capture_in_progress=yes\n')
     local ppu_bytes = ppu.readbyterange(0, 0x4000)
     local ram_bytes = memory.readbyterange(0, 0x0800)
     assert(type(ppu_bytes) == 'string' and #ppu_bytes == 0x4000,
