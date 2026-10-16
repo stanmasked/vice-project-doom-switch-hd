@@ -15,6 +15,8 @@ local last_frame = -1
 local writes_this_frame, total_writes = 0, 0
 local dropped_writes = 0
 local buffered = {}
+local timed_buffered = {}
+local clock_available = type(debugger)=='table' and type(debugger.getcyclescount)=='function'
 local chr_reg = {}
 local invalid_screen_palette_values = 0
 local mmc3_select, ppuctrl, ppumask = nil, nil, nil
@@ -34,11 +36,28 @@ local log_path = OUTPUT_DIRECTORY..'/mmc3_video_writes.tsv'
 local log, open_error = io.open(log_path, 'wb')
 assert(log, 'Create a writable private capture directory: '..log_path..' ('..tostring(open_error)..')')
 assert(log:write('frame\taddress\tvalue\n'))
+-- Separate backwards-compatible subframe trace. Timestamps are CPU cycles,
+-- not PPU scanlines: cycle-counter reset can change their epoch.
+local timed_log = nil
+if clock_available then
+    local path = OUTPUT_DIRECTORY..'/mmc3_ppu_cycles.tsv'
+    timed_log = assert(io.open(path,'wb'))
+    assert(timed_log:write('frame\tcpu_cycle\taddress\tvalue\tkind\n'))
+end
 
-local function record_event(address, value)
+local function record_event(address, value, kind)
+    kind = kind or 'W'
     if writes_this_frame < MAX_EVENTS_PER_FRAME and total_writes < MAX_TOTAL_EVENTS then
+        local frame = emu.framecount()
         buffered[#buffered+1] = string.format('%d\t%04X\t%02X\n',
-                                              emu.framecount(), address, value)
+                                              frame, address, value)
+        if clock_available then
+            local cycles = debugger.getcyclescount()
+            assert(type(cycles)=='number' and cycles>=0 and cycles==math.floor(cycles),
+                   'Invalid debugger CPU cycle counter')
+            timed_buffered[#timed_buffered+1] = string.format('%.0f\t%.0f\t%04X\t%02X\t%s\n',
+                                                frame, cycles, address, value, kind)
+        end
         writes_this_frame = writes_this_frame + 1
         total_writes = total_writes + 1
     else
@@ -61,7 +80,7 @@ local function on_status_read(address, size, value)
     -- One synthetic address 2002/value 00 marker represents a real
     -- PPUSTATUS read. The PPU $2005/$2006 shared toggle resets on this read.
     -- This is not a PPUSTATUS write.
-    record_event(0x2002, 0)
+    record_event(0x2002, 0, 'R')
 end
 
 for _, addr in ipairs({0x2000,0x2001,0x2005,0x2006,0x2007,
@@ -77,13 +96,20 @@ local function flush()
         assert(log:write(table.concat(buffered)), 'Failed writing register log')
         assert(log:flush(), 'Failed flushing register log')
         buffered = {}
+        if timed_log then
+            assert(timed_log:write(table.concat(timed_buffered)), 'Failed cycle log write')
+            assert(timed_log:flush(), 'Failed cycle log flush')
+            timed_buffered = {}
+        end
     end
     writes_this_frame = 0
 end
 
 local function capture_metadata(frame)
     local result = {
-        'format=fceux_ppu_snapshot_v3',
+        'format=fceux_ppu_snapshot_v4',
+        'cycle_trace_available='..(clock_available and 'yes' or 'no'),
+        'cycle_trace_counter_epoch=debugger_since_reset',
         'screen_reference='..(CAPTURE_SCREEN and 'yes' or 'no'),
         'screen_size=256x240',
         'invalid_screen_palette_values='..tostring(invalid_screen_palette_values),
@@ -160,4 +186,4 @@ local function capture_frame()
 end
 
 emu.registerafter(capture_frame)
-emu.registerexit(function() flush(); log:close() end)
+emu.registerexit(function() flush(); log:close(); if timed_log then timed_log:close() end end)
