@@ -3,8 +3,18 @@
 -- Documented APIs: ppu.readbyterange, memory.readbyterange/registerwrite,
 -- emu.framecount/registerafter/registerexit, rom.gethash.
 local OUTPUT_DIRECTORY = rawget(_G, 'VPD_CAPTURE_DIRECTORY') or 'private'
-local FRAME_INTERVAL = 120
-local MAX_CAPTURES = 24
+-- Default remains backwards-compatible; use smaller intervals for
+-- overlapping first-stage samples, without changing the script on disk.
+local function bounded_integer(global_name, fallback, limit)
+    local value = rawget(_G, global_name)
+    if value == nil then return fallback end
+    assert(type(value)=='number' and value==math.floor(value)
+           and value>=1 and value<=limit,
+           global_name..' must be an integer from 1 to '..limit)
+    return value
+end
+local FRAME_INTERVAL = bounded_integer('VPD_CAPTURE_INTERVAL',120,1200)
+local MAX_CAPTURES = bounded_integer('VPD_CAPTURE_LIMIT',24,512)
 -- Default-on renderer reference. Disable by setting VPD_CAPTURE_SCREEN=false.
 local CAPTURE_SCREEN = rawget(_G, 'VPD_CAPTURE_SCREEN') ~= false
 local MAX_EVENTS_PER_FRAME = 12000
@@ -112,6 +122,8 @@ local function capture_metadata(frame)
         'cycle_trace_counter_epoch=debugger_since_reset',
         'screen_reference='..(CAPTURE_SCREEN and 'yes' or 'no'),
         'screen_size=256x240',
+        'capture_interval='..tostring(FRAME_INTERVAL),
+        'capture_limit='..tostring(MAX_CAPTURES),
         'invalid_screen_palette_values='..tostring(invalid_screen_palette_values),
         'frame='..tostring(frame),
         'rom_md5='..tostring(rom.gethash('md5')),
