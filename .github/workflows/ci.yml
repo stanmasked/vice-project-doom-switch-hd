@@ -24,7 +24,7 @@ jobs:
         run: ctest --test-dir build/native_core --output-on-failure
       - name: Run synthetic ROM tests
         run: python -m unittest discover -s tests -p 'test_*.py' -v
-      - name: Install Lua 5.4 for FCEUX capture mock
+      - name: Validate stage39 video/dispatcher correlation without original ROM\n        run: python -m unittest discover -s tests -p 'test_video_trace_alignment.py' -v\n      - name: Install Lua 5.4 for FCEUX capture mock
         run: sudo apt-get update -qq && sudo apt-get install -y lua5.4
       - name: Exercise FCEUX Lua capture with and without CPU clock
         run: |
