@@ -86,21 +86,22 @@ for _,addr in ipairs(tracked_ram) do
     record('RAM_WRITE',local_addr,value)
   end)
 end
-memory.registerwrite(0x8000,function(a,size,value)
-  assert(type(value)=='number' and value>=0 and value<=255,
-         'Mapper $8000 write value unavailable; trace cannot map banks')
-  select_value=value
-  record('MMC3_SELECT',0x8000,value)
-end)
-memory.registerwrite(0x8001,function(a,size,value)
-  assert(type(value)=='number' and value>=0 and value<=255,
-         'Mapper $8001 write value unavailable; trace cannot map banks')
-  if select_value~=nil then
-    local reg=select_value%8
-    if reg==6 then bank6=value end
-    if reg==7 then bank7=value end
+-- All $8000-$9FFF even/odd addresses mirror MMC3 select/data.
+memory.registerwrite(0x8000,0x2000,function(a,size,value)
+  assert(type(a)=='number' and a==math.floor(a) and a>=0x8000 and a<=0x9FFF
+         and size==1 and type(value)=='number' and value==math.floor(value)
+         and value>=0 and value<=255, 'Unsupported mirrored MMC3 callback')
+  if a%2==0 then
+    select_value=value
+    record('MMC3_SELECT',a,value)
+  else
+    if select_value~=nil then
+      local reg=select_value%8
+      if reg==6 then bank6=value end
+      if reg==7 then bank7=value end
+    end
+    record('MMC3_DATA',a,value)
   end
-  record('MMC3_DATA',0x8001,value)
 end)
 emu.registerexit(function()
   assert(file:flush())
@@ -121,6 +122,7 @@ emu.registerexit(function()
     'frames_with_events='..tostring(nframes),
     'cycle_trace_available='..(clock and 'yes' or 'no'),
     'initial_mmc3_mode=unknown',
+    'mmc3_write_coverage=full_8000_9fff_even_odd',
     'initial_prg_r6=unknown',
     'initial_prg_r7=unknown',
     'execution_provenance=registerexec_callbacks_not_source_disassembly',
