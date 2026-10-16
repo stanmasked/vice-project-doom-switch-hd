@@ -1,3 +1,10 @@
+rom={
+ readbyteunsigned=function(i)
+   local header={[0]=0x4e,[1]=0x45,[2]=0x53,[3]=0x1a,
+     [4]=8,[5]=8,[6]=0x40,[7]=0}
+   return header[i] or 0
+ end
+}
 -- ROM-free stage53 joint callback and optional CPU register test.
 local dir=os.tmpname();os.remove(dir);assert(os.execute('mkdir -p "'..dir..'"'))
 VPD_STAGE53_DIRECTORY=dir;VPD_STAGE53_MAX_EVENTS=4
@@ -35,6 +42,8 @@ local data=m:read('*a');m:close()
 assert(data:find('events_dropped=1',1,true))
 assert(data:find('read_causality=not_proven',1,true))
 assert(data:find('register_api=memory.getregister',1,true))
+assert(data:find('rom_header_profile=ines_mapper4_prg128k',1,true))
+assert(data:find('rom_md5_pin=not_supplied',1,true))
 assert(data:find('callback_errors=0',1,true))
 assert(data:find('callback_contract=address_size_value_v1',1,true))
 os.remove(dir..'/stage53_joint_context.tsv')
