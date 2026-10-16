@@ -11,3 +11,9 @@ add_executable(vpd_scene_renderer_test ../tests/test_scene_renderer.cpp)
 target_link_libraries(vpd_scene_renderer_test PRIVATE vpd_scene_renderer)
 enable_testing()
 add_test(NAME scene_renderer_unit COMMAND vpd_scene_renderer_test)
+
+# Integrate the same portable deterministic simulation as the libnx NRO.
+add_subdirectory(../game_core "${CMAKE_CURRENT_BINARY_DIR}/native_game_core")
+add_executable(vpd_graphics_integration_test ../tests/test_graphics_integration.cpp)
+target_link_libraries(vpd_graphics_integration_test PRIVATE vpd_scene_renderer vpd_simulation)
+add_test(NAME game_to_graphics_integration COMMAND vpd_graphics_integration_test)
