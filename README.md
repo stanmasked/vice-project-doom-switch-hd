@@ -159,3 +159,24 @@ native diagnostic NRO. See [animation documentation](docs/ANIMATION_CONTROLLER.m
 The four atlas frames and JSON durations are **author-invented tests**;
 original Vice: Project Doom animation timing, final HD character art,
 runtime asset streaming and physical-console performance remain open.
+
+## Stage 25 — optional external sprite atlas on SD
+
+An optional author-created 4-frame VPAT resource may now be read from
+`sdmc:/switch/vice_project_doom/hero.vpat` at launch and reloaded
+in-game with **X**. Pressing **Y** restores the embedded developer
+sprite. The on-screen HUD indicates whether external art was accepted
+or the last manual reload failed. A bad file does not replace the
+last valid resource.
+
+The portable AssetSource loader enforces VPAT v1 length, CRC32,
+frame-count compatibility, bounded memory and an atomic replacement
+operation. C++ host tests exercise successful loading and failure
+rollback, while devkitPro compiles the same code into the Switch NRO.
+A separate downloadable blue demo VPAT is a **synthetic test**, not
+restored Vice art.
+
+[Installation, controls and safety rules](docs/SD_ASSET_OVERRIDE.md).
+
+This has not been tested on actual Switch hardware, and the game
+remains a synthetic scene with placeholder animations and physics.

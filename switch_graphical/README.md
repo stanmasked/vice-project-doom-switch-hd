@@ -72,3 +72,20 @@ and `facing_left` fields; no JSON parser runs on the Switch.
 Tests cover transitions, looping, invalid metadata and a deterministic
 200-tick replay through sprite rasterization. See
 [ANIMATION_CONTROLLER.md](../docs/ANIMATION_CONTROLLER.md).
+
+## Stage 25 — external SD art override
+
+Optionally put a 4-frame VPAT file at:
+`sdmc:/switch/vice_project_doom/hero.vpat`
+
+On launch the program tries this path and falls back to the
+compiled-in red developer sprite if missing or invalid. Use **X** to
+reload after replacing the file; **Y** to reset to the embedded art.
+The HUD displays ART: SD OVERRIDE, ART: EMBEDDED or RELOAD FAILED.
+
+The runtime loader protects against truncated, corrupted, oversized
+and frame-count-incompatible files. An unsuccessful reload preserves
+the last valid atlas. [Full documentation](../docs/SD_ASSET_OVERRIDE.md).
+
+This feature has only been compiled and host-tested; no runtime test
+on a physical Nintendo Switch has been performed.

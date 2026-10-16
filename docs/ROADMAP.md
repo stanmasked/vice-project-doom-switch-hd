@@ -56,6 +56,8 @@ The original fixed bank's documented control flow is in [VIDEO_PIPELINE.md](VIDE
 - [x] Build synthetic 96x32 RGBA atlas at compile-time and import newly authored PNG sprite sheets with VPAT PNG converter.
 - [x] Verify malformed sprite data and pose changes with C++ tests; PNG importer has 5 ROM-free tests.
 - [x] Separate animation clips and state transitions from the raster scene (see [ANIMATION_CONTROLLER.md](ANIMATION_CONTROLLER.md)).
+- [x] Add transactional external VPAT loading from SDMC with embedded fallback (Stage 25).
+- [x] Test corruption/oversized/wrong-frame rejection, atomic rollback and NRO cross-build.
 - [ ] Replace procedural test scene with original behavior and newly authored HD artwork.
 
 ## M3: first genuinely HD scene
@@ -65,6 +67,7 @@ The original fixed bank's documented control flow is in [VIDEO_PIPELINE.md](VIDE
 - [x] Implement a data-driven, validated author-authored animation timing manifest; compiled C++ controller, four states and horizontal mirroring.
 - [x] Verify deterministic full-stack simulation → animation → sprite atlas → raster output in CI (Actions #38926608121).
 - [ ] Add detailed original HD character art and measure authentic animation timings.
+- [x] Allow opt-in author-created external 4-frame VPAT pixel replacement via SD, X reload and Y fallback.
 - [ ] Optimize HD rendering and validate speed on Switch hardware.
 - [ ] Evaluate quality against reference scene and original timing.
 
@@ -73,7 +76,8 @@ The original fixed bank's documented control flow is in [VIDEO_PIPELINE.md](VIDE
 - [x] Validate NRO magic/size and upload artifact to GitHub Actions.
 - [x] Build native ROM-free ASCII scene diagnostic NRO (Actions #38829200654).
 - [x] Build ROM-free native 1280x720 graphical NRO (Actions #38921850038).
-- [ ] Test the graphical NRO on physical Switch hardware.
+- [x] Build the diagnostic NRO with optional runtime SD atlas loading (Stage 25).
+- [ ] Test the graphical NRO and actual SD asset replacement on physical Switch hardware.
 - [ ] Integrate the actual native scene, controller, renderer and audio.
 - [ ] Profile hardware performance in handheld and docked mode.
 
