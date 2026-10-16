@@ -9,7 +9,7 @@ assert(type(emu)=='table' and type(emu.framecount)=='function' and type(emu.regi
 -- A crash or callback exception must never reuse an old complete=yes.
 local meta_path=DIR..'/stage52_cpu_context.meta.txt'
 local pending=assert(io.open(meta_path,'wb'))
-assert(pending:write('capture_in_progress=yes\\n'))
+assert(pending:write('capture_in_progress=yes\n'))
 assert(pending:close())
 local file=assert(io.open(DIR..'/stage52_cpu_context.tsv','wb'))
 assert(file:write('frame\tseq\tpc\ta\tx\ty\ts\tp\tregister_status\n'))
