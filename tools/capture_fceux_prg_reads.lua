@@ -10,7 +10,7 @@ assert(type(emu)=='table' and type(emu.framecount)=='function' and
 local file=assert(io.open(DIR..'/stage45_prg_reads.tsv','wb'))
 assert(file:write('frame\tseq\tkind\tcpu_address\tvalue\tmapped_bank\n'))
 local selected,r6,r7=nil,nil,nil
-local count,dropped=0,0
+local count,dropped,callback_errors=0,0,0
 local function bank(addr)
   if addr>=0xE000 then return 15 end
   if selected==nil then return nil end
@@ -46,7 +46,10 @@ memory.registerwrite(0x8001,function(a,size,value) log('DATA',0x8001,value) end)
 memory.registerread(0x8000,0x8000,function(addr,size,value)
   assert(type(addr)=='number' and addr>=0x8000 and addr<=0xFFFF,
     'Invalid PRG CPU read address')
-  assert(size==1 and value==0,'Unsupported FCEUX READ callback sentinel')
+  if size~=1 or value~=0 then
+    callback_errors=callback_errors+1
+    error('Unsupported FCEUX READ callback zero sentinel')
+  end
   log('READ',addr,nil)
 end)
 emu.registerexit(function()
@@ -56,7 +59,8 @@ emu.registerexit(function()
     'format=vice_stage45_prg_reads_v1',
     'events_recorded='..count,
     'events_dropped='..dropped,
-    'complete='..(dropped==0 and 'yes' or 'no'),
+    'complete='..(dropped==0 and callback_errors==0 and 'yes' or 'no'),
+    'callback_errors='..callback_errors,
     'initial_mmc3_mode=unknown',
     'read_provenance=registerread_callback_no_pc_proof',
     'read_value_provenance=address_only_fceux_zero_sentinel'
