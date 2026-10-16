@@ -229,3 +229,18 @@ Four tile variants and validation/rollback rules are documented in
 [TERRAIN_PIPELINE.md](docs/TERRAIN_PIPELINE.md). The original first stage
 has **not** been extracted or recreated; no physical Switch runtime
 test has been performed.
+
+## Stage 29 — two SD-reloadable parallax background layers
+
+The diagnostic now composes **two independent RGBA background frames**
+behind the terrain and sprite. The distant skyline moves with 1/5 camera
+offset, the near skyline with 1/2. A transparent sky reveals the prior
+gradient, stars and moon. A validated `backdrop.vpat` may override the
+compiled-in, original synthetic backgrounds from an SD card, and **L/R**
+reload/reset this resource without affecting the hero or ground.
+
+Source: [backdrop generation](tools/build_demo_backdrop.py) and
+[BackdropSource](graphics_core/backdrop_source.cpp).
+[Format, valid frame sizes, controls and limitations](docs/PARALLAX_BACKGROUNDS.md).
+There is still **no verified live NES first-stage capture or physical
+Nintendo Switch performance measurement**.

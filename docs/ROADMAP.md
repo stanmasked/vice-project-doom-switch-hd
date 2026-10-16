@@ -61,6 +61,9 @@ The original fixed bank's documented control flow is in [VIDEO_PIPELINE.md](VIDE
 - [x] Render invented collision platforms using a separately authored four-tile terrain VPAT atlas (stage 28).
 - [x] Support independent ZL/ZR SD reload/fallback for terrain alongside existing X/Y character bundle controls.
 - [x] Verify geometry validation, corrupted resource rejection and rollback in host tests, native NRO cross-build (#38932788496).
+- [x] Implement two separate VPAT alpha skyline layers, parallax speeds 1/5 and 1/2 camera movement, and tile-safe horizontal repeats (Stage 29).
+- [x] Support independent SD background replacement at `backdrop.vpat`, L reload / R reset, and preserve working art on invalid reload.
+- [x] Test transparent sky, rendered pixel changes, negative scroll, CRC/geometry rejection and NRO build (Actions #38934661070).
 - [ ] Replace procedural test scene with original behavior and newly authored HD artwork.
 
 ## M3: first genuinely HD scene
@@ -75,6 +78,7 @@ The original fixed bank's documented control flow is in [VIDEO_PIPELINE.md](VIDE
 - [x] Add VANM v2 optional pixel-content CRC binding, same-count wrong-atlas rejection and legacy v1 compatibility (stage 27).
 - [x] C++/Python regression: cross-file checksum and rollback when unrelated art uses the same frame layout.
 - [x] Add editable independently authored terrain textures and safe hot reload; see [TERRAIN_PIPELINE.md](TERRAIN_PIPELINE.md).
+- [x] Independently reload two background layers without changing collision map or hero/terrain; see [PARALLAX_BACKGROUNDS.md](PARALLAX_BACKGROUNDS.md).
 - [ ] Add detailed original HD character art and measure authentic animation timings.
 - [x] Allow opt-in author-created external 4-frame VPAT pixel replacement via SD, X reload and Y fallback.
 - [ ] Optimize HD rendering and validate speed on Switch hardware.

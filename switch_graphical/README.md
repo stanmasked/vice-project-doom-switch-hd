@@ -134,3 +134,16 @@ Tiles must consist of four square cells with sides 4/8/16/32
 pixels. Their displayed size is 32×32; changing art does not change
 solid world tiles. This scene remains an invented demo, not the authentic
 Vice: Project Doom stage.
+
+## Stage 29 — independently reloadable background
+
+The diagnostic now uses a separate two-frame alpha VPAT background:
+far skyline (1/5 camera-speed) and near skyline (1/2 camera-speed).
+Put a matching resource at `sdmc:/switch/vice_project_doom/backdrop.vpat`.
+Press **L** to load the new background and **R** to restore the built-in
+test art. Controls X/Y (hero) and ZL/ZR (terrain) are unchanged.
+An invalid background keeps the last valid one.
+
+Details: [PARALLAX_BACKGROUNDS.md](../docs/PARALLAX_BACKGROUNDS.md).
+The original NES first-level background has not been extracted, and
+background quality/performance has not been tested on physical Switch.
