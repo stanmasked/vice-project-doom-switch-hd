@@ -101,7 +101,7 @@ def main():
     print(json.dumps({'report':str(args.out),
         'frames':report['event_frame_count'],
         'chr_writes':report['total_chr_writes'],
-        'fully_observed_frames':report['mapping_available_for_frames'],
+        'frames_with_all_six_chr_registers':report['mapping_available_for_frames'],
         'warning':'Keep register logs and reports private'},indent=2))
 
 if __name__=='__main__':main()
