@@ -15,6 +15,7 @@ on:
       - 'assets/demo_animation.json'
       - 'tests/test_animation.cpp'
       - 'tests/test_animation_manifest.py'
+      - 'tests/test_graphics_animation_integration.cpp'
       - 'tests/check_nro.py'
       - '.github/workflows/native-graphics.yml'
   pull_request:
