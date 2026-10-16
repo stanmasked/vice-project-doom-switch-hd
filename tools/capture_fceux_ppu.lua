@@ -35,14 +35,7 @@ local log, open_error = io.open(log_path, 'wb')
 assert(log, 'Create a writable private capture directory: '..log_path..' ('..tostring(open_error)..')')
 assert(log:write('frame\taddress\tvalue\n'))
 
-local function on_write(address, size, value)
-    if address == 0x2000 then ppuctrl = value end
-    if address == 0x2001 then ppumask = value end
-    if address == 0x8000 then mmc3_select = value end
-    if address == 0x8001 and mmc3_select ~= nil then
-        local register = mmc3_select % 8
-        if register <= 5 then chr_reg[register] = value end
-    end
+local function record_event(address, value)
     if writes_this_frame < MAX_EVENTS_PER_FRAME and total_writes < MAX_TOTAL_EVENTS then
         buffered[#buffered+1] = string.format('%d\t%04X\t%02X\n',
                                               emu.framecount(), address, value)
@@ -53,10 +46,31 @@ local function on_write(address, size, value)
     end
 end
 
+local function on_write(address, size, value)
+    if address == 0x2000 then ppuctrl = value end
+    if address == 0x2001 then ppumask = value end
+    if address == 0x8000 then mmc3_select = value end
+    if address == 0x8001 and mmc3_select ~= nil then
+        local register = mmc3_select % 8
+        if register <= 5 then chr_reg[register] = value end
+    end
+    record_event(address, value)
+end
+
+local function on_status_read(address, size, value)
+    -- One synthetic address 2002/value 00 marker represents a real
+    -- PPUSTATUS read. The PPU $2005/$2006 shared toggle resets on this read.
+    -- This is not a PPUSTATUS write.
+    record_event(0x2002, 0)
+end
+
 for _, addr in ipairs({0x2000,0x2001,0x2005,0x2006,0x2007,
                        0x8000,0x8001,0xA000,0xC000,0xC001,0xE000,0xE001}) do
     memory.registerwrite(addr, on_write)
 end
+-- Reads of $2002 reset the $2005/$2006 shared PPU write latch.
+-- Capture these as address=2002/value=00 markers in the event TSV.
+memory.registerread(0x2002, on_status_read)
 
 local function flush()
     if #buffered > 0 then
