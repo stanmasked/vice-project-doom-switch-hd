@@ -70,3 +70,25 @@ Recent CI failures were before runner allocation and executed no tests.
 
 No original game resources, verified map geometry or Switch NRO
 were created in this stage.
+
+## PPU frame capture uses the same fail-closed rule
+
+The separate `tools/capture_fceux_ppu.lua` writes snapshots with
+reused names such as `frame_000120.ppu.bin`, `.ram.bin` and
+`.meta.txt`. This collector now writes
+`frame_NNNNNN.meta.txt = capture_in_progress=yes` **before** reading
+PPU/RAM and before changing the per-frame binary files. If PPU access,
+RAM access or screen rendering fails during the frame, its metadata
+remains pending rather than reusing a complete report from an earlier
+run with the same frame number. On a successful frame, the full
+`fceux_ppu_snapshot_v4` metadata replaces the marker last.
+
+A new ROM-free `tests/test_fceux_ppu_session_invalidation.lua` checks
+a deliberately failed frame (wrong synthetic PPU byte count), followed
+by a successful capture with synthetic PPU and RAM data. It is also
+wired into the native CI job. The test never includes a real game
+snapshot. An interrupted run may leave orphaned binary files; these
+must **not** be interpreted without matching finalized metadata.
+
+Neither new stage76 integration Lua test has been confirmed by full
+GitHub CI because runner allocation remains blocked.
