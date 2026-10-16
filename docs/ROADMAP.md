@@ -7,12 +7,18 @@
 - [x] Private GitHub repository with provenance exclusions.
 - [x] Hosted GitHub Actions native core CI successful (#38828092666).
 
-## M1: restore documented original behavior — next
-- [ ] Capture MMC3 PRG/CHR bank changes across title/stage/gameplay.
+## M1: restore documented original behavior — underway
+- [x] Identify all six fixed-bank MMC3 CHR register sources (RAM $3D-$42).
+- [x] Verify boot-time R0/R1 values and NMI PPU queue / sprite DMA instruction anchors.
+- [x] Add ROM-free static video pipeline tests and 1KiB CHR inversion/even-alignment mapper.
+- [x] Confirm GitHub CI on video pipeline research (Actions #38862362193).
+- [ ] Capture **live** MMC3 CHR register values and bank mode at title/stage/gameplay.
 - [ ] Recover real PPU palettes, nametables, metatiles and OAM frames.
 - [ ] Produce timed local reference traces for movement/collisions/AI.
 - [ ] Recover level formats, collision metadata and state transitions.
 - [ ] Record confidence levels and local-ROM reproducibility.
+
+The original fixed bank's documented control flow is in [VIDEO_PIPELINE.md](VIDEO_PIPELINE.md). This is static evidence only: the first authentic stage, palettes and runtime sprite mapping are not yet restored.
 
 ## M2: first independent native scene — scaffold verified
 - [x] Model fixed-step deterministic simulation without an NES interpreter.
