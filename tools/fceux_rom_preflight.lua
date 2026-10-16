@@ -1,4 +1,4 @@
--- Stage68: iNES header-only identity gate for the expected mapper4, 128KiB PRG.
+-- Stage68: iNES header-only identity gate for the expected mapper4, 128KiB PRG and 128KiB CHR.
 -- Reads at most the 16 header bytes through FCEUX ROM APIs, never dumps ROM data.
 local M={}
 local function byte(rom_api,offset)
@@ -27,6 +27,7 @@ function M.inspect(expected_md5, rom_api)
   local mapper=math.floor(h[6]/16)+(h[7]-h[7]%16)
   assert(mapper==4,'Expected MMC3 mapper 4 ROM')
   assert(h[4]==8,'Expected 128 KiB PRG (eight 16 KiB banks)')
+  assert(h[5]==16,'Expected 128 KiB CHR (sixteen 8 KiB banks)')
   -- A mapper+PRG match alone cannot identify the game. Optional locally pinned
   -- MD5 detects switching ROM images without copying the hash into reports.
   local pinned=false
@@ -39,9 +40,9 @@ function M.inspect(expected_md5, rom_api)
            'Loaded FCEUX ROM does not match expected private MD5')
     pinned=true
   end
-  return {profile='ines_mapper4_prg128k',
+  return {profile='ines_mapper4_prg128k_chr128k',
           trainer=(math.floor(h[6]/4)%2==1),
-          prg_bytes=131072,
+          prg_bytes=131072, chr_bytes=131072,
           md5_pin=pinned and 'matched' or 'not_supplied',
           identity_authenticated=false}
 end
