@@ -23,7 +23,7 @@ class JointTraceValidationTests(unittest.TestCase):
         self.write_rows()
         self.meta.write_text('\n'.join([
             'format=vice_stage49_joint_v1','events_recorded=5',
-            'events_dropped=0','complete=yes',
+            'events_dropped=0','callback_errors=0','complete=yes',
             'exec_context=selected_pc_hooks_only',
             'read_causality=not_proven',
             'read_value_provenance=address_only_fceux_zero_sentinel'])+'\n',encoding='utf8')
@@ -50,6 +50,13 @@ class JointTraceValidationTests(unittest.TestCase):
     def test_dropped_capture_rejected(self):
         self.meta.write_text(self.meta.read_text().replace('events_dropped=0','events_dropped=1').replace('complete=yes','complete=no'))
         with self.assertRaisesRegex(ValueError,'Incomplete'):validate(self.trace,self.meta)
+    def test_callback_contract_error_refused(self):
+        self.meta.write_text(self.meta.read_text().replace(
+            'callback_errors=0','callback_errors=1').replace(
+            'complete=yes','complete=no'))
+        with self.assertRaisesRegex(ValueError,'Incomplete'):
+            validate(self.trace,self.meta)
+
     def test_forged_provenance_rejected(self):
         self.meta.write_text(self.meta.read_text().replace('not_proven','proven'))
         with self.assertRaisesRegex(ValueError,'provenance'):validate(self.trace,self.meta)
