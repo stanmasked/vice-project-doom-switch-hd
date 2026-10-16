@@ -9,6 +9,12 @@ local output=assert(io.open(DIR..'/stage49_joint.tsv','wb'))
 assert(output:write('frame\tseq\tkind\taddress\tvalue\tphysical_bank\n'))
 local selected,r6,r7=nil,nil,nil
 local count,dropped,callback_errors=0,0,0
+local function checked(ok,reason)
+  if not ok then
+    callback_errors=callback_errors+1
+    error('Unsupported FCEUX callback contract: '..reason,2)
+  end
+end
 local function bank(pc)
   if pc>=0xE000 then return 15 end
   if selected==nil then return nil end
@@ -43,15 +49,15 @@ for _,pc in ipairs({0xE479,0xE4E6,0xE4F3,0x835B,0xC906}) do
   memory.registerexec(p,function() log('EXEC',p,nil) end)
 end
 memory.registerread(0x8000,0x8000,function(a,size,v)
-  if size~=1 or v~=0 then
-    callback_errors=callback_errors+1
-    error('Unsupported FCEUX READ zero-sentinel callback')
-  end
+  checked(type(a)=='number' and a==math.floor(a) and a>=0x8000
+    and a<=0xFFFF and size==1 and v==0,
+    'READ callback address/size/zero sentinel')
   log('READ',a,nil)
 end)
 memory.registerwrite(0x8000,0x2000,function(a,size,v)
-  assert(type(a)=='number' and a==math.floor(a) and a>=0x8000 and a<=0x9FFF
-    and size==1, 'Invalid mirrored MMC3 callback')
+  checked(type(a)=='number' and a==math.floor(a) and a>=0x8000 and a<=0x9FFF
+    and size==1 and type(v)=='number' and v==math.floor(v)
+    and v>=0 and v<=255,'mirrored MMC3 write address/size/byte')
   log(a%2==0 and 'SELECT' or 'DATA',a,v)
 end)
 emu.registerexit(function()
