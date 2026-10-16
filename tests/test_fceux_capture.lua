@@ -80,6 +80,10 @@ assert(text:find('screen_reference=yes',1,true),text)
 assert(text:find('cycle_trace_available='..(without_clock and 'no' or 'yes'),1,true),text)
 assert(text:find('invalid_screen_palette_values=',1,true),text)
 assert(text:find('chr_ram_0=B7',1,true),text)
+assert(text:find('scroll_emitter_ram_0b=21',1,true),text)
+assert(text:find('scroll_emitter_ram_0c=24',1,true),text)
+assert(text:find('scroll_emitter_ram_0d=27',1,true),text)
+assert(text:find('scroll_emitter_provenance=static_emitter_e8de_not_confirmed_runtime',1,true))
 if without_clock then
   assert(io.open(p..'/mmc3_ppu_cycles.tsv','rb')==nil,
          'Cycle log created without FCEUX debugger clock')

@@ -133,6 +133,10 @@ local function capture_metadata(frame)
         'logged_register_writes='..tostring(total_writes),
         'dropped_register_writes='..tostring(dropped_writes),
         'register_log_complete='..(dropped_writes == 0 and 'yes' or 'no'),
+        'scroll_emitter_ram_0b='..hx(memory.readbyte(0x0B)),
+        'scroll_emitter_ram_0c='..hx(memory.readbyte(0x0C)),
+        'scroll_emitter_ram_0d='..hx(memory.readbyte(0x0D)),
+        'scroll_emitter_provenance=static_emitter_e8de_not_confirmed_runtime',
         'queue_index_16='..hx(memory.readbyte(0x16)),
     }
     for r=0,5 do
