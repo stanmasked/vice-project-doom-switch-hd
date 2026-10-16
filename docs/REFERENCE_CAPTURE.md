@@ -96,3 +96,29 @@ to guess.
 **Important:** This is one *static* OAM overlay, not the complete live
 original frame; a 6502/MMC3 game can alter banks and scrolling within
 the same frame. True HD art must be newly authored.
+
+
+## Stage 19: actual rendered-frame reference (capture format v3)
+
+The FCEUX Lua capture can now record the **image the emulator actually rendered**, independently from its static PPU memory. Per sampled frame it writes two additional *private* binary files:
+
+- frame_NNNNNN.screen.rgb.bin — 256x240x3 RGB bytes, top to bottom.
+- frame_NNNNNN.screen.pal.bin — 256x240 NES palette indices (0-63); 254 means the color index was unavailable.
+
+Both come from the documented emu.getscreenpixel(x,y,true), queried in the same emu.registerafter callback as the PPU/RAM capture. Metadata records format=fceux_ppu_snapshot_v3, screen_reference=yes, screen_size=256x240, and invalid_screen_palette_values. Sampling 61,440 screen pixels per saved frame can cost time. To opt out, set the Lua global VPD_CAPTURE_SCREEN=false before executing the script (default: enabled).
+
+Compare to a static background from an owned-ROM capture:
+
+    python3 tools/compare_rendered_frame.py private/frame_000240 --mode background --nametable 0 --out private/reference_comparison
+
+Or include static OAM sprite compositing:
+
+    python3 tools/compare_rendered_frame.py private/frame_000240 --mode sprites --nametable 0 --out private/reference_comparison
+
+If PPUCTRL is unknown, explicit pattern-table selection is required for backgrounds; the sprite comparison needs observed PPUCTRL. The analyzer compares NES palette **indices**, rather than approximate RGB colors, to avoid mistaking an emulator's color-profile choice for a tile-layout error. It emits a mismatch fraction, the worst 12 scanlines, a color-coded mismatch heatmap and the observed FCEUX RGB frame.
+
+Differences may originate in scroll position, scanline IRQ CHR changes, OAM evaluation, grayscale/color emphasis, or PPU timing—not only extraction errors. A close match does NOT prove original game logic or video behavior has been recovered.
+
+Actual screen frames, PNGs and reports produced from the original ROM are private and never belong in GitHub or CI artifacts. The Lua mock verifies the file contract but does not represent an actual FCEUX gameplay capture.
+
+Reference: https://fceux.com/web/help/LuaFunctionsList.html
