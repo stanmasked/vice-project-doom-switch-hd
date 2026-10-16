@@ -367,3 +367,20 @@ during authentic first-stage gameplay. ROM-free regression tests
 passed locally; [documentation](docs/INDEX_STATE_DISPATCH.md)
 lists every verified destination, mapping caveats and remaining
 runtime unknowns. The existing native Switch NRO is unchanged.
+
+## Stage 38 — instrumented FCEUX execution evidence
+
+New [execution logger](tools/capture_fceux_dispatch.lua) records
+CPU execution callbacks at confirmed fixed-bank dispatcher code,
+candidate bank-switched pointer/decoder addresses, selected RAM
+writes and MMC3 $8000/$8001 register history. Unlike static
+analysis, it can capture executed PCs in a future actual FCEUX
+session, while refusing to guess **initial PRG bank mapping**.
+
+The matching [validator](tools/analyze_dispatch_execution.py)
+replays mapper state, rejects false physical bank labels and
+incomplete event sequences. Eight invented-event Python tests and
+three production-Lua mock configurations pass locally.
+See [DISPATCH_EXECUTION_TRACE.md](docs/DISPATCH_EXECUTION_TRACE.md).
+**No actual first-stage emulator trace has yet been captured.**
+The native Switch NRO is unchanged.

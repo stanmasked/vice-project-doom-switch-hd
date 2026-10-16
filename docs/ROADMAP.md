@@ -56,6 +56,9 @@
 - [x] Sample RAM $90/$91/$93 beside $92 in FCEUX postframe metadata with explicit static-only provenance.
 - [x] Stage 37: anchor the fixed-bank state dispatcher $E479, table entry $E4C0 -> $E4E6, gate $E4E8 -> $E4F3 and RAM $07 bit-7/2/3 branch priorities ([INDEX_STATE_DISPATCH.md](INDEX_STATE_DISPATCH.md)).
 - [x] Verify nine original 6502 instruction signatures, seven relative/table destinations and seven synthetic host tests, including conflicting RAM $07 bits.
+- [x] Stage 38: add focused FCEUX CPU execution-hook trace for $E479/$E4E6/$E4F3 and banked $835B/$C906, recording RAM writes and MMC3 $8000/$8001 history ([DISPATCH_EXECUTION_TRACE.md](DISPATCH_EXECUTION_TRACE.md)).
+- [x] Reconstruct physical PRG mapping strictly from observed MMC3 register writes, leaving initial mode and R6/R7 unknown; reject inconsistent, truncated or incomplete traces.
+- [x] Add eight ROM-free Python validation tests and three synthetic FCEUX Lua mock configurations; host-tested with Lua 5.4 and Python.
 - [ ] Identify runtime states selected through RAM $90/$91 and verify the physical meaning of RAM $07 bits in live FCEUX.
 - [ ] Dynamically trace the pointer ($AA),Y, bank switching and writer execution in the actual first level.
 - [ ] Independently identify actual collision metatiles and event/entity positions; observed PPU tile IDs alone are not collisions.

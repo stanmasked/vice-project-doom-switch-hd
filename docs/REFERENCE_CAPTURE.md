@@ -188,3 +188,19 @@ $90/$91/$07 with actual execution of $E479, $E4E6, $E4F3 and
 $E50F/$E519, while also logging mapper bank mode and pointer
 $AA/$AB. Merely observing the RAM bytes in a postframe snapshot
 does not prove these routines executed or what their bits represent.
+
+## Stage 38: record *actual* dispatcher instructions, not only RAM snapshots
+
+The new [focused Lua execution tracer](../tools/capture_fceux_dispatch.lua)
+registers callbacks for fixed-bank PCs $E479/$E4E6/$E4F3 and
+candidate banked PCs $835B/$C906, while recording $90/$91/$92,
+$07, pointer writes and MMC3 PRG bank-selection history.
+Its initial mapper state is unknown until writes are observed.
+
+Analyze the private TSV using
+[analyze_dispatch_execution.py](../tools/analyze_dispatch_execution.py).
+See [DISPATCH_EXECUTION_TRACE.md](DISPATCH_EXECUTION_TRACE.md) for
+commands, completeness gates, static-versus-runtime caveats and
+the recommendation to run the focused script separately from the
+general video-capture script until combined hooks are tested.
+A trace is **not** yet available from real gameplay.
