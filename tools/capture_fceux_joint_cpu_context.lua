@@ -11,7 +11,7 @@ local preflight=dofile('tools/fceux_rom_preflight.lua').inspect(
 -- A crash or callback exception must never reuse an old complete=yes.
 local meta_path=DIR..'/stage53_joint_context.meta.txt'
 local pending=assert(io.open(meta_path,'wb'))
-assert(pending:write('capture_in_progress=yes\\n'))
+assert(pending:write('capture_in_progress=yes\n'))
 assert(pending:close())
 local file=assert(io.open(DIR..'/stage53_joint_context.tsv','wb'))
 assert(file:write('frame\tseq\tkind\taddress\tvalue\tbank\ta\tx\ty\ts\tp\n'))
