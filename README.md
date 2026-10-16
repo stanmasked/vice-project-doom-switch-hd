@@ -281,3 +281,19 @@ Invalid layouts do not discard the previously accepted positions.
 See docs/LEVEL_PLACEMENTS.md for file structure, schema, examples and
 limits. All default object positions and animation periods remain
 invented diagnostics, not the actual Vice: Project Doom first stage.
+
+## Stage 32 — measuring the original first stage
+
+The repo now includes a conservative
+[PPU capture stitching tool](tools/stitch_stage_captures.py), a
+[documented evidence manifest](docs/STAGE_MAP_EVIDENCE.md) and
+five invented-data tests. It can merge multiple measured first-stage
+8x8 nametable observations into a **private** world-coordinate report,
+preserving pixel-memory disagreements rather than inventing a collision
+map. The Lua FCEUX acquisition interval and capture limit are now
+configurable to obtain overlapping observations.
+
+**Important:** The original NES first stage and its collision geometry
+have not yet been extracted; the new tool requires actual FCEUX captures
+with independently measured camera/scroll positions. It does not add
+proprietary data or claim the native Switch test stage is authentic.

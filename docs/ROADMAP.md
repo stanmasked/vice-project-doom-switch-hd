@@ -37,6 +37,11 @@
 - [ ] Recover real PPU palettes, nametables, metatiles and OAM frames.
 - [ ] Produce timed local reference traces for movement/collisions/AI.
 - [ ] Recover level formats, collision metadata and state transitions.
+- [x] Stage 32: create strict FCEUX nametable-tile mosaic reconstruction with per-frame camera/scroll provenance, overlap counts and explicit conflicts ([STAGE_MAP_EVIDENCE.md](STAGE_MAP_EVIDENCE.md)).
+- [x] Reject missing ROM identity, incomplete capture log, misaligned tile phase and invalid PPU frames; five invented-snapshot tests.
+- [x] Enable opt-in dense first-stage FCEUX capture (e.g. 8 frames / 96 samples), synthetic Lua mock in CI.
+- [ ] Record **real** first-stage PPU frames with verified camera/scroll, and populate the evidence-gated tile mosaic.
+- [ ] Independently identify actual collision metatiles and event/entity positions; observed PPU tile IDs alone are not collisions.
 - [ ] Record confidence levels and local-ROM reproducibility.
 
 The original fixed bank's documented control flow is in [VIDEO_PIPELINE.md](VIDEO_PIPELINE.md) and [PPU_QUEUE.md](PPU_QUEUE.md), and [PPU_PACKET_FORMATS.md](PPU_PACKET_FORMATS.md). See [REFERENCE_CAPTURE.md](REFERENCE_CAPTURE.md) for the new local capture workflow. First-stage palettes, actual runtime sprite mapping, and complete geometry are **not yet restored**.

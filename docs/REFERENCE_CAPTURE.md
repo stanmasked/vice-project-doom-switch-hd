@@ -122,3 +122,22 @@ Differences may originate in scroll position, scanline IRQ CHR changes, OAM eval
 Actual screen frames, PNGs and reports produced from the original ROM are private and never belong in GitHub or CI artifacts. The Lua mock verifies the file contract but does not represent an actual FCEUX gameplay capture.
 
 Reference: https://fceux.com/web/help/LuaFunctionsList.html
+
+## Stage 32: collect enough overlapping first-stage observations
+
+A new [tile-mosaic stitcher](STAGE_MAP_EVIDENCE.md) can correlate multiple
+private FCEUX PPU snapshots **only with externally verified** camera
+and scroll positions. It preserves disagreements instead of converting
+tile observations into guessed collision geometry.
+
+Set `VPD_CAPTURE_INTERVAL` and `VPD_CAPTURE_LIMIT` globals before
+running the Lua script to acquire more overlapping frames. Defaults
+remain 120 and 24; use e.g. 8 and 96 for dense user-controlled
+sampling while first entering the playable stage. Set
+`VPD_CAPTURE_SCREEN=false` to skip expensive screenshot collection
+if only PPU memory and register logs are required.
+
+See [STAGE_MAP_EVIDENCE.md](STAGE_MAP_EVIDENCE.md) for the strict
+manifest, camera measurement requirements, sample commands and
+limitations. No real first-stage camera values or collision map have
+been recovered by these tests.

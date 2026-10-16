@@ -111,3 +111,27 @@ python3 -m unittest discover -s tests -p test_stitch_stage_captures.py -v
 Until those measurements exist, the project has **no trustworthy original
 first-stage map**. All currently rendered native stage layouts are still
 independently authored prototypes.
+
+## Dense capture mode for scrolling stages
+
+The FCEUX Lua script now allows **opt-in** sample cadence and count.
+Set these globals in FCEUX **before** executing the script:
+
+~~~lua
+VPD_CAPTURE_DIRECTORY = "private/first_stage"
+VPD_CAPTURE_INTERVAL = 8
+VPD_CAPTURE_LIMIT = 96
+VPD_CAPTURE_SCREEN = false
+dofile("tools/capture_fceux_ppu.lua")
+~~~
+
+The example values are **suggested acquisition settings**, not
+measured frame timings of the original game. The optional
+`VPD_CAPTURE_SCREEN=false` avoids expensive per-pixel screen capture;
+keep screen references enabled when validating actual rendered output.
+
+Defaults remain every 120 frames / maximum 24 files, for backwards
+compatibility. Accepted ranges are 1–1200 for interval and 1–512 for
+count. Metadata contains `capture_interval` and `capture_limit`.
+The native CI mock verifies default and 8-frame dense acquisition, but
+this is **not** a successful real FCEUX gameplay recording.
