@@ -61,3 +61,26 @@ Even a completely valid synthetic test cannot establish video identity.
 GitHub Actions is configured to run `test_video_trace_alignment.py`
 explicitly, but the result is not considered verified until a passing
 workflow run or a locally executed test report is available.
+
+## Stage 40: inspect RAM/MMC3 event candidates, without assigning semantics
+
+After obtaining a real trace and manually verified anchors, run:
+
+```sh
+python3 tools/inventory_stage40_candidates.py \
+  private/first_level/stage38_dispatch_exec.tsv \
+  private/first_level/anchors.csv \
+  --meta private/first_level/stage38_dispatch_exec.meta.txt \
+  --out private/first_level/stage40_candidates.json
+```
+
+This produces a private inventory of captured writes to the **already
+instrumented** RAM addresses, including observed write arguments, associated
+video labels and mapper changes. It does not read or publish game assets.
+Entries are candidates for follow-up CPU/PPU causality analysis, **not**
+identifications of camera, stage-loader, world coordinates or map tiles.
+
+Do not treat an unobserved address as inactive; the FCEUX hooks record a tiny
+subset of CPU writes. Overlapping anchor windows may repeat one event in
+multiple counts. Video labels are manual claims, not emulator evidence.
+Stage 40's new Python tests use entirely invented traces.
