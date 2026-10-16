@@ -5,14 +5,18 @@ local hooks,writes={},{}
 memory={
  registerexec=function(addr,fn)hooks[addr]=fn end,
  registerread=function(a,n,fn)assert(a==0x8000 and n==0x8000);hooks.read=fn end,
- registerwrite=function(a,fn)writes[a]=fn end
+ registerwrite=function(a,fn)writes[a]=fn end,
+ getregister=function(name)
+   assert(name==name:lower(),'FCEUX register names must be lowercase')
+   if name=='p' then error('unavailable') end
+   return ({a=1,x=2,y=3,s=4})[name]
+ end
 }
 local onexit
 emu={
  framecount=function()return 19 end,
  registerexit=function(fn)onexit=fn end,
- getregister=function(n) if n=='P' then error('unavailable') end
-   return ({A=1,X=2,Y=3,S=4})[n] end
+ getregister=function() error('wrong emu API used') end
 }
 dofile('tools/capture_fceux_joint_cpu_context.lua')
 hooks[0x835B]()
@@ -30,6 +34,7 @@ local m=assert(io.open(dir..'/stage53_joint_context.meta.txt'))
 local data=m:read('*a');m:close()
 assert(data:find('events_dropped=1',1,true))
 assert(data:find('read_causality=not_proven',1,true))
+assert(data:find('register_api=memory.getregister',1,true))
 os.remove(dir..'/stage53_joint_context.tsv')
 os.remove(dir..'/stage53_joint_context.meta.txt')
 assert(os.execute('rmdir "'..dir..'"'))
