@@ -12,7 +12,7 @@ FIELDS=['frame','seq','kind','address','value','bank','a','x','y','s','p']
 PCS={0xE479,0xE4E6,0xE4F3,0x835B,0xC906}
 PROVENANCE={
     'format':'vice_stage53_joint_context_v1',
-    'rom_header_profile':'ines_mapper4_prg128k',
+    'rom_header_profile':'ines_mapper4_prg128k_chr128k',
     'initial_mmc3_mode':'unknown',
     'register_provenance':'callback_time_optional_samples',
     'register_api':'memory.getregister',
