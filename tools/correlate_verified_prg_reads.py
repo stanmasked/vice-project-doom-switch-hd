@@ -22,7 +22,7 @@ def correlate(trace, meta, prg, *, exec_seq, opcode_hex, max_gap=3,
             return {'schema':1,'status':'prg_identity_mismatch',
                     'reason':'local_prg_sha256_does_not_match_expected',
                     'candidate_reads':[],'instruction_caused_read_proven':False,
-                    'level_data_proven':False}
+                    'level_data_proven':False,'read_values_proven':False}
 
     proven_bytes=verify(trace,meta,prg,exec_seq=exec_seq,
                         instruction_hex=opcode_hex)
@@ -31,7 +31,7 @@ def correlate(trace, meta, prg, *, exec_seq, opcode_hex, max_gap=3,
                 'verification':proven_bytes,
                 'reason':proven_bytes['status'],'candidate_reads':[],
                 'instruction_caused_read_proven':False,
-                'level_data_proven':False}
+                'level_data_proven':False,'read_values_proven':False}
     candidates=compare(trace,meta,exec_seq=exec_seq,opcode_hex=opcode_hex,
                        max_gap=max_gap,zp_low=zp_low,zp_high=zp_high)
     return {'schema':1,'status':'local_instruction_bytes_match',
@@ -41,6 +41,7 @@ def correlate(trace, meta, prg, *, exec_seq, opcode_hex, max_gap=3,
             'search_stopped_by':candidates['search_stopped_by'],
             'instruction_caused_read_proven':False,
             'level_data_proven':False,
+            'read_values_proven':False,
             'limitations':[
                 'Local PRG image identity is not independently authenticated',
                 'Sparse EXEC hook timing cannot establish read causality',
