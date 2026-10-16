@@ -12,10 +12,16 @@ memory={
 }
 ppu={readbyterange=function(addr,n)assert(addr==0 and n==16384);return string.rep(string.char(0x5A),n)end}
 rom={gethash=function(which)assert(which=='md5');return 'abcd1234' end}
+local sampled_pixels=0
 emu={framecount=function()return frame end,
  registerafter=function(cb)after=cb end,
  registerexit=function(cb)exit=cb end,
- message=function(s)assert(type(s)=='string')end}
+ message=function(s)assert(type(s)=='string')end,
+ getscreenpixel=function(x,y,raw)
+  assert(raw==true and x>=0 and x<256 and y>=0 and y<240)
+  sampled_pixels=sampled_pixels+1
+  return x,y,42,((x+y)%17==0 and 254 or (x+y)%64)
+ end}
 
 dofile('tools/capture_fceux_ppu.lua')
 assert(type(after)=='function' and type(exit)=='function')
@@ -36,11 +42,18 @@ end
 local p=VPD_CAPTURE_DIRECTORY
 assert(#read(p..'/frame_000000.ppu.bin')==16384)
 assert(#read(p..'/frame_000120.ram.bin')==2048)
+assert(sampled_pixels==2*256*240)
+assert(#read(p..'/frame_000000.screen.rgb.bin')==256*240*3)
+assert(#read(p..'/frame_000120.screen.pal.bin')==256*240)
+assert(read(p..'/frame_000000.screen.rgb.bin'):sub(1,3)==string.char(0,0,42))
+assert(read(p..'/frame_000000.screen.pal.bin'):byte(1)==254)
 local text=read(p..'/frame_000120.meta.txt')
-assert(text:find('format=fceux_ppu_snapshot_v2',1,true))
+assert(text:find('format=fceux_ppu_snapshot_v3',1,true))
 assert(text:find('dropped_register_writes=5',1,true),text)
 assert(text:find('register_log_complete=no',1,true),text)
 assert(text:find('chr_r0=06',1,true),text)
+assert(text:find('screen_reference=yes',1,true),text)
+assert(text:find('invalid_screen_palette_values=',1,true),text)
 assert(text:find('chr_ram_0=B7',1,true),text)
 local log=read(p..'/mmc3_video_writes.tsv')
 assert(log:find('frame\taddress\tvalue',1,true))
