@@ -92,7 +92,7 @@ class PpuPacketTests(unittest.TestCase):
             elif arg[0].startswith('#'):
                 mode='imm'; raw=[int(arg[0][2:],16)]
             else:
-                value=int(arg[0].split(',')[0].replace('
+                value = int(arg[0].split(',')[0].strip('()$'), 16)
                 mode=('rel' if op.startswith('B') else
                     'indy' if arg[0].startswith('(') else
                     'absx' if arg[0].endswith(',X') and value>255 else
