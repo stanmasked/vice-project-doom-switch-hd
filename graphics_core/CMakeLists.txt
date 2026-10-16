@@ -53,6 +53,12 @@ add_custom_command(OUTPUT ${DEMO_LAYOUT_HEADER} ${DEMO_LAYOUT_BINARY}
           ${CMAKE_CURRENT_SOURCE_DIR}/../tools/pack_decor_layout.py
   VERBATIM)
 add_custom_target(vpd_demo_decor_layout DEPENDS ${DEMO_LAYOUT_HEADER} ${DEMO_LAYOUT_BINARY})
+add_executable(vpd_decor_layout_test ../tests/test_decor_layout.cpp)
+target_include_directories(vpd_decor_layout_test PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/generated)
+add_dependencies(vpd_decor_layout_test vpd_demo_decor vpd_demo_decor_layout)
+target_link_libraries(vpd_decor_layout_test PRIVATE vpd_scene_renderer)
+add_test(NAME authored_layout_and_runtime_reload
+         COMMAND vpd_decor_layout_test ${DEMO_LAYOUT_BINARY})
 add_executable(vpd_decor_source_test ../tests/test_decor_source.cpp)
 target_include_directories(vpd_decor_source_test PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/generated)
 add_dependencies(vpd_decor_source_test vpd_demo_decor)

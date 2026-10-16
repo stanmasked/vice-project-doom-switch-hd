@@ -49,7 +49,8 @@ bool DecorLayoutSource::initialize(DecorLayout embedded){
     embedded_={};
     external_=false;
     count_=0;
-    if(!validDecorLayout(embedded))return false;
+    if(!embedded.placements || embedded.count==0 ||
+       !validDecorLayout(embedded))return false;
     embedded_=embedded;
     return true;
 }
