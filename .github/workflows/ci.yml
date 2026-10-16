@@ -99,6 +99,7 @@ jobs:
           lua5.4 tests/test_fceux_dispatch.lua
           VPD_MOCK_NOCLOCK=1 lua5.4 tests/test_fceux_dispatch.lua
           VPD_MOCK_SHORT=1 lua5.4 tests/test_fceux_dispatch.lua
+          VPD_MOCK_BAD_MMC3=1 lua5.4 tests/test_fceux_dispatch.lua
       - name: Exercise stage41 pointer-read FCEUX mock and overflow guard
         run: lua5.4 tests/test_fceux_pointer_access.lua
       - name: Exercise stage45 same-session PRG and MMC3 callbacks
