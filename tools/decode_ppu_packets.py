@@ -90,7 +90,7 @@ def _packet(queue, index, cpu_snapshot):
             'requires_post_bank_switch_snapshot': True
         })
     elif command in (2, 3):
-        half = 0 if command == 3 else 16  # #3 starts X=$10; #2 X=$00
+        half = 0 if command == 2 else 16  # #2 starts X=$00; #3 X=$10
         source = 0x140 + half
         op = {'kind': 'palette_upload', 'ppu_address': 0x3f00 + half,
               'cpu_source': source, 'length': 16}
