@@ -25,6 +25,10 @@
 - [x] Reference rendered-screen capture contract (RGB and NES palette indices), synthetic Lua mock CI #38914936801.
 - [x] Palette-index screen-vs-PPU comparison and 6 invented-data tests, CI #38915109352.
 - [x] Frame-level MMC3 R0-R5 register-log reconstruction and 4 synthetic tests, CI #38915678628.
+- [x] Implement normal 2x2 NES nametable scroll and scrolled OAM-vs-background priority (Actions #38917772203).
+- [x] Add PPUSTATUS-read ($2002) event marker, paired $2005/$2006 write-toggle analyzer and Lua mock (Actions #38918480183).
+- [x] Document limitations, especially Y=240..255, raster splits and unknown initial PPU latch in [PPU_SCROLL.md](PPU_SCROLL.md).
+- [ ] Validate camera/scroll against real FCEUX title and first-stage recordings.
 - [ ] **Run** FCEUX capture during title and first-stage transitions; no verified live captures yet.
 - [ ] Capture actual queued packets, palette RAM and PPU state during **runtime**.
 - [ ] Recover real PPU palettes, nametables, metatiles and OAM frames.
