@@ -76,8 +76,7 @@ class PpuPacketTests(unittest.TestCase):
             decode_queue(bytes([0]),costs=[1,2])
         with self.assertRaises(ValueError):
             decode_queue(bytes(257))
-        with self.assertRaisesRegex(ValueError,'Truncated'):
-            decode_queue(bytes([4,0,0,0]*64))
+        self.assertEqual(decode_queue(bytes([4,0,0,0]*64))['halt_reason'],'end_of_buffer')
 
     def test_handler_anchors_on_invented_6502(self):
         # Synthetic instruction encoding for enough supported anchors;
@@ -93,7 +92,30 @@ class PpuPacketTests(unittest.TestCase):
             elif arg[0].startswith('#'):
                 mode='imm'; raw=[int(arg[0][2:],16)]
             else:
-                value=int(arg[0].lstrip('$').split(',')[0],16)
+                value=int(arg[0].split(',')[0].replace('
+                mode=('rel' if op.startswith('B') else
+                    'indy' if arg[0].startswith('(') else
+                    'absx' if arg[0].endswith(',X') and value>255 else
+                    'absy' if arg[0].endswith(',Y') and value>255 else
+                    'zp' if value<=255 else 'abs')
+                if mode=='rel':
+                    raw=[(value-(pc+2))&255]
+                elif mode=='indy':
+                    raw=[value]
+                elif mode=='zp':
+                    raw=[value]
+                else:
+                    raw=[value&255,value>>8]
+            try: opcode=by_op[(op,mode)]
+            except KeyError as e: raise AssertionError((pc,expected,mode)) from e
+            b[pc-0xe000:pc-0xe000+1+len(raw)]=bytes([opcode,*raw])
+        self.assertEqual(validate_handlers(b),len(HANDLER_ANCHORS))
+        b[0xe74d-0xe000]=0
+        with self.assertRaisesRegex(ValueError,'Handler instruction mismatch'):
+            validate_handlers(bytes(b))
+
+if __name__=='__main__':unittest.main()
+,'').replace('(','').replace(')',''),16)
                 mode=('rel' if op.startswith('B') else
                     'indy' if arg[0].startswith('(') else
                     'absx' if arg[0].endswith(',X') and value>255 else
