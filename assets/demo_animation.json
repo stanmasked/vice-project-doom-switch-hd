@@ -1,0 +1,46 @@
+{
+  "schema": 1,
+  "atlas_frame_count": 4,
+  "states": {
+    "idle": {
+      "loop": true,
+      "frames": [
+        {
+          "frame": 0,
+          "ticks": 10
+        }
+      ]
+    },
+    "run": {
+      "loop": true,
+      "frames": [
+        {
+          "frame": 1,
+          "ticks": 6
+        },
+        {
+          "frame": 2,
+          "ticks": 8
+        }
+      ]
+    },
+    "rise": {
+      "loop": false,
+      "frames": [
+        {
+          "frame": 3,
+          "ticks": 4
+        }
+      ]
+    },
+    "fall": {
+      "loop": false,
+      "frames": [
+        {
+          "frame": 3,
+          "ticks": 4
+        }
+      ]
+    }
+  }
+}
