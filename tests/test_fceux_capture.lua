@@ -17,6 +17,11 @@ rom={gethash=function(which)assert(which=='md5');return 'abcd1234' end}
 local sampled_pixels=0
 local cpu_clock=100000
 local without_clock=arg and arg[1]=='--no-clock'
+local dense=arg and arg[1]=='--dense'
+if dense then
+  VPD_CAPTURE_INTERVAL=8
+  VPD_CAPTURE_LIMIT=3
+end
 -- FCEUX debugger counts CPU cycles since power-on or counter reset.
 if not without_clock then
  debugger={getcyclescount=function() cpu_clock=cpu_clock+3; return cpu_clock end}
@@ -42,6 +47,10 @@ after()
 frame=1
 for n=1,12005 do write(0x2007,n%256) end
 after()
+if dense then
+  frame=8
+  after()
+end
 frame=120
 write(0x8000,0);write(0x8001,6)
 after()
@@ -52,7 +61,12 @@ end
 local p=VPD_CAPTURE_DIRECTORY
 assert(#read(p..'/frame_000000.ppu.bin')==16384)
 assert(#read(p..'/frame_000120.ram.bin')==2048)
-assert(sampled_pixels==2*256*240)
+assert(sampled_pixels==(dense and 3 or 2)*256*240)
+if dense then
+ assert(#read(p..'/frame_000008.ppu.bin')==16384)
+ assert(read(p..'/frame_000008.meta.txt'):find('capture_interval=8',1,true))
+ assert(read(p..'/frame_000008.meta.txt'):find('capture_limit=3',1,true))
+end
 assert(#read(p..'/frame_000000.screen.rgb.bin')==256*240*3)
 assert(#read(p..'/frame_000120.screen.pal.bin')==256*240)
 assert(read(p..'/frame_000000.screen.rgb.bin'):sub(1,3)==string.char(0,0,42))
