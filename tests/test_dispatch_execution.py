@@ -123,7 +123,7 @@ class DispatchExecutionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             path,meta=fixture(Path(d))
             meta.write_text(meta.read_text().replace(
-                'callback_errors=0\\n',''))
+                'callback_errors=0\n',''))
             with self.assertRaisesRegex(ValueError,'incomplete trace metadata'):
                 analyze(path,meta)
 
