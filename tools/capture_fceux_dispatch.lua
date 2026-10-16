@@ -15,6 +15,12 @@ assert(type(memory.registerwrite)=='function' and type(memory.readbyte)=='functi
 local clock=type(debugger)=='table' and type(debugger.getcyclescount)=='function'
 local rom_md5=rom.gethash('md5')
 assert(type(rom_md5)=='string' and #rom_md5>0,'Missing ROM identity')
+-- Invalidate metadata from an earlier session BEFORE replacing its TSV.
+-- A crash or callback exception must never reuse an old complete=yes.
+local meta_path=DIR..'/stage38_dispatch_exec.meta.txt'
+local pending=assert(io.open(meta_path,'wb'))
+assert(pending:write('capture_in_progress=yes\\n'))
+assert(pending:close())
 local file=assert(io.open(DIR..'/stage38_dispatch_exec.tsv','wb'))
 local fields={'frame','seq','cpu_cycle','kind','cpu_address','value','mmc3_mode',
               'r6','r7','mapped_bank','mapping_status','ram_07','ram_90','ram_91',
@@ -115,7 +121,7 @@ end)
 emu.registerexit(function()
   assert(file:flush())
   assert(file:close())
-  local meta=assert(io.open(DIR..'/stage38_dispatch_exec.meta.txt','wb'))
+  local meta=assert(io.open(meta_path,'wb'))
   local nframes=0
   for _ in pairs(frames) do nframes=nframes+1 end
   local txt={
