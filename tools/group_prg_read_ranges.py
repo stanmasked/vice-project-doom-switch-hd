@@ -3,6 +3,7 @@
 import argparse
 import collections
 import json
+import csv
 from pathlib import Path
 from audit_prg_read_mapping import audit_verified
 
@@ -13,7 +14,18 @@ def runs(trace, meta, min_run=2):
     spans=[]
     current=None
     unresolved=0
-    for item in checked['reads']:
+    # Rebuild only chronological event positions. A mapper write is a barrier
+    # even if the next READ eventually maps back to the same bank.
+    with Path(trace).open(newline='',encoding='utf8') as stream:
+        events=list(csv.DictReader(stream,delimiter='\\t'))
+    read_iter=iter(checked['reads'])
+    for event in events:
+        if event['kind']!='READ':
+            if current is not None:
+                spans.append(current)
+                current=None
+            continue
+        item=next(read_iter)
         offset=item['physical_prg_offset']
         if offset is None:
             unresolved+=1
