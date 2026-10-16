@@ -14,7 +14,7 @@ memory={
    if reads[addr] then
      callback_recursions=callback_recursions+1
      if callback_recursions>100 then error('recursive callback loop') end
-     reads[addr](addr,1,ram[addr])
+     reads[addr](addr,1,0)
    end
    return ram[addr]
  end
@@ -25,9 +25,9 @@ rom={gethash=function(alg)assert(alg=='md5');return string.rep('a',32) end}
 dofile('tools/capture_fceux_pointer_access.lua')
 assert(reads[0xAA] and reads[0xAB] and reads[0xA8] and reads[0xA9])
 assert(writes[0xAA] and writes[0xAB] and writes[0xA8] and writes[0xA9])
-reads[0xAA](0xAA,1,0x11)
+reads[0xAA](0xAA,1,0)
 writes[0xAB](0xAB,1,0x99)
-reads[0xA8](0xA8,1,0x33) -- deliberate overflow
+reads[0xA8](0xA8,1,0) -- deliberate overflow
 exit_fn()
 local f=assert(io.open(dir..'/stage41_pointer_access.tsv'))
 local lines={}
@@ -42,6 +42,8 @@ local meta=m:read('*a');m:close()
 assert(meta:find('events_recorded=2',1,true))
 assert(meta:find('events_dropped=1',1,true))
 assert(meta:find('complete=no',1,true))
+assert(meta:find('callback_errors=0',1,true))
+assert(meta:find('read_value_provenance=address_only_fceux_zero_sentinel',1,true))
 assert(meta:find('execution_pc=not_instrumented',1,true))
 os.remove(dir..'/stage41_pointer_access.tsv')
 os.remove(dir..'/stage41_pointer_access.meta.txt')
