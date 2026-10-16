@@ -18,7 +18,8 @@ def validate(trace,meta):
         props[key]=val
     required={'format':'vice_stage41_pointer_access_v1',
               'execution_pc':'not_instrumented',
-              'meaning':'pointer_byte_access_not_dereference'}
+              'meaning':'pointer_byte_access_not_dereference',
+              'read_value_provenance':'address_only_fceux_zero_sentinel'}
     if any(props.get(k)!=v for k,v in required.items()):
         raise ValueError('Untrusted provenance')
     if not re.fullmatch('[0-9a-fA-F]{32}',props.get('rom_md5','')):
@@ -27,8 +28,11 @@ def validate(trace,meta):
         if not re.fullmatch('[0-9]+',props.get(key,'')):
             raise ValueError('Invalid event counts')
     total=int(props['events_recorded'])
+    if not re.fullmatch('[0-9]+',props.get('callback_errors','')):
+        raise ValueError('Invalid callback error count')
+    callback_errors=int(props['callback_errors'])
     dropped=int(props['events_dropped'])
-    if props.get('complete')!=('yes' if dropped==0 else 'no'):
+    if props.get('complete')!=('yes' if dropped==0 and callback_errors==0 else 'no'):
         raise ValueError('Inconsistent completeness')
     observed=0
     previous_frame=None
@@ -49,13 +53,17 @@ def validate(trace,meta):
             if row['seq']!=str(observed): raise ValueError('Event sequence')
             if row['kind'] not in counts or row['address'] not in ADDRESSES:
                 raise ValueError('Unexpected RAM access')
-            if any(not re.fullmatch('[0-9A-F]{2}',row[key]) for key in FIELDS[4:]):
+            if (row['kind']=='READ' and row['value']!='unknown') or (
+                row['kind']=='WRITE' and not re.fullmatch('[0-9A-F]{2}',row['value'])):
+                raise ValueError('Invalid READ/WRITE value provenance')
+            if any(not re.fullmatch('[0-9A-F]{2}',row[key]) for key in FIELDS[5:]):
                 raise ValueError('Invalid byte')
             counts[row['kind']]+=1
     if observed!=total:raise ValueError('Recorded event count mismatch')
     return {'schema':1,'rom_md5':props['rom_md5'].lower(),
             'events_recorded':observed,'events_dropped':dropped,
-            'complete':dropped==0,'ram_byte_reads':counts['READ'],
+            'complete':dropped==0 and callback_errors==0,
+            'read_callback_values_proven':False,'ram_byte_reads':counts['READ'],
             'ram_byte_writes':counts['WRITE'],
             'prg_rom_reads_observed':False,
             'effective_addresses_observed':False,
