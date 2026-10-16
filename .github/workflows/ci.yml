@@ -26,13 +26,7 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          {
-          python -m unittest discover -s tests -p 'test_dispatch_execution.py' -v
-          python -m unittest discover -s tests -p 'test_prg_read_mapping.py' -v
-          python -m unittest discover -s tests -p 'test_prg_capture_completeness.py' -v
-          python -m unittest discover -s tests -p 'test_prg_read_ranges.py' -v
-          python -m unittest discover -s tests -p 'test_joint_cpu_context_validation.py' -v
-          } 2>&1 | tee stage38-54.log
+          python tools/run_research_regressions.py --group stage38-54 2>&1 | tee stage38-54.log
       - name: Stage 55-60 instruction and integration regression group
         id: late_regressions
         if: always()
@@ -40,13 +34,7 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          {
-          python -m unittest discover -s tests -p 'test_6502_read_address.py' -v
-          python -m unittest discover -s tests -p 'test_6502_prg_instruction_verification.py' -v
-          python -m unittest discover -s tests -p 'test_verified_prg_read_correlation.py' -v
-          python -m unittest discover -s tests -p 'test_prg_identity_gate.py' -v
-          python -m unittest discover -s tests -p 'test_stage60_integration.py' -v
-          } 2>&1 | tee stage55-60.log
+          python tools/run_research_regressions.py --group stage55-60 2>&1 | tee stage55-60.log
       - name: Stage 69-71 READ provenance and unittest discovery isolation
         id: provenance_regressions
         if: always()
@@ -54,10 +42,7 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          {
-          python -m unittest discover -s tests -p 'test_stage70_read_provenance_pipeline.py' -v
-          python -m unittest discover -s tests -p 'test_stage71_discovery_isolation.py' -v
-          } 2>&1 | tee stage69-71.log
+          python tools/run_research_regressions.py --group stage70-71 2>&1 | tee stage69-71.log
       - name: Upload Python failure diagnostics
         if: always()
         uses: actions/upload-artifact@v4
