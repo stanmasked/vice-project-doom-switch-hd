@@ -62,8 +62,16 @@ exec_hooks[0x835B]()
 frame=121
 exec_hooks[0xE50F]()
 if invalid then
- local ok,err=pcall(write_hooks.mapper,0x8002,2,6)
- assert(not ok and tostring(err):find('Unsupported FCEUX callback contract',1,true))
+ local bad_calls={
+  {write_hooks.mapper,0x8002,2,6}, -- invalid operation size
+  {write_hooks.mapper,0xA000,1,6}, -- invalid MMC3 bank window
+  {write_hooks.mapper,0x8002,1,256}, -- invalid 8-bit value
+  {write_hooks[0x92],0x91,1,21}, -- RAM callback for wrong address
+ }
+ for _,args in ipairs(bad_calls) do
+  local ok,err=pcall(args[1],args[2],args[3],args[4])
+  assert(not ok and tostring(err):find('Unsupported FCEUX callback contract',1,true))
+ end
 end
 exit_hook()
 local function read(path)
@@ -92,7 +100,7 @@ assert(meta:find('session_label=invented_test_fixture',1,true))
 assert(meta:find('cycle_trace_available='..(noclock and 'no' or 'yes'),1,true))
 assert(meta:find('initial_prg_r6=unknown',1,true))
 assert(meta:find('mmc3_write_coverage=full_8000_9fff_even_odd',1,true))
-assert(meta:find('callback_errors='..(invalid and '1' or '0'),1,true))
+assert(meta:find('callback_errors='..(invalid and '4' or '0'),1,true))
 if short then
  assert(meta:find('events_recorded=3',1,true))
  assert(meta:find('trace_complete=no',1,true))
