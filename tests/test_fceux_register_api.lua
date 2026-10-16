@@ -63,7 +63,7 @@ emu={
 dofile('tools/capture_fceux_joint_cpu_context.lua')
 writes53[0x8000](0x8000,1,0x06)
 writes53[0x8001](0x8001,1,0x0C)
-exec53[0x835B]()
+exec53[0x835B](0x835B,1,0)
 read53(0x835C,1,0x99)
 exit53()
 rows=read_rows(dir..'/stage53_joint_context.tsv')
