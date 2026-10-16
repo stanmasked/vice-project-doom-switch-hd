@@ -6,11 +6,13 @@ on:
     paths:
       - '.github/workflows/switch-native-probe.yml'
       - 'switch_probe/**'
+      - 'game_core/**'
       - 'tests/check_nro.py'
   pull_request:
     paths:
       - '.github/workflows/switch-native-probe.yml'
       - 'switch_probe/**'
+      - 'game_core/**'
       - 'tests/check_nro.py'
 
 permissions:
