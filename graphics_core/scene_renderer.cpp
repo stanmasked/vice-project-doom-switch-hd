@@ -199,6 +199,9 @@ bool drawScene(uint32_t* target,int width,int height,int stride_pixels,
     s.rect(932,47,83,8,rgba(87,184,194));
     s.rect(0,689,1280,31,rgba(13,19,33));
     s.text(25,697,"MOVE : D PAD  /  JUMP : A OR B  /  EXIT : PLUS",rgba(173,184,207),2);
+    s.text(760,697,view.asset_reload_failed?"RELOAD FAILED":
+       (view.external_sprite_asset?"ART: SD OVERRIDE":"ART: EMBEDDED"),
+       view.asset_reload_failed?rgba(243,121,104):rgba(164,210,193),2);
     return true;
 }
 }

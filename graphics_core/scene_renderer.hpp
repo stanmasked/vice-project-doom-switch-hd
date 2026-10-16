@@ -13,6 +13,8 @@ struct SceneView {
     bool moving=false;
     int sprite_frame=-1; // explicit animation player override; -1 means legacy default
     bool facing_left=false;
+    bool external_sprite_asset=false;
+    bool asset_reload_failed=false;
 };
 constexpr int kSceneWidth=1280;
 constexpr int kSceneHeight=720;
