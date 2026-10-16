@@ -64,7 +64,7 @@ def compare(trace, meta, *, exec_seq, opcode_hex, max_gap=3,
         "instruction_bytes_provenance":"supplied_externally_not_verified_against_ROM",
         "calculation":calculated,"candidate_reads":candidates,
         "search_stopped_by":barrier,"causality_proven":False,
-        "stage_data_proven":False}
+        "stage_data_proven":False,"read_values_proven":False}
 
 def main():
     p=argparse.ArgumentParser(description=__doc__)
