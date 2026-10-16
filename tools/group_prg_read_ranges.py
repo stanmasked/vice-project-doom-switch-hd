@@ -17,7 +17,7 @@ def runs(trace, meta, min_run=2):
     # Rebuild only chronological event positions. A mapper write is a barrier
     # even if the next READ eventually maps back to the same bank.
     with Path(trace).open(newline='',encoding='utf8') as stream:
-        events=list(csv.DictReader(stream,delimiter='\\t'))
+        events=list(csv.DictReader(stream,delimiter='\t'))
     read_iter=iter(checked['reads'])
     for event in events:
         if event['kind']!='READ':
