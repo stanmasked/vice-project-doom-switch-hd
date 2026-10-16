@@ -53,6 +53,7 @@ def fixture(root,clock=True,drop=0):
       'format=vice_stage38_execution_v1',f'rom_md5={MD5}',
       'execution_hooks_registered=15','tracked_ram_write_hooks=8',
       f'events_recorded={len(events)}',f'events_dropped={drop}',
+      'callback_errors=0',
       f'trace_complete={"no" if drop else "yes"}',
       f'cycle_trace_available={"yes" if clock else "no"}',
       'initial_mmc3_mode=unknown',
@@ -105,6 +106,26 @@ class DispatchExecutionTests(unittest.TestCase):
             meta.write_text(meta.read_text().replace(
                 'mmc3_write_coverage=full_8000_9fff_even_odd\n',''))
             with self.assertRaisesRegex(ValueError,'coverage'):analyze(path,meta)
+
+    def test_callback_error_incomplete_even_without_overflow(self):
+        with tempfile.TemporaryDirectory() as d:
+            path,meta=fixture(Path(d))
+            meta.write_text(meta.read_text().replace(
+                'callback_errors=0','callback_errors=1').replace(
+                'trace_complete=yes','trace_complete=no'))
+            with self.assertRaisesRegex(ValueError,'Incomplete'):
+                analyze(path,meta)
+            diagnosed=analyze(path,meta,allow_incomplete=True)
+            self.assertFalse(diagnosed['complete'])
+            self.assertEqual(diagnosed['callback_errors'],1)
+
+    def test_legacy_callback_error_count_rejected(self):
+        with tempfile.TemporaryDirectory() as d:
+            path,meta=fixture(Path(d))
+            meta.write_text(meta.read_text().replace(
+                'callback_errors=0\\n',''))
+            with self.assertRaisesRegex(ValueError,'incomplete trace metadata'):
+                analyze(path,meta)
 
     def test_incomplete_capture_refused_by_default(self):
         with tempfile.TemporaryDirectory() as d:
