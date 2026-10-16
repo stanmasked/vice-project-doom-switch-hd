@@ -69,11 +69,16 @@ int main(){
                                        vpd_demo::kAtlasBlob+vpd_demo::kAtlasBytes);
     // Mutate the first visible RGBA red channel, then recalculate correct CRC.
     bool changed=false;
-    for(size_t n=vpd::kVpatHeaderBytes;n<alternative.size();n+=4){
-        if(alternative[n+3]>0){
-            alternative[n]^=0x33u;
-            changed=true;
-            break;
+    // First visible texel of *frame zero*, not the earliest pixel in
+    // the whole 4-frame sheet (which could belong to the jump pose).
+    for(size_t y=0;y<32 && !changed;++y){
+        for(size_t x=0;x<24;++x){
+            const size_t n=vpd::kVpatHeaderBytes+(y*96+x)*4;
+            if(alternative[n+3]>0){
+                alternative[n]^=0x33u;
+                changed=true;
+                break;
+            }
         }
     }
     CHECK(changed);
