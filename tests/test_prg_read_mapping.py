@@ -47,6 +47,20 @@ class PrgReadTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,'READ value provenance'):
             audit(self.path)
 
+    def test_mirrored_mmc3_select_and_data_supported(self):
+        self.rows[1][3]='8002'
+        self.rows[2][3]='8003'
+        self.rows[4][3]='9FFE'
+        self.rows[5][3]='9FFF'
+        self.rewrite()
+        result=audit(self.path)
+        self.assertEqual(result['reads'][1]['bank'],12)
+        self.assertEqual(result['reads'][2]['bank'],14)
+
+    def test_wrong_mirror_parity_rejected(self):
+        self.rows[1][3]='8003';self.rewrite()
+        with self.assertRaisesRegex(ValueError,'SELECT address'):audit(self.path)
+
     def test_forged_bank_refused(self):
         self.rows[3][5]='14';self.rewrite()
         with self.assertRaisesRegex(ValueError,'bank disagrees'):audit(self.path)
