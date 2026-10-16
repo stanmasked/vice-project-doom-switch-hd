@@ -23,11 +23,18 @@ class VerifiedCaptureTests(unittest.TestCase):
             'events_dropped='+str(dropped),
             'complete='+complete,
             'initial_mmc3_mode=unknown',
-            'read_provenance=registerread_callback_no_pc_proof'])+'\n',encoding='utf8')
+            'read_provenance=registerread_callback_no_pc_proof',
+            'read_value_provenance=address_only_fceux_zero_sentinel'])+'\n',encoding='utf8')
     def test_matching_complete_capture(self):
         result=audit_verified(self.trace,self.meta)
         self.assertTrue(result['capture_metadata_verified'])
         self.assertEqual(result['events_recorded'],8)
+    def test_legacy_read_value_provenance_refused(self):
+        self.meta.write_text(self.meta.read_text().replace(
+            'read_value_provenance=address_only_fceux_zero_sentinel\\n',''))
+        with self.assertRaisesRegex(ValueError,'provenance'):
+            audit_verified(self.trace,self.meta)
+
     def test_overflow_refused(self):
         self.write_meta(dropped=1,complete='no')
         with self.assertRaisesRegex(ValueError,'Incomplete'):audit_verified(self.trace,self.meta)
