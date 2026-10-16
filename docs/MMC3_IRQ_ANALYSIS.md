@@ -47,3 +47,24 @@ Instrument RAM $36 and IRQ execution in a locally configured emulator to
 identify actual row reachability, handler sequencing, and PPU register effects.
 This can inform the **native HD renderer** without embedding the original ROM
 or porting an NES emulator into the Switch executable.
+
+## IRQ handler chaining (additional verified static evidence)
+
+The routine at **$E0E6** loads the value in RAM **$33**, multiplies it by
+five, and uses it as the **index of the subsequent table record**.
+It then changes the MMC3 IRQ latch and handler pointer using that next record.
+
+At **$E103**, the former RAM **$38** byte is copied to **$37**.
+The table's fifth byte is written into **$38**. Routines **$E392** and
+**$E398** load **$37** and **$38**, respectively, into X and execute
+decrement/branch busy-wait loops. These values therefore participate in
+instruction-cycle delay timing, though exact display timings are not measured.
+
+All 41 next-row indices are in the valid range **0–40**.
+The link graph has **11 directed cycles**, including five single-row loops;
+rows **33 and 38** have no incoming table link and may be selected by
+the initial state logic. These are *static link properties*, not an assertion
+that every state or link executes during normal gameplay.
+
+The analyzer now checks **20 code signatures**, reports next-row links
+and graph cycles locally, and has six ROM-free synthetic tests.

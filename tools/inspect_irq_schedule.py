@@ -26,7 +26,16 @@ ANCHORS = {
     0xE0D2: 'BD 0E E1 85 35',
     0xE0D7: 'BD 11 E1 85 38',
     0xE0DC: 'BD 10 E1 85 33',
-    0xE1F3: '6C 34 00'
+    0xE1F3: '6C 34 00',
+    0xE0E6: 'A5 33 0A 0A 18 65 33 AA',
+    0xE0EE: 'BD 0F E1 8D 00 C0',
+    0xE0F4: 'BD 0D E1 85 34',
+    0xE0F9: 'BD 0E E1 85 35',
+    0xE0FE: 'BD 10 E1 85 33',
+    0xE103: 'A5 38 85 37',
+    0xE107: 'BD 11 E1 85 38',
+    0xE392: 'A6 37 CA D0 FD 60',
+    0xE398: 'A6 38 CA D0 FD 60'
 }
 
 def last_bank(prg):
@@ -58,6 +67,35 @@ def extract_rows(bank, start=START, end=END):
         })
     return rows
 
+def transition_graph(rows):
+    """Link every row via the RAM $33 'next record' field.
+
+    Static graph topology is NOT a proof that all graph edges execute.
+    """
+    links=[r['ram_0033'] for r in rows]
+    length=len(links)
+    bad=[i for i,value in enumerate(links) if value>=length]
+    if bad:
+        return {'invalid_next_indices':bad,'zero_indegree':[],'cycles':[]}
+    indegree=[0]*length
+    for value in links:
+        indegree[value]+=1
+    cycles=set()
+    for start in range(length):
+        seen={}
+        path=[]
+        cur=start
+        while cur not in seen:
+            seen[cur]=len(path)
+            path.append(cur)
+            cur=links[cur]
+        cycle=path[seen[cur]:]
+        idx=cycle.index(min(cycle))
+        cycles.add(tuple(cycle[idx:]+cycle[:idx]))
+    return {'invalid_next_indices':[],
+            'zero_indegree':[i for i,degree in enumerate(indegree) if degree==0],
+            'cycles':[list(item) for item in sorted(cycles)]}
+
 def inspect(prg, strict=False):
     bank = last_bank(prg)
     failures = validate_anchors(bank)
@@ -81,9 +119,10 @@ def inspect(prg, strict=False):
         'validated_instruction_anchors':len(ANCHORS),
         'anchor_mismatches':failures, 'undecodable_handler_indices':bad,
         'rows':rows,
+        'transition_graph':transition_graph(rows),
         'uncertainties':[
-            'Reachability of individual IRQ rows not proven without tracing',
-            'Fields at offsets +3 and +4 populate RAM 0033/0038; further meaning unknown',
+            'Graph edges are possible transitions, not verified runtime paths',
+            'Row byte +3 is next-row index ($33); byte +4 is used by busy-wait counters ($38/$37)',
             'Inferred table end is contiguous with IRQ entrypoint',
         ]
     }
