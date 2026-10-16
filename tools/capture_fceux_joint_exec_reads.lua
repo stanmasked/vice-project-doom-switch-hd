@@ -42,7 +42,10 @@ for _,pc in ipairs({0xE479,0xE4E6,0xE4F3,0x835B,0xC906}) do
   local p=pc
   memory.registerexec(p,function() log('EXEC',p,nil) end)
 end
-memory.registerread(0x8000,0x8000,function(a,size,v) log('READ',a,v) end)
+memory.registerread(0x8000,0x8000,function(a,size,v)
+  assert(size==1 and v==0,'Unsupported FCEUX READ zero-sentinel callback')
+  log('READ',a,nil)
+end)
 memory.registerwrite(0x8000,function(a,size,v) log('SELECT',0x8000,v) end)
 memory.registerwrite(0x8001,function(a,size,v) log('DATA',0x8001,v) end)
 emu.registerexit(function()
@@ -54,7 +57,8 @@ emu.registerexit(function()
     'events_dropped='..dropped,
     'complete='..(dropped==0 and 'yes' or 'no'),
     'exec_context=selected_pc_hooks_only',
-    'read_causality=not_proven'
+    'read_causality=not_proven',
+    'read_value_provenance=address_only_fceux_zero_sentinel'
   },'\n')..'\n'))
   assert(m:close())
 end)
