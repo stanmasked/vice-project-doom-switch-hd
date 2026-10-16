@@ -4,7 +4,7 @@ assert(os.execute('mkdir -p "'..dir..'"'))
 VPD_STAGE53_DIRECTORY=dir
 VPD_STAGE53_MAX_EVENTS=4
 local header={[0]=0x4E,[1]=0x45,[2]=0x53,[3]=0x1A,
-              [4]=8,[5]=8,[6]=0x40,[7]=0}
+              [4]=8,[5]=16,[6]=0x40,[7]=0}
 local md5=string.rep('e',32)
 rom={readbyteunsigned=function(i)return header[i] or 0 end,
      gethash=function(t)assert(t=='md5');return md5 end}
@@ -34,7 +34,7 @@ hooks[0x835B](0x835B,1,0)
 exit_callback()
 local f=assert(io.open(dir..'/stage53_joint_context.meta.txt','rb'))
 local meta=f:read('*a');f:close()
-assert(meta:find('rom_header_profile=ines_mapper4_prg128k',1,true))
+assert(meta:find('rom_header_profile=ines_mapper4_prg128k_chr128k',1,true))
 assert(meta:find('rom_md5_pin=matched',1,true))
 assert(meta:find('complete=yes',1,true))
 os.remove(dir..'/stage53_joint_context.tsv')
