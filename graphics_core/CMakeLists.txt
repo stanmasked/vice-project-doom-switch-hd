@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.16)
 project(vpd_scene_renderer LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-add_library(vpd_scene_renderer STATIC scene_renderer.cpp asset_atlas.cpp animation.cpp asset_source.cpp animation_resource.cpp asset_bundle.cpp terrain_source.cpp)
+add_library(vpd_scene_renderer STATIC scene_renderer.cpp asset_atlas.cpp animation.cpp asset_source.cpp animation_resource.cpp asset_bundle.cpp terrain_source.cpp backdrop_source.cpp)
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
 target_include_directories(vpd_scene_renderer PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
@@ -25,6 +25,15 @@ add_custom_command(OUTPUT ${DEMO_TERRAIN_HEADER} ${DEMO_TERRAIN_BINARY}
   DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/../tools/build_demo_terrain.py
   VERBATIM)
 add_custom_target(vpd_demo_terrain DEPENDS ${DEMO_TERRAIN_HEADER} ${DEMO_TERRAIN_BINARY})
+set(DEMO_BACKDROP_HEADER ${CMAKE_CURRENT_BINARY_DIR}/generated/demo_backdrop.hpp)
+set(DEMO_BACKDROP_BINARY ${CMAKE_CURRENT_BINARY_DIR}/generated/demo_backdrop.vpat)
+add_custom_command(OUTPUT ${DEMO_BACKDROP_HEADER} ${DEMO_BACKDROP_BINARY}
+  COMMAND ${Python3_EXECUTABLE}
+          ${CMAKE_CURRENT_SOURCE_DIR}/../tools/build_demo_backdrop.py
+          ${DEMO_BACKDROP_HEADER} --raw ${DEMO_BACKDROP_BINARY}
+  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/../tools/build_demo_backdrop.py
+  VERBATIM)
+add_custom_target(vpd_demo_backdrop DEPENDS ${DEMO_BACKDROP_HEADER} ${DEMO_BACKDROP_BINARY})
 add_executable(vpd_terrain_source_test ../tests/test_terrain_source.cpp)
 target_include_directories(vpd_terrain_source_test PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/generated)
 add_dependencies(vpd_terrain_source_test vpd_demo_terrain)

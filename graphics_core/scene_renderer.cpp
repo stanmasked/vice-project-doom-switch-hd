@@ -1,6 +1,7 @@
 #include "scene_renderer.hpp"
 #include "asset_atlas.hpp"
 #include "terrain_source.hpp"
+#include "backdrop_source.hpp"
 #include <cstdint>
 #include <algorithm>
 
@@ -167,7 +168,12 @@ bool drawScene(uint32_t* target,int width,int height,int stride_pixels,
         int x=static_cast<int>((h>>1)%1280),y=80+static_cast<int>((h>>16)%320);
         s.rect(x,y,n%11==0?4:2,2,rgba(145+(n%54),141+(n%25),159+(n%33)));
     }
-    skyline(s,view.camera_x_px);
+    // Replace only the skyline, preserving independent sky and HUD.
+    // Invalid/no background atlas keeps the original procedural fallback.
+    if(!view.backdrop_atlas ||
+       !drawBackdropLayers(target,width,height,stride_pixels,
+                           *view.backdrop_atlas,view.camera_x_px))
+        skyline(s,view.camera_x_px);
     const int environment_scale=view.terrain_atlas?
         terrainScale(*view.terrain_atlas):-1;
     int left=floorDiv(view.camera_x_px,16)-1;
@@ -218,6 +224,14 @@ bool drawScene(uint32_t* target,int width,int height,int stride_pixels,
             "TERRAIN: SD" : "TERRAIN: EMBEDDED");
         s.text(951,100,terrain_message,
                view.terrain_reload_failed?rgba(243,121,104):
+               rgba(153,218,195),2);
+    }
+    if(view.backdrop_atlas) {
+        const char* label=view.backdrop_reload_failed?
+            "BG: FAILED" : (view.external_backdrop_asset?
+            "BG: SD" : "BG: EMBEDDED");
+        s.text(951,126,label,
+               view.backdrop_reload_failed?rgba(243,121,104):
                rgba(153,218,195),2);
     }
     s.rect(0,689,1280,31,rgba(13,19,33));
