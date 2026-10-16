@@ -10,8 +10,8 @@ assert(file:write('frame\tseq\tkind\taddress\tvalue\tbank\ta\tx\ty\ts\tp\n'))
 local selected,r6,r7=nil,nil,nil
 local count,dropped=0,0
 local function register(name)
-  if type(emu.getregister)~='function' then return 'unknown' end
-  local ok,v=pcall(emu.getregister,name)
+  if type(memory.getregister)~='function' then return 'unknown' end
+  local ok,v=pcall(memory.getregister,name:lower())
   if not ok or type(v)~='number' or v~=math.floor(v) or v<0 or v>255 then return 'unknown' end
   return string.format('%02X',v)
 end
@@ -56,6 +56,7 @@ emu.registerexit(function()
     'complete='..(dropped==0 and 'yes' or 'no'),
     'initial_mmc3_mode=unknown',
     'register_provenance=callback_time_optional_samples',
+    'register_api=memory.getregister',
     'effective_address=not_proven',
     'read_causality=not_proven'
   },'\n')..'\n'))
