@@ -8,7 +8,7 @@ assert(emu and emu.framecount and emu.registerexit)
 local output=assert(io.open(DIR..'/stage49_joint.tsv','wb'))
 assert(output:write('frame\tseq\tkind\taddress\tvalue\tphysical_bank\n'))
 local selected,r6,r7=nil,nil,nil
-local count,dropped=0,0
+local count,dropped,callback_errors=0,0,0
 local function bank(pc)
   if pc>=0xE000 then return 15 end
   if selected==nil then return nil end
@@ -43,7 +43,10 @@ for _,pc in ipairs({0xE479,0xE4E6,0xE4F3,0x835B,0xC906}) do
   memory.registerexec(p,function() log('EXEC',p,nil) end)
 end
 memory.registerread(0x8000,0x8000,function(a,size,v)
-  assert(size==1 and v==0,'Unsupported FCEUX READ zero-sentinel callback')
+  if size~=1 or v~=0 then
+    callback_errors=callback_errors+1
+    error('Unsupported FCEUX READ zero-sentinel callback')
+  end
   log('READ',a,nil)
 end)
 memory.registerwrite(0x8000,function(a,size,v) log('SELECT',0x8000,v) end)
@@ -55,7 +58,8 @@ emu.registerexit(function()
     'format=vice_stage49_joint_v1',
     'events_recorded='..count,
     'events_dropped='..dropped,
-    'complete='..(dropped==0 and 'yes' or 'no'),
+    'complete='..(dropped==0 and callback_errors==0 and 'yes' or 'no'),
+    'callback_errors='..callback_errors,
     'exec_context=selected_pc_hooks_only',
     'read_causality=not_proven',
     'read_value_provenance=address_only_fceux_zero_sentinel'
