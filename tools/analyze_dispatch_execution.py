@@ -22,6 +22,7 @@ KINDS={'EXEC','RAM_WRITE','MMC3_SELECT','MMC3_DATA'}
 REQUIRED_META={'format','rom_md5','execution_hooks_registered',
                'tracked_ram_write_hooks','events_recorded','events_dropped',
                'trace_complete','cycle_trace_available','initial_mmc3_mode',
+               'mmc3_write_coverage',
                'initial_prg_r6','initial_prg_r7','execution_provenance'}
 
 def numeric(value,label,lo=0,hi=10**15):
@@ -52,6 +53,8 @@ def meta_parse(path):
     if any(d[k]!='unknown' for k in
            ('initial_mmc3_mode','initial_prg_r6','initial_prg_r7')):
         raise ValueError('Unverified initial mapper state')
+    if d['mmc3_write_coverage']!='full_8000_9fff_even_odd':
+        raise ValueError('Incomplete MMC3 write hook coverage')
     if d['execution_provenance']!='registerexec_callbacks_not_source_disassembly':
         raise ValueError('Unknown provenance')
     if d['cycle_trace_available'] not in ('yes','no'):
@@ -117,7 +120,7 @@ def analyze(trace_path,meta_path,allow_incomplete=False):
             if kind=='RAM_WRITE' and (pc not in TRACKED_RAM or value is None):
                 raise ValueError('Unexpected RAM write')
             if kind in ('MMC3_SELECT','MMC3_DATA'):
-                if pc!=(0x8000 if kind=='MMC3_SELECT' else 0x8001) or value is None:
+                if not (0x8000<=pc<=0x9FFF) or pc%2!=(0 if kind=='MMC3_SELECT' else 1) or value is None:
                     raise ValueError('Unexpected mapper event')
             if kind=='MMC3_SELECT':select=value
             if kind=='MMC3_DATA' and select is not None:
