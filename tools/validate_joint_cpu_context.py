@@ -17,6 +17,7 @@ PROVENANCE={
     'register_provenance':'callback_time_optional_samples',
     'register_api':'memory.getregister',
     'callback_contract':'address_size_value_v1',
+    'read_value_provenance':'address_only_fceux_zero_sentinel',
     'effective_address':'not_proven',
     'read_causality':'not_proven'
 }
@@ -69,7 +70,7 @@ def validate(trace,meta):
             if kind=='EXEC':
                 if addr not in PCS or value is not None:raise ValueError('Invalid EXEC')
             elif kind=='READ':
-                if addr<0x8000 or value is None:raise ValueError('Invalid READ')
+                if addr<0x8000 or value is not None:raise ValueError('Invalid READ value provenance')
             elif addr!=(0x8000 if kind=='SELECT' else 0x8001) or value is None:
                 raise ValueError('Invalid MMC3 write')
             if kind=='SELECT':selected=value
@@ -89,7 +90,7 @@ def validate(trace,meta):
     return {'schema':1,'complete':True,'events':count,
             'event_counts':dict(sorted(kinds.items())),
             'unknown_register_samples':dict(sorted(unknown_registers.items())),
-            'unknown_bank_reads':unknown_banks,
+            'unknown_bank_reads':unknown_banks,'read_values_proven':False,
             'effective_address_proven':False,'read_causality_proven':False,
             'classification':'validated callback-order and register samples only'}
 
