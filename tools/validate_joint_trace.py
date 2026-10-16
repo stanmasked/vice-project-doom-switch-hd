@@ -12,6 +12,7 @@ FIELDS=['frame','seq','kind','address','value','physical_bank']
 PCS={0xE479,0xE4E6,0xE4F3,0x835B,0xC906}
 KINDS={'EXEC','READ','SELECT','DATA'}
 REQUIRED={'format':'vice_stage49_joint_v1',
+          'mmc3_write_coverage':'full_8000_9fff_even_odd',
           'exec_context':'selected_pc_hooks_only','read_causality':'not_proven',
           'read_value_provenance':'address_only_fceux_zero_sentinel'}
 
@@ -60,7 +61,7 @@ def validate(trace,meta):
             elif kind=='READ':
                 if addr<0x8000 or v is not None:raise ValueError('Invalid READ value provenance')
             else:
-                if addr!=(0x8000 if kind=='SELECT' else 0x8001) or v is None:
+                if not (0x8000<=addr<=0x9FFF) or addr%2!=(0 if kind=='SELECT' else 1) or v is None:
                     raise ValueError('Invalid mapper write')
             if kind=='SELECT':selected=v
             elif kind=='DATA' and selected is not None:
