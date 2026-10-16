@@ -93,10 +93,13 @@ def audit_verified(path, meta_path):
             raise ValueError('Invalid capture count')
     if props.get('complete') not in ('yes','no'):
         raise ValueError('Invalid completeness value')
+    if not re.fullmatch(r'[0-9]+',props.get('callback_errors','')):
+        raise ValueError('Missing callback error count')
+    callback_errors=int(props['callback_errors'])
     dropped=int(props['events_dropped'])
-    if props['complete']!=('yes' if dropped==0 else 'no'):
+    if props['complete']!=('yes' if dropped==0 and callback_errors==0 else 'no'):
         raise ValueError('Contradictory capture completeness')
-    if dropped or props['complete']!='yes':
+    if dropped or callback_errors or props['complete']!='yes':
         raise ValueError('Incomplete PRG capture cannot certify evidence')
     result=audit(path)
     actual=sum(result['event_counts'].values())
