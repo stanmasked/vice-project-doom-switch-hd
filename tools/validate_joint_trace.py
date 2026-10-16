@@ -12,7 +12,8 @@ FIELDS=['frame','seq','kind','address','value','physical_bank']
 PCS={0xE479,0xE4E6,0xE4F3,0x835B,0xC906}
 KINDS={'EXEC','READ','SELECT','DATA'}
 REQUIRED={'format':'vice_stage49_joint_v1',
-          'exec_context':'selected_pc_hooks_only','read_causality':'not_proven'}
+          'exec_context':'selected_pc_hooks_only','read_causality':'not_proven',
+          'read_value_provenance':'address_only_fceux_zero_sentinel'}
 
 def validate(trace,meta):
     props={}
@@ -55,7 +56,7 @@ def validate(trace,meta):
             if kind=='EXEC':
                 if addr not in PCS or v is not None:raise ValueError('Invalid EXEC')
             elif kind=='READ':
-                if addr<0x8000 or v is None:raise ValueError('Invalid READ')
+                if addr<0x8000 or v is not None:raise ValueError('Invalid READ value provenance')
             else:
                 if addr!=(0x8000 if kind=='SELECT' else 0x8001) or v is None:
                     raise ValueError('Invalid mapper write')
@@ -73,6 +74,7 @@ def validate(trace,meta):
         raise ValueError('Event count mismatch')
     return {'schema':1,'events':observed,'counts':dict(counts),
             'unknown_bank_reads':unknown,'complete':True,
+            'read_values_proven':False,
             'cpu_read_causality_proven':False,
             'classification':'ordered callbacks with bank replay, not instruction causality'}
 
