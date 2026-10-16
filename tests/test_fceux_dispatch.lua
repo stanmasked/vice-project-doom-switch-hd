@@ -1,5 +1,6 @@
 -- Synthetic emulator callbacks only. Executes actual production Lua trace script.
 local short=os.getenv('VPD_MOCK_SHORT')=='1'
+local invalid=os.getenv('VPD_MOCK_BAD_MMC3')=='1'
 local noclock=os.getenv('VPD_MOCK_NOCLOCK')=='1'
 VPD_TRACE_DIRECTORY=os.tmpname()..'_vpd_stage38'
 VPD_TRACE_MAX_EVENTS=short and 3 or 100
@@ -60,6 +61,10 @@ exec_hooks[0xC906]()
 exec_hooks[0x835B]()
 frame=121
 exec_hooks[0xE50F]()
+if invalid then
+ local ok,err=pcall(write_hooks.mapper,0x8002,2,6)
+ assert(not ok and tostring(err):find('Unsupported FCEUX callback contract',1,true))
+end
 exit_hook()
 local function read(path)
  local f=assert(io.open(path,'rb'))
@@ -87,6 +92,7 @@ assert(meta:find('session_label=invented_test_fixture',1,true))
 assert(meta:find('cycle_trace_available='..(noclock and 'no' or 'yes'),1,true))
 assert(meta:find('initial_prg_r6=unknown',1,true))
 assert(meta:find('mmc3_write_coverage=full_8000_9fff_even_odd',1,true))
+assert(meta:find('callback_errors='..(invalid and '1' or '0'),1,true))
 if short then
  assert(meta:find('events_recorded=3',1,true))
  assert(meta:find('trace_complete=no',1,true))
@@ -94,7 +100,7 @@ if short then
 else
  assert(meta:find('events_recorded=14',1,true),meta)
  assert(meta:find('events_dropped=0',1,true))
- assert(meta:find('trace_complete=yes',1,true))
+ assert(meta:find('trace_complete='..(invalid and 'no' or 'yes'),1,true))
 end
 print('PASS stage38 execution trace: '..(short and 'overflow' or 'complete'))
 assert(os.execute('rm -rf '..VPD_TRACE_DIRECTORY))
