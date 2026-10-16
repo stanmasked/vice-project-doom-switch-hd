@@ -12,6 +12,13 @@ import sys
 from pathlib import Path
 
 GROUPS = {
+    'stage38-54': ('test_dispatch_execution.py', 'test_prg_read_mapping.py',
+                   'test_prg_capture_completeness.py', 'test_prg_read_ranges.py',
+                   'test_joint_cpu_context_validation.py'),
+    'stage55-60': ('test_6502_read_address.py',
+                   'test_6502_prg_instruction_verification.py',
+                   'test_verified_prg_read_correlation.py',
+                   'test_prg_identity_gate.py', 'test_stage60_integration.py'),
     'stage70-71': ('test_stage70_read_provenance_pipeline.py',
                    'test_stage71_discovery_isolation.py'),
     'research': ('test_*.py',),
@@ -37,8 +44,10 @@ def run_group(root, group, *, timeout=180, python=sys.executable):
             completed = subprocess.run(command, cwd=root, capture_output=True,
                                        text=True, timeout=timeout, check=False)
             output = completed.stdout + '\n' + completed.stderr
-            count_match = COUNT.search(output)
-            count = int(count_match.group(1)) if count_match else None
+            # unittest's summary is emitted on stderr. Ignore plausible-looking
+            # banners printed to stdout by individual test cases.
+            count_matches = COUNT.findall(completed.stderr)
+            count = int(count_matches[0]) if len(count_matches) == 1 else None
             passed = completed.returncode == 0 and count is not None and count > 0
             error = None if passed else output[-4000:]
             results.append({'pattern': pattern, 'tests_run': count,
