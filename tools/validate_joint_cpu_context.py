@@ -14,6 +14,7 @@ PROVENANCE={
     'format':'vice_stage53_joint_context_v1',
     'initial_mmc3_mode':'unknown',
     'register_provenance':'callback_time_optional_samples',
+    'register_api':'memory.getregister',
     'effective_address':'not_proven',
     'read_causality':'not_proven'
 }
