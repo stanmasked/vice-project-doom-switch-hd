@@ -8,7 +8,13 @@ assert(emu and emu.framecount and emu.registerexit)
 local file=assert(io.open(DIR..'/stage53_joint_context.tsv','wb'))
 assert(file:write('frame\tseq\tkind\taddress\tvalue\tbank\ta\tx\ty\ts\tp\n'))
 local selected,r6,r7=nil,nil,nil
-local count,dropped=0,0
+local count,dropped,callback_errors=0,0,0
+local function checked(ok,reason)
+  if not ok then
+    callback_errors=callback_errors+1
+    error('Unsupported FCEUX callback contract: '..reason,2)
+  end
+end
 local function register(name)
   if type(memory.getregister)~='function' then return 'unknown' end
   local ok,v=pcall(memory.getregister,name:lower())
@@ -40,20 +46,41 @@ local function record(kind,addr,val)
     string.format('%04X',addr),val and string.format('%02X',val) or 'unknown',
     b and tostring(b) or 'unknown',regs[1],regs[2],regs[3],regs[4],regs[5]},'\t')..'\n'))
 end
+local function bus(kind,expected,a,size,value)
+  checked(type(a)=='number' and a==math.floor(a) and a>=0x8000
+    and a<=0xFFFF and (expected==nil or a==expected),
+    kind..' callback address')
+  checked(size==1,kind..' callback size must be 1')
+  checked(type(value)=='number' and value==math.floor(value)
+    and value>=0 and value<=255,
+    kind..' callback must provide a third byte value')
+  record(kind,a,value)
+end
 for _,pc in ipairs({0xE479,0xE4E6,0xE4F3,0x835B,0xC906}) do
   local address=pc
-  memory.registerexec(address,function()record('EXEC',address,nil)end)
+  memory.registerexec(address,function(a,size,value)
+    checked(a==address and size==1,'EXEC callback address/size')
+    record('EXEC',address,nil)
+  end)
 end
-memory.registerread(0x8000,0x8000,function(addr,size,value)record('READ',addr,value)end)
-memory.registerwrite(0x8000,function(a,size,v)record('SELECT',0x8000,v)end)
-memory.registerwrite(0x8001,function(a,size,v)record('DATA',0x8001,v)end)
+memory.registerread(0x8000,0x8000,function(a,size,value)
+  bus('READ',nil,a,size,value)
+end)
+memory.registerwrite(0x8000,function(a,size,value)
+  bus('SELECT',0x8000,a,size,value)
+end)
+memory.registerwrite(0x8001,function(a,size,value)
+  bus('DATA',0x8001,a,size,value)
+end)
 emu.registerexit(function()
   assert(file:close())
   local m=assert(io.open(DIR..'/stage53_joint_context.meta.txt','wb'))
   assert(m:write(table.concat({
     'format=vice_stage53_joint_context_v1',
     'events_recorded='..count,'events_dropped='..dropped,
-    'complete='..(dropped==0 and 'yes' or 'no'),
+    'complete='..(dropped==0 and callback_errors==0 and 'yes' or 'no'),
+    'callback_errors='..callback_errors,
+    'callback_contract=address_size_value_v1',
     'initial_mmc3_mode=unknown',
     'register_provenance=callback_time_optional_samples',
     'register_api=memory.getregister',
