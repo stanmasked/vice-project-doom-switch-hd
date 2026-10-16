@@ -5,6 +5,12 @@ local MAX=rawget(_G,'VPD_CPU_CONTEXT_MAX_EVENTS') or 10000
 assert(type(MAX)=='number' and MAX==math.floor(MAX) and MAX>=1 and MAX<=500000)
 assert(type(memory)=='table' and type(memory.registerexec)=='function')
 assert(type(emu)=='table' and type(emu.framecount)=='function' and type(emu.registerexit)=='function')
+-- Invalidate metadata from an earlier session BEFORE replacing its TSV.
+-- A crash or callback exception must never reuse an old complete=yes.
+local meta_path=DIR..'/stage52_cpu_context.meta.txt'
+local pending=assert(io.open(meta_path,'wb'))
+assert(pending:write('capture_in_progress=yes\\n'))
+assert(pending:close())
 local file=assert(io.open(DIR..'/stage52_cpu_context.tsv','wb'))
 assert(file:write('frame\tseq\tpc\ta\tx\ty\ts\tp\tregister_status\n'))
 local count,dropped=0,0
@@ -30,7 +36,7 @@ for _,pc in ipairs({0xE479,0xE4E6,0xE4F3,0x835B,0xC906}) do
 end
 emu.registerexit(function()
   assert(file:close())
-  local m=assert(io.open(DIR..'/stage52_cpu_context.meta.txt','wb'))
+  local m=assert(io.open(meta_path,'wb'))
   assert(m:write(table.concat({
     'format=vice_stage52_cpu_context_v1',
     'events_recorded='..count,'events_dropped='..dropped,
