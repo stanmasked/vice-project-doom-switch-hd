@@ -40,12 +40,17 @@ def correlate(trace_path, meta_path, anchors_path, radius=1):
     if not anchors:
         raise ValueError('At least one manually verified anchor required')
     events = []
+    trace_first_frame = None
+    trace_last_frame = None
     with Path(trace_path).open(newline='', encoding='utf8') as stream:
         reader = csv.DictReader(stream, delimiter='\t')
         if reader.fieldnames != FIELDS:
             raise ValueError('Unexpected trace fields')
         for row in reader:
             frame = int(row['frame'])
+            if trace_first_frame is None:
+                trace_first_frame = frame
+            trace_last_frame = frame
             if not any(abs(frame - a['trace_frame']) <= radius for a in anchors):
                 continue
             addr = hx(row['cpu_address'], 'address', 4)
@@ -66,7 +71,11 @@ def correlate(trace_path, meta_path, anchors_path, radius=1):
     for a in anchors:
         nearby = [e for e in events if abs(e['trace_frame'] - a['trace_frame']) <= radius]
         dispatch = [e for e in nearby if e['kind']=='EXEC']
+        in_range = (trace_first_frame is not None and
+                    trace_first_frame <= a['trace_frame'] <= trace_last_frame)
         results.append({**a, 'radius_frames': radius, 'events': len(nearby),
+                        'trace_frame_within_recorded_span': in_range,
+                        'anchor_has_instrumented_events': bool(nearby),
                         'dispatcher_executions': collections.Counter(e['cpu_address'] for e in dispatch),
                         'unknown_bank_executions': sum(e['kind']=='EXEC' and e['physical_prg_bank'] is None and
                                                       int(e['cpu_address'][1:],16)>=0x8000 for e in nearby),
@@ -75,12 +84,15 @@ def correlate(trace_path, meta_path, anchors_path, radius=1):
         'schema': 1, 'source': 'user-verified video anchors + FCEUX stage38 execution callbacks',
         'rom_md5': audit['rom_md5'], 'video_identity': 'not independently verified',
         'first_level_identity': 'not verified by alignment alone',
+        'trace_recorded_frame_span': [trace_first_frame, trace_last_frame],
         'anchors': results,
         'limitations': [
             'Video-frame to emulator-frame correspondence is manually asserted',
             'Only instrumented PCs and RAM/mapper writes are observable',
             'RAM samples may predate the writes whose callbacks recorded them',
             'An execution PC does not identify camera, collision or level data semantics',
+            'Frames without instrumented events are not proof of inactivity',
+            'An anchor outside the recorded frame span cannot be corroborated',
             'No interpolation or timing extrapolation between anchors is performed'
         ]
     }
