@@ -103,7 +103,7 @@ class DispatchExecutionTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,'mapper event'):analyze(path,meta)
             path,meta=fixture(Path(d))
             meta.write_text(meta.read_text().replace(
-                'mmc3_write_coverage=full_8000_9fff_even_odd\\n',''))
+                'mmc3_write_coverage=full_8000_9fff_even_odd\n',''))
             with self.assertRaisesRegex(ValueError,'coverage'):analyze(path,meta)
 
     def test_incomplete_capture_refused_by_default(self):
