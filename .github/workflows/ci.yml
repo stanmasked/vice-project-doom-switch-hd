@@ -31,6 +31,11 @@ jobs:
           lua5.4 tests/test_fceux_capture.lua
           lua5.4 tests/test_fceux_capture.lua --no-clock
           lua5.4 tests/test_fceux_capture.lua --dense
+      - name: Trace real FCEUX Lua execution hooks under synthetic emulator callbacks
+        run: |
+          lua5.4 tests/test_fceux_dispatch.lua
+          VPD_MOCK_NOCLOCK=1 lua5.4 tests/test_fceux_dispatch.lua
+          VPD_MOCK_SHORT=1 lua5.4 tests/test_fceux_dispatch.lua
       - name: Reject ROMs, PPU snapshots, original art exports and binaries
         shell: bash
         run: |
