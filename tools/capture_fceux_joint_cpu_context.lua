@@ -7,6 +7,12 @@ assert(memory and memory.registerexec and memory.registerread and memory.registe
 assert(emu and emu.framecount and emu.registerexit)
 local preflight=dofile('tools/fceux_rom_preflight.lua').inspect(
   rawget(_G,'VPD_STAGE53_EXPECTED_ROM_MD5'))
+-- Invalidate metadata from an earlier session BEFORE replacing its TSV.
+-- A crash or callback exception must never reuse an old complete=yes.
+local meta_path=DIR..'/stage53_joint_context.meta.txt'
+local pending=assert(io.open(meta_path,'wb'))
+assert(pending:write('capture_in_progress=yes\\n'))
+assert(pending:close())
 local file=assert(io.open(DIR..'/stage53_joint_context.tsv','wb'))
 assert(file:write('frame\tseq\tkind\taddress\tvalue\tbank\ta\tx\ty\ts\tp\n'))
 local selected,r6,r7=nil,nil,nil
@@ -80,7 +86,7 @@ memory.registerwrite(0x8000,0x2000,function(a,size,value)
 end)
 emu.registerexit(function()
   assert(file:close())
-  local m=assert(io.open(DIR..'/stage53_joint_context.meta.txt','wb'))
+  local m=assert(io.open(meta_path,'wb'))
   assert(m:write(table.concat({
     'format=vice_stage53_joint_context_v1',
     'rom_header_profile='..preflight.profile,
