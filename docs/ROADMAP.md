@@ -48,19 +48,24 @@ The original fixed bank's documented control flow is in [VIDEO_PIPELINE.md](VIDE
 - [x] Build independent controllable ASCII scene into native Switch NRO (Actions #38829200654).
 - [ ] Recover authentic scene geometry and player motion from ROM-local reference traces.
 - [ ] Match character motion/collisions/animation to measured original behavior.
-- [ ] Replace the ASCII console output with an actual HD renderer.
+- [x] Add ROM-free native software raster renderer at 1280x720 (independent art).
+- [x] Cross-build graphical libnx NRO and upload artifact (Actions #38921850038).
+- [x] Guard 1280x720 renderer against stride overflow, incorrect dimensions and regressions via golden screenshot hash.
+- [ ] Replace procedural test scene with original behavior and newly authored HD artwork.
 
 ## M3: first genuinely HD scene
 - [ ] Create new hand-authored characters, backgrounds and effects.
-- [ ] Add HD renderer, animation, camera and interface.
+- [x] Validate native RGBA8888 framebuffer drawing, synthetic background, collision geometry and camera.
+- [ ] Develop an optimized HD renderer with independently authored scene artwork and animation.
 - [ ] Evaluate quality against reference scene and original timing.
 
 ## M4: Switch platform validation
 - [x] Compile a ROM-free libnx diagnostic .nro in devkitPro CI (#38828228022).
 - [x] Validate NRO magic/size and upload artifact to GitHub Actions.
 - [x] Build native ROM-free ASCII scene diagnostic NRO (Actions #38829200654).
-- [ ] Test this ROM-free probe on physical Switch hardware.
+- [x] Build ROM-free native 1280x720 graphical NRO (Actions #38921850038).
+- [ ] Test the graphical NRO on physical Switch hardware.
 - [ ] Integrate the actual native scene, controller, renderer and audio.
 - [ ] Profile hardware performance in handheld and docked mode.
 
-**Caution:** The new .nro is an independent ASCII test-scene prototype, not the original game, not an HD remake, and not hardware-validated. The SDL2 CHR viewer build remains unverified. See docs/NATIVE_SIMULATION.md.
+**Caution:** Both the original ASCII NRO and new graphical NRO are independently authored test scenes, not the original game or a completed HD remake. Neither has been validated on real Switch hardware. See [NATIVE_SIMULATION.md](NATIVE_SIMULATION.md) and [switch_graphical README](../switch_graphical/README.md).

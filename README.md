@@ -1,6 +1,6 @@
 # Vice: Project Doom — Native HD Remake Research
 
-**Status:** A ROM-free deterministic side-scrolling test scene compiles into a native Nintendo Switch NRO and passes C++ replay tests. This is not original Vice: Project Doom gameplay, not an HD remake yet, and is not tested on Switch hardware.
+**Status:** Two ROM-free Nintendo Switch NRO prototypes compile successfully: an ASCII test scene and a **1280x720 native RGBA8888 raster scene** with independently created procedural background and pixel character. The C++ simulation and renderer pass host-side reproducibility tests. Neither NRO is the original game or a playable HD remake; Switch hardware execution remains unverified.
 
 This private repository contains an independent C++ research/development toolchain targeting Nintendo Switch Homebrew. No NES emulation engine, original ROM, or game-derived artwork is included.
 
@@ -24,6 +24,8 @@ This private repository contains an independent C++ research/development toolcha
 | `tests/` | ROM-free Python/Lua/C++ tests, NRO verifier and private ROM regression check |
 | `game_core/` | Native deterministic game-scene scaffold with placeholder physics and map |
 | `switch_probe/` | Native libnx ASCII test scene with D-pad/A/B gamepad input |
+| `graphics_core/` | Portable C++ 1280x720 raster renderer, independent synthetic art |
+| `switch_graphical/` | Native libnx RGBA8888 framebuffer scene and Switch NRO build |
 | `switch_viewer/` | Experimental SDL2 CHR page viewer (requires private generated pages) |
 | `docs/` | Development roadmap and provenance/copyright guidelines |
 | `.github/workflows/` | Host-side CI and native Switch probe build |
@@ -99,3 +101,20 @@ TSV, nor fill in missing initial register values.
 Local synthetic tests, FCEUX API mocks, and GitHub CI pass; **the original
 first level has not been captured in FCEUX**. All real-game images, memory
 dumps, and logs remain local and private. See [capture documentation](docs/REFERENCE_CAPTURE.md).
+
+## Stage 22 — ROM-free Nintendo Switch graphical build
+
+The native graphical test scene now compiles on devkitPro/libnx without SDL2
+or original NES assets. It draws **1280×720** RGBA8888 pixels using a software
+framebuffer and presents our already tested fixed-tick simulation with a
+hand-authored procedural skyline, tile platforms, pixel hero, and simple HUD.
+This is a diagnostic, not Vice: Project Doom gameplay or actual final HD art.
+
+- Portable host C++ test checks buffer boundaries, golden pixel checksum,
+  deterministic scene output, camera motion and invalid input.
+- The [graphical NRO GitHub Actions run](https://github.com/stanmasked/vice-project-doom-switch-hd/actions/runs/38921850038)
+  cross-builds and uploads `vpd-native-raster-scene`, a ROM-free NRO.
+- For build and control details, see [switch_graphical/README.md](switch_graphical/README.md).
+
+Actual gameplay physics, original first-stage composition, art restoration,
+stable frame pacing, and physical Switch runtime validation remain undone.
