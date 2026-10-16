@@ -40,10 +40,12 @@ def audit(path):
             if kind!='READ' and value is None:
                 raise ValueError('Missing MMC3 write value')
             if kind=='SELECT':
-                if addr!=0x8000:raise ValueError('Bad MMC3 SELECT address')
+                if not 0x8000<=addr<=0x9FFF or addr%2!=0:
+                    raise ValueError('Bad MMC3 SELECT address')
                 selected=value
             elif kind=='DATA':
-                if addr!=0x8001:raise ValueError('Bad MMC3 DATA address')
+                if not 0x8000<=addr<=0x9FFF or addr%2!=1:
+                    raise ValueError('Bad MMC3 DATA address')
                 if selected is not None:
                     if selected%8==6:r6=value
                     if selected%8==7:r7=value
@@ -84,6 +86,7 @@ def audit_verified(path, meta_path):
         props[key]=value
     required={'format':'vice_stage45_prg_reads_v1',
               'initial_mmc3_mode':'unknown',
+              'mmc3_write_coverage':'full_8000_9fff_even_odd',
               'read_provenance':'registerread_callback_no_pc_proof',
               'read_value_provenance':'address_only_fceux_zero_sentinel'}
     if any(props.get(k)!=v for k,v in required.items()):
