@@ -5,6 +5,12 @@ local MAX=rawget(_G,'VPD_JOINT_MAX_EVENTS') or 20000
 assert(type(MAX)=='number' and MAX==math.floor(MAX) and MAX>=1 and MAX<=500000)
 assert(memory and memory.registerexec and memory.registerread and memory.registerwrite)
 assert(emu and emu.framecount and emu.registerexit)
+-- Invalidate metadata from an earlier session BEFORE replacing its TSV.
+-- A crash or callback exception must never reuse an old complete=yes.
+local meta_path=DIR..'/stage49_joint.meta.txt'
+local pending=assert(io.open(meta_path,'wb'))
+assert(pending:write('capture_in_progress=yes\\n'))
+assert(pending:close())
 local output=assert(io.open(DIR..'/stage49_joint.tsv','wb'))
 assert(output:write('frame\tseq\tkind\taddress\tvalue\tphysical_bank\n'))
 local selected,r6,r7=nil,nil,nil
@@ -62,7 +68,7 @@ memory.registerwrite(0x8000,0x2000,function(a,size,v)
 end)
 emu.registerexit(function()
   assert(output:close())
-  local m=assert(io.open(DIR..'/stage49_joint.meta.txt','wb'))
+  local m=assert(io.open(meta_path,'wb'))
   assert(m:write(table.concat({
     'format=vice_stage49_joint_v1',
     'events_recorded='..count,
