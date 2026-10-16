@@ -2,7 +2,7 @@
 local inspect=dofile('tools/fceux_rom_preflight.lua').inspect
 local md5=string.rep('a',32)
 local h={[0]=0x4e,[1]=0x45,[2]=0x53,[3]=0x1a,
-         [4]=8,[5]=8,[6]=0x40,[7]=0}
+         [4]=8,[5]=16,[6]=0x40,[7]=0}
 local hash_calls=0
 local api={
  readbyteunsigned=function(i) return h[i] or 0 end,
@@ -14,7 +14,7 @@ local function rejects(label, fn)
  assert(type(err)=='string','Expected error message: '..label)
 end
 local ok=inspect(nil,api)
-assert(ok.profile=='ines_mapper4_prg128k')
+assert(ok.profile=='ines_mapper4_prg128k_chr128k')
 assert(ok.prg_bytes==131072 and not ok.trainer)
 assert(ok.md5_pin=='not_supplied' and ok.identity_authenticated==false)
 assert(hash_calls==0,'MD5 should be read only when independently pinned')
@@ -28,7 +28,9 @@ h[6]=0x00
 rejects('wrong mapper',function() inspect(nil,api) end)
 h[6]=0x40;h[4]=4
 rejects('wrong PRG count',function() inspect(nil,api) end)
-h[4]=8;h[7]=8
+h[4]=8;h[5]=8
+rejects('wrong CHR count',function() inspect(nil,api) end)
+h[5]=16;h[7]=8
 rejects('NES 2.0',function() inspect(nil,api) end)
 h[7]=0;h[0]=0
 rejects('bad header',function() inspect(nil,api) end)
