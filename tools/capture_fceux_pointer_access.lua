@@ -15,14 +15,17 @@ assert(type(hash)=='string' and hash:match('^[0-9a-fA-F]+$') and #hash==32,
 local file=assert(io.open(DIR..'/stage41_pointer_access.tsv','wb'))
 assert(file:write('frame\tseq\tkind\taddress\tvalue\taa\tab\ta8\ta9\n'))
 local seq,count,dropped=0,0,0
+local sampling=false
 local function bytehex(v)
   assert(type(v)=='number' and v>=0 and v<=255 and v==math.floor(v),
          'Callback did not expose a byte')
   return string.format('%02X',v)
 end
 local function record(kind,addr,value)
+  if sampling then return end
   seq=seq+1
   if count>=MAX then dropped=dropped+1;return end
+  sampling=true
   local row={tostring(emu.framecount()),tostring(seq),kind,
              string.format('%04X',addr),bytehex(value)}
   for _,p in ipairs({0xAA,0xAB,0xA8,0xA9}) do
@@ -30,6 +33,7 @@ local function record(kind,addr,value)
   end
   assert(file:write(table.concat(row,'\t')..'\n'))
   count=count+1
+  sampling=false
 end
 for _,p in ipairs({0xAA,0xAB,0xA8,0xA9}) do
   local address=p
