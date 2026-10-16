@@ -21,6 +21,7 @@ class VerifiedCaptureTests(unittest.TestCase):
             'format=vice_stage45_prg_reads_v1',
             'events_recorded='+str(recorded),
             'events_dropped='+str(dropped),
+            'callback_errors=0',
             'complete='+complete,
             'initial_mmc3_mode=unknown',
             'read_provenance=registerread_callback_no_pc_proof',
@@ -44,6 +45,13 @@ class VerifiedCaptureTests(unittest.TestCase):
     def test_truncated_trace_refused(self):
         self.write_meta(recorded=9)
         with self.assertRaisesRegex(ValueError,'count mismatch'):audit_verified(self.trace,self.meta)
+    def test_callback_contract_error_refused(self):
+        self.meta.write_text(self.meta.read_text().replace(
+            'callback_errors=0','callback_errors=1').replace(
+            'complete=yes','complete=no'))
+        with self.assertRaisesRegex(ValueError,'Incomplete'):
+            audit_verified(self.trace,self.meta)
+
     def test_missing_metadata_refused(self):
         self.meta.unlink()
         with self.assertRaises(FileNotFoundError):audit_verified(self.trace,self.meta)
