@@ -47,6 +47,39 @@ class ResearchRunnerTests(unittest.TestCase):
         self.assertEqual(result['results'][0]['tests_run'], 1)
         self.assertIn('expected', result['results'][0]['error_tail'])
 
+    def test_earlier_failure_is_not_hidden_by_later_success(self):
+        bad = ('import unittest\nclass T(unittest.TestCase):\n'
+               ' def test_bad(self): self.fail("first group failed")\n')
+        good = ('import unittest\nclass T(unittest.TestCase):\n'
+                ' def test_good(self): self.assertTrue(True)\n')
+        self.write('test_stage70_read_provenance_pipeline.py', bad)
+        self.write('test_stage71_discovery_isolation.py', good)
+        report = run_group(self.root, 'stage70-71')
+        self.assertFalse(report['passed'])
+        self.assertEqual([r['passed'] for r in report['results']], [False, True])
+        self.assertIn('first group failed', report['results'][0]['error_tail'])
+
+    def test_all_five_early_patterns_are_checked_despite_failure(self):
+        good = ('import unittest\nclass T(unittest.TestCase):\n'
+                ' def test_ok(self): self.assertTrue(True)\n')
+        bad = good.replace('self.assertTrue(True)', 'self.fail("expected failure")')
+        from run_research_regressions import GROUPS
+        for i, pattern in enumerate(GROUPS['stage38-54']):
+            self.write(pattern, bad if i == 0 else good)
+        report = run_group(self.root, 'stage38-54')
+        self.assertEqual(len(report['results']), 5)
+        self.assertFalse(report['passed'])
+        self.assertEqual([r['passed'] for r in report['results']],
+                         [False, True, True, True, True])
+
+    def test_testcase_stdout_cannot_spoof_unittest_summary(self):
+        source = ('import unittest\nclass T(unittest.TestCase):\n'
+                  ' def test_ok(self): print("Ran 999 tests in 0.01s")\n')
+        self.write('test_fake.py', source)
+        report = run_group(self.root, 'research')
+        self.assertTrue(report['passed'])
+        self.assertEqual(report['results'][0]['tests_run'], 1)
+
     def test_missing_checkout_is_failure(self):
         with self.assertRaisesRegex(ValueError, 'Missing tests directory'):
             run_group(self.root / 'nonexistent', 'research')
