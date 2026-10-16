@@ -15,6 +15,7 @@ PROVENANCE={
     'initial_mmc3_mode':'unknown',
     'register_provenance':'callback_time_optional_samples',
     'register_api':'memory.getregister',
+    'callback_contract':'address_size_value_v1',
     'effective_address':'not_proven',
     'read_causality':'not_proven'
 }
@@ -31,10 +32,14 @@ def validate(trace,meta):
     for key in ('events_recorded','events_dropped'):
         if not re.fullmatch(r'[0-9]+',fields.get(key,'')):
             raise ValueError('Invalid event count')
+    errors_field=fields.get('callback_errors','')
+    if not re.fullmatch(r'[0-9]+',errors_field):
+        raise ValueError('Missing or invalid callback error count')
+    callback_errors=int(errors_field)
     dropped=int(fields['events_dropped'])
-    if fields.get('complete')!=('yes' if dropped==0 else 'no'):
+    if fields.get('complete')!=('yes' if dropped==0 and callback_errors==0 else 'no'):
         raise ValueError('Inconsistent completeness flag')
-    if dropped:raise ValueError('Incomplete capture')
+    if dropped or callback_errors:raise ValueError('Incomplete capture or invalid FCEUX callbacks')
     selected=r6=r7=None
     count=0
     prev_frame=0
