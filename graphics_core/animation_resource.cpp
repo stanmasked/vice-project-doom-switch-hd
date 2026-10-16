@@ -39,29 +39,36 @@ void AnimationResource::rebuildPointers(){
     }
 }
 AnimationLoadResult AnimationResource::loadBytes(
-        const uint8_t* bytes,size_t size,uint16_t atlas_frames) {
+        const uint8_t* bytes,size_t size,uint16_t atlas_frames,
+        uint32_t atlas_pixel_crc32) {
     if(!embedded_)return AnimationLoadResult::Uninitialized;
     if(!bytes || size<34 || size>kMaxAnimationFileBytes)
         return AnimationLoadResult::Invalid;
     if(bytes[0]!='V'||bytes[1]!='A'||bytes[2]!='N'||bytes[3]!='M'||
-       u16(bytes+4)!=1 || u16(bytes+8)!=4 || u16(bytes+12)!=0)
+       u16(bytes+8)!=4 || u16(bytes+12)!=0)
         return AnimationLoadResult::Invalid;
+    const unsigned version=u16(bytes+4);
+    if(version!=1 && version!=2)return AnimationLoadResult::Invalid;
     const unsigned frame_count=u16(bytes+6);
     const unsigned total=u16(bytes+10);
-    if(frame_count!=atlas_frames)
-        return AnimationLoadResult::AtlasMismatch;
+    const size_t descriptors=version==2?22u:18u;
     if(frame_count==0||frame_count>4096||total<4||total>kMaxAnimationFrames||
-       size!=34+size_t(total)*4 ||
+       size!=descriptors+16u+size_t(total)*4 ||
        u32(bytes+14)!=crc32(bytes+18,size-18))
         return AnimationLoadResult::Invalid;
+    if(frame_count!=atlas_frames)
+        return AnimationLoadResult::AtlasMismatch;
+    // v2 binds timing to the VPAT pixel payload; v1 remains unbound/legacy.
+    if(version==2 && u32(bytes+18)!=atlas_pixel_crc32)
+        return AnimationLoadResult::AtlasIdentityMismatch;
     std::array<AnimationFrame,kMaxAnimationFrames> staged{};
     std::array<uint8_t,4> counts{};
     std::array<uint8_t,4> loops{};
     unsigned used=0;
     for(unsigned state=0;state<4;++state){
-        unsigned start=u16(bytes+18+state*4);
-        unsigned n=bytes[20+state*4];
-        unsigned flags=bytes[21+state*4];
+        unsigned start=u16(bytes+descriptors+state*4);
+        unsigned n=bytes[descriptors+2+state*4];
+        unsigned flags=bytes[descriptors+3+state*4];
         if(!n||n>64||flags>1||start!=used||used+n>total)
             return AnimationLoadResult::Invalid;
         counts[state]=static_cast<uint8_t>(n);
@@ -70,7 +77,7 @@ AnimationLoadResult AnimationResource::loadBytes(
     }
     if(used!=total)return AnimationLoadResult::Invalid;
     for(unsigned index=0;index<total;++index){
-        const uint8_t* p=bytes+34+index*4;
+        const uint8_t* p=bytes+descriptors+16+index*4;
         const unsigned frame=u16(p),ticks=u16(p+2);
         if(frame>=frame_count||ticks==0||ticks>600)
             return AnimationLoadResult::Invalid;
@@ -87,7 +94,7 @@ AnimationLoadResult AnimationResource::loadBytes(
     return AnimationLoadResult::Loaded;
 }
 AnimationLoadResult AnimationResource::loadFile(
-        const char* path,uint16_t atlas_frames) {
+        const char* path,uint16_t atlas_frames,uint32_t atlas_pixel_crc32) {
     if(!embedded_)return AnimationLoadResult::Uninitialized;
     if(!path||!*path)return AnimationLoadResult::Missing;
     std::FILE* file=std::fopen(path,"rb");
@@ -112,7 +119,7 @@ AnimationLoadResult AnimationResource::loadFile(
     const int extra=broken?EOF:std::fgetc(file);
     std::fclose(file);
     if(broken||extra!=EOF)return AnimationLoadResult::IoError;
-    return loadBytes(data.data(),got,atlas_frames);
+    return loadBytes(data.data(),got,atlas_frames,atlas_pixel_crc32);
 }
 void AnimationResource::reset(){
     external_=false;

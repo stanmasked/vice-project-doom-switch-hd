@@ -28,7 +28,8 @@ BundleReload AssetBundle::reload(const char* atlas_path,const char* anim_path){
     if(texture!=AtlasLoadResult::Loaded)return BundleReload::BadAtlas;
 
     const AnimationLoadResult timing=
-        next_animation.loadFile(anim_path,next_atlas.atlas().frame_count);
+        next_animation.loadFile(anim_path,next_atlas.atlas().frame_count,
+                                next_atlas.atlas().pixel_crc32);
     if(timing!=AnimationLoadResult::Loaded &&
        timing!=AnimationLoadResult::Missing)
         return BundleReload::BadAnimation;

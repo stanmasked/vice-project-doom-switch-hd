@@ -8,6 +8,8 @@ struct SpriteAtlas {
     const uint8_t* pixels=nullptr;
     uint16_t width=0, height=0, frame_width=0, frame_height=0;
     uint16_t frame_count=0;
+    // CRC of validated uncompressed VPAT pixel payload (resource identity).
+    uint32_t pixel_crc32=0;
 };
 constexpr size_t kVpatHeaderBytes=22;
 bool openAtlas(SpriteAtlas& out,const uint8_t* bytes,size_t size);

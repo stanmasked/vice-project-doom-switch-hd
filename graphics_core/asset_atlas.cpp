@@ -29,7 +29,8 @@ bool openAtlas(SpriteAtlas& out,const uint8_t* bytes,size_t size){
     if(size!=kVpatHeaderBytes+pixels)return false;
     if(u32le(bytes+18)!=crc32(bytes+kVpatHeaderBytes,pixels))return false;
     out={bytes+kVpatHeaderBytes,static_cast<uint16_t>(w),static_cast<uint16_t>(h),
-         static_cast<uint16_t>(fw),static_cast<uint16_t>(fh),static_cast<uint16_t>(count)};
+         static_cast<uint16_t>(fw),static_cast<uint16_t>(fh),static_cast<uint16_t>(count),
+         u32le(bytes+18)};
     return true;
 }
 bool blitAtlasFrame(uint32_t* target,int width,int height,int stride,

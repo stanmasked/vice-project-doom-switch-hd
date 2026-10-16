@@ -4,13 +4,13 @@
 #include <cstddef>
 #include <cstdint>
 namespace vpd {
-// VANM v1: 18-byte header, 4x4-byte clip descriptors, <=256 frame records.
+// VANM v1 legacy / v2 atlas-bound: header 18/22 bytes + descriptors + frame records.
 // This resource owns all frame records. It cannot be moved or copied because
 // AnimationClip exposes pointers into its fixed-size frame array.
 constexpr size_t kMaxAnimationFrames=256;
-constexpr size_t kMaxAnimationFileBytes=34+4*kMaxAnimationFrames;
+constexpr size_t kMaxAnimationFileBytes=38+4*kMaxAnimationFrames;
 enum class AnimationLoadResult : uint8_t {
-    Loaded, Missing, IoError, Invalid, AtlasMismatch, Uninitialized
+    Loaded, Missing, IoError, Invalid, AtlasMismatch, AtlasIdentityMismatch, Uninitialized
 };
 class AnimationResource {
 public:
@@ -18,8 +18,10 @@ public:
     AnimationResource(const AnimationResource&)=delete;
     AnimationResource& operator=(const AnimationResource&)=delete;
     bool initialize(const AnimationBank& embedded);
-    AnimationLoadResult loadBytes(const uint8_t* data,size_t size,uint16_t atlas_frames);
-    AnimationLoadResult loadFile(const char* path,uint16_t atlas_frames);
+    AnimationLoadResult loadBytes(const uint8_t* data,size_t size,uint16_t atlas_frames,
+                                  uint32_t atlas_pixel_crc32=0);
+    AnimationLoadResult loadFile(const char* path,uint16_t atlas_frames,
+                                 uint32_t atlas_pixel_crc32=0);
     void reset();
     void swapExternal(AnimationResource& other);
     const AnimationBank& bank() const { return external_?runtime_:*embedded_; }
