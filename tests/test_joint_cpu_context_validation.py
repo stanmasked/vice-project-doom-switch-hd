@@ -29,6 +29,7 @@ class JointContextTests(unittest.TestCase):
             'rom_header_profile=ines_mapper4_prg128k_chr128k',
             'rom_md5_pin=not_supplied',
             'callback_contract=address_size_value_v1',
+            'mmc3_write_coverage=full_8000_9fff_even_odd',
             'read_value_provenance=address_only_fceux_zero_sentinel',
             'callback_errors=0',
             'effective_address=not_proven','read_causality=not_proven'])+'\n')
@@ -49,6 +50,22 @@ class JointContextTests(unittest.TestCase):
     def test_missing_read_value_provenance_rejected(self):
         self.meta.write_text(self.meta.read_text().replace(
             'read_value_provenance=address_only_fceux_zero_sentinel\n',''))
+        with self.assertRaisesRegex(ValueError,'provenance'):
+            validate(self.trace,self.meta)
+
+    def test_mirrored_mmc3_registers_accepted(self):
+        self.rows[1][3]='8002';self.rows[2][3]='8003'
+        self.write_rows()
+        self.assertEqual(validate(self.trace,self.meta)['events'],4)
+
+    def test_mirrored_parity_rejected(self):
+        self.rows[1][3]='8003';self.write_rows()
+        with self.assertRaisesRegex(ValueError,'MMC3 write'):
+            validate(self.trace,self.meta)
+
+    def test_legacy_incomplete_mapper_coverage_rejected(self):
+        self.meta.write_text(self.meta.read_text().replace(
+            'mmc3_write_coverage=full_8000_9fff_even_odd\\n',''))
         with self.assertRaisesRegex(ValueError,'provenance'):
             validate(self.trace,self.meta)
 
