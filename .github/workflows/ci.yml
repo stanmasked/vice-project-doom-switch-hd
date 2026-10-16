@@ -19,19 +19,37 @@ jobs:
       - name: Compile Python files
         run: python -m compileall -q tools tests
       - name: Stage 38-54 trace and mapper regression group
+        shell: bash
         run: |
+          set -o pipefail
+          {
           python -m unittest discover -s tests -p 'test_dispatch_execution.py' -v
           python -m unittest discover -s tests -p 'test_prg_read_mapping.py' -v
           python -m unittest discover -s tests -p 'test_prg_capture_completeness.py' -v
           python -m unittest discover -s tests -p 'test_prg_read_ranges.py' -v
           python -m unittest discover -s tests -p 'test_joint_cpu_context_validation.py' -v
+          } 2>&1 | tee stage38-54.log
       - name: Stage 55-60 instruction and integration regression group
+        shell: bash
         run: |
+          set -o pipefail
+          {
           python -m unittest discover -s tests -p 'test_6502_read_address.py' -v
           python -m unittest discover -s tests -p 'test_6502_prg_instruction_verification.py' -v
           python -m unittest discover -s tests -p 'test_verified_prg_read_correlation.py' -v
           python -m unittest discover -s tests -p 'test_prg_identity_gate.py' -v
           python -m unittest discover -s tests -p 'test_stage60_integration.py' -v
+          } 2>&1 | tee stage55-60.log
+      - name: Upload Python failure diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: prg-python-regression-logs
+          path: |
+            stage38-54.log
+            stage55-60.log
+          if-no-files-found: warn
+          retention-days: 7
   code-and-tests:
     runs-on: ubuntu-latest
     steps:
