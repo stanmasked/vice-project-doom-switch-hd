@@ -14,10 +14,10 @@ from validate_joint_cpu_context import validate as validate53
 from validate_pointer_access import validate as validate41
 from compare_6502_read_candidates import compare
 from group_prg_read_ranges import runs
-from test_prg_capture_completeness import VerifiedCaptureTests
-from test_joint_trace_validation import JointTraceValidationTests
-from test_joint_cpu_context_validation import JointContextTests
-from test_pointer_access_validation import PointerValidationTests
+import test_prg_capture_completeness as capture_fixtures
+import test_joint_trace_validation as joint49_fixtures
+import test_joint_cpu_context_validation as joint53_fixtures
+import test_pointer_access_validation as pointer_fixtures
 
 
 class ReadProvenanceEndToEndTests(unittest.TestCase):
@@ -28,7 +28,7 @@ class ReadProvenanceEndToEndTests(unittest.TestCase):
         return fixture
 
     def test_stage41_unknown_read_and_independent_ram_snapshot(self):
-        fixture = self.prepare(PointerValidationTests)
+        fixture = self.prepare(pointer_fixtures.PointerValidationTests)
         result = validate41(fixture.log, fixture.meta)
         self.assertEqual(fixture.rows[0][4], 'unknown')
         self.assertEqual(fixture.rows[0][5:9], ['11', '22', '33', '44'])
@@ -36,7 +36,7 @@ class ReadProvenanceEndToEndTests(unittest.TestCase):
         self.assertFalse(result['prg_rom_reads_observed'])
 
     def test_stage45_address_mapping_without_read_bytes(self):
-        fixture = self.prepare(VerifiedCaptureTests)
+        fixture = self.prepare(capture_fixtures.VerifiedCaptureTests)
         result = audit_verified(fixture.trace, fixture.meta)
         self.assertFalse(result['read_values_proven'])
         self.assertEqual(len(result['reads']), 4)
@@ -46,7 +46,7 @@ class ReadProvenanceEndToEndTests(unittest.TestCase):
         self.assertFalse(summary['read_values_proven'])
 
     def test_stage49_joint_trace_rejects_fake_read_byte(self):
-        fixture = self.prepare(JointTraceValidationTests)
+        fixture = self.prepare(joint49_fixtures.JointTraceValidationTests)
         result = validate49(fixture.trace, fixture.meta)
         self.assertFalse(result['read_values_proven'])
         fixture.rows[4][4] = 'AB'
@@ -55,7 +55,7 @@ class ReadProvenanceEndToEndTests(unittest.TestCase):
             validate49(fixture.trace, fixture.meta)
 
     def test_stage53_address_candidate_remains_noncausal(self):
-        fixture = self.prepare(JointContextTests)
+        fixture = self.prepare(joint53_fixtures.JointContextTests)
         result = validate53(fixture.trace, fixture.meta)
         self.assertFalse(result['read_values_proven'])
         self.assertEqual(fixture.rows[3][4], 'unknown')
@@ -66,14 +66,14 @@ class ReadProvenanceEndToEndTests(unittest.TestCase):
         self.assertFalse(candidates['read_values_proven'])
 
     def test_stage41_legacy_callback_bytes_not_accepted(self):
-        fixture = self.prepare(PointerValidationTests)
+        fixture = self.prepare(pointer_fixtures.PointerValidationTests)
         fixture.rows[0][4] = '11'
         fixture.write_rows()
         with self.assertRaisesRegex(ValueError, 'provenance'):
             validate41(fixture.log, fixture.meta)
 
     def test_stage45_legacy_capture_metadata_rejected(self):
-        fixture = self.prepare(VerifiedCaptureTests)
+        fixture = self.prepare(capture_fixtures.VerifiedCaptureTests)
         fixture.meta.write_text(fixture.meta.read_text().replace(
             'read_value_provenance=address_only_fceux_zero_sentinel\n', ''),
             encoding='utf8')
@@ -81,7 +81,7 @@ class ReadProvenanceEndToEndTests(unittest.TestCase):
             audit_verified(fixture.trace, fixture.meta)
 
     def test_stage53_legacy_read_value_and_metadata_rejected(self):
-        fixture = self.prepare(JointContextTests)
+        fixture = self.prepare(joint53_fixtures.JointContextTests)
         fixture.rows[3][4] = 'AB'
         fixture.write_rows()
         with self.assertRaisesRegex(ValueError, 'READ value provenance'):
