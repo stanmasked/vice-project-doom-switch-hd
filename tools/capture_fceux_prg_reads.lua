@@ -7,6 +7,12 @@ assert(type(memory)=='table' and type(memory.registerread)=='function' and
   type(memory.registerwrite)=='function','FCEUX read/write callbacks required')
 assert(type(emu)=='table' and type(emu.framecount)=='function' and
   type(emu.registerexit)=='function','FCEUX emu callback API required')
+-- Invalidate metadata from an earlier session BEFORE replacing its TSV.
+-- A crash or callback exception must never reuse an old complete=yes.
+local meta_path=DIR..'/stage45_prg_reads.meta.txt'
+local pending=assert(io.open(meta_path,'wb'))
+assert(pending:write('capture_in_progress=yes\\n'))
+assert(pending:close())
 local file=assert(io.open(DIR..'/stage45_prg_reads.tsv','wb'))
 assert(file:write('frame\tseq\tkind\tcpu_address\tvalue\tmapped_bank\n'))
 local selected,r6,r7=nil,nil,nil
@@ -61,7 +67,7 @@ memory.registerread(0x8000,0x8000,function(addr,size,value)
 end)
 emu.registerexit(function()
   assert(file:close())
-  local meta=assert(io.open(DIR..'/stage45_prg_reads.meta.txt','wb'))
+  local meta=assert(io.open(meta_path,'wb'))
   assert(meta:write(table.concat({
     'format=vice_stage45_prg_reads_v1',
     'events_recorded='..count,
