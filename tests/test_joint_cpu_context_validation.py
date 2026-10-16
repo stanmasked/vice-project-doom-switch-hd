@@ -65,7 +65,7 @@ class JointContextTests(unittest.TestCase):
 
     def test_legacy_incomplete_mapper_coverage_rejected(self):
         self.meta.write_text(self.meta.read_text().replace(
-            'mmc3_write_coverage=full_8000_9fff_even_odd\\n',''))
+            'mmc3_write_coverage=full_8000_9fff_even_odd\n',''))
         with self.assertRaisesRegex(ValueError,'provenance'):
             validate(self.trace,self.meta)
 
