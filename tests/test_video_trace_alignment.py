@@ -27,6 +27,9 @@ class VideoAlignmentTests(unittest.TestCase):
             self.assertEqual(len(out['anchors']), 2)
             self.assertEqual(out['anchors'][0]['events'], 12)
             self.assertEqual(out['anchors'][1]['events'], 2)
+            self.assertEqual(out['trace_recorded_frame_span'], [100, 101])
+            self.assertTrue(out['anchors'][0]['trace_frame_within_recorded_span'])
+            self.assertTrue(out['anchors'][0]['anchor_has_instrumented_events'])
             self.assertEqual(out['anchors'][0]['dispatcher_executions']['$E479'], 1)
             self.assertEqual(out['anchors'][0]['timeline'][0]['physical_prg_bank'], None)
             self.assertEqual(out['anchors'][1]['timeline'][0]['physical_prg_bank'], 14)
@@ -37,7 +40,10 @@ class VideoAlignmentTests(unittest.TestCase):
             root = Path(temp)
             trace, meta = fixture(root)
             anchors = anchors_file(root, [(999, 102, 'later frame')])
-            self.assertEqual(correlate(trace, meta, anchors, radius=0)['anchors'][0]['events'], 0)
+            no_hits = correlate(trace, meta, anchors, radius=0)['anchors'][0]
+            self.assertEqual(no_hits['events'], 0)
+            self.assertFalse(no_hits['trace_frame_within_recorded_span'])
+            self.assertFalse(no_hits['anchor_has_instrumented_events'])
             self.assertEqual(correlate(trace, meta, anchors, radius=1)['anchors'][0]['events'], 2)
 
     def test_reject_out_of_order_or_duplicate_anchors(self):
