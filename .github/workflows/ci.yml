@@ -110,6 +110,8 @@ jobs:
         run: lua5.4 tests/test_fceux_joint_cpu_context.lua
       - name: Confirm documented FCEUX register API in stage52 and stage53 mocks
         run: lua5.4 tests/test_fceux_register_api.lua
+      - name: Reject incompatible FCEUX hook callback shapes in synthetic stage53 capture
+        run: lua5.4 tests/test_fceux_callback_contract.lua
       - name: Reject ROMs, PPU snapshots, original art exports and binaries
         shell: bash
         run: |
