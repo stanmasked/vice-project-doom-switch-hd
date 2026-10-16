@@ -27,8 +27,10 @@ def validate(trace,meta):
     for k in ('events_recorded','events_dropped'):
         if not re.fullmatch(r'[0-9]+',props.get(k,'')):
             raise ValueError('Invalid event count')
+    if not re.fullmatch(r'[0-9]+',props.get('callback_errors','')):
+        raise ValueError('Missing callback error count')
     if props.get('complete') not in ('yes','no') or (
-        props['complete']=='yes') != (int(props['events_dropped'])==0):
+        props['complete']=='yes') != (int(props['events_dropped'])==0 and int(props['callback_errors'])==0):
         raise ValueError('Contradictory completeness')
     if props['complete']!='yes':
         raise ValueError('Incomplete joint trace')
