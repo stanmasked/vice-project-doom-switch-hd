@@ -15,6 +15,7 @@ struct SceneView {
     bool facing_left=false;
     bool external_sprite_asset=false;
     bool asset_reload_failed=false;
+    bool external_animation_source=false;
 };
 constexpr int kSceneWidth=1280;
 constexpr int kSceneHeight=720;

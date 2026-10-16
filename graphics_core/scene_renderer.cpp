@@ -197,6 +197,8 @@ bool drawScene(uint32_t* target,int width,int height,int stride_pixels,
     s.rect(932,22,125,16,rgba(171,66,75));
     s.rect(932,47,126,8,rgba(55,88,108));
     s.rect(932,47,83,8,rgba(87,184,194));
+    if(view.external_animation_source)
+        s.text(788,54,"ANIM: SD OVERRIDE",rgba(164,210,193),2);
     s.rect(0,689,1280,31,rgba(13,19,33));
     s.text(25,697,"MOVE : D PAD  /  JUMP : A OR B  /  EXIT : PLUS",rgba(173,184,207),2);
     s.text(760,697,view.asset_reload_failed?"RELOAD FAILED":

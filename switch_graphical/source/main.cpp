@@ -3,7 +3,7 @@
 #include "simulation.hpp"
 #include "scene_renderer.hpp"
 #include "asset_atlas.hpp"
-#include "asset_source.hpp"
+#include "asset_bundle.hpp"
 #include "animation.hpp"
 #include "demo_animation.hpp"
 #include "demo_atlas.hpp"
@@ -26,16 +26,17 @@ int main(int,char**) {
     // Optional development asset. Missing or damaged SD data never blocks launch.
     constexpr const char* kExternalAtlasPath=
         "sdmc:/switch/vice_project_doom/hero.vpat";
-    vpd::AssetSource assets;
+    constexpr const char* kExternalAnimationPath=
+        "sdmc:/switch/vice_project_doom/hero.vanm";
+    vpd::AssetBundle assets;
     if(!assets.initialize(vpd_demo::kAtlasBlob,vpd_demo::kAtlasBytes,
-                          vpd_demo::kAnimationBank.atlas_frame_count) ||
-       !vpd::validAnimationBank(vpd_demo::kAnimationBank)) {
+                          vpd_demo::kAnimationBank)) {
         framebufferClose(&fb);return 4;
     }
     const Result sd_mount=fsdevMountSdmc();
     const bool we_mounted_sd=R_SUCCEEDED(sd_mount);
     const bool has_sd=we_mounted_sd || fsdevGetDeviceFileSystem("sdmc")!=nullptr;
-    if(has_sd)assets.reloadFromFile(kExternalAtlasPath);
+    if(has_sd)assets.reload(kExternalAtlasPath,kExternalAnimationPath);
     bool reload_failed=false;
     vpd::AnimationPlayer animation;
     vpd::Simulation game;
@@ -45,11 +46,16 @@ int main(int,char**) {
         const u64 pressed=padGetButtonsDown(&pad);
         if(buttons&HidNpadButton_Plus)break;
         if(pressed&HidNpadButton_X) {
-            reload_failed= !has_sd ||
-                assets.reloadFromFile(kExternalAtlasPath)!=vpd::AtlasLoadResult::Loaded;
+            const vpd::BundleReload result=has_sd ?
+                assets.reload(kExternalAtlasPath,kExternalAnimationPath) :
+                vpd::BundleReload::MissingAtlas;
+            reload_failed=result!=vpd::BundleReload::LoadedPair &&
+                          result!=vpd::BundleReload::LoadedAtlasOnly;
+            if(!reload_failed)animation.reset(); // clip counts/ticks may change
         }
         if(pressed&HidNpadButton_Y) {
-            assets.resetToEmbedded();
+            assets.reset();
+            animation.reset();
             reload_failed=false;
         }
         uint8_t input=0;
@@ -66,12 +72,13 @@ int main(int,char**) {
             const_cast<vpd::Scene*>(&game.scene()),solidAt
         };
         view.sprite_atlas=&assets.atlas();
-        view.external_sprite_asset=assets.external();
+        view.external_sprite_asset=assets.externalAtlas();
+        view.external_animation_source=assets.externalAnimation();
         view.asset_reload_failed=reload_failed;
         view.moving=actor.vx!=0;
-        if(!animation.tick(vpd_demo::kAnimationBank,
+        if(!animation.tick(assets.animation(),
                 vpd::MotionSample{actor.grounded,actor.vx!=0,actor.vy,actor.vx}))break;
-        view.sprite_frame=animation.frame(vpd_demo::kAnimationBank);
+        view.sprite_frame=animation.frame(assets.animation());
         view.facing_left=animation.facingLeft();
         const bool drawn=vpd::drawScene(pixels,vpd::kSceneWidth,
                 vpd::kSceneHeight,static_cast<int>(stride/sizeof(uint32_t)),view);

@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.16)
 project(vpd_scene_renderer LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-add_library(vpd_scene_renderer STATIC scene_renderer.cpp asset_atlas.cpp animation.cpp asset_source.cpp)
+add_library(vpd_scene_renderer STATIC scene_renderer.cpp asset_atlas.cpp animation.cpp asset_source.cpp animation_resource.cpp asset_bundle.cpp)
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
 target_include_directories(vpd_scene_renderer PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
@@ -40,6 +40,21 @@ target_include_directories(vpd_asset_source_test PRIVATE ${CMAKE_CURRENT_BINARY_
 add_dependencies(vpd_asset_source_test vpd_demo_atlas)
 target_link_libraries(vpd_asset_source_test PRIVATE vpd_scene_renderer)
 add_test(NAME external_asset_reload_unit COMMAND vpd_asset_source_test)
+set(DEMO_ANIMATION_BINARY ${CMAKE_CURRENT_BINARY_DIR}/generated/demo_animation.vanm)
+add_custom_command(OUTPUT ${DEMO_ANIMATION_BINARY}
+  COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/../tools/pack_animation_binary.py
+          ${CMAKE_CURRENT_SOURCE_DIR}/../assets/demo_animation.json ${DEMO_ANIMATION_BINARY}
+  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/../assets/demo_animation.json
+          ${CMAKE_CURRENT_SOURCE_DIR}/../tools/pack_animation_binary.py
+          ${CMAKE_CURRENT_SOURCE_DIR}/../tools/build_animation_manifest.py
+  VERBATIM)
+add_custom_target(vpd_demo_animation_binary DEPENDS ${DEMO_ANIMATION_BINARY})
+add_executable(vpd_asset_bundle_test ../tests/test_asset_bundle.cpp)
+target_include_directories(vpd_asset_bundle_test PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/generated)
+add_dependencies(vpd_asset_bundle_test vpd_demo_atlas vpd_demo_animation vpd_demo_animation_binary)
+target_link_libraries(vpd_asset_bundle_test PRIVATE vpd_scene_renderer)
+add_test(NAME paired_texture_and_animation_reload
+         COMMAND vpd_asset_bundle_test ${DEMO_ANIMATION_BINARY})
 add_test(NAME animation_unit COMMAND vpd_animation_test)
 
 # Integrate the same portable deterministic simulation as the libnx NRO.
