@@ -147,3 +147,22 @@ An invalid background keeps the last valid one.
 Details: [PARALLAX_BACKGROUNDS.md](../docs/PARALLAX_BACKGROUNDS.md).
 The original NES first-level background has not been extracted, and
 background quality/performance has not been tested on physical Switch.
+
+## Stage 30 — animated decorative objects
+
+The synthetic scene includes an independent four-frame alpha VPAT
+for a signal lamp (bright/dim) and a ventilation fan (two poses).
+These are **visual only** objects with no collision effect. Positions are
+anchored in test-scene world coordinates and backgrounds/foregrounds
+are composited on opposite sides of the hero/terrain layers.
+
+The optional SD resource is
+`sdmc:/switch/vice_project_doom/decor.vpat`. Use **D-pad Up** to
+reload it and **D-pad Down** to return to the embedded art; all prior
+X/Y, L/R and ZL/ZR art controls remain the same. The last valid decor
+resource is retained after a failed reload.
+
+See [DECOR_EFFECTS.md](../docs/DECOR_EFFECTS.md) for authoring, the
+supported sprite sizes, scene ordering, automated tests, and boundaries.
+The graphics and effects are placeholders, not faithfully restored
+original NES game content.

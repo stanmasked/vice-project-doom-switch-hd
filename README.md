@@ -244,3 +244,24 @@ Source: [backdrop generation](tools/build_demo_backdrop.py) and
 [Format, valid frame sizes, controls and limitations](docs/PARALLAX_BACKGROUNDS.md).
 There is still **no verified live NES first-stage capture or physical
 Nintendo Switch performance measurement**.
+
+## Stage 30 — independently animated decorative assets
+
+The ROM-free native scene now draws a separate **four-frame alpha VPAT**
+for industrial signal lamps and fans, layered both behind the terrain
+and in front of the character. Frame choices use deterministic simulation
+ticks and positions tied to world coordinates, not physical screen offsets.
+Decor art is strictly cosmetic and does not modify hitboxes, map topology,
+hero actions or collision simulation.
+
+The independently-authored `decor.vpat` can be replaced at
+`sdmc:/switch/vice_project_doom/decor.vpat`. D-pad **Up** reloads the
+asset, **Down** returns to the embedded test resource. Other art-control
+bindings remain unchanged. File validation and rollback use the same
+bounded VPAT loader as earlier stages. Detailed examples are in
+[DECOR_EFFECTS.md](docs/DECOR_EFFECTS.md).
+
+A separate synthetic 48×64 editable art sheet and SD-ready VPAT are
+available in the conversation. This is **not** recovered NES visual
+data; real first-stage scenery and Switch hardware performance are
+still outstanding.
