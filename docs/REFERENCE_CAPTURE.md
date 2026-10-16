@@ -169,3 +169,12 @@ The FCEUX snapshot metadata records $92/$AA/$AB/$A8/$A9 as
 See [INDIRECT_POINTER_TRACE.md](INDIRECT_POINTER_TRACE.md) for
 the three exact opcode anchors, MMC3 mode-0 mapping requirement and
 the carry-handling edge case at hypothetical index 86.
+
+## Stage 36: index context for the candidate descriptor pointer
+
+Private capture metadata now includes RAM `$90`, `$91` and
+`$93` as `stage36_companion_ram_90/91/93` alongside the earlier
+index `$92` and pointer `$AA/$AB`. The documentation
+[INDEX_92_AUDIT.md](INDEX_92_AUDIT.md) explains why a 0..21
+fixed-bank wrap does **not** bound all uses of `$92`.
+The snapshot-time values do not prove instructions executed.

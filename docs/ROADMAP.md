@@ -50,6 +50,10 @@
 - [x] Stage 35: verify a bank-12 RAM $92 → $AA/$AB pointer setup, a bank-14 indirect decoder and local JSR anchor ([INDIRECT_POINTER_TRACE.md](INDIRECT_POINTER_TRACE.md)).
 - [x] Emulate 6502 pointer-address ADC carry exactly, including incorrect naive base+3×index extrapolation at index 86; six ROM-free tests passed locally.
 - [x] Record candidate $92, $AA/$AB, $A8/$A9 postframe RAM samples in FCEUX metadata, never claiming observed execution.
+- [x] Stage 36: verify six original-ROM instruction anchors establishing a $92 seed=21, conditional wrap 0..21, alternate seed=147 and indirect writer ([INDEX_92_AUDIT.md](INDEX_92_AUDIT.md)).
+- [x] Prove wrap only for one code path, preserving the stage-35 carry caveat and unknown global index domain.
+- [x] Add seven ROM-free synthetic audit tests, including mutated anchors and out-of-domain transitions.
+- [x] Sample RAM $90/$91/$93 beside $92 in FCEUX postframe metadata with explicit static-only provenance.
 - [ ] Dynamically trace the pointer ($AA),Y, bank switching and writer execution in the actual first level.
 - [ ] Independently identify actual collision metatiles and event/entity positions; observed PPU tile IDs alone are not collisions.
 - [ ] Record confidence levels and local-ROM reproducibility.

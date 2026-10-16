@@ -337,3 +337,17 @@ six ROM-free locally passing tests, private-only report output and
 conditions for correlating real FCEUX execution. GitHub Actions has
 been unable to provision its runner; this stage has **not** obtained
 a green hosted CI. No Switch NRO changed.
+
+## Stage 36 — the index feeding the candidate stage-data pointer
+
+The [ROM-local index audit](tools/audit_index_92.py) validates six
+instruction signatures for RAM `$92`, previously seen forming the
+`$AA/$AB` descriptor pointer. A fixed-bank branch cycles 0–21, but
+other verified code explicitly loads **147** or sources `$92` through
+an indirect read. A 22-state cycle in one code path is **not evidence
+of 22 game levels** or the global index domain.
+
+[Full source-level analysis](docs/INDEX_92_AUDIT.md) and seven
+fabricated-ROM tests are committed. Live execution, authentic level
+format and camera semantics remain unproven. GitHub Actions runner
+provisioning is still being checked; hosted CI success is not assumed.
