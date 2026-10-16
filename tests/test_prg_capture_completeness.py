@@ -39,7 +39,7 @@ class VerifiedCaptureTests(unittest.TestCase):
 
     def test_incomplete_mmc3_coverage_refused(self):
         self.meta.write_text(self.meta.read_text().replace(
-            'mmc3_write_coverage=full_8000_9fff_even_odd\\n',''))
+            'mmc3_write_coverage=full_8000_9fff_even_odd\n',''))
         with self.assertRaisesRegex(ValueError,'provenance'):
             audit_verified(self.trace,self.meta)
 
