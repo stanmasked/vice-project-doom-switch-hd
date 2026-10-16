@@ -46,8 +46,9 @@ struct TempFiles {
 };
 }
 int main(int argc,char** argv) {
-    CHECK(argc==2);
+    CHECK(argc==3);
     const std::vector<uint8_t> binary=load(argv[1]);
+    const std::vector<uint8_t> bound=load(argv[2]);
     const std::vector<uint8_t> embedded(vpd_demo::kAtlasBlob,
              vpd_demo::kAtlasBlob+vpd_demo::kAtlasBytes);
     TempFiles files;
@@ -118,9 +119,37 @@ int main(int argc,char** argv) {
     CHECK(game.reload("missing_vpd_bundle_atlas.vpat",files.anim.c_str())==
           vpd::BundleReload::MissingAtlas);
     CHECK(game.atlas().pixels==legacy);
+    // VANM v2: same frame count is insufficient: CRC must identify this
+    // actual VPAT pixel payload. Legacy VANM v1 intentionally remains usable.
+    CHECK(bound.size()==binary.size()+4);
+    CHECK(bound[4]==2 && bound[5]==0);
+    CHECK(individual.loadBytes(bound.data(),bound.size(),4,
+               game.atlas().pixel_crc32)==vpd::AnimationLoadResult::Loaded);
+    CHECK(individual.loadBytes(bound.data(),bound.size(),4,
+               game.atlas().pixel_crc32^1u)==
+               vpd::AnimationLoadResult::AtlasIdentityMismatch);
+    write(files.anim.c_str(),bound);
+    CHECK(game.reload(files.atlas.c_str(),files.anim.c_str())==
+          vpd::BundleReload::LoadedPair);
+    const auto* good_bound_pixels=game.atlas().pixels;
+    CHECK(game.animation().clips[1].frames[0].ticks==6);
+    auto different_vpat=embedded;
+    const size_t pos=vpd::kVpatHeaderBytes+(7u*96u+12u)*4u;
+    different_vpat[pos]^=0x3fu;
+    uint32_t texture_crc=crc32(different_vpat.data()+vpd::kVpatHeaderBytes,
+                                different_vpat.size()-vpd::kVpatHeaderBytes);
+    for(int k=0;k<4;++k)different_vpat[18+k]=uint8_t(texture_crc>>(8*k));
+    write(files.atlas.c_str(),different_vpat);
+    CHECK(game.reload(files.atlas.c_str(),files.anim.c_str())==
+          vpd::BundleReload::BadAnimation);
+    CHECK(game.atlas().pixels==good_bound_pixels);
+    CHECK(game.animation().clips[1].frames[0].ticks==6);
+    write(files.atlas.c_str(),embedded);
+    CHECK(game.reload(files.atlas.c_str(),files.anim.c_str())==
+          vpd::BundleReload::LoadedPair);
     game.reset();
     CHECK(!game.externalAtlas()&&!game.externalAnimation());
     CHECK(game.atlas().pixels==vpd_demo::kAtlasBlob+vpd::kVpatHeaderBytes);
-    puts("PASS: VANM CRC, durations, matching frame count, paired atomic reload and fallback");
+    puts("PASS: VANM v1/v2, atlas CRC identity, durations, rollback, legacy fallback");
     return 0;
 }

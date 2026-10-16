@@ -50,3 +50,6 @@ class AnimationBinaryTests(unittest.TestCase):
         with self.assertRaises(ValueError):pack(custom)
 
 if __name__=='__main__':unittest.main()
+
+// VANM v2 binding tests are in test_animation_identity.py, including
+// mismatched atlas count, corrupted VPAT and intentional frame changes.

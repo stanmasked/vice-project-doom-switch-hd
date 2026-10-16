@@ -17,6 +17,7 @@ on:
       - 'tests/test_animation_manifest.py'
       - 'tools/pack_animation_binary.py'
       - 'tests/test_animation_binary.py'
+      - 'tests/test_animation_identity.py'
       - 'tests/test_asset_bundle.cpp'
       - 'tests/test_graphics_animation_integration.cpp'
       - 'tests/check_nro.py'

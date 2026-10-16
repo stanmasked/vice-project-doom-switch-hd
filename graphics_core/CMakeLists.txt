@@ -9,11 +9,13 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
   target_compile_options(vpd_scene_renderer PRIVATE -Wall -Wextra -Wpedantic)
 endif()
 set(DEMO_HEADER ${CMAKE_CURRENT_BINARY_DIR}/generated/demo_atlas.hpp)
-add_custom_command(OUTPUT ${DEMO_HEADER}
-  COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/../tools/build_demo_atlas.py ${DEMO_HEADER}
+set(DEMO_ATLAS_BINARY ${CMAKE_CURRENT_BINARY_DIR}/generated/demo_atlas.vpat)
+add_custom_command(OUTPUT ${DEMO_HEADER} ${DEMO_ATLAS_BINARY}
+  COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/../tools/build_demo_atlas.py
+          ${DEMO_HEADER} --raw ${DEMO_ATLAS_BINARY}
   DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/../tools/build_demo_atlas.py
   VERBATIM)
-add_custom_target(vpd_demo_atlas DEPENDS ${DEMO_HEADER})
+add_custom_target(vpd_demo_atlas DEPENDS ${DEMO_HEADER} ${DEMO_ATLAS_BINARY})
 set(DEMO_ANIMATION_HEADER ${CMAKE_CURRENT_BINARY_DIR}/generated/demo_animation.hpp)
 add_custom_command(OUTPUT ${DEMO_ANIMATION_HEADER}
   COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/../tools/build_animation_manifest.py
@@ -49,12 +51,23 @@ add_custom_command(OUTPUT ${DEMO_ANIMATION_BINARY}
           ${CMAKE_CURRENT_SOURCE_DIR}/../tools/build_animation_manifest.py
   VERBATIM)
 add_custom_target(vpd_demo_animation_binary DEPENDS ${DEMO_ANIMATION_BINARY})
+set(DEMO_BOUND_ANIMATION_BINARY ${CMAKE_CURRENT_BINARY_DIR}/generated/demo_bound_animation.vanm)
+add_custom_command(OUTPUT ${DEMO_BOUND_ANIMATION_BINARY}
+  COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/../tools/pack_animation_binary.py
+          ${CMAKE_CURRENT_SOURCE_DIR}/../assets/demo_animation.json
+          ${DEMO_BOUND_ANIMATION_BINARY} --atlas ${DEMO_ATLAS_BINARY}
+  DEPENDS ${DEMO_ATLAS_BINARY}
+          ${CMAKE_CURRENT_SOURCE_DIR}/../assets/demo_animation.json
+          ${CMAKE_CURRENT_SOURCE_DIR}/../tools/pack_animation_binary.py
+          ${CMAKE_CURRENT_SOURCE_DIR}/../tools/build_animation_manifest.py
+  VERBATIM)
+add_custom_target(vpd_demo_bound_animation DEPENDS ${DEMO_BOUND_ANIMATION_BINARY})
 add_executable(vpd_asset_bundle_test ../tests/test_asset_bundle.cpp)
 target_include_directories(vpd_asset_bundle_test PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/generated)
-add_dependencies(vpd_asset_bundle_test vpd_demo_atlas vpd_demo_animation vpd_demo_animation_binary)
+add_dependencies(vpd_asset_bundle_test vpd_demo_atlas vpd_demo_animation vpd_demo_animation_binary vpd_demo_bound_animation)
 target_link_libraries(vpd_asset_bundle_test PRIVATE vpd_scene_renderer)
 add_test(NAME paired_texture_and_animation_reload
-         COMMAND vpd_asset_bundle_test ${DEMO_ANIMATION_BINARY})
+         COMMAND vpd_asset_bundle_test ${DEMO_ANIMATION_BINARY} ${DEMO_BOUND_ANIMATION_BINARY})
 add_test(NAME animation_unit COMMAND vpd_animation_test)
 
 # Integrate the same portable deterministic simulation as the libnx NRO.
