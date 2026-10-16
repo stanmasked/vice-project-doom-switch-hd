@@ -40,7 +40,7 @@ void AnimationResource::rebuildPointers(){
 AnimationLoadResult AnimationResource::loadBytes(
         const uint8_t* bytes,size_t size,uint16_t atlas_frames) {
     if(!embedded_)return AnimationLoadResult::Uninitialized;
-    if(!bytes || size<32 || size>kMaxAnimationFileBytes)
+    if(!bytes || size<34 || size>kMaxAnimationFileBytes)
         return AnimationLoadResult::Invalid;
     if(bytes[0]!='V'||bytes[1]!='A'||bytes[2]!='N'||bytes[3]!='M'||
        u16(bytes+4)!=1 || u16(bytes+8)!=4 || u16(bytes+12)!=0)
@@ -50,7 +50,7 @@ AnimationLoadResult AnimationResource::loadBytes(
     if(frame_count!=atlas_frames)
         return AnimationLoadResult::AtlasMismatch;
     if(frame_count==0||frame_count>4096||total<4||total>kMaxAnimationFrames||
-       size!=32+size_t(total)*4 ||
+       size!=34+size_t(total)*4 ||
        u32(bytes+14)!=crc32(bytes+18,size-18))
         return AnimationLoadResult::Invalid;
     std::array<AnimationFrame,kMaxAnimationFrames> staged{};
@@ -69,7 +69,7 @@ AnimationLoadResult AnimationResource::loadBytes(
     }
     if(used!=total)return AnimationLoadResult::Invalid;
     for(unsigned index=0;index<total;++index){
-        const uint8_t* p=bytes+32+index*4;
+        const uint8_t* p=bytes+34+index*4;
         const unsigned frame=u16(p),ticks=u16(p+2);
         if(frame>=frame_count||ticks==0||ticks>600)
             return AnimationLoadResult::Invalid;
