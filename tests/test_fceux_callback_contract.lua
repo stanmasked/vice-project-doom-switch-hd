@@ -18,7 +18,10 @@ memory={
     assert(addr==0x8000 and size==0x8000)
     read_hook=fn
   end,
-  registerwrite=function(addr,fn) writes[addr]=fn end,
+  registerwrite=function(addr,size,fn)
+    assert(addr==0x8000 and size==0x2000)
+    writes[0x8000]=fn;writes[0x8001]=fn
+  end,
   getregister=function(name)
     return ({a=1,x=2,y=3,s=4,p=5})[name]
   end
@@ -31,7 +34,7 @@ local function fails(fn,...)
     'Expected explicit FCEUX callback failure, got '..tostring(err))
 end
 fails(writes[0x8000],0x8000,1)               -- legacy 2-argument write
-fails(writes[0x8001],0x8000,1,12)            -- wrong callback address
+fails(writes[0x8001],0xA000,1,12)            -- outside MMC3 bank window
 fails(read_hook,0x835B,2,0)               -- wrong bus operation size
 fails(read_hook,0x835B,1)                    -- absent read byte
 fails(execs[0x835B],0xE479,1,0)             -- wrong EXEC callback PC
