@@ -28,3 +28,17 @@ stage38 logger until those conditions have been established.
 A future confirmed result needs an execution trace identifying the instruction,
 its operand/index register, the active physical PRG bank and the data read,
 then independent agreement with the observed video/PPU scene.
+
+## Stage 43: validate provenance before interpretation
+
+Run `python3 tools/validate_pointer_access.py private/first_level/stage41_pointer_access.tsv --meta private/first_level/stage41_pointer_access.meta.txt --out private/first_level/stage43_pointer_audit.json`.
+
+This checks row structure, ordered event identifiers, tracked RAM byte
+addresses, event counts, ROM identity format and metadata consistency.
+It **never** upgrades pointer-byte callback events into PRG-ROM reads,
+instruction PCs or effective addresses. A truncated log remains explicitly
+incomplete. Six synthetic Python regressions cover these boundaries.
+
+The stage39 CI YAML was also corrected to restore actual newlines in the
+video-alignment test step. Passing CI and authentic FCEUX instrumentation
+still require independent confirmation.
