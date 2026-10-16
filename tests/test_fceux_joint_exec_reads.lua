@@ -21,8 +21,14 @@ reads(0x835C,1,0)               -- observed next read, causality not proven
 reads(0x835D,1,0)               -- overflow
 local ok,err=pcall(reads,0x835B,1,0x7F)
 assert(not ok and tostring(err):find('READ callback address/size/zero sentinel',1,true))
-local bad,why=pcall(writes[0x8000],0x9FFF,1,nil)
-assert(not bad and tostring(why):find('mirrored MMC3 write',1,true))
+for _,args in ipairs({
+  {0xA000,1,0x06}, -- wrong mapper register region
+  {0x8002,2,0x06}, -- wrong access size
+  {0x9FFE,1,256},  -- invalid byte
+}) do
+  local bad,why=pcall(writes[0x8000],args[1],args[2],args[3])
+  assert(not bad and tostring(why):find('mirrored MMC3 write',1,true))
+end
 exit()
 local f=assert(io.open(folder..'/stage49_joint.tsv'))
 local lines={};for l in f:lines() do lines[#lines+1]=l end;f:close()
@@ -33,7 +39,7 @@ assert(lines[6]=='9\t5\tREAD\t835C\tunknown\t12')
 local m=assert(io.open(folder..'/stage49_joint.meta.txt'))
 local meta=m:read('*a');m:close()
 assert(meta:find('events_dropped=1',1,true))
-assert(meta:find('callback_errors=2',1,true))
+assert(meta:find('callback_errors=4',1,true))
 assert(meta:find('mmc3_write_coverage=full_8000_9fff_even_odd',1,true))
 assert(meta:find('complete=no',1,true))
 assert(meta:find('read_causality=not_proven',1,true))
