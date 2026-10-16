@@ -105,3 +105,15 @@ A simple ROM-free editor input is `hero_animation.json`. Convert it via:
 
 See [EXTERNAL_ANIMATION.md](../docs/EXTERNAL_ANIMATION.md). No
 physical-console test or original-game timing recovery is claimed.
+
+## Stage 27 — matching the atlas to the animation file
+
+For stronger **accidental content mismatch detection**, create a
+VANM **v2** bound to the exact atlas:
+
+    python3 tools/pack_animation_binary.py hero_animation.json hero.vanm --atlas hero.vpat
+
+Reload with X. A v2 animation file for a different same-size atlas
+is refused; existing loaded textures/animation remain unchanged.
+Previous VANM v1 files continue working but do not provide this check.
+For details see [EXTERNAL_ANIMATION.md](../docs/EXTERNAL_ANIMATION.md).

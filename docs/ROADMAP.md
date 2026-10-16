@@ -69,6 +69,8 @@ The original fixed bank's documented control flow is in [VIDEO_PIPELINE.md](VIDE
 - [x] Add independently authored VANM v1 external animation clips and editable durations (stage 26).
 - [x] Verify paired SD atlas + timing update is transactional, retains legacy atlas-only fallback and rejects bad data.
 - [x] Host test and native cross-build of bundle loader; see [EXTERNAL_ANIMATION.md](EXTERNAL_ANIMATION.md).
+- [x] Add VANM v2 optional pixel-content CRC binding, same-count wrong-atlas rejection and legacy v1 compatibility (stage 27).
+- [x] C++/Python regression: cross-file checksum and rollback when unrelated art uses the same frame layout.
 - [ ] Add detailed original HD character art and measure authentic animation timings.
 - [x] Allow opt-in author-created external 4-frame VPAT pixel replacement via SD, X reload and Y fallback.
 - [ ] Optimize HD rendering and validate speed on Switch hardware.

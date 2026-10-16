@@ -102,3 +102,60 @@ build does not demonstrate acceptable display speed on a physical Switch.
 
 See [ASSET_PIPELINE.md](ASSET_PIPELINE.md) and
 [SD_ASSET_OVERRIDE.md](SD_ASSET_OVERRIDE.md) for the earlier texture format.
+
+## Stage 27: VANM v2 — bind clip timing to the exact VPAT atlas
+
+To prevent an animation schedule from being applied to the **wrong
+same-frame-count sprite sheet**, the animation resource now optionally
+contains the CRC32 of its intended VPAT **pixel payload**. The CRC comes
+from VPAT header bytes 18–21 and is rechecked when VPAT is loaded.
+
+VANM v2 uses the same record semantics as v1, with a four-byte identity
+inserted immediately before the clip descriptors:
+
+| Offset | Contents |
+|---:|---|
+| 0–3 | Magic `VANM` |
+| 4–5 | Version `2` (legacy `1` still readable) |
+| 6–13 | Frame count, four states, total records and reserved flags |
+| 14–17 | CRC32 of *everything from offset 18 onward* |
+| 18–21 | **CRC32 of accompanying VPAT pixel payload** (v2 only) |
+| 22–37 | Four 4-byte state descriptors |
+| 38 onward | `u16 atlas_frame; u16 duration_ticks` records |
+
+VANM v1 retains its original offsets (descriptors start at 18, records
+at 34), and **does not** provide content binding. A missing VANM file
+also retains the legacy stage-25 embedded timing fallback.
+
+To generate a new **v2 bound** animation file, pack the final VPAT first:
+
+~~~sh
+python3 tools/pack_vpat.py private/hero.png --frame-width 24 --frame-height 32 \
+  --frames 4 --binary private/hero.vpat
+python3 tools/pack_animation_binary.py private/hero_animation.json \
+  private/hero.vanm --atlas private/hero.vpat
+~~~
+
+The packer checks VPAT dimensions, stored CRC and frame count. If
+you **change any pixel**, rebuild both VPAT and its bound VANM v2 before
+pressing X. Otherwise the game refuses the new pair and keeps its
+last valid atlas plus timings.
+
+For compatibility with an old SD package, omitting `--atlas` produces
+an intentionally **unbound legacy VANM v1**:
+
+~~~sh
+python3 tools/pack_animation_binary.py private/hero_animation.json private/hero.vanm
+~~~
+
+The host unit tests now include two *independently authored* VPAT
+files with **identical frame counts** but different pixels. The
+same bound VANM must not load with both. The already-active pair must
+remain unchanged if the replacement is incompatible.
+
+**Security boundary:** CRC32 helps detect accidental version mixing
+and file corruption; a determined person could intentionally forge a
+matching CRC32. This feature is **not** authentication, encryption, a
+licensing system, or cryptographic proof of an art source. Real-game
+visuals, authentic timing and physical Switch performance are still
+unverified.

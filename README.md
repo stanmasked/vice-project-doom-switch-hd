@@ -198,3 +198,17 @@ same authored JSON as the compile-time animation generator. The new
 explains clip records, CRC checks, state bounds and SD paths. CI verifies
 both the transaction and native NRO cross-build. This is not measured
 original-game animation timing and has not been run on physical Switch.
+
+## Stage 27 — animation-to-atlas content binding (VANM v2)
+
+The optional SD-card `hero.vanm` file can now be **VANM v2**, with an
+explicit CRC32 of the companion VPAT pixel payload. The runtime validates
+both files before switching. It rejects a v2 timeline paired with
+*different pixels*, even if the two atlases have identical dimensions
+and frame counts. The prior valid atlas and timings remain active on
+a mismatch. [Python packing tool](tools/pack_animation_binary.py)
+supports the `--atlas` argument to produce a bound VANM v2.
+
+VANM v1 remains readable for older stage-26 SD bundles, but does not
+bind to exact pixel content. CRC32 is an accidental-mismatch check,
+**not a security signature**. See [VANM v2 documentation](docs/EXTERNAL_ANIMATION.md).
