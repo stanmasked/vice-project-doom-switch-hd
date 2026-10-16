@@ -7,9 +7,13 @@ import json
 from pathlib import Path
 from verify_6502_prg_instruction import verify
 from compare_6502_read_candidates import compare
+from validate_joint_cpu_context import validate
 
 def correlate(trace, meta, prg, *, exec_seq, opcode_hex, max_gap=3,
               zp_low=None, zp_high=None, expected_prg_sha256=None):
+    # Validate event completeness before an early PRG hash mismatch return.
+    # Otherwise damaged captures could be reported as ordinary image mismatches.
+    validate(trace, meta)
     if expected_prg_sha256 is not None:
         if not isinstance(expected_prg_sha256,str) or not re.fullmatch(r'[0-9a-fA-F]{64}',expected_prg_sha256):
             raise ValueError('Invalid expected PRG SHA256')
