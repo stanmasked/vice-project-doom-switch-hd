@@ -14,7 +14,7 @@ class EndToEndTests(unittest.TestCase):
         self.addCleanup(self.fixture.doCleanups)
         self.fixture.case.rows.extend([
             ['19','5','EXEC','835B','unknown','12','01','02','03','04','unknown'],
-            ['19','6','READ','835C','AB','12','01','02','03','04','unknown']
+            ['19','6','READ','835C','unknown','12','01','02','03','04','unknown']
         ])
         self.fixture.case.write_rows()
         self.fixture.case.meta.write_text(
@@ -45,7 +45,7 @@ class EndToEndTests(unittest.TestCase):
     def test_intervening_mmc3_write_blocks_candidate(self):
         self.fixture.case.rows[5]=['19','6','SELECT','8000','06','12',
                                   '01','02','03','04','unknown']
-        self.fixture.case.rows.append(['19','7','READ','835C','AB','12',
+        self.fixture.case.rows.append(['19','7','READ','835C','unknown','12',
                                        '01','02','03','04','unknown'])
         self.fixture.case.write_rows()
         self.fixture.case.meta.write_text(
