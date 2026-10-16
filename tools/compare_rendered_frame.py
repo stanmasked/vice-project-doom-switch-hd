@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Compare true FCEUX screen palette indices to a static PPU/OAM reconstruction.
 
-This is a diagnostic, NOT proof of authentic screen layout. Scrolling, CHR
-bank switches midframe, sprite overflow, emphasis and timing are NOT emulated.
+This is a diagnostic, NOT proof of authentic screen layout. Only explicit
+static normal scroll is supported; midframe scroll splits, CHR bank changes,
+sprite overflow, emphasis and precise timing are NOT emulated.
 Original-game capture files / frame previews MUST remain local, outside Git.
 """
 import argparse
@@ -15,7 +16,8 @@ try:
 except ImportError:
     from render_ppu_snapshot import background_color_index as bg_pixel
     from render_ppu_snapshot import nes_palette_index as palette_color
-from render_oam_sprites import sprite_pixel, _background_opaque
+from render_oam_sprites import sprite_pixel
+from ppu_scroll import resolve_pixel, scroll_background_pixel, opaque_background_pixel
 
 WIDTH, HEIGHT = 256, 240
 PIXELS = WIDTH * HEIGHT
@@ -31,7 +33,7 @@ def load_reference(prefix):
     return rgb,pal
 
 def reconstructed_indices(ppu,ram,nt,base,sprites=False,height=8,
-                          sprite_base=0,mask=None):
+                          sprite_base=0,mask=None,scroll_x=0,scroll_y=0):
     """Produce a palette-index image, not approximate RGB."""
     if len(ppu)!=16384:raise ValueError('Expected 16KiB PPU snapshot')
     if nt not in range(4) or base not in (0,0x1000):
@@ -42,6 +44,7 @@ def reconstructed_indices(ppu,ram,nt,base,sprites=False,height=8,
         raise ValueError('Sprites require 2KiB CPU RAM')
     if sprites and (height not in (8,16) or sprite_base not in (0,0x1000)):
         raise ValueError('Invalid sprite size/pattern table')
+    resolve_pixel(nt,0,0,scroll_x,scroll_y)
     bg_enabled=mask is None or bool(mask&0x08)
     left_visible=mask is None or bool(mask&0x02)
     backdrop=palette_color(ppu,0)
@@ -51,8 +54,8 @@ def reconstructed_indices(ppu,ram,nt,base,sprites=False,height=8,
         for x in range(WIDTH):
             i=y*WIDTH+x
             visible=bg_enabled and (x>=8 or left_visible)
-            pixels[i]=bg_pixel(ppu,nt,x,y,base) if visible else backdrop
-            opaque[i]=1 if visible and _background_opaque(ppu,nt,x,y,base) else 0
+            pixels[i]=scroll_background_pixel(ppu,nt,x,y,base,scroll_x,scroll_y) if visible else backdrop
+            opaque[i]=1 if visible and opaque_background_pixel(ppu,nt,x,y,base,scroll_x,scroll_y) else 0
     if not sprites or (mask is not None and not mask&0x10):
         return bytes(pixels)
     spr_left=mask is None or bool(mask&0x04)
@@ -114,7 +117,7 @@ def meta_byte(metadata,key):
     if not 0<=n<=255:raise ValueError('Invalid '+key)
     return n
 
-def evaluate(prefix,nt=0,base=None,mode='background'):
+def evaluate(prefix,nt=0,base=None,mode='background',scroll_x=0,scroll_y=0):
     snap=load_snapshot(prefix)
     if hasattr(snap,'ppu'):
         ppu,ram,meta=snap.ppu,snap.ram,snap.metadata
@@ -135,14 +138,16 @@ def evaluate(prefix,nt=0,base=None,mode='background'):
         sprites=mode=='sprites',
         height=16 if ctrl is not None and ctrl&0x20 else 8,
         sprite_base=0x1000 if ctrl is not None and ctrl&0x08 else 0,
-        mask=mask)
+        mask=mask,scroll_x=scroll_x,scroll_y=scroll_y)
     result,heatmap=compare_pixels(proposed,reference)
     result.update({
         'frame':meta.get('frame'),'input_prefix':str(prefix),
         'mode':mode,'nametable':nt,'bg_pattern_base':hex(base),
+        'scroll_x':scroll_x,'scroll_y':scroll_y,
         'ppuctrl_observed':ctrl is not None,'ppumask_observed':mask is not None,
         'rgb_capture_bytes':len(rgb),
-        'limitations':'Discrepancies may be due to scrolling, midframe CHR swaps, '
+        'limitations':'Scroll offsets are assumptions unless independently measured. '
+          'Discrepancies may be due to scroll splits, midframe CHR swaps, '
           'sprites, emphasis, PPU timing and static snapshot limitations; '
           'a low error fraction does NOT establish authentic game reconstruction.'
     })
@@ -154,10 +159,18 @@ def main():
     ap.add_argument('--nametable',type=int,choices=[0,1,2,3],default=0)
     ap.add_argument('--pattern-base',choices=['auto','0x0000','0x1000'],default='auto')
     ap.add_argument('--mode',choices=['background','sprites'],default='background')
+    ap.add_argument('--scroll-x',type=int,default=None,
+                    help='Measured X scroll (0..255); omit for assumed zero')
+    ap.add_argument('--scroll-y',type=int,default=None,
+                    help='Measured Y scroll (0..239); omit for assumed zero')
     ap.add_argument('--out',type=Path,default=Path('private/reference_comparison'))
     args=ap.parse_args()
     base=None if args.pattern_base=='auto' else int(args.pattern_base,16)
-    result,heatmap=evaluate(args.capture_prefix,args.nametable,base,args.mode)
+    result,heatmap=evaluate(args.capture_prefix,args.nametable,base,args.mode,
+        0 if args.scroll_x is None else args.scroll_x,
+        0 if args.scroll_y is None else args.scroll_y)
+    result['scroll_provenance']=('explicit' if args.scroll_x is not None
+        and args.scroll_y is not None else 'partially_or_fully_assumed_zero')
     args.out.mkdir(parents=True,exist_ok=True)
     report=args.out/(args.capture_prefix.name+'_comparison.json')
     difference=args.out/(args.capture_prefix.name+'_difference.png')
