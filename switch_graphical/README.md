@@ -89,3 +89,19 @@ the last valid atlas. [Full documentation](../docs/SD_ASSET_OVERRIDE.md).
 
 This feature has only been compiled and host-tested; no runtime test
 on a physical Nintendo Switch has been performed.
+
+## Stage 26: external clip manifest
+
+In addition to `hero.vpat`, put `hero.vanm` alongside it to modify
+animation frame choices and durations at runtime. The `X` hot-reload
+now stages **both** files; bad animation data cannot partially replace
+a texture. On a successful reload the animation state is restarted.
+`Y` restores embedded sprites and timing. If `hero.vanm` is missing,
+stage-25 atlas-only behavior is retained.
+
+A simple ROM-free editor input is `hero_animation.json`. Convert it via:
+
+    python3 tools/pack_animation_binary.py hero_animation.json hero.vanm
+
+See [EXTERNAL_ANIMATION.md](../docs/EXTERNAL_ANIMATION.md). No
+physical-console test or original-game timing recovery is claimed.

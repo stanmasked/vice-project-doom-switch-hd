@@ -180,3 +180,21 @@ restored Vice art.
 
 This has not been tested on actual Switch hardware, and the game
 remains a synthetic scene with placeholder animations and physics.
+
+## Stage 26 — SD animation manifest hot reload
+
+External animation **timing and frame order** are now stored in validated
+VANM v1 binary clip data, independent of the VPAT sprite pixels.
+The native Switch diagnostic loads `hero.vpat` and optional `hero.vanm`
+as one staged resource transaction. If a supplied VANM is corrupt or
+incompatible, both current resources remain unchanged. Press **X** to
+reload, **Y** to restore embedded art and timing. With no VANM file,
+existing stage-25 external VPATs remain compatible using the embedded
+four-clip manifest.
+
+The ROM-free [VANM packer](tools/pack_animation_binary.py) accepts the
+same authored JSON as the compile-time animation generator. The new
+[external animation format documentation](docs/EXTERNAL_ANIMATION.md)
+explains clip records, CRC checks, state bounds and SD paths. CI verifies
+both the transaction and native NRO cross-build. This is not measured
+original-game animation timing and has not been run on physical Switch.

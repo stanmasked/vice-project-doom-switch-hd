@@ -87,3 +87,18 @@ authentic Vice: Project Doom level remains unextracted and unvalidated.
 
 See ASSET_PIPELINE.md and ANIMATION_CONTROLLER.md for atlas encoding,
 frame selection, and animation state design.
+
+## Stage 26: optional external animation timings
+
+The stage-25 `hero.vpat` location is unchanged. For a paired external
+animation schedule, add a binary `hero.vanm` in the **same SD directory**.
+This controls the frame indices and durations for idle, run, rise and fall.
+
+**X** validates both files and applies them together. A damaged/incompatible
+VANM blocks the entire update and preserves the previous valid resources.
+**Y** returns to embedded pixels **and** embedded timing. If VANM is missing,
+an external VPAT alone continues to work with the embedded clip schedule
+(legacy compatibility). The fixed total of four clip states is unchanged.
+
+Use [EXTERNAL_ANIMATION.md](EXTERNAL_ANIMATION.md) for the VANM binary
+layout, Python JSON packer, controls, bounds and known limitations.
