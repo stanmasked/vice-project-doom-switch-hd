@@ -55,7 +55,8 @@ def fixture(root,clock=True,drop=0):
       f'events_recorded={len(events)}',f'events_dropped={drop}',
       f'trace_complete={"no" if drop else "yes"}',
       f'cycle_trace_available={"yes" if clock else "no"}',
-      'initial_mmc3_mode=unknown','initial_prg_r6=unknown',
+      'initial_mmc3_mode=unknown',
+      'mmc3_write_coverage=full_8000_9fff_even_odd','initial_prg_r6=unknown',
       'initial_prg_r7=unknown',
       'execution_provenance=registerexec_callbacks_not_source_disassembly'
     ])+'\n',encoding='utf8')
@@ -83,6 +84,27 @@ class DispatchExecutionTests(unittest.TestCase):
             self.assertEqual(r['banked_hits_with_different_mapping'],1)
             self.assertEqual(r['candidate_setup_before_decoder_observations'],1)
             self.assertEqual(r['pointer_ram_write_events'],2)
+
+    def test_mirrored_bank_registers_replay(self):
+        with tempfile.TemporaryDirectory() as d:
+            path,meta=fixture(Path(d))
+            edit(path,lambda rows:(
+                rows[2].update(cpu_address='8002'),
+                rows[3].update(cpu_address='8003'),
+                rows[10].update(cpu_address='9FFE'),
+                rows[11].update(cpu_address='9FFF')))
+            result=analyze(path,meta)
+            self.assertEqual(result['candidate_physically_mapped_exec_hits']['835B:bank12'],1)
+
+    def test_wrong_mirror_parity_and_legacy_capture_refused(self):
+        with tempfile.TemporaryDirectory() as d:
+            path,meta=fixture(Path(d))
+            edit(path,lambda rows:rows[2].update(cpu_address='8003'))
+            with self.assertRaisesRegex(ValueError,'mapper event'):analyze(path,meta)
+            path,meta=fixture(Path(d))
+            meta.write_text(meta.read_text().replace(
+                'mmc3_write_coverage=full_8000_9fff_even_odd\\n',''))
+            with self.assertRaisesRegex(ValueError,'coverage'):analyze(path,meta)
 
     def test_incomplete_capture_refused_by_default(self):
         with tempfile.TemporaryDirectory() as d:
