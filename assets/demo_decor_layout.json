@@ -1,0 +1,125 @@
+{
+  "schema": 1,
+  "objects": [
+    {
+      "x": 80,
+      "y": 73,
+      "kind": "beacon",
+      "layer": "rear",
+      "first_frame": 0,
+      "frames": 2,
+      "period_ticks": 24,
+      "phase_frames": 0
+    },
+    {
+      "x": 256,
+      "y": 103,
+      "kind": "fan",
+      "layer": "front",
+      "first_frame": 2,
+      "frames": 2,
+      "period_ticks": 9,
+      "phase_frames": 0
+    },
+    {
+      "x": 432,
+      "y": 73,
+      "kind": "beacon",
+      "layer": "rear",
+      "first_frame": 0,
+      "frames": 2,
+      "period_ticks": 24,
+      "phase_frames": 1
+    },
+    {
+      "x": 608,
+      "y": 103,
+      "kind": "fan",
+      "layer": "front",
+      "first_frame": 2,
+      "frames": 2,
+      "period_ticks": 9,
+      "phase_frames": 1
+    },
+    {
+      "x": 784,
+      "y": 73,
+      "kind": "beacon",
+      "layer": "rear",
+      "first_frame": 0,
+      "frames": 2,
+      "period_ticks": 24,
+      "phase_frames": 2
+    },
+    {
+      "x": 960,
+      "y": 103,
+      "kind": "fan",
+      "layer": "front",
+      "first_frame": 2,
+      "frames": 2,
+      "period_ticks": 9,
+      "phase_frames": 2
+    },
+    {
+      "x": 1136,
+      "y": 73,
+      "kind": "beacon",
+      "layer": "rear",
+      "first_frame": 0,
+      "frames": 2,
+      "period_ticks": 24,
+      "phase_frames": 3
+    },
+    {
+      "x": 1312,
+      "y": 103,
+      "kind": "fan",
+      "layer": "front",
+      "first_frame": 2,
+      "frames": 2,
+      "period_ticks": 9,
+      "phase_frames": 3
+    },
+    {
+      "x": 1488,
+      "y": 73,
+      "kind": "beacon",
+      "layer": "rear",
+      "first_frame": 0,
+      "frames": 2,
+      "period_ticks": 24,
+      "phase_frames": 4
+    },
+    {
+      "x": 1664,
+      "y": 103,
+      "kind": "fan",
+      "layer": "front",
+      "first_frame": 2,
+      "frames": 2,
+      "period_ticks": 9,
+      "phase_frames": 4
+    },
+    {
+      "x": 1840,
+      "y": 73,
+      "kind": "beacon",
+      "layer": "rear",
+      "first_frame": 0,
+      "frames": 2,
+      "period_ticks": 24,
+      "phase_frames": 5
+    },
+    {
+      "x": 2016,
+      "y": 103,
+      "kind": "fan",
+      "layer": "front",
+      "first_frame": 2,
+      "frames": 2,
+      "period_ticks": 9,
+      "phase_frames": 5
+    }
+  ]
+}
