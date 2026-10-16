@@ -45,6 +45,8 @@ jobs:
         run: cmake --build build/graphics_core --parallel 2
       - name: Test renderer
         run: ctest --test-dir build/graphics_core --output-on-failure
+      - name: Record synthetic scene fingerprint
+        run: build/graphics_core/vpd_scene_renderer_test
   build-switch-nro:
     runs-on: ubuntu-latest
     container:
