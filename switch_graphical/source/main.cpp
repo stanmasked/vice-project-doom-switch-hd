@@ -2,6 +2,8 @@
 #include <switch.h>
 #include "simulation.hpp"
 #include "scene_renderer.hpp"
+#include "asset_atlas.hpp"
+#include "demo_atlas.hpp"
 #include <cstdint>
 namespace {
 bool solidAt(void* context,int x,int y) {
@@ -18,6 +20,10 @@ int main(int,char**) {
     if(R_FAILED(rc))return 2;
     rc=framebufferMakeLinear(&fb);
     if(R_FAILED(rc)){framebufferClose(&fb);return 3;}
+    vpd::SpriteAtlas atlas{};
+    if(!vpd::openAtlas(atlas,vpd_demo::kAtlasBlob,vpd_demo::kAtlasBytes)) {
+        framebufferClose(&fb);return 4;
+    }
     vpd::Simulation game;
     while(appletMainLoop()){
         padUpdate(&pad);
@@ -36,6 +42,8 @@ int main(int,char**) {
             game.frame(),actor.grounded,
             const_cast<vpd::Scene*>(&game.scene()),solidAt
         };
+        view.sprite_atlas=&atlas;
+        view.moving=(input&(vpd::Left|vpd::Right))!=0;
         const bool drawn=vpd::drawScene(pixels,vpd::kSceneWidth,
                 vpd::kSceneHeight,static_cast<int>(stride/sizeof(uint32_t)),view);
         framebufferEnd(&fb);

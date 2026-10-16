@@ -1,6 +1,7 @@
 #pragma once
 #include <cstdint>
 namespace vpd {
+struct SpriteAtlas;
 // ROM-free renderer interface shared by host tests and Nintendo Switch.
 struct SceneView {
     int32_t player_x_px=0, player_y_px=0, camera_x_px=0;
@@ -8,6 +9,8 @@ struct SceneView {
     bool grounded=false;
     void* map_context=nullptr;
     bool (*solid_at)(void*,int,int)=nullptr;
+    const SpriteAtlas* sprite_atlas=nullptr;
+    bool moving=false;
 };
 constexpr int kSceneWidth=1280;
 constexpr int kSceneHeight=720;
