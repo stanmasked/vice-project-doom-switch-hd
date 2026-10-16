@@ -24,6 +24,7 @@ class VerifiedCaptureTests(unittest.TestCase):
             'callback_errors=0',
             'complete='+complete,
             'initial_mmc3_mode=unknown',
+            'mmc3_write_coverage=full_8000_9fff_even_odd',
             'read_provenance=registerread_callback_no_pc_proof',
             'read_value_provenance=address_only_fceux_zero_sentinel'])+'\n',encoding='utf8')
     def test_matching_complete_capture(self):
@@ -33,6 +34,12 @@ class VerifiedCaptureTests(unittest.TestCase):
     def test_legacy_read_value_provenance_refused(self):
         self.meta.write_text(self.meta.read_text().replace(
             'read_value_provenance=address_only_fceux_zero_sentinel\n',''))
+        with self.assertRaisesRegex(ValueError,'provenance'):
+            audit_verified(self.trace,self.meta)
+
+    def test_incomplete_mmc3_coverage_refused(self):
+        self.meta.write_text(self.meta.read_text().replace(
+            'mmc3_write_coverage=full_8000_9fff_even_odd\\n',''))
         with self.assertRaisesRegex(ValueError,'provenance'):
             audit_verified(self.trace,self.meta)
 
