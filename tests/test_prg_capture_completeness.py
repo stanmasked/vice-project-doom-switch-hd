@@ -31,7 +31,7 @@ class VerifiedCaptureTests(unittest.TestCase):
         self.assertEqual(result['events_recorded'],8)
     def test_legacy_read_value_provenance_refused(self):
         self.meta.write_text(self.meta.read_text().replace(
-            'read_value_provenance=address_only_fceux_zero_sentinel\\n',''))
+            'read_value_provenance=address_only_fceux_zero_sentinel\n',''))
         with self.assertRaisesRegex(ValueError,'provenance'):
             audit_verified(self.trace,self.meta)
 
