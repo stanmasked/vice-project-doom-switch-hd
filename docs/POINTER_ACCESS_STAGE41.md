@@ -13,14 +13,17 @@ dofile("tools/capture_fceux_pointer_access.lua")
 ```
 
 The script observes accesses to $AA/$AB/$A8/$A9 using `memory.registerread`
-and `memory.registerwrite`. It records callback values and nearby bytes,
+and `memory.registerwrite`. It records write callback values; read callback byte values are always `unknown`.
+It also records nearby RAM bytes sampled explicitly with `memory.readbyte`,
 with a recursion guard so inspecting RAM doesn't recursively log itself.
 The metadata marks overflows as incomplete. The program counter and effective
 target address **are not recorded**. This does not establish that an indexed
 instruction dereferenced the pointer or that the bytes contain map data.
 
-The script expects byte-valued callback arguments; if a FCEUX version omits
-read values, the script raises an error rather than silently inventing them.
+FCEUX read callback's third argument is a zero sentinel, **not a RAM byte**.
+The script requires that sentinel, marks the READ value as `unknown`, and
+records separately sampled RAM bytes with their own limitations.
+The validator requires explicit `read_value_provenance` and rejects old logs.
 The live API behavior, concurrent-hook interactions, and actual first-stage
 observations still require emulator validation. Run this separately from the
 stage38 logger until those conditions have been established.
