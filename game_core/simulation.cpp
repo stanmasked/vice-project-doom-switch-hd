@@ -131,3 +131,4 @@ uint64_t Simulation::fingerprint() const{
     append(static_cast<uint32_t>(jump_was_down_?1:0));
     return hash;
 }
+}
