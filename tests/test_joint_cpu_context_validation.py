@@ -18,7 +18,7 @@ class JointContextTests(unittest.TestCase):
             ['19','1','EXEC','835B','unknown','unknown','01','02','03','04','unknown'],
             ['19','2','SELECT','8000','06','unknown','01','02','03','04','unknown'],
             ['19','3','DATA','8001','0C','12','01','02','03','04','unknown'],
-            ['19','4','READ','835C','AB','12','01','02','03','04','unknown']
+            ['19','4','READ','835C','unknown','12','01','02','03','04','unknown']
         ]
         self.write_rows()
         self.meta.write_text('\n'.join([
@@ -29,6 +29,7 @@ class JointContextTests(unittest.TestCase):
             'rom_header_profile=ines_mapper4_prg128k_chr128k',
             'rom_md5_pin=not_supplied',
             'callback_contract=address_size_value_v1',
+            'read_value_provenance=address_only_fceux_zero_sentinel',
             'callback_errors=0',
             'effective_address=not_proven','read_causality=not_proven'])+'\n')
     def write_rows(self):
@@ -40,6 +41,17 @@ class JointContextTests(unittest.TestCase):
         self.assertEqual(result['events'],4)
         self.assertEqual(result['unknown_register_samples']['p'],4)
         self.assertFalse(result['read_causality_proven'])
+    def test_forged_read_value_rejected(self):
+        self.rows[3][4]='AB';self.write_rows()
+        with self.assertRaisesRegex(ValueError,'READ value provenance'):
+            validate(self.trace,self.meta)
+
+    def test_missing_read_value_provenance_rejected(self):
+        self.meta.write_text(self.meta.read_text().replace(
+            'read_value_provenance=address_only_fceux_zero_sentinel\\n',''))
+        with self.assertRaisesRegex(ValueError,'provenance'):
+            validate(self.trace,self.meta)
+
     def test_bad_mapper_bank(self):
         self.rows[3][5]='14';self.write_rows()
         with self.assertRaisesRegex(ValueError,'mapping'):validate(self.trace,self.meta)
