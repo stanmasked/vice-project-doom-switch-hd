@@ -4,11 +4,11 @@
 #include <cstddef>
 #include <cstdint>
 namespace vpd {
-// VANM v1: 16-byte header, 4x4-byte clip descriptors, <=256 frame records.
+// VANM v1: 18-byte header, 4x4-byte clip descriptors, <=256 frame records.
 // This resource owns all frame records. It cannot be moved or copied because
 // AnimationClip exposes pointers into its fixed-size frame array.
 constexpr size_t kMaxAnimationFrames=256;
-constexpr size_t kMaxAnimationFileBytes=32+4*kMaxAnimationFrames;
+constexpr size_t kMaxAnimationFileBytes=34+4*kMaxAnimationFrames;
 enum class AnimationLoadResult : uint8_t {
     Loaded, Missing, IoError, Invalid, AtlasMismatch, Uninitialized
 };

@@ -2,6 +2,7 @@
 #include <array>
 #include <cstdio>
 #include <utility>
+#include <cerrno>
 
 namespace vpd {
 namespace {
@@ -90,7 +91,8 @@ AnimationLoadResult AnimationResource::loadFile(
     if(!embedded_)return AnimationLoadResult::Uninitialized;
     if(!path||!*path)return AnimationLoadResult::Missing;
     std::FILE* file=std::fopen(path,"rb");
-    if(!file)return AnimationLoadResult::Missing;
+    if(!file)return errno==ENOENT?AnimationLoadResult::Missing:
+                              AnimationLoadResult::IoError;
     if(std::fseek(file,0,SEEK_END)!=0){
         std::fclose(file);return AnimationLoadResult::IoError;
     }

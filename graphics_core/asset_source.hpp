@@ -29,6 +29,7 @@ public:
                     uint16_t expected_frame_count);
     AtlasLoadResult reloadFromFile(const char* path);
     void resetToEmbedded();
+    bool swapLoaded(AssetSource& other);
     const SpriteAtlas& atlas() const { return active_; }
     bool external() const { return external_; }
     uint16_t expectedFrameCount() const { return expected_count_; }

@@ -2,6 +2,7 @@
 #include <cstdio>
 #include <memory>
 #include <new>
+#include <utility>
 
 namespace vpd {
 
@@ -68,6 +69,15 @@ AtlasLoadResult AssetSource::reloadFromFile(const char* path){
     return AtlasLoadResult::Loaded;
 }
 
+bool AssetSource::swapLoaded(AssetSource& other){
+    if(!embedded_.pixels || !other.embedded_.pixels ||
+       embedded_.pixels!=other.embedded_.pixels ||
+       expected_count_!=other.expected_count_)return false;
+    external_bytes_.swap(other.external_bytes_);
+    std::swap(active_,other.active_);
+    std::swap(external_,other.external_);
+    return true;
+}
 void AssetSource::resetToEmbedded(){
     if(embedded_.pixels){
         active_=embedded_;

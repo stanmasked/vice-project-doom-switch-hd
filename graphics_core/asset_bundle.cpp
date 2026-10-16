@@ -34,7 +34,7 @@ BundleReload AssetBundle::reload(const char* atlas_path,const char* anim_path){
         return BundleReload::BadAnimation;
     // Both independent candidates have passed validation. No disk
     // operations can fail after this point, so swap the accepted pair.
-    atlas_.swapLoaded(next_atlas);
+    if(!atlas_.swapLoaded(next_atlas))return BundleReload::BadAtlas;
     animation_.swapExternal(next_animation);
     return timing==AnimationLoadResult::Loaded ?
            BundleReload::LoadedPair : BundleReload::LoadedAtlasOnly;
