@@ -26,8 +26,14 @@ reads.all(0xC906,1,0) -- bank 14
 reads.all(0x835B,1,0) -- overflow; never written
 local ok,err=pcall(reads.all,0x835B,1,0x7F)
 assert(not ok and tostring(err):find('READ callback address/size/zero sentinel',1,true))
-local bad,why=pcall(writes[0x8000],0x8002,2,0x06)
-assert(not bad and tostring(why):find('mirrored MMC3 write',1,true))
+for _,args in ipairs({
+  {0x8002,2,0x06}, -- not a byte-sized write
+  {0xA000,1,0x06}, -- outside bank-select/data mirrored region
+  {0x9FFE,1,256},  -- not an 8-bit value
+}) do
+  local bad,why=pcall(writes[0x8000],args[1],args[2],args[3])
+  assert(not bad and tostring(why):find('mirrored MMC3 write',1,true))
+end
 exit_fn()
 local file=assert(io.open(dir..'/stage45_prg_reads.tsv'))
 local lines={};for line in file:lines() do lines[#lines+1]=line end;file:close()
@@ -39,7 +45,7 @@ local f=assert(io.open(dir..'/stage45_prg_reads.meta.txt'))
 local meta=f:read('*a');f:close()
 assert(meta:find('events_recorded=7',1,true))
 assert(meta:find('events_dropped=1',1,true))
-assert(meta:find('callback_errors=2',1,true))
+assert(meta:find('callback_errors=4',1,true))
 assert(meta:find('mmc3_write_coverage=full_8000_9fff_even_odd',1,true))
 assert(meta:find('complete=no',1,true))
 assert(meta:find('read_value_provenance=address_only_fceux_zero_sentinel',1,true))
