@@ -28,7 +28,10 @@
 - [x] Implement normal 2x2 NES nametable scroll and scrolled OAM-vs-background priority (Actions #38917772203).
 - [x] Add PPUSTATUS-read ($2002) event marker, paired $2005/$2006 write-toggle analyzer and Lua mock (Actions #38918480183).
 - [x] Document limitations, especially Y=240..255, raster splits and unknown initial PPU latch in [PPU_SCROLL.md](PPU_SCROLL.md).
-- [ ] Validate camera/scroll against real FCEUX title and first-stage recordings.
+- [x] Add separate CPU-cycle-timestamped MMC3/PPU log using documented FCEUX debugger counter.
+- [x] Parse CPU-cycle timelines with reset epochs, unknown initial CHR state and strict capture-completeness metadata.
+- [x] Six synthetic Python regression cases and FCEUX Lua mock test; see [CPU_CYCLE_CAPTURE.md](CPU_CYCLE_CAPTURE.md).
+- [ ] Validate camera/scroll and actual CPU-cycle timestamp fidelity against real FCEUX title/first-stage recordings.
 - [ ] **Run** FCEUX capture during title and first-stage transitions; no verified live captures yet.
 - [ ] Capture actual queued packets, palette RAM and PPU state during **runtime**.
 - [ ] Recover real PPU palettes, nametables, metatiles and OAM frames.
