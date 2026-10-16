@@ -12,7 +12,10 @@ local hooks,writes={},{}
 memory={
  registerexec=function(addr,fn)hooks[addr]=fn end,
  registerread=function(a,n,fn)assert(a==0x8000 and n==0x8000);hooks.read=fn end,
- registerwrite=function(a,fn)writes[a]=fn end,
+ registerwrite=function(a,size,fn)
+   assert(a==0x8000 and size==0x2000)
+   writes[0x8000]=fn;writes[0x8001]=fn
+ end,
  getregister=function(name)
    assert(name==name:lower(),'FCEUX register names must be lowercase')
    if name=='p' then error('unavailable') end
@@ -27,8 +30,8 @@ emu={
 }
 dofile('tools/capture_fceux_joint_cpu_context.lua')
 hooks[0x835B](0x835B,1,0)
-writes[0x8000](0x8000,1,6)
-writes[0x8001](0x8001,1,12)
+writes[0x8000](0x8002,1,6)
+writes[0x8001](0x8003,1,12)
 hooks.read(0x835C,1,0)
 hooks.read(0x835D,1,0)
 onexit()
@@ -45,6 +48,7 @@ assert(data:find('register_api=memory.getregister',1,true))
 assert(data:find('rom_header_profile=ines_mapper4_prg128k_chr128k',1,true))
 assert(data:find('rom_md5_pin=not_supplied',1,true))
 assert(data:find('callback_errors=0',1,true))
+assert(data:find('mmc3_write_coverage=full_8000_9fff_even_odd',1,true))
 assert(data:find('read_value_provenance=address_only_fceux_zero_sentinel',1,true))
 assert(data:find('callback_contract=address_size_value_v1',1,true))
 os.remove(dir..'/stage53_joint_context.tsv')
