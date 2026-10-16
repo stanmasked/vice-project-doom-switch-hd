@@ -35,6 +35,8 @@ int main(int argc,char** argv) {
         view.grounded=true;
         check(vpd::drawScene(image.data(),vpd::kSceneWidth,vpd::kSceneHeight,stride,view),"draw failed");
         const uint64_t original=checksum(image,stride);
+        check(original==11395909035941133922ull,
+              "rendered screenshot does not match approved synthetic golden frame");
         for(int y=0;y<vpd::kSceneHeight;++y)
             for(int x=vpd::kSceneWidth;x<stride;++x)
                 check(image[static_cast<size_t>(y)*stride+x]==guard,"row-padding corruption");
