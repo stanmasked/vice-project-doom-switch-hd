@@ -17,13 +17,16 @@
 - [ ] Capture **live** MMC3 CHR register values and bank mode at title/stage/gameplay.
 - [x] Decode all 8 PPU command payload formats as **symbolic effects**, including palette halves, CPU copy and masked writes.
 - [x] Validate 28 handler instruction anchors and test the queue parser with ROM-free inputs (Actions #38863927572).
+- [x] Implement FCEUX Lua snapshot capture and PPU background renderer (Actions #38865231340).
+- [x] Validate background tile/attribute/palette decoding against ROM-free synthetic samples.
+- [ ] **Run** FCEUX capture during title and first-stage transitions; no verified live captures yet.
 - [ ] Capture actual queued packets, palette RAM and PPU state during **runtime**.
 - [ ] Recover real PPU palettes, nametables, metatiles and OAM frames.
 - [ ] Produce timed local reference traces for movement/collisions/AI.
 - [ ] Recover level formats, collision metadata and state transitions.
 - [ ] Record confidence levels and local-ROM reproducibility.
 
-The original fixed bank's documented control flow is in [VIDEO_PIPELINE.md](VIDEO_PIPELINE.md) and [PPU_QUEUE.md](PPU_QUEUE.md), and [PPU_PACKET_FORMATS.md](PPU_PACKET_FORMATS.md). This is static evidence only: the first authentic stage, palettes and runtime sprite mapping are not yet restored.
+The original fixed bank's documented control flow is in [VIDEO_PIPELINE.md](VIDEO_PIPELINE.md) and [PPU_QUEUE.md](PPU_QUEUE.md), and [PPU_PACKET_FORMATS.md](PPU_PACKET_FORMATS.md). See [REFERENCE_CAPTURE.md](REFERENCE_CAPTURE.md) for the new local capture workflow. First-stage palettes, actual runtime sprite mapping, and complete geometry are **not yet restored**.
 
 ## M2: first independent native scene — scaffold verified
 - [x] Model fixed-step deterministic simulation without an NES interpreter.
