@@ -1,6 +1,6 @@
 # Vice: Project Doom — Native HD Remake Research
 
-**Status:** ROM-free native Switch diagnostic NRO builds successfully. The project is not yet a playable game or HD remake; hardware runtime remains unverified.
+**Status:** A ROM-free deterministic side-scrolling test scene compiles into a native Nintendo Switch NRO and passes C++ replay tests. This is not original Vice: Project Doom gameplay, not an HD remake yet, and is not tested on Switch hardware.
 
 This private repository contains an independent C++ research/development toolchain targeting Nintendo Switch Homebrew. No NES emulation engine, original ROM, or game-derived artwork is included.
 
@@ -11,7 +11,9 @@ This private repository contains an independent C++ research/development toolcha
 - C++ CHR decoder and atlas exporter pass ROM-free unit tests and the owner's local ROM verification.
 - GitHub Actions **Native Core CI** passed: [run #38828092666](https://github.com/stanmasked/vice-project-doom-switch-hd/actions/runs/38828092666).
 - GitHub Actions **Nintendo Switch native probe** built and uploaded a ROM-free `.nro`: [run #38828228022](https://github.com/stanmasked/vice-project-doom-switch-hd/actions/runs/38828228022).
-- No gameplay restoration, actual HD artwork or Switch hardware test has been confirmed.
+- Original ROM-free C++ physics/collision/camera scaffolding passes Debug/Release CI: [run #38829149333](https://github.com/stanmasked/vice-project-doom-switch-hd/actions/runs/38829149333).
+- Native interactive ASCII-scene NRO built and uploaded: [run #38829200654](https://github.com/stanmasked/vice-project-doom-switch-hd/actions/runs/38829200654).
+- Original gameplay restoration, HD artwork and Switch hardware validation remain outstanding.
 
 ## Project folders
 
@@ -19,8 +21,9 @@ This private repository contains an independent C++ research/development toolcha
 | --- | --- |
 | `native_core/` | C++17 CHR decoder, atlas exporter and unit tests |
 | `tools/` | Local-only NES ROM static analysis tools |
-| `tests/` | ROM-free Python tests, NRO verifier, private ROM regression check |
-| `switch_probe/` | Minimal libnx native Switch executable with no original data |
+| `tests/` | ROM-free Python and C++ tests, NRO verifier, private ROM regression check |
+| `game_core/` | Native deterministic game-scene scaffold with placeholder physics and map |
+| `switch_probe/` | Native libnx ASCII test scene with D-pad/A/B gamepad input |
 | `switch_viewer/` | Experimental SDL2 CHR page viewer (requires private generated pages) |
 | `docs/` | Development roadmap and provenance/copyright guidelines |
 | `.github/workflows/` | Host-side CI and native Switch probe build |
@@ -33,6 +36,9 @@ cmake --build build/native_core --parallel
 ctest --test-dir build/native_core --output-on-failure
 python3 -m pip install 'Pillow>=10,<13'
 python3 -m unittest discover -s tests -p 'test_*.py' -v
+cmake -S game_core -B build/game_core -DCMAKE_BUILD_TYPE=Release
+cmake --build build/game_core --parallel
+ctest --test-dir build/game_core --output-on-failure
 ```
 
 ## ROM-free Switch diagnostic
@@ -44,7 +50,7 @@ make -C switch_probe
 python3 tests/check_nro.py switch_probe/vpd_native_probe.nro
 ```
 
-You can download the diagnostic NRO under **Artifacts** in the successful [Switch build](https://github.com/stanmasked/vice-project-doom-switch-hd/actions/runs/38828228022). It is not the game.
+You can download the ROM-free native test-scene NRO under **Artifacts** in [Switch Actions #38829200654](https://github.com/stanmasked/vice-project-doom-switch-hd/actions/runs/38829200654). It shows an ASCII scene, not the original game. See [native simulation notes](docs/NATIVE_SIMULATION.md).
 
 ## Original ROM analysis (locally, never commit generated data)
 
