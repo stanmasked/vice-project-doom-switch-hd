@@ -21,7 +21,13 @@ local fields={'frame','seq','cpu_cycle','kind','cpu_address','value','mmc3_mode'
               'ram_92','ram_aa','ram_ab','ram_a8','ram_a9'}
 assert(file:write(table.concat(fields,'\t')..'\n'))
 local select_value,bank6,bank7=nil,nil,nil
-local count,dropped,seq=0,0,0
+local count,dropped,seq,callback_errors=0,0,0,0
+local function checked(ok,reason)
+  if not ok then
+    callback_errors=callback_errors+1
+    error('Unsupported FCEUX callback contract: '..reason,2)
+  end
+end
 local captured,frames={},{}
 local function hex2(x) return x==nil and 'unknown' or string.format('%02X',x) end
 local function hex4(x) return string.format('%04X',x) end
@@ -83,14 +89,17 @@ local tracked_ram={0x07,0x90,0x91,0x92,0xAA,0xAB,0xA8,0xA9}
 for _,addr in ipairs(tracked_ram) do
   local local_addr=addr
   memory.registerwrite(local_addr,function(a,size,value)
+    checked(a==local_addr and size==1 and type(value)=='number' and
+      value==math.floor(value) and value>=0 and value<=255,
+      'RAM write address/size/byte')
     record('RAM_WRITE',local_addr,value)
   end)
 end
 -- All $8000-$9FFF even/odd addresses mirror MMC3 select/data.
 memory.registerwrite(0x8000,0x2000,function(a,size,value)
-  assert(type(a)=='number' and a==math.floor(a) and a>=0x8000 and a<=0x9FFF
+  checked(type(a)=='number' and a==math.floor(a) and a>=0x8000 and a<=0x9FFF
          and size==1 and type(value)=='number' and value==math.floor(value)
-         and value>=0 and value<=255, 'Unsupported mirrored MMC3 callback')
+         and value>=0 and value<=255, 'mirrored MMC3 write address/size/byte')
   if a%2==0 then
     select_value=value
     record('MMC3_SELECT',a,value)
@@ -118,7 +127,8 @@ emu.registerexit(function()
     'tracked_ram_write_hooks='..tostring(#tracked_ram),
     'events_recorded='..tostring(count),
     'events_dropped='..tostring(dropped),
-    'trace_complete='..(dropped==0 and 'yes' or 'no'),
+    'trace_complete='..(dropped==0 and callback_errors==0 and 'yes' or 'no'),
+    'callback_errors='..tostring(callback_errors),
     'frames_with_events='..tostring(nframes),
     'cycle_trace_available='..(clock and 'yes' or 'no'),
     'initial_mmc3_mode=unknown',
