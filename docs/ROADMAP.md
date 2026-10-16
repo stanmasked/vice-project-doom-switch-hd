@@ -52,12 +52,16 @@ The original fixed bank's documented control flow is in [VIDEO_PIPELINE.md](VIDE
 - [x] Cross-build graphical libnx NRO and upload artifact (Actions #38921850038).
 - [x] Guard 1280x720 renderer against stride overflow, incorrect dimensions and regressions via golden screenshot hash.
 - [x] Host integration test proves the real fixed-step game simulation drives the renderer and camera (Actions #38922369314).
+- [x] Implement validated sprite atlas decoding, alpha compositing, clipping and four-frame animation on native raster NRO (Actions #38924413702).
+- [x] Build synthetic 96x32 RGBA atlas at compile-time and import newly authored PNG sprite sheets with VPAT PNG converter.
+- [x] Verify malformed sprite data and pose changes with C++ tests; PNG importer has 5 ROM-free tests.
 - [ ] Replace procedural test scene with original behavior and newly authored HD artwork.
 
 ## M3: first genuinely HD scene
 - [ ] Create new hand-authored characters, backgrounds and effects.
 - [x] Validate native RGBA8888 framebuffer drawing, synthetic background, collision geometry and camera.
-- [ ] Develop an optimized HD renderer with independently authored scene artwork and animation.
+- [x] Build an independently authored sprite atlas import/render infrastructure (see [ASSET_PIPELINE.md](ASSET_PIPELINE.md)).
+- [ ] Add author-created detailed HD characters, animation timing metadata and optimized HD rendering.
 - [ ] Evaluate quality against reference scene and original timing.
 
 ## M4: Switch platform validation

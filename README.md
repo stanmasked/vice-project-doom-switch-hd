@@ -121,3 +121,22 @@ This is a diagnostic, not Vice: Project Doom gameplay or actual final HD art.
 
 Actual gameplay physics, original first-stage composition, art restoration,
 stable frame pacing, and physical Switch runtime validation remain undone.
+
+## Stage 23 — sprite texture import and animation (ROM-free)
+
+The native Switch diagnostic now consumes a **versioned VPAT v1 RGBA sprite
+atlas** with CRC32 checking, alpha blending and frame selection. The
+four-frame developer hero asset is independently drawn by
+`tools/build_demo_atlas.py` and embedded at build time. For newly authored
+HD PNG sprite sheets, `tools/pack_vpat.py` creates a VPAT binary and
+C++ resource header, so texture authors do not have to modify renderer code.
+
+- C++ tests reject corrupted headers and checksums, protect framebuffer
+  boundaries, and verify idle/run/jump poses actually change the scene.
+- Python tests validate PNG alpha, dimensions and frame count.
+- The native Switch NRO still has no external asset streaming or RomFS
+  hot-reload, and the included art is intentionally provisional.
+
+See [asset pipeline](docs/ASSET_PIPELINE.md) and
+[switch_graphical](switch_graphical/README.md). Original NES artwork,
+accurate gameplay and on-device performance validation are still outstanding.

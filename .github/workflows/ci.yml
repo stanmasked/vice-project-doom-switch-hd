@@ -34,7 +34,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if git ls-files | grep -E -i '(^|/)(atlases/|reports/|private/|roms/|reference_captures/|chr_all_pages_overview\.png$)|\.(nes|fds|unf|unif|iso|chd|nro|bmp|bin|sav|state|zip|7z)$'; then
+          if git ls-files | grep -E -i '(^|/)(atlases/|reports/|private/|roms/|reference_captures/|chr_all_pages_overview\.png$)|\.(nes|fds|unf|unif|iso|chd|nro|bmp|bin|vpat|sav|state|zip|7z)$'; then
             echo 'Forbidden ROM, PPU memory capture, or binary artifact tracked' >&2
             exit 1
           fi
