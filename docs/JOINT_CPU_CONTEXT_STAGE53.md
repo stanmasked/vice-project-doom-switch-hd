@@ -3,7 +3,8 @@
 The opt-in `tools/capture_fceux_joint_cpu_context.lua` combines five
 candidate execution hooks, CPU $8000-$FFFF read callbacks and MMC3
 register writes in one ordered private TSV. Optional A/X/Y/S/P register
-samples are collected at callback time; unsupported registers are
+samples are collected via `memory.getregister` with lowercase register
+names at callback time; unsupported registers are
 `unknown`, never imputed.
 
 Use an existing private output folder in a local FCEUX session:
@@ -16,8 +17,8 @@ dofile("tools/capture_fceux_joint_cpu_context.lua")
 
 Outputs: `stage53_joint_context.tsv` and
 `stage53_joint_context.meta.txt`. Metadata marks overflow as incomplete.
-**There is no verified stage53 validator yet**; do not run older stage49
-validators on its different schema or treat the TSV as verified.
+The stage54 validator `tools/validate_joint_cpu_context.py` validates the
+stage53 schema and capture metadata; live authenticity is still unverified.
 Sampling register values does not prove an instruction generated a READ;
 callback ordering, opcode, and effective addresses remain unverified.
 
