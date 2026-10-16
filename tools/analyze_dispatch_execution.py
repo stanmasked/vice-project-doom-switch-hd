@@ -21,7 +21,7 @@ TRACKED_RAM={0x07,0x90,0x91,0x92,0xAA,0xAB,0xA8,0xA9}
 KINDS={'EXEC','RAM_WRITE','MMC3_SELECT','MMC3_DATA'}
 REQUIRED_META={'format','rom_md5','execution_hooks_registered',
                'tracked_ram_write_hooks','events_recorded','events_dropped',
-               'trace_complete','cycle_trace_available','initial_mmc3_mode',
+               'trace_complete','cycle_trace_available','callback_errors','initial_mmc3_mode',
                'mmc3_write_coverage',
                'initial_prg_r6','initial_prg_r7','execution_provenance'}
 
@@ -63,7 +63,8 @@ def meta_parse(path):
         raise ValueError('Unknown completeness state')
     numeric(d['events_recorded'],'events_recorded')
     numeric(d['events_dropped'],'events_dropped')
-    if (d['trace_complete']=='yes')!=(int(d['events_dropped'])==0):
+    numeric(d['callback_errors'],'callback_errors')
+    if (d['trace_complete']=='yes')!=(int(d['events_dropped'])==0 and int(d['callback_errors'])==0):
         raise ValueError('Inconsistent completeness flag')
     return d
 
@@ -155,6 +156,7 @@ def analyze(trace_path,meta_path,allow_incomplete=False):
       'rom_md5':meta['rom_md5'].lower(),
       'events_recorded':int(meta['events_recorded']),
       'events_dropped':int(meta['events_dropped']),
+      'callback_errors':int(meta['callback_errors']),
       'complete':meta['trace_complete']=='yes',
       'event_counts':dict(sorted(counts.items())),
       'execution_counts_by_cpu_pc':dict(sorted(pc_counts.items())),
