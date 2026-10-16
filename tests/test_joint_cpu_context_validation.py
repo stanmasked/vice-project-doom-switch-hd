@@ -26,6 +26,8 @@ class JointContextTests(unittest.TestCase):
             'events_dropped=0','complete=yes','initial_mmc3_mode=unknown',
             'register_provenance=callback_time_optional_samples',
             'register_api=memory.getregister',
+            'callback_contract=address_size_value_v1',
+            'callback_errors=0',
             'effective_address=not_proven','read_causality=not_proven'])+'\n')
     def write_rows(self):
         with self.trace.open('w',newline='',encoding='utf8') as f:
@@ -55,6 +57,19 @@ class JointContextTests(unittest.TestCase):
         self.meta.write_text(self.meta.read_text().replace(
             'register_api=memory.getregister\n',''))
         with self.assertRaisesRegex(ValueError,'provenance'):
+            validate(self.trace,self.meta)
+
+    def test_legacy_callback_contract_rejected(self):
+        self.meta.write_text(self.meta.read_text().replace(
+            'callback_contract=address_size_value_v1\\n',''))
+        with self.assertRaisesRegex(ValueError,'provenance'):
+            validate(self.trace,self.meta)
+
+    def test_callback_error_refused(self):
+        self.meta.write_text(self.meta.read_text().replace(
+            'callback_errors=0','callback_errors=1').replace(
+            'complete=yes','complete=no'))
+        with self.assertRaisesRegex(ValueError,'Incomplete'):
             validate(self.trace,self.meta)
 
     def test_forged_provenance(self):
