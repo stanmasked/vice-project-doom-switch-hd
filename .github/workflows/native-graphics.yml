@@ -1,0 +1,54 @@
+name: Nintendo Switch graphical scene
+on:
+  push:
+    paths:
+      - 'graphics_core/**'
+      - 'game_core/**'
+      - 'switch_graphical/**'
+      - 'tests/test_scene_renderer.cpp'
+      - 'tests/check_nro.py'
+      - '.github/workflows/native-graphics.yml'
+  pull_request:
+    paths:
+      - 'graphics_core/**'
+      - 'game_core/**'
+      - 'switch_graphical/**'
+      - 'tests/test_scene_renderer.cpp'
+      - 'tests/check_nro.py'
+      - '.github/workflows/native-graphics.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  host-raster-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure graphics core
+        run: cmake -S graphics_core -B build/graphics_core -DCMAKE_BUILD_TYPE=Release
+      - name: Build graphics test
+        run: cmake --build build/graphics_core --parallel 2
+      - name: Test renderer
+        run: ctest --test-dir build/graphics_core --output-on-failure
+  build-switch-nro:
+    runs-on: ubuntu-latest
+    container:
+      image: devkitpro/devkita64:latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build ROM-free native raster scene
+        shell: bash
+        run: |
+          set -euxo pipefail
+          export DEVKITPRO=/opt/devkitpro
+          export DEVKITA64=$DEVKITPRO/devkitA64
+          export PATH="$DEVKITA64/bin:$DEVKITPRO/tools/bin:$PATH"
+          make -C switch_graphical clean all
+          python3 tests/check_nro.py switch_graphical/vpd_native_scene.nro
+      - name: Publish graphical NRO diagnostic
+        uses: actions/upload-artifact@v4
+        with:
+          name: vpd-native-raster-scene
+          path: switch_graphical/vpd_native_scene.nro
+          if-no-files-found: error
