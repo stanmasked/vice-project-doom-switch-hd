@@ -324,3 +324,16 @@ routines, while $0D has independent update sites. This is not
 proof of world camera X/Y or authentic stage geometry. GitHub Actions
 has been failing to provision a runner at stage 33–34 commits;
 do not mistake those infrastructure failures for passing CI.
+
+## Stage 35 — possible source descriptor pointer
+
+The new [ROM-private pointer audit](tools/audit_indirect_pointer.py)
+confirms a bank-12 `$92 → $AA/$AB` table-pointer setup and a bank-14
+indirect consumer. The CPU carry behavior is emulated exactly; no
+first-stage data table is claimed without dynamic proof.
+
+The [technical findings](docs/INDIRECT_POINTER_TRACE.md) include
+six ROM-free locally passing tests, private-only report output and
+conditions for correlating real FCEUX execution. GitHub Actions has
+been unable to provision its runner; this stage has **not** obtained
+a green hosted CI. No Switch NRO changed.

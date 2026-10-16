@@ -47,6 +47,9 @@
 - [x] Stage 34: verify eight exact ROM writer signatures for $0B/$0C/$0D across physical PRG banks 14 and 15 ([SCROLL_WRITERS.md](SCROLL_WRITERS.md)).
 - [x] Trace the packed-byte transformation from ($AA),Y and distinguish two-byte increment/decrement operations on $0B/$0C from separate $0D updates.
 - [x] Add six ROM-free synthetic regression cases, mutation rejection and MMC3 bank-mode caveats.
+- [x] Stage 35: verify a bank-12 RAM $92 → $AA/$AB pointer setup, a bank-14 indirect decoder and local JSR anchor ([INDIRECT_POINTER_TRACE.md](INDIRECT_POINTER_TRACE.md)).
+- [x] Emulate 6502 pointer-address ADC carry exactly, including incorrect naive base+3×index extrapolation at index 86; six ROM-free tests passed locally.
+- [x] Record candidate $92, $AA/$AB, $A8/$A9 postframe RAM samples in FCEUX metadata, never claiming observed execution.
 - [ ] Dynamically trace the pointer ($AA),Y, bank switching and writer execution in the actual first level.
 - [ ] Independently identify actual collision metatiles and event/entity positions; observed PPU tile IDs alone are not collisions.
 - [ ] Record confidence levels and local-ROM reproducibility.

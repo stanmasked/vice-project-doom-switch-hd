@@ -156,3 +156,16 @@ The local FCEUX Lua metadata now includes
 The script marks their provenance as static-only; only CPU-cycle
 runtime verification can prove the emitter executed. See
 [SCROLL_SOURCE_AUDIT.md](SCROLL_SOURCE_AUDIT.md).
+
+## Stage 35: capture candidate descriptor pointer provenance
+
+The ROM-local audit identifies an exact bank-12 setup of zero-page
+pointer `$AA/$AB` from RAM `$92`, with nearby reads into
+`$A8/$A9`. A bank-14 decoder reads `($AA),Y`. **Whether these
+routines share that pointer at first-stage runtime remains unverified.**
+
+The FCEUX snapshot metadata records $92/$AA/$AB/$A8/$A9 as
+`stage35_candidate_...` fields, explicitly labelled static-only.
+See [INDIRECT_POINTER_TRACE.md](INDIRECT_POINTER_TRACE.md) for
+the three exact opcode anchors, MMC3 mode-0 mapping requirement and
+the carry-handling edge case at hypothetical index 86.
