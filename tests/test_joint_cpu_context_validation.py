@@ -26,7 +26,7 @@ class JointContextTests(unittest.TestCase):
             'events_dropped=0','complete=yes','initial_mmc3_mode=unknown',
             'register_provenance=callback_time_optional_samples',
             'register_api=memory.getregister',
-            'rom_header_profile=ines_mapper4_prg128k',
+            'rom_header_profile=ines_mapper4_prg128k_chr128k',
             'rom_md5_pin=not_supplied',
             'callback_contract=address_size_value_v1',
             'callback_errors=0',
@@ -76,7 +76,7 @@ class JointContextTests(unittest.TestCase):
 
     def test_missing_rom_preflight_rejected(self):
         self.meta.write_text(self.meta.read_text().replace(
-            'rom_header_profile=ines_mapper4_prg128k\n',''))
+            'rom_header_profile=ines_mapper4_prg128k_chr128k\n',''))
         with self.assertRaisesRegex(ValueError,'provenance'):
             validate(self.trace,self.meta)
 
