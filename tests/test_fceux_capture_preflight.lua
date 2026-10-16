@@ -11,7 +11,10 @@ rom={readbyteunsigned=function(i)return header[i] or 0 end,
 local hooks={},nil
 local exit_callback=nil
 memory={registerexec=function(a,fn)hooks[a]=fn end,
- registerread=function()end,registerwrite=function()end,
+ registerread=function()end,
+ registerwrite=function(a,size,fn)
+   assert(a==0x8000 and size==0x2000 and type(fn)=='function')
+ end,
  getregister=function(n)return ({a=1,x=2,y=3,s=4,p=5})[n] end}
 emu={framecount=function()return 1 end,
  registerexit=function(fn)exit_callback=fn end}
