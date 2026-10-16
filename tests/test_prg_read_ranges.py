@@ -21,14 +21,18 @@ class ReadRangeTests(VerifiedCaptureTests):
             runs(self.trace,self.meta)
     def test_mapper_event_breaks_adjacent_addresses(self):
         # Fixed bank 15 remains mapped across SELECT, yet stream is not contiguous.
-        self.rows=[['10','1','READ','E000','AA','15'],
-                   ['10','2','SELECT','8000','06','unknown'],
-                   ['10','3','READ','E001','BB','15']]
-        self.rewrite()
+        import csv
+        from audit_prg_read_mapping import FIELDS
+        with self.trace.open('w',newline='',encoding='utf8') as out:
+            writer=csv.writer(out,delimiter='\t')
+            writer.writerow(FIELDS)
+            writer.writerows([['10','1','READ','E000','AA','15'],
+                              ['10','2','SELECT','8000','06','unknown'],
+                              ['10','3','READ','E001','BB','15']])
         import re
         self.meta.write_text(re.sub(r'events_recorded=[0-9]+',
                                     'events_recorded=3',self.meta.read_text()))
-        data=runs(self.path,self.meta,min_run=2)
+        data=runs(self.trace,self.meta,min_run=2)
         self.assertEqual(data['candidate_runs'],[])
         self.assertEqual(data['discarded_short_runs'],2)
     def test_threshold_bounds(self):
