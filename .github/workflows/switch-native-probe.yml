@@ -1,0 +1,52 @@
+name: Nintendo Switch native probe
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/switch-native-probe.yml'
+      - 'switch_probe/**'
+      - 'tests/check_nro.py'
+  pull_request:
+    paths:
+      - '.github/workflows/switch-native-probe.yml'
+      - 'switch_probe/**'
+      - 'tests/check_nro.py'
+
+permissions:
+  contents: read
+
+jobs:
+  build-nro:
+    runs-on: ubuntu-latest
+    container:
+      image: devkitpro/devkita64:latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify native Switch toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          export DEVKITPRO="${DEVKITPRO:-/opt/devkitpro}"
+          export DEVKITA64="${DEVKITA64:-$DEVKITPRO/devkitA64}"
+          export PATH="$DEVKITA64/bin:$DEVKITPRO/tools/bin:$PATH"
+          command -v aarch64-none-elf-g++
+          command -v elf2nro
+          command -v nacptool
+          test -f "$DEVKITPRO/libnx/include/switch.h"
+      - name: Build native ROM-free NRO
+        shell: bash
+        run: |
+          set -euxo pipefail
+          export DEVKITPRO="${DEVKITPRO:-/opt/devkitpro}"
+          export DEVKITA64="${DEVKITA64:-$DEVKITPRO/devkitA64}"
+          export PATH="$DEVKITA64/bin:$DEVKITPRO/tools/bin:$PATH"
+          make -C switch_probe clean all
+          python3 tests/check_nro.py switch_probe/vpd_native_probe.nro
+      - name: Upload diagnostic NRO
+        uses: actions/upload-artifact@v4
+        with:
+          name: vpd-native-rom-free-probe
+          path: switch_probe/vpd_native_probe.nro
+          if-no-files-found: error
