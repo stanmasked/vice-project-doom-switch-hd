@@ -56,7 +56,12 @@ local function bus(kind,expected,a,size,value)
   checked(type(value)=='number' and value==math.floor(value)
     and value>=0 and value<=255,
     kind..' callback must provide a third byte value')
-  record(kind,a,value)
+  if kind=='READ' then
+    checked(value==0,'READ callback value must be FCEUX zero sentinel')
+    record(kind,a,nil) -- actual CPU bus byte is NOT exposed by FCEUX
+  else
+    record(kind,a,value)
+  end
 end
 for _,pc in ipairs({0xE479,0xE4E6,0xE4F3,0x835B,0xC906}) do
   local address=pc
@@ -85,6 +90,7 @@ emu.registerexit(function()
     'complete='..(dropped==0 and callback_errors==0 and 'yes' or 'no'),
     'callback_errors='..callback_errors,
     'callback_contract=address_size_value_v1',
+    'read_value_provenance=address_only_fceux_zero_sentinel',
     'initial_mmc3_mode=unknown',
     'register_provenance=callback_time_optional_samples',
     'register_api=memory.getregister',
