@@ -24,6 +24,7 @@ class JointTraceValidationTests(unittest.TestCase):
         self.meta.write_text('\n'.join([
             'format=vice_stage49_joint_v1','events_recorded=5',
             'events_dropped=0','callback_errors=0','complete=yes',
+            'mmc3_write_coverage=full_8000_9fff_even_odd',
             'exec_context=selected_pc_hooks_only',
             'read_causality=not_proven',
             'read_value_provenance=address_only_fceux_zero_sentinel'])+'\n',encoding='utf8')
@@ -39,6 +40,22 @@ class JointTraceValidationTests(unittest.TestCase):
     def test_forged_read_byte_rejected(self):
         self.rows[4][4]='AA';self.write_rows()
         with self.assertRaisesRegex(ValueError,'READ value provenance'):
+            validate(self.trace,self.meta)
+
+    def test_mirrored_mmc3_registers_accepted(self):
+        self.rows[1][3]='9FFE';self.rows[2][3]='9FFF'
+        self.write_rows()
+        self.assertEqual(validate(self.trace,self.meta)['counts']['READ'],1)
+
+    def test_invalid_mirror_parity_rejected(self):
+        self.rows[1][3]='8003';self.write_rows()
+        with self.assertRaisesRegex(ValueError,'mapper write'):
+            validate(self.trace,self.meta)
+
+    def test_legacy_mmc3_coverage_rejected(self):
+        self.meta.write_text(self.meta.read_text().replace(
+            'mmc3_write_coverage=full_8000_9fff_even_odd\\n',''))
+        with self.assertRaisesRegex(ValueError,'provenance'):
             validate(self.trace,self.meta)
 
     def test_wrong_bank_rejected(self):
