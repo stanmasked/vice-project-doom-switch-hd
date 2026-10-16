@@ -35,6 +35,13 @@ class EndToEndTests(unittest.TestCase):
         result=self.check('f'*64)
         self.assertEqual(result['status'],'prg_identity_mismatch')
         self.assertEqual(result['candidate_reads'],[])
+    def test_wrong_digest_cannot_hide_incomplete_trace(self):
+        self.fixture.case.meta.write_text(
+            self.fixture.case.meta.read_text().replace(
+                'events_dropped=0','events_dropped=1').replace(
+                'complete=yes','complete=no'))
+        with self.assertRaisesRegex(ValueError,'Incomplete'):
+            self.check('f'*64)
     def test_intervening_mmc3_write_blocks_candidate(self):
         self.fixture.case.rows[5]=['19','6','SELECT','8000','06','12',
                                   '01','02','03','04','unknown']
