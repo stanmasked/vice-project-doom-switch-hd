@@ -49,6 +49,7 @@ def runs(trace, meta, min_run=2):
         'schema':1,'classification':'adjacent mapped CPU-read runs; data meaning unverified',
         'capture_metadata_verified':checked['capture_metadata_verified'],
         'event_counts':checked['event_counts'],'unresolved_reads':unresolved,
+        'read_values_proven':False,
         'candidate_runs':[dict(s, occurrences_of_same_range=repeats[(s['bank'],s['start_offset'],s['end_offset'])])
                           for s in selected],
         'discarded_short_runs':len(spans)-len(selected),
