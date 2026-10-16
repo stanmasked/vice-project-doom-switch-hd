@@ -13,6 +13,8 @@
 #include "demo_backdrop.hpp"
 #include "decor_source.hpp"
 #include "demo_decor.hpp"
+#include "decor_layout.hpp"
+#include "demo_decor_layout.hpp"
 #include <cstdint>
 namespace {
 bool solidAt(void* context,int x,int y) {
@@ -75,6 +77,16 @@ int main(int,char**) {
     }
     if(has_sd)decor.reload(kExternalDecorPath);
     bool decor_reload_failed=false;
+    constexpr const char* kExternalDecorLayoutPath=
+        "sdmc:/switch/vice_project_doom/decor_layout.vlay";
+    vpd::DecorLayoutSource layout;
+    if(!layout.initialize(vpd_layout::kLayout)){
+        framebufferClose(&fb);
+        if(we_mounted_sd)fsdevUnmountDevice("sdmc");
+        return 8;
+    }
+    if(has_sd)layout.reload(kExternalDecorLayoutPath);
+    bool decor_layout_reload_failed=false;
     vpd::AnimationPlayer animation;
     vpd::Simulation game;
     while(appletMainLoop()){
@@ -119,6 +131,14 @@ int main(int,char**) {
             decor.reset();
             decor_reload_failed=false;
         }
+        if(pressed&HidNpadButton_Minus){
+            decor_layout_reload_failed= !has_sd ||
+                layout.reload(kExternalDecorLayoutPath)!=vpd::LayoutLoadResult::Loaded;
+        }
+        if(pressed&HidNpadButton_StickR){
+            layout.reset();
+            decor_layout_reload_failed=false;
+        }
         uint8_t input=0;
         if(buttons&(HidNpadButton_Left|HidNpadButton_StickLLeft))input|=vpd::Left;
         if(buttons&(HidNpadButton_Right|HidNpadButton_StickLRight))input|=vpd::Right;
@@ -150,6 +170,9 @@ int main(int,char**) {
         view.decor_atlas=&decor.atlas();
         view.external_decor_asset=decor.external();
         view.decor_reload_failed=decor_reload_failed;
+        view.decor_layout=layout.layout();
+        view.external_decor_layout=layout.external();
+        view.decor_layout_reload_failed=decor_layout_reload_failed;
         const bool drawn=vpd::drawScene(pixels,vpd::kSceneWidth,
                 vpd::kSceneHeight,static_cast<int>(stride/sizeof(uint32_t)),view);
         framebufferEnd(&fb);

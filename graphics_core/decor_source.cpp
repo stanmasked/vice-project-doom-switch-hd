@@ -1,6 +1,7 @@
 #include "decor_source.hpp"
 #include <cstdint>
 #include <limits>
+#include "decor_layout.hpp"
 
 namespace vpd {
 int decorScale(const SpriteAtlas& a){
@@ -31,6 +32,28 @@ bool drawDecorLayer(uint32_t* target,int width,int height,int stride,
         const int sy=foreground ? 366 : 306;
         if(!blitAtlasFrame(target,width,height,stride,atlas,
                            decorFrame(i,tick),int(sx),sy,scale))
+            return false;
+    }
+    return true;
+}
+bool drawPlacedDecorLayer(uint32_t* target,int width,int height,int stride,
+                          const SpriteAtlas& atlas,DecorLayout layout,
+                          int camera_px,uint32_t tick,bool foreground){
+    const int scale=decorScale(atlas);
+    if(!target||width<=0||height<=0||stride<width||scale<0||
+       !validDecorLayout(layout,atlas.frame_count))return false;
+    for(unsigned i=0;i<layout.count;++i){
+        const DecorPlacement& p=layout.placements[i];
+        if(bool(p.layer)!=foreground)continue;
+        const int64_t sx=(int64_t(p.world_x)-camera_px)*2;
+        const int64_t sy=(int64_t(p.world_y)+80)*2;
+        if(sx<=-48||sx>=width||sy<=-64||sy>=height)continue;
+        if(sx<std::numeric_limits<int>::min()||
+           sx>std::numeric_limits<int>::max()||
+           sy<std::numeric_limits<int>::min()||
+           sy>std::numeric_limits<int>::max())continue;
+        if(!blitAtlasFrame(target,width,height,stride,atlas,
+                           placedDecorFrame(p,tick),int(sx),int(sy),scale))
             return false;
     }
     return true;

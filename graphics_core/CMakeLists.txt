@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.16)
 project(vpd_scene_renderer LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-add_library(vpd_scene_renderer STATIC scene_renderer.cpp asset_atlas.cpp animation.cpp asset_source.cpp animation_resource.cpp asset_bundle.cpp terrain_source.cpp backdrop_source.cpp decor_source.cpp)
+add_library(vpd_scene_renderer STATIC scene_renderer.cpp asset_atlas.cpp animation.cpp asset_source.cpp animation_resource.cpp asset_bundle.cpp terrain_source.cpp backdrop_source.cpp decor_source.cpp decor_layout.cpp)
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
 target_include_directories(vpd_scene_renderer PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
@@ -43,6 +43,16 @@ add_custom_command(OUTPUT ${DEMO_DECOR_HEADER} ${DEMO_DECOR_BINARY}
   DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/../tools/build_demo_decor.py
   VERBATIM)
 add_custom_target(vpd_demo_decor DEPENDS ${DEMO_DECOR_HEADER} ${DEMO_DECOR_BINARY})
+set(DEMO_LAYOUT_HEADER ${CMAKE_CURRENT_BINARY_DIR}/generated/demo_decor_layout.hpp)
+set(DEMO_LAYOUT_BINARY ${CMAKE_CURRENT_BINARY_DIR}/generated/demo_decor_layout.vlay)
+add_custom_command(OUTPUT ${DEMO_LAYOUT_HEADER} ${DEMO_LAYOUT_BINARY}
+  COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/../tools/pack_decor_layout.py
+          ${CMAKE_CURRENT_SOURCE_DIR}/../assets/demo_decor_layout.json
+          --header ${DEMO_LAYOUT_HEADER} --binary ${DEMO_LAYOUT_BINARY}
+  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/../assets/demo_decor_layout.json
+          ${CMAKE_CURRENT_SOURCE_DIR}/../tools/pack_decor_layout.py
+  VERBATIM)
+add_custom_target(vpd_demo_decor_layout DEPENDS ${DEMO_LAYOUT_HEADER} ${DEMO_LAYOUT_BINARY})
 add_executable(vpd_decor_source_test ../tests/test_decor_source.cpp)
 target_include_directories(vpd_decor_source_test PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/generated)
 add_dependencies(vpd_decor_source_test vpd_demo_decor)

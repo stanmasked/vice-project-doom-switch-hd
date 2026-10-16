@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include "decor_layout.hpp"
 namespace vpd {
 struct SpriteAtlas;
 // ROM-free renderer interface shared by host tests and Nintendo Switch.
@@ -25,6 +26,9 @@ struct SceneView {
     const SpriteAtlas* decor_atlas=nullptr;
     bool external_decor_asset=false;
     bool decor_reload_failed=false;
+    DecorLayout decor_layout{};
+    bool external_decor_layout=false;
+    bool decor_layout_reload_failed=false;
 };
 constexpr int kSceneWidth=1280;
 constexpr int kSceneHeight=720;

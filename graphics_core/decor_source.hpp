@@ -1,5 +1,6 @@
 #pragma once
 #include "asset_source.hpp"
+#include "decor_layout.hpp"
 #include <cstddef>
 #include <cstdint>
 
@@ -12,6 +13,10 @@ unsigned decorFrame(int index,uint32_t simulation_tick);
 bool drawDecorLayer(uint32_t* target,int width,int height,int stride,
                     const SpriteAtlas& atlas,int camera_px,uint32_t tick,
                     bool foreground);
+// Stage 31: draw authored placements rather than C++-defined coordinates.
+bool drawPlacedDecorLayer(uint32_t* target,int width,int height,int stride,
+                          const SpriteAtlas& atlas,DecorLayout layout,
+                          int camera_px,uint32_t tick,bool foreground);
 enum class DecorReload : uint8_t {
     Loaded, Missing, Invalid, UnsupportedGeometry, Uninitialized
 };
