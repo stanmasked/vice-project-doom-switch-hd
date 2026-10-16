@@ -19,6 +19,9 @@
 - [x] Validate 28 handler instruction anchors and test the queue parser with ROM-free inputs (Actions #38863927572).
 - [x] Implement FCEUX Lua snapshot capture and PPU background renderer (Actions #38865231340).
 - [x] Validate background tile/attribute/palette decoding against ROM-free synthetic samples.
+- [x] Validate the real Lua capture script against a synthetic FCEUX API (GitHub CI #38866707731).
+- [x] Fix silent register log truncation; capture metadata now reports write losses.
+- [x] Add static OAM sprite preview with 8x8/8x16, flips, palette, transparency and priority (CI #38866828175).
 - [ ] **Run** FCEUX capture during title and first-stage transitions; no verified live captures yet.
 - [ ] Capture actual queued packets, palette RAM and PPU state during **runtime**.
 - [ ] Recover real PPU palettes, nametables, metatiles and OAM frames.

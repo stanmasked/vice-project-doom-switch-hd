@@ -20,8 +20,8 @@ This private repository contains an independent C++ research/development toolcha
 | Directory | Purpose |
 | --- | --- |
 | `native_core/` | C++17 CHR decoder, atlas exporter and unit tests |
-| `tools/` | Local-only NES ROM static analysis tools |
-| `tests/` | ROM-free Python and C++ tests, NRO verifier, private ROM regression check |
+| `tools/` | NES ROM analysis plus local FCEUX PPU/OAM capture, background/sprite preview |
+| `tests/` | ROM-free Python/Lua/C++ tests, NRO verifier and private ROM regression check |
 | `game_core/` | Native deterministic game-scene scaffold with placeholder physics and map |
 | `switch_probe/` | Native libnx ASCII test scene with D-pad/A/B gamepad input |
 | `switch_viewer/` | Experimental SDL2 CHR page viewer (requires private generated pages) |
@@ -63,3 +63,20 @@ python3 tests/verify_original_rom.py '/private/path/Vice - Project Doom (USA).ne
 ```
 
 **Rights and provenance:** Original commercial game binaries, extracted graphics, disassembly and ROM-bearing build artifacts are not published. The project is research tooling; a distributed remake requires appropriate permissions.
+
+## Local FCEUX snapshot and static OAM sprite reconstruction
+
+The NES background and sprite snapshot tools are **analysis aids**, not a
+full emulator or accurate live rendered stage. See
+[REFERENCE_CAPTURE.md](docs/REFERENCE_CAPTURE.md) for the complete workflow.
+
+- `tools/capture_fceux_ppu.lua` records 16KiB PPU, 2KiB CPU work RAM
+  and a bounded register log (with an explicit overflow warning).
+- `tools/render_ppu_snapshot.py` reconstructs the unscrolled background.
+- `tools/render_oam_sprites.py` adds a static OAM sprite overlay, including
+  8x8/8x16 patterns, flip, palette selection and basic priority.
+- `tools/compare_ppu_captures.py` summarizes changes between saved frames.
+- GitHub CI runs the actual Lua capture script against a synthetic FCEUX API,
+  plus Python unit tests, without including the game's original assets.
+
+Authentic first-stage captures and on-hardware Switch testing are **not done**.
