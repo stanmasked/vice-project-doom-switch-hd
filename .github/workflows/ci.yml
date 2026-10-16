@@ -112,6 +112,10 @@ jobs:
         run: lua5.4 tests/test_fceux_register_api.lua
       - name: Reject incompatible FCEUX hook callback shapes in synthetic stage53 capture
         run: lua5.4 tests/test_fceux_callback_contract.lua
+      - name: Stage68 ROM header, mapper and private-hash gate mocks
+        run: |
+          lua5.4 tests/test_fceux_rom_preflight.lua
+          lua5.4 tests/test_fceux_capture_preflight.lua
       - name: Reject ROMs, PPU snapshots, original art exports and binaries
         shell: bash
         run: |
