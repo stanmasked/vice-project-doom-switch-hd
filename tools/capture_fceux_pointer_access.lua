@@ -16,7 +16,7 @@ assert(type(hash)=='string' and hash:match('^[0-9a-fA-F]+$') and #hash==32,
 -- A crash or callback exception must never reuse an old complete=yes.
 local meta_path=DIR..'/stage41_pointer_access.meta.txt'
 local pending=assert(io.open(meta_path,'wb'))
-assert(pending:write('capture_in_progress=yes\\n'))
+assert(pending:write('capture_in_progress=yes\n'))
 assert(pending:close())
 local file=assert(io.open(DIR..'/stage41_pointer_access.tsv','wb'))
 assert(file:write('frame\tseq\tkind\taddress\tvalue\taa\tab\ta8\ta9\n'))
