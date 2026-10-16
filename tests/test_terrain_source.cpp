@@ -109,6 +109,25 @@ int main() {
     CHECK(terrain.reload(file.path.c_str())==vpd::TerrainReload::Invalid);
     CHECK(terrain.atlas().pixels==external);
 
+    // High-resolution 32x32/frame sheet (128x32 total) has exactly
+    // the same displayed pixels as the built-in 16x16 sheet at 2x scale.
+    // This verifies actual 1x HD-cell support, not just accepted metadata.
+    std::vector<uint8_t> high(22u+128u*32u*4u);
+    for(size_t k=0;k<22;++k)high[k]=vpd_terrain::kAtlasBlob[k];
+    high[6]=128;high[7]=0; // atlas width
+    high[8]=32;high[9]=0;  // atlas height
+    high[10]=32;high[11]=0; // each frame 32x32
+    high[12]=32;high[13]=0;
+    for(size_t y=0;y<32;++y)for(size_t x=0;x<128;++x)
+      for(size_t channel=0;channel<4;++channel)
+        high[22u+(y*128u+x)*4u+channel]=
+          vpd_terrain::kAtlasBlob[22u+((y/2u)*64u+x/2u)*4u+channel];
+    patchCrc(high);
+    file.write(high);
+    CHECK(terrain.reload(file.path.c_str())==vpd::TerrainReload::Loaded);
+    CHECK(vpd::terrainScale(terrain.atlas())==1);
+    CHECK(render(view)==embedded);
+
     terrain.reset();
     CHECK(!terrain.external()&&terrain.atlas().pixels==builtin);
     CHECK(render(view)==embedded);
