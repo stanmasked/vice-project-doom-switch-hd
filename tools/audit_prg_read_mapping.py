@@ -34,7 +34,11 @@ def audit(path):
             kind=row['kind']
             if kind not in KINDS: raise ValueError('Unknown event type')
             addr=hx(row['cpu_address'],'CPU address',4)
-            value=hx(row['value'],'byte',2)
+            value=None if row['value']=='unknown' else hx(row['value'],'byte',2)
+            if kind=='READ' and value is not None:
+                raise ValueError('Invalid READ value provenance')
+            if kind!='READ' and value is None:
+                raise ValueError('Missing MMC3 write value')
             if kind=='SELECT':
                 if addr!=0x8000:raise ValueError('Bad MMC3 SELECT address')
                 selected=value
@@ -58,7 +62,7 @@ def audit(path):
                                   bank*8192+(addr%8192)})
     return {
         'schema':1,'classification':'CPU-bus read candidates, not decoded stage data',
-        'event_counts':counts,'reads':reads,
+        'event_counts':counts,'reads':reads,'read_values_proven':False,
         'unresolved_reads':sum(v['bank'] is None for v in reads),
         'limitations':[
             'Input must originate from independently verified bus read callbacks',
@@ -80,7 +84,8 @@ def audit_verified(path, meta_path):
         props[key]=value
     required={'format':'vice_stage45_prg_reads_v1',
               'initial_mmc3_mode':'unknown',
-              'read_provenance':'registerread_callback_no_pc_proof'}
+              'read_provenance':'registerread_callback_no_pc_proof',
+              'read_value_provenance':'address_only_fceux_zero_sentinel'}
     if any(props.get(k)!=v for k,v in required.items()):
         raise ValueError('Invalid capture provenance')
     for name in ('events_recorded','events_dropped'):
