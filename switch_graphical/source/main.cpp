@@ -11,6 +11,8 @@
 #include "terrain_source.hpp"
 #include "backdrop_source.hpp"
 #include "demo_backdrop.hpp"
+#include "decor_source.hpp"
+#include "demo_decor.hpp"
 #include <cstdint>
 namespace {
 bool solidAt(void* context,int x,int y) {
@@ -63,6 +65,16 @@ int main(int,char**) {
     }
     if(has_sd)backdrop.reload(kExternalBackdropPath);
     bool backdrop_reload_failed=false;
+    constexpr const char* kExternalDecorPath=
+        "sdmc:/switch/vice_project_doom/decor.vpat";
+    vpd::DecorSource decor;
+    if(!decor.initialize(vpd_decor::kAtlasBlob,vpd_decor::kAtlasBytes)) {
+        framebufferClose(&fb);
+        if(we_mounted_sd)fsdevUnmountDevice("sdmc");
+        return 7;
+    }
+    if(has_sd)decor.reload(kExternalDecorPath);
+    bool decor_reload_failed=false;
     vpd::AnimationPlayer animation;
     vpd::Simulation game;
     while(appletMainLoop()){
@@ -99,6 +111,14 @@ int main(int,char**) {
             backdrop.reset();
             backdrop_reload_failed=false;
         }
+        if(pressed&HidNpadButton_Up) {
+            decor_reload_failed= !has_sd ||
+                decor.reload(kExternalDecorPath)!=vpd::DecorReload::Loaded;
+        }
+        if(pressed&HidNpadButton_Down) {
+            decor.reset();
+            decor_reload_failed=false;
+        }
         uint8_t input=0;
         if(buttons&(HidNpadButton_Left|HidNpadButton_StickLLeft))input|=vpd::Left;
         if(buttons&(HidNpadButton_Right|HidNpadButton_StickLRight))input|=vpd::Right;
@@ -127,6 +147,9 @@ int main(int,char**) {
         view.backdrop_atlas=&backdrop.atlas();
         view.external_backdrop_asset=backdrop.external();
         view.backdrop_reload_failed=backdrop_reload_failed;
+        view.decor_atlas=&decor.atlas();
+        view.external_decor_asset=decor.external();
+        view.decor_reload_failed=decor_reload_failed;
         const bool drawn=vpd::drawScene(pixels,vpd::kSceneWidth,
                 vpd::kSceneHeight,static_cast<int>(stride/sizeof(uint32_t)),view);
         framebufferEnd(&fb);

@@ -22,6 +22,9 @@ struct SceneView {
     const SpriteAtlas* backdrop_atlas=nullptr;
     bool external_backdrop_asset=false;
     bool backdrop_reload_failed=false;
+    const SpriteAtlas* decor_atlas=nullptr;
+    bool external_decor_asset=false;
+    bool decor_reload_failed=false;
 };
 constexpr int kSceneWidth=1280;
 constexpr int kSceneHeight=720;

@@ -2,6 +2,7 @@
 #include "asset_atlas.hpp"
 #include "terrain_source.hpp"
 #include "backdrop_source.hpp"
+#include "decor_source.hpp"
 #include <cstdint>
 #include <algorithm>
 
@@ -174,6 +175,10 @@ bool drawScene(uint32_t* target,int width,int height,int stride_pixels,
        !drawBackdropLayers(target,width,height,stride_pixels,
                            *view.backdrop_atlas,view.camera_x_px))
         skyline(s,view.camera_x_px);
+    // Decorative background props sit behind solid tiles and player.
+    if(view.decor_atlas)
+        drawDecorLayer(target,width,height,stride_pixels,*view.decor_atlas,
+                       view.camera_x_px,view.frame,false);
     const int environment_scale=view.terrain_atlas?
         terrainScale(*view.terrain_atlas):-1;
     int left=floorDiv(view.camera_x_px,16)-1;
@@ -208,6 +213,10 @@ bool drawScene(uint32_t* target,int width,int height,int stride_pixels,
                            sprite_frame,player_x-4,player_y-12,2,view.facing_left))
             drawHero(s,player_x,player_y,view.frame,view.grounded);
     } else drawHero(s,player_x,player_y,view.frame,view.grounded);
+    // Foreground objects are visual only: no hitbox/collision changes.
+    if(view.decor_atlas)
+        drawDecorLayer(target,width,height,stride_pixels,*view.decor_atlas,
+                       view.camera_x_px,view.frame,true);
     s.rect(0,0,1280,76,rgba(14,23,43));
     s.rect(0,73,1280,3,rgba(170,67,85));
     s.text(30,17,"VICE : NATIVE SCENE TEST",rgba(240,223,216),3);
@@ -232,6 +241,13 @@ bool drawScene(uint32_t* target,int width,int height,int stride_pixels,
             "BG: SD" : "BG: EMBEDDED");
         s.text(951,126,label,
                view.backdrop_reload_failed?rgba(243,121,104):
+               rgba(153,218,195),2);
+    }
+    if(view.decor_atlas) {
+        const char* label=view.decor_reload_failed?"DECOR: FAILED":
+            view.external_decor_asset?"DECOR: SD":"DECOR: EMBEDDED";
+        s.text(951,152,label,
+               view.decor_reload_failed?rgba(243,121,104):
                rgba(153,218,195),2);
     }
     s.rect(0,689,1280,31,rgba(13,19,33));
