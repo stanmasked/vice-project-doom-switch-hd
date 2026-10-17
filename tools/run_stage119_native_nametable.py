@@ -139,17 +139,35 @@ def run(binary, temp):
     with tempfile.TemporaryDirectory(dir=temp) as name:
         root = Path(name)
         measured = []
+        stride_records = []
+        # Import here to keep the Stage119 standalone verifier usable.
+        from audit_stage120_nt_stride import verify_stride_report, verify_stride_sweep
         for fine in FINES:
             rom = root / ("distinct_%d.nes" % fine)
             make_rom(rom, first=fine)
-            measured.append((fine, execute(
-                binary, rom, root / ("session_%d" % fine), fine=fine)))
+            session = root / ("session_%d" % fine)
+            observation = execute(binary, rom, session, fine=fine)
+            measured.append((fine, observation))
+            native_log = (session / "native.log").read_text(
+                encoding="utf8", errors="replace")
+            stride_records.append((fine, verify_stride_report(
+                native_log, fine, observation)))
         control = root / "identical.nes"
         make_rom(control, first=3, differentiated=False)
         execute(binary, control, root / "uniform_chr", fine=3, positive=False)
         execute(binary, root / "distinct_7.nes", root / "disabled",
                 fine=7, enabled=False, positive=False)
     result = verify_sweep(measured)
+    stride_proof = verify_stride_sweep(stride_records)
+    print(
+        "STAGE120_NATIVE_NT_STRIDE_CROSSCHECK "
+        "native_fceux=yes synthetic_mapper4_only=yes "
+        "phases=1,3,5,7 samples=%d transitions=%d "
+        "first_nt_addr=2000 second_nt_addr=2001 "
+        "uniform_chr_control=clean disabled_probe_control=clean "
+        "original_game_nt_stride_proven=no" %
+        (stride_proof["total_samples"], stride_proof["total_tile_transitions"])
+    )
     print(
         "STAGE119_NATIVE_COARSE_NAMETABLE_SOURCE_PROOF "
         "native_fceux=yes synthetic_mapper4_only=yes phases=1,3,5,7 "
