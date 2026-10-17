@@ -44,6 +44,7 @@ local update,hex,checksum,read_checksum=loader()
 assert(checksum('hello')=='062C0215')
 
 local name=os.tmpname()
+target=name
 local out=assert(system_io.open(name,'wb'))
 local header='frame\taddress\tvalue\n'
 assert(out:write(header))
