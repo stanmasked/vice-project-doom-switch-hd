@@ -97,8 +97,8 @@ for _,fragment in ipairs({
  assert(log:find(fragment,1,true),fragment)
 end
 local timed=read(dir..'/mmc3_ppu_cycles.tsv')
-assert(timed:find('\\t3FFA\\t00\\tR',1,true))
-assert(not timed:find('\\t2002\\t7F\\tW',1,true))
+assert(timed:find('\t3FFA\t00\tR',1,true))
+assert(not timed:find('\t2002\t7F\tW',1,true))
 -- A later frame must be tagged incomplete if malformed hooks fire.
 current_frame=2
 local ok,err=pcall(mwrite,0x8002,2,0x80)
