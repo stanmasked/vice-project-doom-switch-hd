@@ -34,8 +34,8 @@ def verify_stride_report(log, fine, stage119):
         for i, x in enumerate(found[0].groups())
     )
     if (fine not in PHASES or f != fine or second != 8-fine or
-            not (0x2000 <= addr0 < 0x3000 and (addr0 & 31) == 0) or
-            not (0x2000 <= addr1 < 0x3000 and (addr1 & 31) == 1) or
+            not (0x2000 <= addr0 < 0x3000 and (addr0 & 31) == 4) or
+            not (0x2000 <= addr1 < 0x3000 and (addr1 & 31) == 5) or
             (samples0, samples1) != (16, 16) or
             (changes0, changes1) != (2, 2)):
         raise NametableStrideError("Wrong phase, address or tile transitions")
@@ -60,8 +60,8 @@ def verify_stride_sweep(records):
                 len(item["addresses"]) != 2 or
                 not (0x2000 <= item["addresses"][0] < 0x3000) or
                 not (0x2000 <= item["addresses"][1] < 0x3000) or
-                (item["addresses"][0] & 31) != 0 or
-                (item["addresses"][1] & 31) != 1 or
+                (item["addresses"][0] & 31) != 4 or
+                (item["addresses"][1] & 31) != 5 or
                 item.get("sampled_pixels") != 32 or
                 item.get("tile_transitions") != 4 or
                 item.get("original_game_nt_stride_proven") is not False):
