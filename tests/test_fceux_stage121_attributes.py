@@ -150,7 +150,7 @@ int main(int argc,char**) {
    if(argc>1&&sl==106&&x==8)attraddr+=0x400U;
    const unsigned shift=((ntaddr&0x40U)?4U:0U)+
                         ((ntaddr&0x02U)?2U:0U);
-   const unsigned raw=1U,decoded=((raw>>shift)&3U)<<2;
+   const unsigned raw=attraddr&1U,decoded=((raw>>shift)&3U)<<2;
    const unsigned pattern=nt?3U:0U;
    vpd_ppu_probe::stage119_pixel(sl,x/8,x%8,tile,bgpx,
       scroll,second?1U:0U,nt,ntaddr,plane,plane,
