@@ -77,16 +77,24 @@ end
 local function record_event(address, value, kind)
     kind = kind or 'W'
     if writes_this_frame < MAX_EVENTS_PER_FRAME and total_writes < MAX_TOTAL_EVENTS then
-        local frame = emu.framecount()
-        buffered[#buffered+1] = string.format('%d\t%04X\t%02X\n',
-                                              frame, address, value)
+        -- Build both records BEFORE mutating either buffer. If a debugger
+        -- callback fails, neither TSV is allowed to gain a partial event.
+        local ok_frame,frame=pcall(emu.framecount)
+        checked(ok_frame and type(frame)=='number' and frame==frame
+            and frame>=0 and frame<math.huge and frame==math.floor(frame),
+            'invalid frame counter')
+        local frame_line=string.format('%d\t%04X\t%02X\n',frame,address,value)
+        local timed_line=nil
         if clock_available then
-            local cycles = debugger.getcyclescount()
-            assert(type(cycles)=='number' and cycles>=0 and cycles==math.floor(cycles),
-                   'Invalid debugger CPU cycle counter')
-            timed_buffered[#timed_buffered+1] = string.format('%.0f\t%.0f\t%04X\t%02X\t%s\n',
-                                                frame, cycles, address, value, kind)
+            local ok_cycle,cycles=pcall(debugger.getcyclescount)
+            checked(ok_cycle and type(cycles)=='number' and cycles==cycles
+                and cycles>=0 and cycles<math.huge and cycles==math.floor(cycles),
+                'invalid CPU cycle counter')
+            timed_line=string.format('%.0f\t%.0f\t%04X\t%02X\t%s\n',
+                                     frame,cycles,address,value,kind)
         end
+        buffered[#buffered+1]=frame_line
+        if timed_line then timed_buffered[#timed_buffered+1]=timed_line end
         writes_this_frame = writes_this_frame + 1
         total_writes = total_writes + 1
     else
@@ -145,6 +153,8 @@ memory.registerread(0x2000,0x2000,on_status_read)
 memory.registerwrite(0x8000,0x8000,on_write)
 
 local function flush()
+    checked(not clock_available or #buffered==#timed_buffered,
+            'frame/cycle event buffer mismatch')
     if #buffered > 0 then
         assert(log:write(table.concat(buffered)), 'Failed writing register log')
         assert(log:flush(), 'Failed flushing register log')
