@@ -179,7 +179,7 @@ def run(binary, temp):
         "STAGE120_NATIVE_NT_STRIDE_CROSSCHECK "
         "native_fceux=yes synthetic_mapper4_only=yes "
         "phases=1,3,5,7 samples=%d transitions=%d "
-        "first_nt_col=0 second_nt_col=1 row_base=observed "
+        "first_nt_col=4 second_nt_col=5 row_base=observed "
         "uniform_chr_control=clean disabled_probe_control=clean "
         "original_game_nt_stride_proven=no" %
         (stride_proof["total_samples"], stride_proof["total_tile_transitions"])
