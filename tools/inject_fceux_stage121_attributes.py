@@ -51,7 +51,7 @@ def patch(source):
         b"bgdata.main[bgtile].vpd_stage121_atraw, " +
         b"bgdata.main[bgtile].vpd_stage121_shift, " +
         b"bgdata.main[bgtile].at, pixel & 3, " +
-        b"(pixel & 3) | bgdata.main[bgtile].at);" + nl + b"#endif", 1)
+        b"pixel);" + nl + b"#endif", 1)
     if (source.count(HOOK) != 1 or
             source.count(b"vpd_stage121_ataddr = RefreshAddr") != 1 or
             source.count(b"vpd_stage121_atraw = at") != 1):
