@@ -129,6 +129,8 @@ jobs:
         run: python -m unittest discover -s tests -p 'test_fceux_stage100_runtime.py' -v
       - name: Stage101 Xvfb backend and sanitized headless process-exit regressions
         run: python -m unittest discover -s tests -p 'test_fceux_stage101_headless_diagnostics.py' -v
+      - name: Stage102 native source-level VBlank status-window and pinned hook tests
+        run: python -m unittest discover -s tests -p 'test_fceux_stage102_status_windows.py' -v
       - name: Stage89 validated static screen hypotheses and explicit provenance
         run: python -m unittest discover -s tests -p 'test_ppu_capture_session.py' -v
       - name: Stage88 audited PPU reference-frame inventory regressions
