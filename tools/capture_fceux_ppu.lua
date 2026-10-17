@@ -81,14 +81,15 @@ local function record_event(address, value, kind)
         -- callback fails, neither TSV is allowed to gain a partial event.
         local ok_frame,frame=pcall(emu.framecount)
         checked(ok_frame and type(frame)=='number' and frame==frame
-            and frame>=0 and frame<math.huge and frame==math.floor(frame),
+            and frame>=0 and frame<=2147483647 and frame==math.floor(frame),
             'invalid frame counter')
         local frame_line=string.format('%d\t%04X\t%02X\n',frame,address,value)
         local timed_line=nil
         if clock_available then
             local ok_cycle,cycles=pcall(debugger.getcyclescount)
             checked(ok_cycle and type(cycles)=='number' and cycles==cycles
-                and cycles>=0 and cycles<math.huge and cycles==math.floor(cycles),
+                and cycles>=0 and cycles<=9007199254740991
+                and cycles==math.floor(cycles),
                 'invalid CPU cycle counter')
             timed_line=string.format('%.0f\t%.0f\t%04X\t%02X\t%s\n',
                                      frame,cycles,address,value,kind)
