@@ -3,7 +3,7 @@
 // Install callback explicitly only on a controlled private emulator build.
 #ifndef VPD_NEWPPU_RAW_STEP_PROBE_H
 #define VPD_NEWPPU_RAW_STEP_PROBE_H
-#if defined(VPD_NATIVE_SYNTHETIC_SMOKE) || defined(VPD_NATIVE_SYNTHETIC_VBLANK) || defined(VPD_NATIVE_SYNTHETIC_PPUSTATUS_READ) || defined(VPD_NATIVE_SYNTHETIC_EVENT_ORDER) || defined(VPD_NATIVE_SYNTHETIC_PRECLEAR) || defined(VPD_NATIVE_SYNTHETIC_MMC3_CHR) || defined(VPD_NATIVE_SYNTHETIC_BG_PIXELS) || defined(VPD_NATIVE_SYNTHETIC_BG_FETCH) || defined(VPD_NATIVE_SYNTHETIC_CHR_TIMELINE) || defined(VPD_NATIVE_SYNTHETIC_MIDFRAME_CHR)
+#if defined(VPD_NATIVE_SYNTHETIC_SMOKE) || defined(VPD_NATIVE_SYNTHETIC_VBLANK) || defined(VPD_NATIVE_SYNTHETIC_PPUSTATUS_READ) || defined(VPD_NATIVE_SYNTHETIC_EVENT_ORDER) || defined(VPD_NATIVE_SYNTHETIC_PRECLEAR) || defined(VPD_NATIVE_SYNTHETIC_MMC3_CHR) || defined(VPD_NATIVE_SYNTHETIC_BG_PIXELS) || defined(VPD_NATIVE_SYNTHETIC_BG_FETCH) || defined(VPD_NATIVE_SYNTHETIC_CHR_TIMELINE) || defined(VPD_NATIVE_SYNTHETIC_MIDFRAME_CHR) || defined(VPD_NATIVE_SYNTHETIC_BG_TILES)
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -410,6 +410,104 @@ inline void stage110_raster_pixel(unsigned sl, unsigned pattern, unsigned color)
             std::fflush(stderr);
             s.emitted = true;
         }
+    }
+}
+#endif
+
+// Stage111: observe buffer values ACTUALLY CONSUMED by newppu pixels.
+// Private synthetic ROM only. Do not confuse earlier fetches with buffered
+// pattern data; this callback receives bgdata.main[bgtile].pt[0/1].
+#if defined(VPD_NATIVE_SYNTHETIC_BG_TILES) && defined(VPD_NATIVE_SYNTHETIC_MIDFRAME_CHR)
+struct TileBoundary {
+    unsigned long pre = 0, pre_zero = 0, transient_old = 0;
+    unsigned long filled = 0, filled_ok = 0, regression = 0, invalid = 0;
+    unsigned long frame = 0;
+    unsigned last_sl = 0, last_xt = 0, switch_xt = 0;
+    unsigned first_new_sl = 0, first_new_xt = 0;
+    bool switched_seen = false, new_seen = false, emitted = false;
+};
+inline TileBoundary& stage111_state() {
+    static TileBoundary t;
+    return t;
+}
+inline bool stage111_enabled() {
+    static const char* env = std::getenv("VPD_STAGE111_BG_TILE_PROBE");
+    return env && std::strcmp(env, "1") == 0;
+}
+inline void stage111_tile_pixel(unsigned sl, unsigned xt, unsigned xp,
+                                unsigned index, unsigned lo,
+                                unsigned hi, unsigned pattern) {
+    if (!stage111_enabled() || xp != 0) return;
+    TileBoundary& t = stage111_state();
+    MidframeChr& m = stage110_state();
+    if (t.emitted) return;
+    if (sl < 1 || sl > 240 || xt >= 32 || index >= 34 ||
+        lo > 255 || hi > 255 || pattern > 3 ||
+        (sl == t.last_sl && xt <= t.last_xt)) ++t.invalid;
+    if (t.frame != m.frame && !m.switched) {
+        t.frame = m.frame;
+        t.pre = t.pre_zero = 0;
+        t.switched_seen = t.new_seen = false;
+        t.transient_old = t.filled = t.filled_ok = t.regression = 0;
+    }
+    if (m.writes == 1 && !m.switched && t.pre < 128) {
+        ++t.pre;
+        if (lo == 0 && hi == 0 && pattern == 0) ++t.pre_zero;
+        else ++t.invalid;
+    }
+    if (m.writes == 2 && m.switched && !t.switched_seen) {
+        t.switched_seen = true;
+        t.switch_xt = t.last_xt;
+        if (t.frame != m.switch_frame || t.pre != 128 ||
+            t.pre_zero != 128 || sl < m.switch_sl ||
+            sl > m.switch_sl + 1 || m.switch_sl < 40 ||
+            m.switch_sl > 210) ++t.invalid;
+    }
+    if (t.switched_seen && m.writes == 2 && m.frame == m.switch_frame &&
+        t.filled < 128) {
+        if (lo == 0 && hi == 0 && pattern == 0) {
+            if (t.new_seen) ++t.regression;
+            else ++t.transient_old;
+        } else if (lo == 255 && hi == 255 && pattern == 3) {
+            if (!t.new_seen) {
+                t.new_seen = true;
+                t.first_new_sl = sl;
+                t.first_new_xt = xt;
+            }
+            ++t.filled;
+            ++t.filled_ok;
+        } else {
+            ++t.invalid;
+        }
+    }
+    t.last_sl = sl;
+    t.last_xt = xt;
+    if (t.filled == 128 && !t.emitted) {
+        if (!t.new_seen || t.first_new_sl < m.switch_sl ||
+            t.first_new_sl > m.switch_sl + 3 ||
+            t.transient_old > 64 || t.regression != 0 ||
+            t.pre != 128 || t.pre_zero != 128 ||
+            t.filled_ok != 128 || m.frame != m.switch_frame ||
+            m.writes != 2) ++t.invalid;
+        if (t.invalid) {
+            std::fprintf(stderr,
+                "VPD_STAGE111_REJECTED_TILE_BOUNDARY invalid=%lu "
+                "transient_old=%lu regressions=%lu synthetic_only=yes\n",
+                t.invalid, t.transient_old, t.regression);
+        } else {
+            std::fprintf(stderr,
+                "VPD_STAGE111_NATIVE_TILE_BOUNDARY_PASS "
+                "switch_sl=%u last_rendered_xt=%u "
+                "pre_tiles=128 pre_zero=128 transient_old=%lu "
+                "first_new_sl=%u first_new_xt=%u "
+                "new_tiles=128 new_ff=128 regressions=0 invalid=0 "
+                "same_rendered_frame=yes synthetic_only=yes "
+                "original_game_tile_proven=no\n",
+                m.switch_sl, t.switch_xt, t.transient_old,
+                t.first_new_sl, t.first_new_xt);
+        }
+        std::fflush(stderr);
+        t.emitted = true;
     }
 }
 #endif
