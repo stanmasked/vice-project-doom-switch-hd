@@ -54,8 +54,66 @@ end
 local function write_binary(path, value)
     local f, error_message = io.open(path, 'wb')
     assert(f, 'Cannot write '..path..': '..tostring(error_message))
-    assert(f:write(value), 'Failed writing '..path)
-    f:close()
+    local wrote, write_error = f:write(value)
+    if not wrote then
+        pcall(function() f:close() end)
+        error('Failed writing '..path..': '..tostring(write_error),2)
+    end
+    local closed, close_error = f:close()
+    assert(closed, 'Failed closing '..path..': '..tostring(close_error))
+end
+
+-- A finalized metadata file is the publication boundary for private
+-- captures. First write/close a sibling temporary file and compare the
+-- exact bytes, then replace the pending marker. On systems where renaming
+-- over an existing file is unsupported, removing the pending marker
+-- before rename is safe: missing metadata is *not* valid evidence.
+local function publish_metadata(path, contents)
+    local pending='capture_in_progress=yes\\n'
+    local previous, previous_error=io.open(path,'rb')
+    assert(previous,'Missing pending metadata '..path..': '..tostring(previous_error))
+    local existing=previous:read('*a')
+    assert(previous:close(),'Failed closing pending metadata '..path)
+    assert(existing==pending,'Metadata not pending before finalize: '..path)
+
+    local temp=path..'.tmp'
+    local out,open_error=io.open(temp,'wb')
+    assert(out,'Cannot open metadata temporary file '..temp..': '..tostring(open_error))
+    local wrote,write_error=out:write(contents)
+    if not wrote then
+        pcall(function() out:close() end)
+        os.remove(temp)
+        error('Metadata temporary write failed: '..tostring(write_error),2)
+    end
+    local closed,close_error=out:close()
+    if not closed then
+        os.remove(temp)
+        error('Metadata temporary close failed: '..tostring(close_error),2)
+    end
+    local verify,verify_error=io.open(temp,'rb')
+    if not verify then
+        os.remove(temp)
+        error('Cannot verify metadata temporary file: '..tostring(verify_error),2)
+    end
+    local actual=verify:read('*a')
+    local verify_closed=verify:close()
+    if not verify_closed or actual~=contents then
+        os.remove(temp)
+        error('Metadata readback mismatch or close failure: '..temp,2)
+    end
+    -- Remove the pending marker *only after* the temporary file has
+    -- been independently verified. Failure here leaves a pending or
+    -- missing metadata file; either one is rejected by validators.
+    local removed,remove_error=os.remove(path)
+    if not removed then
+        os.remove(temp)
+        error('Cannot remove pending metadata: '..tostring(remove_error),2)
+    end
+    local renamed,rename_error=os.rename(temp,path)
+    if not renamed then
+        os.remove(temp)
+        error('Cannot publish metadata: '..tostring(rename_error),2)
+    end
 end
 
 -- Invalidate a prior completed session before replacing either event stream.
@@ -276,7 +334,7 @@ local function capture_frame()
     write_binary(prefix..'.ppu.bin', ppu_bytes)
     write_binary(prefix..'.ram.bin', ram_bytes)
     capture_rendered_screen(prefix)
-    write_binary(prefix..'.meta.txt', capture_metadata(frame))
+    publish_metadata(prefix..'.meta.txt', capture_metadata(frame))
     frames_captured = frames_captured + 1
     captured_frame_list[#captured_frame_list+1] = frame
     emu.message('Private PPU/RAM capture '..frames_captured..'/'..MAX_CAPTURES)
@@ -315,5 +373,5 @@ emu.registerexit(function()
         'ppu_register_write_coverage=full_2000_3fff_mod8',
         'ppu_status_read_coverage=full_2000_3fff_mod8',
     }
-    write_binary(session_path,table.concat(report,'\n')..'\n')
+    publish_metadata(session_path,table.concat(report,'\n')..'\n')
 end)
