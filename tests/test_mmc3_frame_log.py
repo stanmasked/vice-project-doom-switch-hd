@@ -21,6 +21,14 @@ class FrameLogTests(unittest.TestCase):
         self.assertEqual(r['frames'][1]['ppu_1k_bank_mapping'],[4,5,6,7,8,9,10,11])
         self.assertEqual(r['frames'][1]['ppu_port_writes'],2)
 
+    def test_ppu_port_count_includes_mirror_addresses(self):
+        events=[(2,0x2008,0x90),(2,0x3FF9,0x1E),
+                (2,0x200D,0x22),(2,0x3456,0x20),
+                (2,0x3FFF,0x11),(2,0x3FFA,0),
+                (2,0xA000,1)]
+        report=analyze(events)
+        self.assertEqual(report['frames'][0]['ppu_port_writes'],5)
+
     def test_all_mmc3_bank_register_mirrors(self):
         events=[(7,0x8002,0x80),(7,0x8003,4),
                 (7,0x9FFE,0x85),(7,0x9FFF,9),
