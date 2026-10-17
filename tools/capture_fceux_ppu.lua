@@ -24,6 +24,13 @@ local frames_captured = 0
 local last_frame = -1
 local writes_this_frame, total_writes = 0, 0
 local dropped_writes = 0
+local callback_errors = 0
+local function checked(ok,reason)
+    if not ok then
+        callback_errors = callback_errors + 1
+        error('Unsupported FCEUX video callback contract: '..reason,2)
+    end
+end
 local buffered = {}
 local timed_buffered = {}
 local clock_available = type(debugger)=='table' and type(debugger.getcyclescount)=='function'
@@ -76,12 +83,22 @@ local function record_event(address, value, kind)
 end
 
 local function on_write(address, size, value)
+    checked(type(address)=='number' and address==math.floor(address)
+        and ((address>=0x8000 and address<=0xFFFF)
+             or address==0x2000 or address==0x2001
+             or address==0x2005 or address==0x2006 or address==0x2007)
+        and size==1 and type(value)=='number' and value==math.floor(value)
+        and value>=0 and value<=255,
+        'write address/size/byte')
     if address == 0x2000 then ppuctrl = value end
     if address == 0x2001 then ppumask = value end
-    if address == 0x8000 then mmc3_select = value end
-    if address == 0x8001 and mmc3_select ~= nil then
-        local register = mmc3_select % 8
-        if register <= 5 then chr_reg[register] = value end
+    if address>=0x8000 and address<=0x9FFF then
+        if address%2==0 then
+            mmc3_select = value
+        elseif mmc3_select~=nil then
+            local register=mmc3_select%8
+            if register<=5 then chr_reg[register]=value end
+        end
     end
     record_event(address, value)
 end
@@ -93,10 +110,12 @@ local function on_status_read(address, size, value)
     record_event(0x2002, 0, 'R')
 end
 
-for _, addr in ipairs({0x2000,0x2001,0x2005,0x2006,0x2007,
-                       0x8000,0x8001,0xA000,0xC000,0xC001,0xE000,0xE001}) do
+for _, addr in ipairs({0x2000,0x2001,0x2005,0x2006,0x2007}) do
     memory.registerwrite(addr, on_write)
 end
+-- The MMC3 has four mirrored even/odd register pairs. A single hook
+-- observes their full address space, not just the canonical $xx00/$xx01.
+memory.registerwrite(0x8000,0x8000,on_write)
 -- Reads of $2002 reset the $2005/$2006 shared PPU write latch.
 -- Capture these as address=2002/value=00 markers in the event TSV.
 memory.registerread(0x2002, on_status_read)
@@ -131,8 +150,10 @@ local function capture_metadata(frame)
         'ppumask='..hx(ppumask),
         'mmc3_select='..hx(mmc3_select),
         'logged_register_writes='..tostring(total_writes),
+        'callback_errors='..tostring(callback_errors),
+        'mmc3_write_coverage=full_8000_ffff_even_odd',
         'dropped_register_writes='..tostring(dropped_writes),
-        'register_log_complete='..(dropped_writes == 0 and 'yes' or 'no'),
+        'register_log_complete='..(dropped_writes == 0 and callback_errors == 0 and 'yes' or 'no'),
         'scroll_emitter_ram_0b='..hx(memory.readbyte(0x0B)),
         'scroll_emitter_ram_0c='..hx(memory.readbyte(0x0C)),
         'scroll_emitter_ram_0d='..hx(memory.readbyte(0x0D)),
