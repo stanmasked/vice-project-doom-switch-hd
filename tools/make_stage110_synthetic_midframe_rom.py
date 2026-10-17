@@ -11,7 +11,7 @@ from pathlib import Path
 def program(*, switch=True, delay_outer=11, phase_nops=0):
     if not 1 <= delay_outer <= 32:
         raise ValueError("Invalid bounded delay")
-    if not 0 <= phase_nops <= 64:
+    if type(phase_nops) is not int or not 0 <= phase_nops <= 64:
         raise ValueError("Phase NOP count outside bounded 6502 raster sweep")
     result = bytearray()
     def lda(v):
