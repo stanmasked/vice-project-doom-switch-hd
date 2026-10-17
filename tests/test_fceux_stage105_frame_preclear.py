@@ -36,7 +36,7 @@ class FramePreclearContractTests(unittest.TestCase):
         candidate = insert_preclear(stage103_fixture()).decode()
         before = candidate.index("preclear_before_assignment")
         assignment = candidate.index("\t\tPPU_status = 0;")
-        after = candidate.index("observe_native_status_assignment(false")
+        after = candidate.index("observe_native_status_assignment(", assignment)
         self.assertLess(before, assignment)
         self.assertLess(assignment, after)
         self.assertEqual(candidate.count("preclear_before_assignment"), 1)
