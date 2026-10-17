@@ -53,7 +53,7 @@ def analyze(events,bank_count=128):
                      'mapper_select_writes':0,'unpaired_data_writes':0}
             frames.append(current)
         previous=frame
-        if address in (0x2000,0x2001,0x2005,0x2006,0x2007):
+        if 0x2000<=address<=0x3FFF and (address-0x2000)%8 in (0,1,5,6,7):
             current['ppu_port_writes']+=1
         if 0x8000<=address<=0x9FFF and address%2==0:
             selection=value&7
