@@ -17,6 +17,9 @@ local FRAME_INTERVAL = bounded_integer('VPD_CAPTURE_INTERVAL',120,1200)
 local MAX_CAPTURES = bounded_integer('VPD_CAPTURE_LIMIT',24,512)
 -- Default-on renderer reference. Disable by setting VPD_CAPTURE_SCREEN=false.
 local CAPTURE_SCREEN = rawget(_G, 'VPD_CAPTURE_SCREEN') ~= false
+-- Explicit opt-in: sample the FCEUX debugger clock in registerafter() at
+-- captured frames. This is not a scanline or physical VBlank timestamp.
+local CAPTURE_CALLBACK_CLOCK = rawget(_G,'VPD_CAPTURE_AFTER_CALLBACK_CLOCK') == true
 local MAX_EVENTS_PER_FRAME = 12000
 local MAX_TOTAL_EVENTS = 250000
 
@@ -48,6 +51,10 @@ end
 local buffered = {}
 local timed_buffered = {}
 local clock_available = type(debugger)=='table' and type(debugger.getcyclescount)=='function'
+assert(not CAPTURE_CALLBACK_CLOCK or clock_available,
+       'VPD_CAPTURE_AFTER_CALLBACK_CLOCK requires debugger.getcyclescount()')
+local callback_clock_samples=0
+local last_callback_clock=nil
 local chr_reg = {}
 local invalid_screen_palette_values = 0
 local mmc3_select, ppuctrl, ppumask = nil, nil, nil
@@ -311,13 +318,16 @@ local function flush()
     writes_this_frame = 0
 end
 
-local function capture_metadata(frame, checksums)
+local function capture_metadata(frame, checksums, callback_cycle)
     local result = {
         'format=fceux_ppu_snapshot_v4',
         'session_id='..session_id,
         'session_snapshot_index='..tostring(frames_captured+1),
         'capture_scope=frame_prefix_only',
         'cycle_trace_available='..(clock_available and 'yes' or 'no'),
+        'frame_callback_clock_scope='..(CAPTURE_CALLBACK_CLOCK and
+            'captured_frame_sample' or 'disabled'),
+        'frame_callback_cpu_cycle='..callback_cycle,
         'cycle_trace_counter_epoch=debugger_since_reset',
         'screen_reference='..(CAPTURE_SCREEN and 'yes' or 'no'),
         'screen_size=256x240',
@@ -415,6 +425,22 @@ local function capture_frame()
     flush()
     if frames_captured >= MAX_CAPTURES or frame % FRAME_INTERVAL ~= 0 then return end
 
+    local callback_cycle='not_captured'
+    if CAPTURE_CALLBACK_CLOCK then
+        local ok,cycles=pcall(debugger.getcyclescount)
+        checked(ok and type(cycles)=='number' and cycles==cycles
+                and cycles>=0 and cycles<=9007199254740991
+                and cycles==math.floor(cycles),
+                'invalid registerafter CPU-cycle sample')
+        checked(previous_cycle==nil or cycles>=previous_cycle,
+                'registerafter sample precedes previously logged event')
+        checked(last_callback_clock==nil or cycles>=last_callback_clock,
+                'registerafter sample regressed across captured frames')
+        callback_cycle=string.format('%.0f',cycles)
+        last_callback_clock=cycles
+        callback_clock_samples=callback_clock_samples+1
+    end
+
     -- Invalidate stale frame metadata before updating any image/RAM assets.
     -- If the frame capture fails mid-write, old complete metadata cannot
     -- certify a partial replacement of the same frame_NNNNNN.* files.
@@ -436,7 +462,7 @@ local function capture_frame()
                    or 'not_captured'),
     }
     checksums.rgb,checksums.pal=capture_rendered_screen(prefix)
-    publish_metadata(prefix..'.meta.txt', capture_metadata(frame,checksums))
+    publish_metadata(prefix..'.meta.txt', capture_metadata(frame,checksums,callback_cycle))
     frames_captured = frames_captured + 1
     captured_frame_list[#captured_frame_list+1] = frame
     emu.message('Private PPU/RAM capture '..frames_captured..'/'..MAX_CAPTURES)
@@ -477,6 +503,10 @@ emu.registerexit(function()
         'first_callback_frame='..tostring(first_frame or -1),
         'last_callback_frame='..tostring(last_frame),
         'frame_callbacks='..tostring(callback_frames),
+        'frame_callback_clock_mode='..(CAPTURE_CALLBACK_CLOCK and
+            'sampled_snapshots_v1' or 'disabled'),
+        'frame_callback_clock_samples='..tostring(callback_clock_samples),
+        'frame_callback_clock_boundary_proven=no',
         'frame_callback_gaps='..tostring(callback_gaps),
         'frames_captured='..tostring(frames_captured),
         'capture_frames='..table.concat(captured_frame_list,','),
