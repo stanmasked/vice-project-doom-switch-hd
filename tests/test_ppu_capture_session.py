@@ -43,6 +43,8 @@ class CaptureSessionTests(unittest.TestCase):
             'capture_frames':'1,3', 'events_recorded':'3',
             'events_dropped':'0','callback_errors':'0',
             'capture_failures':'0','cycle_trace_available':'yes',
+            'cycle_order_policy':'nondecreasing_v1',
+            'cycle_regressions':'0','cycle_equal_adjacent':'0',
             'mmc3_write_coverage':'full_8000_ffff_even_odd',
             'ppu_register_write_coverage':'full_2000_3fff_mod8',
             'ppu_status_read_coverage':'full_2000_3fff_mod8'}
@@ -107,6 +109,8 @@ class CaptureSessionTests(unittest.TestCase):
         self.assertEqual(report['checksum_type'],'adler32_v1')
         self.assertTrue(report['event_logs_verified'])
         self.assertEqual(report['event_checksum_type'],'adler32_v1')
+        self.assertTrue(report['cpu_cycle_order_verified'])
+        self.assertEqual(report['cpu_cycle_equal_adjacent'],0)
 
     def test_pending_manifest_is_not_completed(self):
         self.manifest.write_text('capture_in_progress=yes\n')
@@ -335,6 +339,77 @@ class CaptureSessionTests(unittest.TestCase):
         self.frames[1]['logged_register_writes']='1'
         self.finalize()
         with self.assertRaisesRegex(SessionError,'frame_log_prefix_adler32'):
+            verify(self.manifest)
+
+
+    def test_same_frame_counter_regression_with_updated_checksum_rejected(self):
+        self.cyclelog.write_text(self.cyclelog.read_text().replace('1\t14\t3FFA','1\t9\t3FFA'))
+        self.props['cycle_log_adler32']=checksum_file(self.cyclelog)
+        self.frames[1]['cycle_log_prefix_adler32']=log_prefixes(self.cyclelog)[2]
+        self.frames[3]['cycle_log_prefix_adler32']=log_prefixes(self.cyclelog)[3]
+        self.finalize()
+        with self.assertRaisesRegex(SessionError,'CPU-cycle counter decreased'):
+            verify(self.manifest)
+
+    def test_cross_frame_counter_regression_with_updated_checksum_rejected(self):
+        self.cyclelog.write_text(self.cyclelog.read_text().replace('3\t100\t200D','3\t3\t200D'))
+        self.props['cycle_log_adler32']=checksum_file(self.cyclelog)
+        self.frames[3]['cycle_log_prefix_adler32']=log_prefixes(self.cyclelog)[3]
+        self.finalize()
+        with self.assertRaisesRegex(SessionError,'CPU-cycle counter decreased'):
+            verify(self.manifest)
+
+    def test_equal_adjacent_cycle_counters_accepted_when_declared(self):
+        self.cyclelog.write_text(self.cyclelog.read_text().replace('1\t14\t3FFA','1\t10\t3FFA'))
+        self.props['cycle_equal_adjacent']='1'
+        self.props['cycle_log_adler32']=checksum_file(self.cyclelog)
+        self.frames[1]['cycle_log_prefix_adler32']=log_prefixes(self.cyclelog)[2]
+        self.frames[3]['cycle_log_prefix_adler32']=log_prefixes(self.cyclelog)[3]
+        self.finalize()
+        report=verify(self.manifest)
+        self.assertTrue(report['cpu_cycle_order_verified'])
+        self.assertEqual(report['cpu_cycle_equal_adjacent'],1)
+
+    def test_equal_adjacent_cycle_count_lie_rejected(self):
+        self.cyclelog.write_text(self.cyclelog.read_text().replace('1\t14\t3FFA','1\t10\t3FFA'))
+        self.props['cycle_log_adler32']=checksum_file(self.cyclelog)
+        self.frames[1]['cycle_log_prefix_adler32']=log_prefixes(self.cyclelog)[2]
+        self.frames[3]['cycle_log_prefix_adler32']=log_prefixes(self.cyclelog)[3]
+        self.finalize()
+        with self.assertRaisesRegex(SessionError,'equality count'):
+            verify(self.manifest)
+
+    def test_nonzero_regression_claim_invalidates_complete_manifest(self):
+        self.props['cycle_regressions']='1'
+        self.finalize()
+        self.fail_if(True)
+
+    def test_legacy_manifest_missing_counter_policy_rejected(self):
+        self.props.pop('cycle_order_policy')
+        self.finalize()
+        self.fail_if(True)
+
+    def test_no_clock_mode_has_zero_order_counts(self):
+        self.props['cycle_trace_available']='no'
+        self.props['cycle_log_adler32']='not_captured'
+        for meta in self.frames.values():
+            meta['cycle_trace_available']='no'
+            meta['cycle_log_prefix_adler32']='not_captured'
+        self.finalize()
+        result=verify(self.manifest)
+        self.assertFalse(result['cpu_cycle_order_verified'])
+        self.props['cycle_equal_adjacent']='1'
+        self.finalize()
+        self.fail_if(False)
+
+    def test_counter_overflow_accepted_neither_by_checksum_nor_parser(self):
+        self.cyclelog.write_text(self.cyclelog.read_text().replace('1\t14\t3FFA',
+                                                                '1\t9007199254740992\t3FFA'))
+        self.props['cycle_log_adler32']=checksum_file(self.cyclelog)
+        self.frames[1]['cycle_log_prefix_adler32']=log_prefixes(self.cyclelog)[2]
+        self.frames[3]['cycle_log_prefix_adler32']=log_prefixes(self.cyclelog)[3]
+        self.finalize()
+        with self.assertRaisesRegex(SessionError,'exact integer range'):
             verify(self.manifest)
 
 
