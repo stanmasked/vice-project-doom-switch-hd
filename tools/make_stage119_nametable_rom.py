@@ -14,14 +14,14 @@ START_RENDER_SETUP = bytes((0xa9, 0x10, 0x8d, 0x00, 0x20))
 
 
 def nametable_init():
-    # Write 1024 entries to $2000-$23FF. The first 960 are alternating
-    # tile IDs 0,1,0,1... and the last 64 are attribute bytes.
+    # Write 4096 entries to $2000-$2FFF. All four pages have alternating
+    # tile IDs 0,1,0,1...; every attribute region is also deterministic.
     # 6502: LDX #0; TXA; AND #1; STA $2007; INX; BNE -9.
     loop = bytes((0xa2, 0, 0x8a, 0x29, 1, 0x8d, 7, 0x20,
                   0xe8, 0xd0, 0xf7))
     return (bytes((0xa9, 0x20, 0x8d, 6, 0x20,
                    0xa9, 0, 0x8d, 6, 0x20)) +
-            loop * 4 +
+            loop * 16 +
             # Reset VRAM and both $2005 X/Y latches before drawing.
             bytes((0xa9, 0x20, 0x8d, 6, 0x20,
                    0xa9, 0, 0x8d, 6, 0x20,
