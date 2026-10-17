@@ -34,7 +34,8 @@ def verify_stride_report(log, fine, stage119):
         for i, x in enumerate(found[0].groups())
     )
     if (fine not in PHASES or f != fine or second != 8-fine or
-            (addr0, addr1) != (0x2000, 0x2001) or
+            not (0x2000 <= addr0 < 0x3000 and (addr0 & 31) == 0) or
+            not (0x2000 <= addr1 < 0x3000 and (addr1 & 31) == 1) or
             (samples0, samples1) != (16, 16) or
             (changes0, changes1) != (2, 2)):
         raise NametableStrideError("Wrong phase, address or tile transitions")
@@ -54,11 +55,20 @@ def verify_stride_sweep(records):
     if len(records) != 4 or [fine for fine, _ in records] != list(PHASES):
         raise NametableStrideError("Four ordered independent fine-X runs required")
     for fine, item in records:
-        if (item.get("fine") != fine or item.get("addresses") != [0x2000, 0x2001] or
+        if (item.get("fine") != fine or
+                not isinstance(item.get("addresses"), list) or
+                len(item["addresses"]) != 2 or
+                not (0x2000 <= item["addresses"][0] < 0x3000) or
+                not (0x2000 <= item["addresses"][1] < 0x3000) or
+                (item["addresses"][0] & 31) != 0 or
+                (item["addresses"][1] & 31) != 1 or
                 item.get("sampled_pixels") != 32 or
                 item.get("tile_transitions") != 4 or
                 item.get("original_game_nt_stride_proven") is not False):
             raise NametableStrideError("Inconsistent native stride sweep")
+    origins = [tuple(item["addresses"]) for _, item in records]
+    if len(set(origins)) != 1:
+        raise NametableStrideError("Different native row origins across phase controls")
     return {"phases": list(PHASES), "total_samples": 128,
             "total_tile_transitions": 16,
             "original_game_nt_stride_proven": False}
