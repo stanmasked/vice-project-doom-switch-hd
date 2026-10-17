@@ -1256,6 +1256,8 @@ struct NTIdentityAudit {
     unsigned writes=0,sl1=0,sl2=0,x1=0,x2=0,f1=0,f2=0;
     unsigned samples1=0,samples2=0,odd1=0,odd2=0,invalid=0;
     unsigned first_color=0,second_color=0;
+    unsigned first_nt=0,second_nt=0,first_pattern=0,second_pattern=0;
+    unsigned first_live_ht=0,second_live_ht=0;
     unsigned last_x1=0,last_x2=0;
     unsigned long frame=0;
     bool have_color1=false,have_color2=false,emitted=false;
@@ -1301,7 +1303,7 @@ inline void stage119_write(unsigned fine,unsigned coarse) {
 }
 inline void stage119_pixel(unsigned sl,unsigned xt,unsigned xp,
                            unsigned tile,unsigned bgpx,unsigned fine,
-                           unsigned /* liveht */,unsigned nt,
+                           unsigned liveht,unsigned nt,
                            unsigned lo,unsigned hi,unsigned pattern,
                            unsigned framebuffer_color) {
     if(!stage119_enabled())return;
@@ -1330,6 +1332,7 @@ inline void stage119_pixel(unsigned sl,unsigned xt,unsigned xp,
         if(a.samples1==0){
             if(x!=0 || nt!=0 || pattern!=0)++a.invalid;
             a.first_color=framebuffer_color;
+            a.first_nt=nt; a.first_pattern=pattern; a.first_live_ht=liveht;
             a.have_color1=true;
         }else if(x<=a.last_x1)++a.invalid;
         a.last_x1=x;
@@ -1339,6 +1342,7 @@ inline void stage119_pixel(unsigned sl,unsigned xt,unsigned xp,
         if(a.samples2==0){
             if(x!=0 || nt!=1 || pattern!=3)++a.invalid;
             a.second_color=framebuffer_color;
+            a.second_nt=nt; a.second_pattern=pattern; a.second_live_ht=liveht;
             a.have_color2=true;
         }else if(x<=a.last_x2)++a.invalid;
         a.last_x2=x;
@@ -1354,8 +1358,11 @@ inline void stage119_pixel(unsigned sl,unsigned xt,unsigned xp,
             std::fprintf(stderr,
                 "VPD_STAGE119_REJECTED_NAMETABLE invalid=%u "
                 "samples1=%u samples2=%u odd1=%u odd2=%u "
-                "sl1=%u sl2=%u synthetic_only=yes\n",
-                a.invalid,a.samples1,a.samples2,a.odd1,a.odd2,a.sl1,a.sl2);
+                "sl1=%u sl2=%u nt_x0=%u,%u pattern_x0=%u,%u "
+                "live_ht_x0=%u,%u color_x0=%u,%u synthetic_only=yes\n",
+                a.invalid,a.samples1,a.samples2,a.odd1,a.odd2,a.sl1,a.sl2,
+                a.first_nt,a.second_nt,a.first_pattern,a.second_pattern,
+                a.first_live_ht,a.second_live_ht,a.first_color,a.second_color);
         }else{
             std::fprintf(stderr,
                 "VPD_STAGE119_NATIVE_NAMETABLE_PASS "
