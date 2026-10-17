@@ -7,6 +7,7 @@ or PPU scanline accuracy. Uses only private local capture files.
 import argparse
 import json
 import re
+import zlib
 from pathlib import Path
 
 HEX4 = re.compile(r'[0-9A-F]{4}\Z')
@@ -111,6 +112,23 @@ def check_cycle_events(path, events):
     return count
 
 
+def check_snapshot_blob(path, size, declared_checksum):
+    """Verify stored bytes, not just file length (Adler-32, not a MAC)."""
+    path = Path(path)
+    if re.fullmatch(r'[0-9A-F]{8}', declared_checksum or '') is None:
+        raise SessionError(f'Missing/invalid checksum for {path.name}')
+    try:
+        content=path.read_bytes()
+    except OSError as exc:
+        raise SessionError(f'Missing/unreadable snapshot {path.name}') from exc
+    if len(content)!=size:
+        raise SessionError(f'Incorrect snapshot size {path.name}')
+    actual=f'{zlib.adler32(content):08X}'
+    if actual!=declared_checksum:
+        raise SessionError(f'Snapshot checksum mismatch {path.name}')
+    return actual
+
+
 def verify(session_meta, *, require_cycle=False):
     manifest = Path(session_meta)
     props = metadata(manifest)
@@ -169,24 +187,24 @@ def verify(session_meta, *, require_cycle=False):
         if count < last_checkpoint or count > expected:
             raise SessionError('Invalid per-frame event count checkpoint')
         last_checkpoint = count
-        for suffix, size in (('.ppu.bin', 0x4000), ('.ram.bin', 0x800)):
-            try:
-                actual_size = Path(str(prefix)+suffix).stat().st_size
-            except OSError as exc:
-                raise SessionError(f'Missing snapshot {prefix.name}{suffix}') from exc
-            if actual_size != size:
-                raise SessionError(f'Incorrect snapshot size {prefix.name}{suffix}')
+        required(m, 'snapshot_checksum', 'adler32_v1')
+        for suffix,size,key in (
+            ('.ppu.bin',0x4000,'ppu_adler32'),
+            ('.ram.bin',0x800,'ram_adler32'),
+        ):
+            check_snapshot_blob(str(prefix)+suffix,size,m.get(key))
         screen = m.get('screen_reference')
         if screen not in ('yes','no'):
             raise SessionError('Invalid screen_reference flag')
         if screen == 'yes':
-            for suffix,size in (('.screen.rgb.bin',256*240*3),('.screen.pal.bin',256*240)):
-                try:
-                    actual_size = Path(str(prefix)+suffix).stat().st_size
-                except OSError as exc:
-                    raise SessionError(f'Missing screen data {prefix.name}{suffix}') from exc
-                if actual_size != size:
-                    raise SessionError('Invalid screen data size')
+            for suffix,size,key in (
+                ('.screen.rgb.bin',256*240*3,'screen_rgb_adler32'),
+                ('.screen.pal.bin',256*240,'screen_pal_adler32'),
+            ):
+                check_snapshot_blob(str(prefix)+suffix,size,m.get(key))
+        else:
+            required(m, 'screen_rgb_adler32', 'not_captured')
+            required(m, 'screen_pal_adler32', 'not_captured')
     cycles_checked = False
     if cycle == 'yes':
         check_cycle_events(folder/'mmc3_ppu_cycles.tsv', events)
@@ -197,7 +215,8 @@ def verify(session_meta, *, require_cycle=False):
             'frame_callback_span':[first,last], 'frames_observed':callbacks,
             'events_checked':len(events), 'cycles_checked':cycles_checked,
             'complete':True, 'game_identity_authenticated':False,
-            'scanline_timing_proven':False, 'stage_geometry_proven':False}
+            'scanline_timing_proven':False, 'stage_geometry_proven':False,
+            'snapshot_bytes_verified':True, 'checksum_type':'adler32_v1'}
 
 
 def main():
