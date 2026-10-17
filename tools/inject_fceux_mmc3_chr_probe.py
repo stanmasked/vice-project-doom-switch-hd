@@ -43,8 +43,8 @@ def patch_mmc3(raw, *, require_pinned=True):
     case_8001 = b"\tcase 0x8001:" + nl
     if not (0 <= start < end and
             raw.count(b"DECLFW(MMC3_CMDWrite) {") == 1 and
-            raw.count(case_8001) == 1 and
-            start < raw.find(case_8001) < raw.find(tail) < end):
+            raw[start:end].count(case_8001) == 1 and
+            start < raw.find(case_8001, start, end) < raw.find(tail) < end):
         raise ValueError("MMC3 $8001 write site outside expected handler")
     includes_after = (
         includes + nl + GUARD + nl +
