@@ -1279,6 +1279,9 @@ inline void stage119_write(unsigned fine,unsigned coarse) {
     NTIdentityAudit& a=stage119_state();
     const MidframeChr& m=stage110_state();
     if(a.emitted)return;
+    // Ignore PPU-disabled setup $2005 writes before MMC3's active raster
+    // bank switch; only the two live-frame writes are evidence.
+    if(!m.switched || m.writes!=2)return;
     ++a.writes;
     if(a.writes==1) {
         a.sl1=m.last_sl;
