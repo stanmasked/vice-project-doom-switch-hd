@@ -90,6 +90,61 @@ class CycleTraceTests(unittest.TestCase):
         self.assertEqual(report['cpu_clock_equal_adjacent'],0)
         self.assertFalse(report['counter_reset_proven'])
 
+
+    def test_adjacent_frame_label_boundary_is_between_logged_events(self):
+        events=[(10,100,0x8000,0,'W'),(10,105,0x8001,3,'W'),
+                (11,150,0x200D,10,'W'),(11,160,0x200D,11,'W')]
+        r=summarize(events)
+        self.assertEqual(r['frame_transition_count'],1)
+        b=r['frame_boundary_observations'][0]
+        self.assertEqual(b['previous_event_frame'],10)
+        self.assertEqual(b['current_event_frame'],11)
+        self.assertEqual(b['frame_label_delta'],1)
+        self.assertEqual(b['last_logged_cycle_previous_frame'],105)
+        self.assertEqual(b['first_logged_cycle_current_frame'],150)
+        self.assertEqual(b['cycles_between_adjacent_logged_events'],45)
+        self.assertEqual(b['frame_labels_skipped_without_events'],0)
+        self.assertIsNone(b['physical_frame_duration_cycles'])
+        self.assertIsNone(b['physical_frame_start_cycle'])
+        self.assertFalse(r['frame_start_cycle_proven'])
+        self.assertFalse(r['ppu_scanline_position_proven'])
+
+    def test_gap_in_event_frame_labels_is_not_missing_emulator_frames(self):
+        events=[(3,400,0x8000,1,'W'),(7,650,0x8001,2,'W')]
+        r=summarize(events)
+        b=r['frame_boundary_observations'][0]
+        self.assertEqual(b['frame_label_delta'],4)
+        self.assertEqual(b['frame_labels_skipped_without_events'],3)
+        self.assertEqual(r['frame_labels_skipped_without_events'],3)
+        self.assertEqual(b['cycles_between_adjacent_logged_events'],250)
+        self.assertIsNone(b['physical_frame_duration_cycles'])
+
+    def test_equal_cycles_across_frame_labels_produce_zero_event_gap(self):
+        r=summarize([(3,400,0x8000,1,'W'),(4,400,0x8001,2,'W')])
+        b=r['frame_boundary_observations'][0]
+        self.assertEqual(b['cycles_between_adjacent_logged_events'],0)
+        self.assertFalse(b['cpu_counter_discontinuity'])
+
+    def test_cycle_regression_does_not_create_negative_boundary_interval(self):
+        r=summarize([(3,400,0x8000,1,'W'),(4,10,0x8001,2,'W')])
+        b=r['frame_boundary_observations'][0]
+        self.assertIsNone(b['cycles_between_adjacent_logged_events'])
+        self.assertTrue(b['cpu_counter_discontinuity'])
+        self.assertEqual(r['cpu_clock_decreases_between_frames'],1)
+
+    def test_out_of_order_event_frame_labels_have_no_valid_interval(self):
+        r=summarize([(7,400,0x8000,1,'W'),(6,420,0x8001,2,'W')])
+        b=r['frame_boundary_observations'][0]
+        self.assertIsNone(b['cycles_between_adjacent_logged_events'])
+        self.assertEqual(b['frame_label_delta'],-1)
+        self.assertTrue(r['out_of_order_frame_numbers'])
+
+    def test_single_frame_and_empty_timeline_have_no_boundary(self):
+        for events in ([],[(2,100,0x8000,0,'W')]):
+            report=summarize(events)
+            self.assertEqual(report['frame_boundary_observations'],[])
+            self.assertEqual(report['frame_transition_count'],0)
+
     def test_unobserved_registers_never_guessed(self):
         r=summarize([(0,10,0x8001,3,'W')])
         self.assertEqual(r['unpaired_mmc3_data_writes'],1)
