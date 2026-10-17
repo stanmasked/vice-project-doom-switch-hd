@@ -190,6 +190,8 @@ def verify(session_meta, *, require_cycle=False):
     required(props, 'ppu_status_read_coverage', 'full_2000_3fff_mod8')
     required(props, 'event_checksum', 'adler32_v1')
     required(props, 'cycle_order_policy', 'nondecreasing_v1')
+    required(props, 'cycle_regressions_same_frame', '0')
+    required(props, 'cycle_regressions_between_frames', '0')
     token = props.get('session_id', '')
     if not SESSION.fullmatch(token):
         raise SessionError('Invalid session_id')
