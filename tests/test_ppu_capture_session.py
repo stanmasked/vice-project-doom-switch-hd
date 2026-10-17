@@ -320,6 +320,16 @@ class CaptureSessionTests(unittest.TestCase):
         self.finalize()
         self.fail_if(False)
 
+    def test_rewritten_full_checksum_does_not_hide_damaged_frame_prefix(self):
+        # Even if someone recalculates a corrupted full TSV checksum,
+        # per-frame prefix commitments still detect the divergent bytes.
+        content=self.log.read_text()
+        self.log.write_text(content.replace('1\t8002\t80','1\t8002\t81'))
+        self.props['frame_log_adler32']=checksum_file(self.log)
+        self.finalize()
+        with self.assertRaisesRegex(SessionError,'frame_log_prefix_adler32'):
+            verify(self.manifest)
+
     def test_snapshot_checkpoint_bound_to_exact_prefix(self):
         self.assertTrue(verify(self.manifest)['event_logs_verified'])
         self.frames[1]['logged_register_writes']='1'
