@@ -104,6 +104,8 @@ local function on_write(address, size, value)
 end
 
 local function on_status_read(address, size, value)
+    checked(address==0x2002 and size==1 and value==0,
+        'PPUSTATUS read address/size/zero sentinel')
     -- One synthetic address 2002/value 00 marker represents a real
     -- PPUSTATUS read. The PPU $2005/$2006 shared toggle resets on this read.
     -- This is not a PPUSTATUS write.
