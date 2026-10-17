@@ -9,6 +9,7 @@ import argparse
 import json
 from pathlib import Path
 from analyze_mmc3_frame_log import read_events
+from verify_ppu_capture_session import verify
 
 
 def analyze(events):
@@ -84,7 +85,9 @@ def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('log',type=Path,help='Private FCEUX MMC3/PPU event TSV')
     p.add_argument('--metadata',type=Path,
-                   help='Capture .meta.txt to reject incomplete register logging')
+                   help='Per-frame prefix diagnostics; not whole-session proof')
+    p.add_argument('--session-meta',type=Path,
+                   help='Finalized session manifest for whole-stream verification')
     p.add_argument('--out',type=Path,default=Path('private/ppu_scroll_summary.json'))
     args=p.parse_args()
     if args.metadata is not None:
@@ -101,7 +104,15 @@ def main():
         if (metadata.get('ppu_register_write_coverage')!='full_2000_3fff_mod8'
                 or metadata.get('ppu_status_read_coverage')!='full_2000_3fff_mod8'):
             p.error('Incomplete PPU register mirror observation')
+    session=None
+    if args.session_meta is not None:
+        if args.log.resolve()!=(args.session_meta.parent/'mmc3_video_writes.tsv').resolve():
+            p.error('Frame event log does not belong to selected session')
+        session=verify(args.session_meta)
+    elif args.metadata is not None:
+        p.error('Per-frame metadata is not session proof; provide --session-meta')
     report=analyze(read_events(args.log))
+    report['session_verified']=session is not None
     args.out.parent.mkdir(parents=True,exist_ok=True)
     args.out.write_text(json.dumps(report,indent=2)+'\n',encoding='utf8')
     print(json.dumps({'output':str(args.out),
