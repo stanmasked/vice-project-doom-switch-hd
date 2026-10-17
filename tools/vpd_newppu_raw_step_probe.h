@@ -3,7 +3,7 @@
 // Install callback explicitly only on a controlled private emulator build.
 #ifndef VPD_NEWPPU_RAW_STEP_PROBE_H
 #define VPD_NEWPPU_RAW_STEP_PROBE_H
-#if defined(VPD_NATIVE_SYNTHETIC_SMOKE) || defined(VPD_NATIVE_SYNTHETIC_VBLANK) || defined(VPD_NATIVE_SYNTHETIC_PPUSTATUS_READ) || defined(VPD_NATIVE_SYNTHETIC_EVENT_ORDER) || defined(VPD_NATIVE_SYNTHETIC_PRECLEAR) || defined(VPD_NATIVE_SYNTHETIC_MMC3_CHR) || defined(VPD_NATIVE_SYNTHETIC_BG_PIXELS) || defined(VPD_NATIVE_SYNTHETIC_BG_FETCH) || defined(VPD_NATIVE_SYNTHETIC_CHR_TIMELINE) || defined(VPD_NATIVE_SYNTHETIC_MIDFRAME_CHR) || defined(VPD_NATIVE_SYNTHETIC_BG_TILES) || defined(VPD_NATIVE_SYNTHETIC_BG_PREFETCH) || defined(VPD_NATIVE_SYNTHETIC_BG_PLANE_PAIRS)
+#if defined(VPD_NATIVE_SYNTHETIC_SMOKE) || defined(VPD_NATIVE_SYNTHETIC_VBLANK) || defined(VPD_NATIVE_SYNTHETIC_PPUSTATUS_READ) || defined(VPD_NATIVE_SYNTHETIC_EVENT_ORDER) || defined(VPD_NATIVE_SYNTHETIC_PRECLEAR) || defined(VPD_NATIVE_SYNTHETIC_MMC3_CHR) || defined(VPD_NATIVE_SYNTHETIC_BG_PIXELS) || defined(VPD_NATIVE_SYNTHETIC_BG_FETCH) || defined(VPD_NATIVE_SYNTHETIC_CHR_TIMELINE) || defined(VPD_NATIVE_SYNTHETIC_MIDFRAME_CHR) || defined(VPD_NATIVE_SYNTHETIC_BG_TILES) || defined(VPD_NATIVE_SYNTHETIC_BG_PREFETCH) || defined(VPD_NATIVE_SYNTHETIC_BG_PLANE_PAIRS) || defined(VPD_NATIVE_SYNTHETIC_SCANLINE_CARRY)
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -772,6 +772,104 @@ inline void stage114_draw(unsigned sl, unsigned xt, unsigned xp,
                 "source_clock_only=yes pinned_fceux_only=yes "
                 "synthetic_only=yes original_game_mixed_tiles_proven=no\n",
                 m.switch_sl, a.min_gap, a.max_gap);
+        }
+        std::fflush(stderr);
+        a.emitted = true;
+    }
+}
+#endif
+
+// Stage115: scanline-edge two-record lookahead, from actual BGData.Read()
+// during the *previous* scanline to the final XBuf sink in the next.
+// Fixed horizontal offset and synthetic bank switch only; not real-game scroll.
+#if defined(VPD_NATIVE_SYNTHETIC_SCANLINE_CARRY) && defined(VPD_NATIVE_SYNTHETIC_MIDFRAME_CHR)
+struct EdgeCarryRecord {
+    unsigned source_sl = 0, lo = 0, hi = 0, epoch = 0;
+    unsigned long long end_tick = 0;
+    bool valid = false;
+};
+struct EdgeCarryAudit {
+    EdgeCarryRecord record[2];
+    unsigned total = 0, old_tiles = 0, new_tiles = 0;
+    unsigned first_new_sl = 0, invalid = 0;
+    unsigned long long lag_min = 0, lag_max = 0;
+    unsigned last_sl = 0, last_tile = 0;
+    bool emitted = false;
+};
+inline EdgeCarryAudit& stage115_audit() {
+    static EdgeCarryAudit a;
+    return a;
+}
+inline bool stage115_enabled() {
+    static const char* env = std::getenv("VPD_STAGE115_SCANLINE_CARRY_PROBE");
+    return env && std::strcmp(env, "1") == 0;
+}
+inline void stage115_edge_read(unsigned sl, unsigned slot,
+                               unsigned lo, unsigned hi) {
+    if (!stage115_enabled()) return;
+    EdgeCarryAudit& a = stage115_audit();
+    if (a.emitted || sl < 94 || sl > 111) return;
+    if (slot >= 2 || lo > 255 || hi > 255) {
+        ++a.invalid; return;
+    }
+    EdgeCarryRecord& r = a.record[slot];
+    r.source_sl = sl;
+    r.lo = lo;
+    r.hi = hi;
+    r.epoch = stage110_state().writes;
+    r.end_tick = channel().internal_tick_units;
+    r.valid = true;
+}
+inline void stage115_edge_draw(unsigned sl, unsigned xt, unsigned xp,
+                                unsigned tile, unsigned fine_x,
+                                unsigned lo, unsigned hi) {
+    if (!stage115_enabled() || sl < 96 || sl > 111 || xp != 0) return;
+    EdgeCarryAudit& a = stage115_audit();
+    if (a.emitted) return;
+    if (xt >= 2 || tile >= 2 || tile != xt || fine_x != 0 ||
+        lo > 255 || hi > 255 || (a.total && sl < a.last_sl) ||
+        (a.total && sl == a.last_sl && tile <= a.last_tile)) {
+        ++a.invalid; return;
+    }
+    const EdgeCarryRecord& r = a.record[tile];
+    const unsigned long long now = channel().internal_tick_units;
+    const bool expect_new = sl >= 105;
+    if (!r.valid || r.source_sl + 1 != sl || r.lo != lo || r.hi != hi ||
+        r.epoch != (expect_new ? 2U : 1U) ||
+        lo != (expect_new ? 255U : 0U) ||
+        hi != (expect_new ? 255U : 0U) || now <= r.end_tick) ++a.invalid;
+    const unsigned long long lag = now >= r.end_tick ? now - r.end_tick : 0;
+    if (a.total == 0 || lag < a.lag_min) a.lag_min = lag;
+    if (lag > a.lag_max) a.lag_max = lag;
+    ++a.total;
+    a.last_sl = sl;
+    a.last_tile = tile;
+    if (expect_new) {
+        ++a.new_tiles;
+        if (!a.first_new_sl) a.first_new_sl = sl;
+    } else {
+        ++a.old_tiles;
+    }
+    if (a.total == 32 && !a.emitted) {
+        const MidframeChr& m = stage110_state();
+        if (a.old_tiles != 18 || a.new_tiles != 14 || a.first_new_sl != 105 ||
+            m.writes != 2 || !m.switched || m.switch_sl != 104 ||
+            a.lag_min == 0 || a.lag_max < a.lag_min ||
+            a.lag_max > 1000000ULL) ++a.invalid;
+        if (a.invalid) {
+            std::fprintf(stderr,
+                "VPD_STAGE115_REJECTED_EDGE_CARRY invalid=%u "
+                "old=%u new=%u synthetic_only=yes\n",
+                a.invalid, a.old_tiles, a.new_tiles);
+        } else {
+            std::fprintf(stderr,
+                "VPD_STAGE115_NATIVE_EDGE_CARRY_PASS "
+                "switch_sl=104 observed_lines=16 edge_tiles=32 "
+                "old_tiles=18 new_tiles=14 first_new_sl=105 "
+                "fine_scroll=0 carry_lag_min=%llu carry_lag_max=%llu "
+                "invalid=0 same_synthetic_frame=yes "
+                "original_game_scroll_proven=no\n",
+                a.lag_min, a.lag_max);
         }
         std::fflush(stderr);
         a.emitted = true;
