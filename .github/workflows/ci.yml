@@ -181,6 +181,8 @@ jobs:
         run: python -m unittest discover -s tests -p 'test_fceux_stage123_quadrants.py' -v
       - name: Stage124 native four-palette XBuf witness, ROM and negative controls
         run: python -m unittest discover -s tests -p 'test_fceux_stage124_quadrants.py' -v
+      - name: Stage125 causal negative-control proof, forged marker regressions
+        run: python -m unittest discover -s tests -p 'test_fceux_stage125_negative_controls.py' -v
       - name: Stage89 validated static screen hypotheses and explicit provenance
         run: python -m unittest discover -s tests -p 'test_ppu_capture_session.py' -v
       - name: Stage88 audited PPU reference-frame inventory regressions
