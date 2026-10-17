@@ -91,6 +91,8 @@ jobs:
         run: python -m unittest discover -s tests -p 'test_ppu_event_provenance.py' -v
       - name: Stage91 background reconstruction readiness conservatism
         run: python -m unittest discover -s tests -p 'test_ppu_background_readiness.py' -v
+      - name: Stage92 cross-snapshot screen consistency and missing-evidence gates
+        run: python -m unittest discover -s tests -p 'test_ppu_cross_snapshot_consistency.py' -v
       - name: Stage89 validated static screen hypotheses and explicit provenance
         run: python -m unittest discover -s tests -p 'test_ppu_capture_session.py' -v
       - name: Stage88 audited PPU reference-frame inventory regressions
