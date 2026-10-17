@@ -1443,6 +1443,77 @@ inline void stage119_pixel(unsigned sl,unsigned xt,unsigned xp,
 }
 #endif
 
+// Stage121: observed newppu attribute byte/address/bit-select are carried in
+// BGData from the original attribute read to the pixel. Synthetic Stage119
+// fixture only: alternating attribute bytes 0/1 across nametable memory.
+#if defined(VPD_NATIVE_SYNTHETIC_BG_ATTRIBUTES) && defined(VPD_NATIVE_SYNTHETIC_NAMETABLE_IDS) && defined(VPD_NATIVE_SYNTHETIC_MIDFRAME_CHR)
+struct Stage121AttributeAudit {
+    unsigned samples0=0,samples1=0,invalid=0,first_addr=0,second_addr=0;
+    bool emitted=false;
+};
+inline Stage121AttributeAudit& stage121_state() {
+    static Stage121AttributeAudit a;
+    return a;
+}
+inline void stage121_pixel(unsigned sl,unsigned xt,unsigned xp,
+                            unsigned ntaddr,unsigned ataddr,unsigned raw,
+                            unsigned shift,unsigned decoded,
+                            unsigned bgpattern,unsigned combined_pixel) {
+    if(!stage119_enabled())return;
+    const NTIdentityAudit& old=stage119_state();
+    Stage121AttributeAudit& a=stage121_state();
+    if(a.emitted || old.writes==0 || xt>=32 || xp>=8)return;
+    const unsigned x=xt*8U+xp;
+    const bool before=sl==old.sl1+1 && x<16;
+    const bool after=old.writes==2 && sl==old.sl2+1 && x<16;
+    if(!before && !after)return;
+    // Independently derive the attribute address and quadrant using the
+    // buffered nametable source, not the final framebuffer pixel.
+    const unsigned expected_addr=0x23C0U+(ntaddr&0x0C00U)+
+                                  ((ntaddr&0x0380U)>>4)+
+                                  ((ntaddr&0x001CU)>>2);
+    const unsigned expected_shift=((ntaddr&0x40U)?4U:0U)+
+                                  ((ntaddr&0x02U)?2U:0U);
+    const unsigned expected_palette=((raw>>expected_shift)&3U)<<2;
+    if(ntaddr<0x2000U || ntaddr>=0x3000U ||
+       ataddr!=expected_addr || (ataddr&0x3C0U)!=0x3C0U ||
+       raw>1U || shift!=expected_shift || decoded!=expected_palette ||
+       (decoded&3U)!=0U || bgpattern>3U ||
+       combined_pixel!=(bgpattern|decoded) || combined_pixel>15U)
+        ++a.invalid;
+    if(before) {
+        if(a.samples0==0)a.first_addr=ataddr;
+        ++a.samples0;
+        if(a.samples0>16)++a.invalid;
+    }else {
+        if(a.samples1==0)a.second_addr=ataddr;
+        ++a.samples1;
+        if(a.samples1>16)++a.invalid;
+    }
+    if(a.samples0==16 && a.samples1==16 && !a.emitted){
+        if(a.invalid || old.samples1!=16 || old.samples2!=16 ||
+           old.invalid || old.stride_invalid || old.writes!=2)
+            ++a.invalid;
+        if(a.invalid) {
+            std::fprintf(stderr,
+                "VPD_STAGE121_REJECTED_ATTRIBUTE invalid=%u "
+                "samples0=%u samples1=%u synthetic_only=yes\n",
+                a.invalid,a.samples0,a.samples1);
+        }else{
+            std::fprintf(stderr,
+                "VPD_STAGE121_NATIVE_ATTRIBUTE_PASS "
+                "fine1=%u fine2=%u attr_addr0=%04X attr_addr1=%04X "
+                "samples0=16 samples1=16 invalid=0 "
+                "buffered_attribute_to_pixel=yes synthetic_only=yes "
+                "original_game_palette_proven=no\n",
+                old.f1,old.f2,a.first_addr,a.second_addr);
+        }
+        std::fflush(stderr);
+        a.emitted=true;
+    }
+}
+#endif
+
 // Stage109 synthetic-only MMC3 write -> BG CHR read -> framebuffer timeline.
 // Internal runppu tick units are not authoritative NTSC dots or CPU cycles.
 #ifdef VPD_NATIVE_SYNTHETIC_CHR_TIMELINE
