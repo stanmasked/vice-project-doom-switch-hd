@@ -18,7 +18,7 @@ the tile's `BGData` record. When newppu consumes that record for each
 pixel, the Stage120 check asserts the actual address equals:
 
 ```text
-expected = $2000 + ((pixel_x + current_fine_x) >> 3) + coarse_phase
+expected = observed_row_base + ((pixel_x + current_fine_x) >> 3) + coarse_phase
 ```
 
 This equation is intentionally scoped to the Stage119 synthetic fixture:
