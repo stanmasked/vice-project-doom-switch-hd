@@ -18,9 +18,9 @@ from run_stage100_fceux_synthetic_smoke import backend_settings, categorize_exit
 MARKER = "VPD_STAGE124_NATIVE_QUADRANTS_PASS"
 REJECTED = "VPD_STAGE124_REJECTED_QUADRANTS"
 REJECTION_PATTERN = re.compile(
-    r"^VPD_STAGE124_REJECTED_QUADRANTS invalid=(\\d+) "
-    r"bad_attribute=(\\d+) bad_color=(\\d+) "
-    r"colors=(\\d+),(\\d+),(\\d+),(\\d+) "
+    r"^VPD_STAGE124_REJECTED_QUADRANTS invalid=(\d+) "
+    r"bad_attribute=(\d+) bad_color=(\d+) "
+    r"colors=(\d+),(\d+),(\d+),(\d+) "
     r"samples=16,16,16,16 synthetic_only=yes$", re.MULTILINE,
 )
 PATTERN = re.compile(
