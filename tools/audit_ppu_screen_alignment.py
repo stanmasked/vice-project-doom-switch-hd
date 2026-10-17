@@ -13,6 +13,7 @@ from compare_rendered_frame import (
     PIXELS, load_reference, meta_byte, reconstructed_indices,
 )
 from verify_ppu_capture_session import metadata, verify
+from audit_ppu_event_provenance import audit_verified as audit_event_provenance
 
 
 def compare_index_buffers(candidate, observed):
@@ -105,20 +106,50 @@ def analyze_verified(session_meta, require_cycle=False, require_screen=False):
     """Validate the whole private session *before* using any captured pixels."""
     session_meta = Path(session_meta)
     proof = verify(session_meta, require_cycle=require_cycle)
+    # Bind each static image comparison to the exact CPU-event prefix window.
+    # This does NOT establish raster-time visibility of any write.
+    provenance = audit_event_provenance(session_meta, require_cycle=require_cycle)
+    if len(provenance['windows']) != len(proof['capture_frames']):
+        raise ValueError('Snapshot/event-window cardinality mismatch')
     entries = []
     available = 0
-    for frame in proof['capture_frames']:
+    for frame, window in zip(proof['capture_frames'], provenance['windows']):
+        if window['to_snapshot_frame'] != frame:
+            raise ValueError('Snapshot/event-window frame mismatch')
         prefix = session_meta.parent / f'frame_{frame:06d}'
         meta = metadata(str(prefix)+'.meta.txt')
         if meta['screen_reference'] == 'yes':
             available += 1
-            entries.append(compare_frame(prefix))
+            comparison = compare_frame(prefix)
+            comparison['observed_event_window'] = {
+                'observed_cpu_register_events': window['observed_register_events'],
+                'chr_register_writes': window['event_counts']['chr_register_writes'],
+                'ppuscroll_writes': window['event_counts']['ppuscroll_writes'],
+                'complete_observed_ppuscroll_pairs':
+                    window['event_counts']['complete_observed_ppuscroll_pairs'],
+                'all_six_chr_registers_observed_since_start':
+                    window['observed_register_state_at_checkpoint'][
+                        'all_six_chr_registers_observed_since_start'],
+                'visible_scroll_or_chr_mapping_proven': False,
+            }
+            entries.append(comparison)
         else:
             entries.append({
                 'frame': frame,
                 'reference_status': 'not_captured',
                 'static_hypotheses_tested': 0,
                 'lowest_error_hypothesis': None,
+                'observed_event_window': {
+                    'observed_cpu_register_events': window['observed_register_events'],
+                    'chr_register_writes': window['event_counts']['chr_register_writes'],
+                    'ppuscroll_writes': window['event_counts']['ppuscroll_writes'],
+                    'complete_observed_ppuscroll_pairs':
+                        window['event_counts']['complete_observed_ppuscroll_pairs'],
+                    'all_six_chr_registers_observed_since_start':
+                        window['observed_register_state_at_checkpoint'][
+                            'all_six_chr_registers_observed_since_start'],
+                    'visible_scroll_or_chr_mapping_proven': False,
+                },
                 'evidence_classification': {
                     'screen_palette_indices': 'absent_not_inferred',
                 },
@@ -132,6 +163,8 @@ def analyze_verified(session_meta, require_cycle=False, require_screen=False):
         'frames_captured': proof['frames_captured'],
         'screen_reference_frames': available,
         'cpu_cycle_trace_verified': proof['cycles_checked'],
+        'event_windows_verified': len(provenance['windows']),
+        'events_after_last_snapshot': provenance['events_after_last_snapshot'],
         'frames': entries,
         'interpretation': {
             'measurement': 'Static predicted palette indices compared to saved FCEUX indices',
@@ -139,6 +172,7 @@ def analyze_verified(session_meta, require_cycle=False, require_screen=False):
             'no_reference_policy': 'No inferred or synthetic reference pixels',
             'physical_frame_boundaries_proven': False,
             'actual_scroll_proven': False,
+            'event_window_to_screen_visibility_proven': False,
             'chr_midframe_mapping_proven': False,
             'sprites_reconstructed': False,
             'first_level_identity_proven': False,
