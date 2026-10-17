@@ -27,6 +27,12 @@ def add_read_hook(patched):
     if b"\r\n" in patched and patched.count(b"\n") != patched.count(b"\r\n"):
         raise ValueError("Mixed source newlines")
     old = BEFORE + nl + CLEAR + nl + AFTER
+    begin = patched.find(b"static DECLFR(A2002) {")
+    end = patched.find(b"static DECLFR(A2004) {")
+    if begin < 0 or end <= begin or patched.count(b"static DECLFR(A2002) {") != 1:
+        raise ValueError("Missing unique FCEUX $2002 register handler")
+    if old not in patched[begin:end]:
+        raise ValueError("A2002 clear statement not inside pinned handler")
     if patched.count(old) != 1:
         raise ValueError("Missing/ambiguous pinned A2002 read-clear site")
     replacement = (
