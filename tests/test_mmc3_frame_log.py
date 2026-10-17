@@ -21,6 +21,19 @@ class FrameLogTests(unittest.TestCase):
         self.assertEqual(r['frames'][1]['ppu_1k_bank_mapping'],[4,5,6,7,8,9,10,11])
         self.assertEqual(r['frames'][1]['ppu_port_writes'],2)
 
+    def test_all_mmc3_bank_register_mirrors(self):
+        events=[(7,0x8002,0x80),(7,0x8003,4),
+                (7,0x9FFE,0x85),(7,0x9FFF,9),
+                (7,0xA002,1),(7,0xBFFF,0),
+                (7,0xC006,10),(7,0xDFFF,11),
+                (7,0xE00C,12),(7,0xFFFF,13)]
+        result=analyze(events)
+        self.assertEqual(result['frames'][0]['mapper_select_writes'],2)
+        self.assertEqual(result['total_chr_writes'],2)
+        self.assertEqual(result['frames'][0]['chr_registers'][0],4)
+        self.assertEqual(result['frames'][0]['chr_registers'][5],9)
+        self.assertEqual(result['frames'][0]['chr_inversion'],True)
+
     def test_unobserved_registers_and_data(self):
         r=analyze(((1,0x8001,13),(1,0x8000,0x85),(1,0x8001,19)))
         self.assertIsNone(r['frames'][0]['ppu_1k_bank_mapping'])
