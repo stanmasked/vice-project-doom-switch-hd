@@ -110,6 +110,19 @@ int main() {
             result = subprocess.run([str(binary)], text=True, capture_output=True)
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertTrue(verify_report(result.stderr)["same_synthetic_frame_proven"])
+            # Negative native control: identical framebuffer banks may not
+            # publish the same success marker with invalid>0.
+            cpp.write_text(code.replace("stage110_register_write(2, 1);",
+                                        "stage110_register_write(2, 0);"))
+            build = subprocess.run(
+                ["c++", "-std=c++11", "-Wall", "-Wextra", "-Werror", "-pedantic",
+                 "-DVPD_NATIVE_SYNTHETIC_MIDFRAME_CHR", "-I", str(ROOT / "tools"),
+                 str(cpp), "-o", str(binary)], text=True, capture_output=True)
+            self.assertEqual(build.returncode, 0, build.stderr)
+            rejected = subprocess.run([str(binary)], text=True, capture_output=True)
+            self.assertEqual(rejected.returncode, 0, rejected.stderr)
+            self.assertNotIn("VPD_STAGE110_NATIVE_MIDFRAME_CHR_PASS", rejected.stderr)
+            self.assertIn("VPD_STAGE110_REJECTED_CONTROL", rejected.stderr)
 
 
 if __name__ == "__main__":
