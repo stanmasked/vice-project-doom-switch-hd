@@ -22,6 +22,15 @@ local MAX_TOTAL_EVENTS = 250000
 
 local frames_captured = 0
 local last_frame = -1
+local first_frame = nil
+local callback_frames = 0
+local callback_gaps = 0
+local capture_failures = 0
+local captured_frame_list = {}
+-- Correlation token only, not a cryptographic signature of original game data.
+local session_id = string.format('%08x%08x', os.time()%4294967296,
+                                 math.floor(os.clock()*1000000)%4294967296)
+local session_path = OUTPUT_DIRECTORY..'/ppu_capture_session.meta.txt'
 local writes_this_frame, total_writes = 0, 0
 local dropped_writes = 0
 local callback_errors = 0
@@ -49,6 +58,9 @@ local function write_binary(path, value)
     f:close()
 end
 
+-- Invalidate a prior completed session before replacing either event stream.
+-- Per-frame metadata must NOT be treated as session-wide completeness.
+write_binary(session_path,'capture_in_progress=yes\n')
 local log_path = OUTPUT_DIRECTORY..'/mmc3_video_writes.tsv'
 local log, open_error = io.open(log_path, 'wb')
 assert(log, 'Create a writable private capture directory: '..log_path..' ('..tostring(open_error)..')')
@@ -149,6 +161,9 @@ end
 local function capture_metadata(frame)
     local result = {
         'format=fceux_ppu_snapshot_v4',
+        'session_id='..session_id,
+        'session_snapshot_index='..tostring(frames_captured+1),
+        'capture_scope=frame_prefix_only',
         'cycle_trace_available='..(clock_available and 'yes' or 'no'),
         'cycle_trace_counter_epoch=debugger_since_reset',
         'screen_reference='..(CAPTURE_SCREEN and 'yes' or 'no'),
@@ -226,7 +241,12 @@ end
 local function capture_frame()
     local frame = emu.framecount()
     if frame == last_frame then return end
+    if last_frame >= 0 and (frame < last_frame or frame > last_frame+1) then
+        callback_gaps = callback_gaps + 1
+    end
     last_frame = frame
+    if first_frame == nil then first_frame = frame end
+    callback_frames = callback_frames + 1
     -- Flush every frame: bound memory use during graphics-heavy scenes.
     flush()
     if frames_captured >= MAX_CAPTURES or frame % FRAME_INTERVAL ~= 0 then return end
@@ -247,8 +267,42 @@ local function capture_frame()
     capture_rendered_screen(prefix)
     write_binary(prefix..'.meta.txt', capture_metadata(frame))
     frames_captured = frames_captured + 1
+    captured_frame_list[#captured_frame_list+1] = frame
     emu.message('Private PPU/RAM capture '..frames_captured..'/'..MAX_CAPTURES)
 end
 
-emu.registerafter(capture_frame)
-emu.registerexit(function() flush(); log:close(); if timed_log then timed_log:close() end end)
+emu.registerafter(function()
+    local ok,reason=pcall(capture_frame)
+    if not ok then
+        capture_failures=capture_failures+1
+        error(reason,2)
+    end
+end)
+emu.registerexit(function()
+    -- Do not finalize anything if an event stream failed to flush/close.
+    flush()
+    assert(log:close(),'Failed closing frame event log')
+    if timed_log then assert(timed_log:close(),'Failed closing CPU-cycle log') end
+    local complete = frames_captured>0 and dropped_writes==0
+        and callback_errors==0 and capture_failures==0 and callback_gaps==0
+    local report={
+        'format=fceux_ppu_session_v1',
+        'session_id='..session_id,
+        'complete='..(complete and 'yes' or 'no'),
+        'first_callback_frame='..tostring(first_frame or -1),
+        'last_callback_frame='..tostring(last_frame),
+        'frame_callbacks='..tostring(callback_frames),
+        'frame_callback_gaps='..tostring(callback_gaps),
+        'frames_captured='..tostring(frames_captured),
+        'capture_frames='..table.concat(captured_frame_list,','),
+        'events_recorded='..tostring(total_writes),
+        'events_dropped='..tostring(dropped_writes),
+        'callback_errors='..tostring(callback_errors),
+        'capture_failures='..tostring(capture_failures),
+        'cycle_trace_available='..(clock_available and 'yes' or 'no'),
+        'mmc3_write_coverage=full_8000_ffff_even_odd',
+        'ppu_register_write_coverage=full_2000_3fff_mod8',
+        'ppu_status_read_coverage=full_2000_3fff_mod8',
+    }
+    write_binary(session_path,table.concat(report,'\n')..'\n')
+end)
