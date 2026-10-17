@@ -759,9 +759,9 @@ class CaptureSessionTests(unittest.TestCase):
         self.assertFalse(result['interpretation']['ppu_visible_scroll_proven'])
 
     def test_stage90_scroll_pair_can_span_verified_frame_checkpoints(self):
-        self.log.write_text(self.log.read_text()+'3\\t2005\\t12\\n')
+        self.log.write_text(self.log.read_text()+'3\t2005\t12\n')
         self.cyclelog.write_text(self.cyclelog.read_text()+
-                                 '3\\t101\\t2005\\t12\\tW\\n')
+                                 '3\t101\t2005\t12\tW\n')
         self.props['events_recorded']='4'
         self.props['frame_log_adler32']=checksum_file(self.log)
         self.props['cycle_log_adler32']=checksum_file(self.cyclelog)
@@ -790,8 +790,8 @@ class CaptureSessionTests(unittest.TestCase):
             'ppuscroll_writes'],1)
 
     def test_stage90_rejects_corrupt_tsv_prior_to_register_analysis(self):
-        self.log.write_text(self.log.read_text().replace('1\\t8002\\t80',
-                                                         '1\\t8002\\t81'))
+        self.log.write_text(self.log.read_text().replace('1\t8002\t80',
+                                                         '1\t8002\t81'))
         with self.assertRaises(SessionError):
             audit_verified_registers(self.manifest)
 
