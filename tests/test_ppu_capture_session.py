@@ -254,14 +254,14 @@ class CaptureSessionTests(unittest.TestCase):
 
     def test_same_size_frame_tsv_corruption_rejected(self):
         text=self.log.read_text()
-        self.log.write_text(text.replace('1\\t8002\\t80','1\\t8002\\t81'))
+        self.log.write_text(text.replace('1\t8002\t80','1\t8002\t81'))
         self.assertEqual(len(self.log.read_bytes()),len(text.encode()))
         with self.assertRaisesRegex(SessionError,'checksum mismatch'):
             verify(self.manifest)
 
     def test_same_size_cycle_counter_corruption_rejected(self):
         text=self.cyclelog.read_text()
-        self.cyclelog.write_text(text.replace('1\\t10\\t','1\\t11\\t'))
+        self.cyclelog.write_text(text.replace('1\t10\t','1\t11\t'))
         self.assertEqual(len(self.cyclelog.read_bytes()),len(text.encode()))
         with self.assertRaisesRegex(SessionError,'checksum mismatch'):
             verify(self.manifest)
