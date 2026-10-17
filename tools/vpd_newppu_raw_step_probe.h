@@ -3,7 +3,7 @@
 // Install callback explicitly only on a controlled private emulator build.
 #ifndef VPD_NEWPPU_RAW_STEP_PROBE_H
 #define VPD_NEWPPU_RAW_STEP_PROBE_H
-#if defined(VPD_NATIVE_SYNTHETIC_SMOKE) || defined(VPD_NATIVE_SYNTHETIC_VBLANK) || defined(VPD_NATIVE_SYNTHETIC_PPUSTATUS_READ) || defined(VPD_NATIVE_SYNTHETIC_EVENT_ORDER) || defined(VPD_NATIVE_SYNTHETIC_PRECLEAR)
+#if defined(VPD_NATIVE_SYNTHETIC_SMOKE) || defined(VPD_NATIVE_SYNTHETIC_VBLANK) || defined(VPD_NATIVE_SYNTHETIC_PPUSTATUS_READ) || defined(VPD_NATIVE_SYNTHETIC_EVENT_ORDER) || defined(VPD_NATIVE_SYNTHETIC_PRECLEAR) || defined(VPD_NATIVE_SYNTHETIC_MMC3_CHR)
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -312,6 +312,71 @@ inline void preclear_cpu_read(bool returned_high, bool before_high,
             s.lag_min, s.lag_max, s.invalid);
         std::fflush(stderr);
         s.emitted = true;
+    }
+}
+#endif
+
+// Stage106: MMC3 $8001 CHR register writes, source-frame windows ONLY.
+// The source register values are never written to logs. A changed register
+// is not proof that any changed tile was fetched or rendered by a real PPU.
+#ifdef VPD_NATIVE_SYNTHETIC_MMC3_CHR
+inline void observe_native_mmc3_chr_write(unsigned selector, unsigned value) {
+    static const char* opt = std::getenv("VPD_STAGE106_MMC3_CHR_PROBE");
+    if (!opt || std::strcmp(opt, "1") != 0) return;
+    struct Mmc3Aggregate {
+        unsigned long writes = 0;
+        unsigned long changed = 0;
+        unsigned long inside = 0;
+        unsigned long outside = 0;
+        unsigned long after_cpu_high = 0;
+        unsigned long invalid = 0;
+        unsigned long long inside_tick_lag_min = 0;
+        unsigned long long inside_tick_lag_max = 0;
+        unsigned char seen[6] = {0, 0, 0, 0, 0, 0};
+        unsigned char previous[6] = {0, 0, 0, 0, 0, 0};
+        bool emitted = false;
+    };
+    static Mmc3Aggregate a;
+    if (a.emitted) return;
+    if (selector >= 6 || value > 255) {
+        ++a.invalid;
+        return;
+    }
+    ++a.writes;
+    if (a.seen[selector] && a.previous[selector] != value) ++a.changed;
+    a.seen[selector] = 1;
+    a.previous[selector] = static_cast<unsigned char>(value);
+#ifdef VPD_NATIVE_SYNTHETIC_EVENT_ORDER
+    const EventOrderState& e = event_order_state();
+    if (e.source_window) {
+        ++a.inside;
+        if (e.high_read_this_window) ++a.after_cpu_high;
+        const unsigned long long now = channel().internal_tick_units;
+        if (e.source_entries == 0 || now < e.current_entry_tick) {
+            ++a.invalid;
+        } else {
+            const unsigned long long lag = now - e.current_entry_tick;
+            if (a.inside == 1 || lag < a.inside_tick_lag_min)
+                a.inside_tick_lag_min = lag;
+            if (lag > a.inside_tick_lag_max)
+                a.inside_tick_lag_max = lag;
+        }
+    } else {
+        ++a.outside;
+    }
+#else
+    ++a.invalid;
+#endif
+    if (a.writes == 4096) {
+        std::fprintf(stderr,
+            "VPD_STAGE106_NATIVE_MMC3_CHR_PASS writes=4096 "
+            "changed=%lu within_source_window=%lu outside_source_window=%lu "
+            "after_cpu_high_read=%lu lag_min=%llu lag_max=%llu invalid=%lu "
+            "source_only=yes chr_pixel_causality_proven=no\n",
+            a.changed, a.inside, a.outside, a.after_cpu_high,
+            a.inside_tick_lag_min, a.inside_tick_lag_max, a.invalid);
+        std::fflush(stderr);
+        a.emitted = true;
     }
 }
 #endif
