@@ -150,6 +150,10 @@ def main():
     if args.cycle_log.resolve()!=(args.session_meta.parent/'mmc3_ppu_cycles.tsv').resolve():
         p.error('Cycle trace path does not belong to selected session')
     session=verify(args.session_meta,require_cycle=True)
+    frame_metas={(args.session_meta.parent/f'frame_{frame:06d}.meta.txt').resolve()
+                 for frame in session['capture_frames']}
+    if args.metadata.resolve() not in frame_metas:
+        p.error('Selected per-frame metadata is not in this session')
     result=summarize(parse_events(args.cycle_log))
     result['session_verified']=session['complete']
     result['frame_callback_span']=session['frame_callback_span']
