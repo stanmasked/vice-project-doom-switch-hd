@@ -46,6 +46,8 @@ def meta_parse(path):
         k,v=line.split('=',1)
         if k in d:raise ValueError('Duplicate metadata key')
         d[k]=v
+    if 'mmc3_write_coverage' not in d:
+        raise ValueError('Missing MMC3 write hook coverage')
     if not REQUIRED_META<=d.keys() or d['format']!='vice_stage38_execution_v1':
         raise ValueError('Unsupported or incomplete trace metadata')
     if not re.fullmatch(r'[a-fA-F0-9]{32}',d['rom_md5']):
