@@ -22,6 +22,16 @@ class CycleTraceTests(unittest.TestCase):
         self.assertEqual(r['frames'][0]['scroll_write_count'],1)
         self.assertEqual(r['frames_with_all_six_chr_values'],0)
 
+    def test_mmc3_mirrored_select_and_data_order(self):
+        events=[(2,100,0x8002,0x80,'W'),(2,110,0x8003,8,'W'),
+                (2,120,0x9FFE,0x85,'W'),(2,130,0x9FFF,12,'W'),
+                (2,140,0xA003,1,'W'),(2,150,0xC002,2,'W'),
+                (2,160,0xEFFF,3,'W')]
+        r=summarize(events)
+        self.assertEqual([e['register'] for e in r['chr_events']],[0,5])
+        self.assertEqual(r['frames'][0]['mapper_writes'],4)
+        self.assertEqual(r['chr_events'][1]['cpu_cycle'],130)
+
     def test_counter_reset_creates_new_epoch(self):
         r=summarize([(0,490,0x8000,0,'W'),
                      (0,510,0x8001,7,'W'),
@@ -71,8 +81,17 @@ class CycleTraceTests(unittest.TestCase):
             path.write_text('register_log_complete=yes\ncycle_trace_available=no\n')
             with self.assertRaisesRegex(ValueError,'No FCEUX'):
                 check_capture_meta(path)
-            path.write_text('register_log_complete=yes\ncycle_trace_available=yes\n')
+            path.write_text('register_log_complete=yes\ncallback_errors=0\nmmc3_write_coverage=full_8000_ffff_even_odd\ncycle_trace_available=yes\n')
             self.assertEqual(check_capture_meta(path)['cycle_trace_available'],'yes')
+            path.write_text('register_log_complete=yes\\ncallback_errors=0\\n'
+                            'cycle_trace_available=yes\\n')
+            with self.assertRaisesRegex(ValueError,'MMC3 mirrored'):
+                check_capture_meta(path)
+            path.write_text('register_log_complete=yes\\ncallback_errors=2\\n'
+                            'mmc3_write_coverage=full_8000_ffff_even_odd\\n'
+                            'cycle_trace_available=yes\\n')
+            with self.assertRaisesRegex(ValueError,'callback integrity'):
+                check_capture_meta(path)
 
 
 if __name__=='__main__':
