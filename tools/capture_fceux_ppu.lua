@@ -65,13 +65,19 @@ end
 
 -- Adler-32 is used for accidental corruption detection, NOT security.
 -- The Python verifier independently recalculates it from each saved blob.
-local function adler32_hex(bytes)
-    local a,b=1,0
+local function adler32_update(bytes,a,b)
     for i=1,#bytes do
         a=(a+string.byte(bytes,i))%65521
         b=(b+a)%65521
     end
+    return a,b
+end
+local function adler32_state_hex(a,b)
     return string.format('%08X',b*65536+a)
+end
+local function adler32_hex(bytes)
+    local a,b=adler32_update(bytes,1,0)
+    return adler32_state_hex(a,b)
 end
 
 -- Inspect exact bytes on disk before writing the frame's metadata.
@@ -92,12 +98,22 @@ end
 local function event_log_checksum(path)
     local source,reason=io.open(path,'rb')
     assert(source,'Cannot read event log '..path..': '..tostring(reason))
-    local bytes=source:read('*a')
+    -- Read once at shutdown in fixed-size chunks, never at every frame.
+    local a,b=1,0
+    local seen,last_byte=false,nil
+    while true do
+        local part=source:read(65536)
+        if part==nil then break end
+        assert(type(part)=='string' and #part>0,
+               'Invalid event log readback '..path)
+        a,b=adler32_update(part,a,b)
+        last_byte=part:sub(-1)
+        seen=true
+    end
     local closed,close_error=source:close()
     assert(closed,'Failed closing event-log readback '..path..': '..tostring(close_error))
-    assert(type(bytes)=='string' and #bytes>0 and bytes:sub(-1)=='\n',
-           'Incomplete event log '..path)
-    return adler32_hex(bytes)
+    assert(seen and last_byte=='\n','Incomplete event log '..path)
+    return adler32_state_hex(a,b)
 end
 
 -- A finalized metadata file is the publication boundary for private
@@ -160,13 +176,18 @@ local log_path = OUTPUT_DIRECTORY..'/mmc3_video_writes.tsv'
 local timed_path = OUTPUT_DIRECTORY..'/mmc3_ppu_cycles.tsv'
 local log, open_error = io.open(log_path, 'wb')
 assert(log, 'Create a writable private capture directory: '..log_path..' ('..tostring(open_error)..')')
-assert(log:write('frame\taddress\tvalue\n'))
+local frame_header='frame\taddress\tvalue\n'
+local cycle_header='frame\tcpu_cycle\taddress\tvalue\tkind\n'
+assert(log:write(frame_header))
+local frame_log_a,frame_log_b=adler32_update(frame_header,1,0)
+local cycle_log_a,cycle_log_b=nil,nil
 -- Separate backwards-compatible subframe trace. Timestamps are CPU cycles,
 -- not PPU scanlines: cycle-counter reset can change their epoch.
 local timed_log = nil
 if clock_available then
     timed_log = assert(io.open(timed_path,'wb'))
-    assert(timed_log:write('frame\tcpu_cycle\taddress\tvalue\tkind\n'))
+    assert(timed_log:write(cycle_header))
+    cycle_log_a,cycle_log_b=adler32_update(cycle_header,1,0)
 end
 
 local function record_event(address, value, kind)
@@ -252,14 +273,22 @@ local function flush()
     checked(not clock_available or #buffered==#timed_buffered,
             'frame/cycle event buffer mismatch')
     if #buffered > 0 then
-        assert(log:write(table.concat(buffered)), 'Failed writing register log')
+        local frame_batch=table.concat(buffered)
+        local cycle_batch=timed_log and table.concat(timed_buffered) or nil
+        assert(log:write(frame_batch), 'Failed writing register log')
         assert(log:flush(), 'Failed flushing register log')
-        buffered = {}
         if timed_log then
-            assert(timed_log:write(table.concat(timed_buffered)), 'Failed cycle log write')
+            assert(timed_log:write(cycle_batch), 'Failed cycle log write')
             assert(timed_log:flush(), 'Failed cycle log flush')
-            timed_buffered = {}
         end
+        -- Advance both rolling checksums only when all writes/flushes
+        -- succeeded. Failed sessions remain unverified by the manifest.
+        frame_log_a,frame_log_b=adler32_update(frame_batch,frame_log_a,frame_log_b)
+        if timed_log then
+            cycle_log_a,cycle_log_b=adler32_update(cycle_batch,cycle_log_a,cycle_log_b)
+        end
+        buffered={}
+        timed_buffered={}
     end
     writes_this_frame = 0
 end
@@ -382,8 +411,11 @@ local function capture_frame()
     local checksums={
         ppu=write_verified_blob(prefix..'.ppu.bin',ppu_bytes),
         ram=write_verified_blob(prefix..'.ram.bin',ram_bytes),
-        frame_log=event_log_checksum(log_path),
-        cycle_log=(timed_log and event_log_checksum(timed_path) or 'not_captured'),
+        -- Constant work per snapshot: use the checksum of successfully
+        -- flushed bytes instead of repeatedly rereading the growing TSV.
+        frame_log=adler32_state_hex(frame_log_a,frame_log_b),
+        cycle_log=(timed_log and adler32_state_hex(cycle_log_a,cycle_log_b)
+                   or 'not_captured'),
     }
     checksums.rgb,checksums.pal=capture_rendered_screen(prefix)
     publish_metadata(prefix..'.meta.txt', capture_metadata(frame,checksums))
@@ -409,6 +441,14 @@ emu.registerexit(function()
     local frame_log_hash=event_log_checksum(log_path)
     local cycle_log_hash=timed_log and event_log_checksum(timed_path)
                          or 'not_captured'
+    -- Independent single-pass readback is mandatory before publishing
+    -- the final session; a lost or altered TSV byte is not certified.
+    assert(frame_log_hash==adler32_state_hex(frame_log_a,frame_log_b),
+           'Frame event log readback differs from flushed bytes')
+    if timed_log then
+        assert(cycle_log_hash==adler32_state_hex(cycle_log_a,cycle_log_b),
+               'CPU-cycle log readback differs from flushed bytes')
+    end
     local complete = frames_captured>0 and dropped_writes==0
         and callback_errors==0 and capture_failures==0 and callback_gaps==0
     local report={
