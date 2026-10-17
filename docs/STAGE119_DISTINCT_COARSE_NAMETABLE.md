@@ -7,8 +7,8 @@ it did not prove that a different tile was actually rendered.
 Stage119 generates a separate mapper-4 ROM which, while rendering is
 disabled, writes alternating tile IDs 0,1 across $2000–$2FFF with
 PPU $2006/$2007. All four nametable pages are initialized
-"so that changing the horizontal name-table selection cannot
-"silently read an uninitialized page. Its CHR bank1 includes two contrasting 8×8
+so that changing the horizontal name-table selection cannot
+silently read an uninitialized page. Its CHR bank1 includes two contrasting 8×8
 patterns: tile0 has low/high bitplanes 0x00; tile1 has both planes
 0xFF. CHR bank0 remains blank. Four ROMs apply the stage118
 fine/coarse scroll pairs 1→15, 3→13, 5→11 and 7→9.
