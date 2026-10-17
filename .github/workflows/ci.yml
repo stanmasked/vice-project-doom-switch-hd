@@ -95,6 +95,8 @@ jobs:
         run: python -m unittest discover -s tests -p 'test_ppu_cross_snapshot_consistency.py' -v
       - name: Stage93 ordered MMC3 PPU callback evidence versus saved screens
         run: python -m unittest discover -s tests -p 'test_ppu_temporal_evidence.py' -v
+      - name: Stage94 timestamp bracketing versus verified snapshot sample clocks
+        run: python -m unittest discover -s tests -p 'test_ppu_cpu_clock_bracketing.py' -v
       - name: Stage89 validated static screen hypotheses and explicit provenance
         run: python -m unittest discover -s tests -p 'test_ppu_capture_session.py' -v
       - name: Stage88 audited PPU reference-frame inventory regressions
