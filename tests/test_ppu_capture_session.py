@@ -7,6 +7,7 @@ import zlib
 from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'tools'))
 from verify_ppu_capture_session import verify,SessionError
+from audit_ppu_reference_frames import analyze_verified
 
 TOKEN='0011002200330044'
 
@@ -529,6 +530,106 @@ class CaptureSessionTests(unittest.TestCase):
         self.frames[1]['frame_callback_cpu_cycle']='20'
         self.finalize()
         self.fail_if(True)
+
+    def test_stage88_inventory_reports_verified_snapshot_evidence_only(self):
+        report=analyze_verified(self.manifest,require_cycle=True)
+        self.assertEqual(report['format'],'vpd_verified_ppu_reference_inventory_v1')
+        self.assertTrue(report['session_verified'])
+        self.assertEqual(report['frames_captured'],2)
+        self.assertEqual(report['recorded_event_count'],3)
+        self.assertEqual(report['snapshot_comparisons'],1)
+        self.assertEqual(report['rendered_screen_reference_frames'],0)
+        self.assertEqual(report['distinct_chr_1k_page_versions_by_slot'],[1]*8)
+        self.assertEqual(report['distinct_nametable_tile_versions_by_slot'],[1]*4)
+        pair=report['changes_between_snapshots'][0]
+        self.assertEqual((pair['from_frame'],pair['to_frame']),(1,3))
+        self.assertEqual(pair['frame_label_distance'],2)
+        self.assertEqual(pair['frame_labels_between_snapshots'],1)
+        self.assertEqual(pair['ppu_changed_bytes'],0)
+        self.assertEqual(pair['ram_changed_bytes'],0)
+        self.assertTrue(report['cpu_cycle_trace_verified'])
+        self.assertFalse(report['capture_provenance']['original_first_level_identified'])
+        self.assertFalse(report['capture_provenance']['level_geometry_reconstructed'])
+        self.assertFalse(report['capture_provenance']['physical_frame_boundaries_proven'])
+
+    def test_stage88_inventory_counts_per_region_changes(self):
+        ppu_path=self.root/'frame_000003.ppu.bin'
+        data=bytearray(ppu_path.read_bytes())
+        for position in (0x0002,0x2000,0x23C0,0x3F00):
+            data[position]^=1
+        ppu_path.write_bytes(data)
+        self.frames[3]['ppu_adler32']=checksum_file(ppu_path)
+        ram_path=self.root/'frame_000003.ram.bin'
+        data=bytearray(ram_path.read_bytes())
+        for position in (0x600,0x700):
+            data[position]^=1
+        ram_path.write_bytes(data)
+        self.frames[3]['ram_adler32']=checksum_file(ram_path)
+        self.finalize()
+        report=analyze_verified(self.manifest)
+        difference=report['changes_between_snapshots'][0]
+        self.assertEqual(difference['ppu_changed_bytes'],4)
+        self.assertEqual(difference['ram_changed_bytes'],2)
+        self.assertEqual(difference['chr_1k_changed_bytes'],[1]+[0]*7)
+        self.assertEqual(difference['nametable_tile_cells_changed'],[1,0,0,0])
+        self.assertEqual(difference['nametable_attribute_bytes_changed'],[1,0,0,0])
+        self.assertEqual(difference['palette_memory_bytes_changed'],1)
+        self.assertEqual(difference['queue_0600_changed_bytes'],1)
+        self.assertEqual(difference['oam_source_0700_changed_slots'],1)
+        self.assertEqual(report['distinct_chr_1k_page_versions_by_slot'],[2]+[1]*7)
+        self.assertEqual(report['distinct_nametable_tile_versions_by_slot'],[2,1,1,1])
+
+    def test_stage88_inventory_rejects_corrupt_same_size_snapshot(self):
+        p=self.root/'frame_000001.ppu.bin'
+        data=bytearray(p.read_bytes());data[0x2010]^=1;p.write_bytes(data)
+        with self.assertRaisesRegex(SessionError,'checksum mismatch'):
+            analyze_verified(self.manifest)
+
+    def test_stage88_inventory_rejects_unfinished_manifest(self):
+        self.manifest.write_text('capture_in_progress=yes\\n')
+        with self.assertRaises(SessionError):
+            analyze_verified(self.manifest)
+
+    def test_stage88_inventory_counts_only_verified_rendered_references(self):
+        frame=1
+        prefix=self.root/f'frame_{frame:06d}'
+        self.frames[frame]['screen_reference']='yes'
+        for suffix,size,key in (
+            ('.screen.rgb.bin',256*240*3,'screen_rgb_adler32'),
+            ('.screen.pal.bin',256*240,'screen_pal_adler32'),
+        ):
+            path=Path(str(prefix)+suffix)
+            data_file(path,size)
+            self.frames[frame][key]=checksum_file(path)
+        self.finalize()
+        report=analyze_verified(self.manifest)
+        self.assertEqual(report['rendered_screen_reference_frames'],1)
+        self.assertTrue(report['snapshots'][0]['rendered_screen_reference_present'])
+        self.assertFalse(report['snapshots'][1]['rendered_screen_reference_present'])
+        Path(str(prefix)+'.screen.pal.bin').write_bytes(b'bad')
+        with self.assertRaises(SessionError):
+            analyze_verified(self.manifest)
+
+    def test_stage88_inventory_cycle_is_optional_unless_required(self):
+        self.props['cycle_trace_available']='no'
+        self.props['cycle_log_adler32']='not_captured'
+        for meta in self.frames.values():
+            meta['cycle_trace_available']='no'
+            meta['cycle_log_prefix_adler32']='not_captured'
+        self.finalize()
+        report=analyze_verified(self.manifest)
+        self.assertFalse(report['cpu_cycle_trace_verified'])
+        with self.assertRaisesRegex(SessionError,'CPU-cycle trace unavailable'):
+            analyze_verified(self.manifest,require_cycle=True)
+
+    def test_stage88_inventory_json_excludes_original_raw_data(self):
+        report=analyze_verified(self.manifest)
+        text=json.dumps(report)
+        self.assertNotIn('palette_entries_changed',text)
+        self.assertNotIn('ppu_sha256',text)
+        self.assertNotIn('original_rom_md5',text)
+        self.assertNotIn('raw_ppu',text)
+        self.assertEqual(len(report['snapshots']),2)
 
 
 if __name__=='__main__': unittest.main()
