@@ -74,11 +74,11 @@ def summarize(events):
                'cycles_since_first_logged_event_this_frame':relative}
         if kind=='R':
             current['ppu_status_reads']+=1
-        elif address==0x8000:
+        elif 0x8000<=address<=0x9FFF and address%2==0:
             selection=value&7
             inversion=bool(value&0x80)
             current['mapper_writes']+=1
-        elif address==0x8001:
+        elif 0x8000<=address<=0x9FFF and address%2==1:
             current['mapper_writes']+=1
             if selection is None:
                 unknown_bank_writes+=1
@@ -123,6 +123,10 @@ def check_capture_meta(path):
             metadata[key]=value
     if metadata.get('register_log_complete')!='yes':
         raise ValueError('Register log contains dropped or unverified events')
+    if metadata.get('mmc3_write_coverage')!='full_8000_ffff_even_odd':
+        raise ValueError('Incomplete MMC3 mirrored register coverage')
+    if metadata.get('callback_errors')!='0':
+        raise ValueError('Unverified callback integrity')
     if metadata.get('cycle_trace_available')!='yes':
         raise ValueError('No FCEUX debugger CPU-cycle timestamps available')
     return metadata
