@@ -6,6 +6,7 @@ only invented bank values. Missing register writes are never guessed.
 """
 import argparse,json
 from pathlib import Path
+from verify_ppu_capture_session import verify
 
 def read_events(path):
     with Path(path).open(encoding='utf8') as f:
@@ -95,8 +96,17 @@ def main():
     ap.add_argument('register_log',type=Path)
     ap.add_argument('--chr-1k-banks',type=int,default=128)
     ap.add_argument('--out',type=Path,default=Path('private/mmc3_frame_summary.json'))
+    ap.add_argument('--session-meta',type=Path,
+                    help='Finalized whole-session evidence (else diagnostics only)')
     args=ap.parse_args()
+    if args.session_meta is not None:
+        if args.register_log.resolve()!=(args.session_meta.parent/'mmc3_video_writes.tsv').resolve():
+            ap.error('Register log does not belong to selected session')
+        verified=verify(args.session_meta)
+    else:
+        verified=None
     report=analyze(read_events(args.register_log),args.chr_1k_banks)
+    report['session_verified']=verified is not None
     args.out.parent.mkdir(parents=True,exist_ok=True)
     args.out.write_text(json.dumps(report,indent=2)+'\n',encoding='utf8')
     print(json.dumps({'report':str(args.out),
