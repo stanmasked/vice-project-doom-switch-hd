@@ -140,8 +140,10 @@ def run(binary, temp):
         root = Path(name)
         measured = []
         stride_records = []
+        attribute_records = []
         # Import here to keep the Stage119 standalone verifier usable.
         from audit_stage120_nt_stride import verify_stride_report, verify_stride_sweep
+        from audit_stage121_attributes import verify_attribute_report, verify_attribute_sweep
         for fine in FINES:
             rom = root / ("distinct_%d.nes" % fine)
             make_rom(rom, first=fine)
@@ -150,8 +152,10 @@ def run(binary, temp):
             measured.append((fine, observation))
             native_log = (session / "native.log").read_text(
                 encoding="utf8", errors="replace")
-            stride_records.append((fine, verify_stride_report(
-                native_log, fine, observation)))
+            stride_observation = verify_stride_report(native_log, fine, observation)
+            stride_records.append((fine, stride_observation))
+            attribute_records.append((fine, verify_attribute_report(
+                native_log, fine, observation, stride_observation)))
         control = root / "identical.nes"
         make_rom(control, first=3, differentiated=False)
         execute(binary, control, root / "uniform_chr", fine=3, positive=False)
@@ -159,6 +163,15 @@ def run(binary, temp):
                 fine=7, enabled=False, positive=False)
     result = verify_sweep(measured)
     stride_proof = verify_stride_sweep(stride_records)
+    attributes = verify_attribute_sweep(attribute_records)
+    print(
+        "STAGE121_NATIVE_ATTRIBUTE_TO_PIXEL_CROSSCHECK "
+        "native_fceux=yes synthetic_mapper4_only=yes phases=1,3,5,7 "
+        "samples=%d buffered_attribute_to_pixel=yes "
+        "uniform_chr_control=clean disabled_probe_control=clean "
+        "original_game_palette_proven=no" %
+        attributes["total_samples"]
+    )
     print(
         "STAGE120_NATIVE_NT_STRIDE_CROSSCHECK "
         "native_fceux=yes synthetic_mapper4_only=yes "
