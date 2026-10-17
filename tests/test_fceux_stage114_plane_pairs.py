@@ -90,18 +90,21 @@ int main() {
  vpd_ppu_probe::stage110_register_write(2,0);
  for(unsigned sl=1; sl<=112; ++sl) {
   for(unsigned xt=0;xt<32;++xt) {
-   if(sl==104 && xt==1) vpd_ppu_probe::stage110_register_write(2,1);
-   unsigned new_bank=sl>104 || (sl==104 && xt>=5);
-   unsigned lo=new_bank?255:0;
-   unsigned hi=new_bank?255:0;
+   if(sl==104 && xt==2) vpd_ppu_probe::stage110_register_write(2,1);
+   unsigned fetch_new=sl>104 || (sl==104 && xt>=2);
+   unsigned lo=fetch_new?255:0;
+   unsigned hi=fetch_new?255:0;
    vpd_ppu_probe::stage114_begin(sl,xt+2);
    vpd_ppu_probe::stage114_plane(0,0x1000,lo);
    vpd_ppu_probe::channel().internal_tick_units+=2;
    vpd_ppu_probe::stage114_plane(1,0x1008,hi);
    vpd_ppu_probe::stage114_end(sl,xt+2,lo,hi);
+   unsigned drawn=xt>=2 ?
+     vpd_ppu_probe::stage114_state().records[xt].lo :
+     (sl>104 ? 255U : 0U);
    for(unsigned xp=0;xp<8;++xp) {
-    vpd_ppu_probe::stage110_raster_pixel(sl,new_bank?3:0,new_bank?48:15);
-    vpd_ppu_probe::stage114_draw(sl,xt,xp,xt,lo,hi);
+    vpd_ppu_probe::stage110_raster_pixel(sl,drawn?3:0,drawn?48:15);
+    vpd_ppu_probe::stage114_draw(sl,xt,xp,xt,drawn,drawn);
     ++vpd_ppu_probe::channel().internal_tick_units;
    }
   }
@@ -121,7 +124,7 @@ int main() {
             self.assertEqual(observed.returncode, 0, observed.stderr)
             self.assertIn("VPD_STAGE114_NATIVE_PLANE_PAIR_PASS", observed.stderr)
             cpp.write_text(source.replace("unsigned hi=new_bank?255:0;",
-                                          "unsigned hi=(new_bank?255:0) ^ (sl==104 && xt==4 ? 255 : 0);"))
+                                          "unsigned hi=(fetch_new?255:0) ^ (sl==104 && xt==3 ? 255 : 0);"))
             built = subprocess.run(flags, capture_output=True, text=True)
             self.assertEqual(built.returncode, 0, built.stderr)
             rejected = subprocess.run([str(exe)], capture_output=True, text=True)
