@@ -94,7 +94,15 @@ def read_frame_events(path):
 
 
 def check_cycle_events(path, events):
+    """Require nondecreasing cycles for verified sessions; equals are possible.
+
+    A decrease can mean an actual counter reset, an invalid trace, or a
+    debugger restart. Without an independently recorded reset marker,
+    none can be certified as continuous CPU time.
+    """
     count = 0
+    previous_cycle = None
+    equal_adjacent = 0
     for lineno, row in check_tsv(path, 'frame\tcpu_cycle\taddress\tvalue\tkind', 5):
         frame_s, cycle_s, addr_s, value_s, kind = row
         if (DEC.fullmatch(frame_s) is None or DEC.fullmatch(cycle_s) is None
@@ -102,6 +110,15 @@ def check_cycle_events(path, events):
             raise SessionError(f'Invalid CPU-cycle event at line {lineno}')
         if count >= len(events) or (int(frame_s), int(addr_s,16), int(value_s,16)) != events[count]:
             raise SessionError(f'Frame/cycle event streams diverge at line {lineno}')
+        cycle = int(cycle_s)
+        if cycle > 9007199254740991:
+            raise SessionError(f'CPU-cycle counter exceeds exact integer range at line {lineno}')
+        if previous_cycle is not None:
+            if cycle < previous_cycle:
+                raise SessionError(f'CPU-cycle counter decreased at line {lineno}: unverified reset/discontinuity')
+            if cycle == previous_cycle:
+                equal_adjacent += 1
+        previous_cycle = cycle
         addr = int(addr_s, 16)
         expected_kind = 'R' if 0x2000 <= addr <= 0x3FFF and (addr-0x2000) % 8 == 2 else 'W'
         if kind != expected_kind:
@@ -109,8 +126,7 @@ def check_cycle_events(path, events):
         count += 1
     if count != len(events):
         raise SessionError('Cycle trace row count does not match frame trace')
-    return count
-
+    return {'checked':count,'equal_adjacent':equal_adjacent}
 
 def check_snapshot_blob(path, size, declared_checksum):
     """Verify stored bytes, not just file length (Adler-32, not a MAC)."""
@@ -172,6 +188,7 @@ def verify(session_meta, *, require_cycle=False):
     required(props, 'ppu_register_write_coverage', 'full_2000_3fff_mod8')
     required(props, 'ppu_status_read_coverage', 'full_2000_3fff_mod8')
     required(props, 'event_checksum', 'adler32_v1')
+    required(props, 'cycle_order_policy', 'nondecreasing_v1')
     token = props.get('session_id', '')
     if not SESSION.fullmatch(token):
         raise SessionError('Invalid session_id')
@@ -255,9 +272,17 @@ def verify(session_meta, *, require_cycle=False):
             required(m, 'screen_rgb_adler32', 'not_captured')
             required(m, 'screen_pal_adler32', 'not_captured')
     cycles_checked = False
+    cycle_equal = 0
     if cycle == 'yes':
-        check_cycle_events(folder/'mmc3_ppu_cycles.tsv', events)
+        required(props, 'cycle_regressions', '0')
+        counts=check_cycle_events(folder/'mmc3_ppu_cycles.tsv', events)
+        cycle_equal=counts['equal_adjacent']
+        if integer(props, 'cycle_equal_adjacent') != cycle_equal:
+            raise SessionError('Cycle equality count disagrees with event trace')
         cycles_checked = True
+    else:
+        required(props, 'cycle_regressions', '0')
+        required(props, 'cycle_equal_adjacent', '0')
     return {'format':'fceux_ppu_verified_session_v1',
             'session_id':token, 'frames_captured':snapshots,
             'capture_frames':frames,
@@ -266,7 +291,9 @@ def verify(session_meta, *, require_cycle=False):
             'complete':True, 'game_identity_authenticated':False,
             'scanline_timing_proven':False, 'stage_geometry_proven':False,
             'snapshot_bytes_verified':True, 'checksum_type':'adler32_v1',
-            'event_logs_verified':True, 'event_checksum_type':'adler32_v1'}
+            'event_logs_verified':True, 'event_checksum_type':'adler32_v1',
+            'cpu_cycle_order_verified':cycles_checked,
+            'cpu_cycle_equal_adjacent':cycle_equal}
 
 
 def main():
