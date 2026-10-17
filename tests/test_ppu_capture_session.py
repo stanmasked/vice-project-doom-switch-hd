@@ -414,6 +414,30 @@ class CaptureSessionTests(unittest.TestCase):
         self.finalize()
         self.fail_if(False)
 
+
+    def test_future_frame_event_in_prior_snapshot_rejected_even_with_matching_hashes(self):
+        # An event labeled frame 3 cannot already belong to the TSV prefix
+        # committed by a snapshot taken at callback frame 1. Rewrite BOTH
+        # traces and recompute all Adler digests to isolate this invariant.
+        for log in (self.log,self.cyclelog):
+            log.write_text(log.read_text().replace('\n1\t','\n3\t'))
+        frame_hashes=log_prefixes(self.log)
+        cycle_hashes=log_prefixes(self.cyclelog)
+        self.props['frame_log_adler32']=frame_hashes[-1]
+        self.props['cycle_log_adler32']=cycle_hashes[-1]
+        for m in self.frames.values():
+            count=int(m['logged_register_writes'])
+            m['frame_log_prefix_adler32']=frame_hashes[count]
+            m['cycle_log_prefix_adler32']=cycle_hashes[count]
+        self.finalize()
+        with self.assertRaisesRegex(SessionError,'future event-frame label'):
+            verify(self.manifest)
+
+    def test_verified_snapshot_frame_order_is_not_physical_frame_proof(self):
+        result=verify(self.manifest)
+        self.assertTrue(result['snapshot_event_frame_order_verified'])
+        self.assertFalse(result['physical_frame_boundaries_proven'])
+
     def test_counter_overflow_accepted_neither_by_checksum_nor_parser(self):
         self.cyclelog.write_text(self.cyclelog.read_text().replace('1\t14\t3FFA',
                                                                 '1\t9007199254740992\t3FFA'))
