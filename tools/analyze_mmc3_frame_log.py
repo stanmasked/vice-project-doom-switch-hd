@@ -55,12 +55,12 @@ def analyze(events,bank_count=128):
         previous=frame
         if address in (0x2000,0x2001,0x2005,0x2006,0x2007):
             current['ppu_port_writes']+=1
-        if address==0x8000:
+        if 0x8000<=address<=0x9FFF and address%2==0:
             selection=value&7
             inversion=bool(value&0x80)
             prg_mode=bool(value&0x40)
             current['mapper_select_writes']+=1
-        elif address==0x8001:
+        elif 0x8000<=address<=0x9FFF and address%2==1:
             if selection is None:
                 unpaired+=1
                 current['unpaired_data_writes']+=1
@@ -85,6 +85,7 @@ def analyze(events,bank_count=128):
         'limitations':[
             'Frame-only register log has no scanline or CPU cycle positions',
             'Missing initial register writes mean unobserved state is unknown',
+            'Input with incomplete MMC3 hook coverage cannot validate CHR mapping',
             'Logs with dropped_register_writes > 0 are not timing evidence',
             'Bank values are not a reconstruction of original level geometry'
         ]}
