@@ -40,9 +40,11 @@ grep -q '^#ifdef VPD_NATIVE_RAW_PPU_PROBE' "${FCEUX}/src/ppu.cpp"
 # Probe is explicitly enabled in this temporary build. No sink is installed.
 cmake -S "${FCEUX}" -B "${BUILD}" \
   -DQT=5 -DCMAKE_BUILD_TYPE=Release \
-  -DCMAKE_CXX_FLAGS="-DVPD_NATIVE_RAW_PPU_PROBE" \
+  -DCMAKE_CXX_FLAGS="-DVPD_NATIVE_RAW_PPU_PROBE -DVPD_NATIVE_SYNTHETIC_SMOKE" \
   -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 cmake --build "${BUILD}" --target fceux --parallel 2
 test -x "${BUILD}/src/fceux"
 file "${BUILD}/src/fceux"
+python3 "${PROJECT}/tools/run_stage100_fceux_synthetic_smoke.py" \
+  "${BUILD}/src/fceux" "${RUNNER_TEMP}"
 printf 'STAGE99_PINNED_FCEUX_NATIVE_BUILD_PASS commit=%s opt_in_probe=yes real_fceux_linked=yes gameplay_raster_verified=no\n' "${PIN}"
