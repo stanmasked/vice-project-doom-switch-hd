@@ -34,6 +34,11 @@ local session_path = OUTPUT_DIRECTORY..'/ppu_capture_session.meta.txt'
 local writes_this_frame, total_writes = 0, 0
 local dropped_writes = 0
 local callback_errors = 0
+-- Counter discontinuities are not proof of an actual emulator reset.
+-- They invalidate continuous-cycle verification of this session.
+local previous_cycle, previous_cycle_frame = nil,nil
+local cycle_regressions, cycle_equal_adjacent = 0,0
+local cycle_regressions_same_frame, cycle_regressions_between_frames = 0,0
 local function checked(ok,reason)
     if not ok then
         callback_errors = callback_errors + 1
@@ -209,6 +214,19 @@ local function record_event(address, value, kind)
                 'invalid CPU cycle counter')
             timed_line=string.format('%.0f\t%.0f\t%04X\t%02X\t%s\n',
                                      frame,cycles,address,value,kind)
+            if previous_cycle~=nil then
+                if cycles<previous_cycle then
+                    cycle_regressions=cycle_regressions+1
+                    if frame==previous_cycle_frame then
+                        cycle_regressions_same_frame=cycle_regressions_same_frame+1
+                    else
+                        cycle_regressions_between_frames=cycle_regressions_between_frames+1
+                    end
+                elseif cycles==previous_cycle then
+                    cycle_equal_adjacent=cycle_equal_adjacent+1
+                end
+            end
+            previous_cycle,previous_cycle_frame=cycles,frame
         end
         buffered[#buffered+1]=frame_line
         if timed_line then timed_buffered[#timed_buffered+1]=timed_line end
@@ -451,6 +469,7 @@ emu.registerexit(function()
     end
     local complete = frames_captured>0 and dropped_writes==0
         and callback_errors==0 and capture_failures==0 and callback_gaps==0
+        and cycle_regressions==0
     local report={
         'format=fceux_ppu_session_v1',
         'session_id='..session_id,
@@ -463,6 +482,11 @@ emu.registerexit(function()
         'capture_frames='..table.concat(captured_frame_list,','),
         'events_recorded='..tostring(total_writes),
         'event_checksum=adler32_v1',
+        'cycle_order_policy=nondecreasing_v1',
+        'cycle_regressions='..tostring(cycle_regressions),
+        'cycle_equal_adjacent='..tostring(cycle_equal_adjacent),
+        'cycle_regressions_same_frame='..tostring(cycle_regressions_same_frame),
+        'cycle_regressions_between_frames='..tostring(cycle_regressions_between_frames),
         'frame_log_adler32='..frame_log_hash,
         'cycle_log_adler32='..cycle_log_hash,
         'events_dropped='..tostring(dropped_writes),
