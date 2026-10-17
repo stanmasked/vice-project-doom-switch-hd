@@ -1544,6 +1544,83 @@ inline void stage121_pixel(unsigned sl,unsigned xt,unsigned xp,
 }
 #endif
 
+// Stage124: only the independently generated all-tile1 Mapper-4 ROM with
+// byte E4 in its attribute tables and four unique palette colors is eligible.
+// The observer sees the actual buffered fetch, palette selection and XBuf.
+// Unlike Stage121, it does NOT depend on Stage119's midframe scroll fixture.
+#if defined(VPD_NATIVE_SYNTHETIC_QUADRANT_COLORS) && defined(VPD_NATIVE_SYNTHETIC_MIDFRAME_CHR)
+struct Quad124Audit {
+    unsigned samples[4]={0,0,0,0};
+    unsigned colors[4]={0,0,0,0};
+    unsigned invalid=0;
+    bool emitted=false;
+};
+inline Quad124Audit& stage124_state() {
+    static Quad124Audit a;
+    return a;
+}
+inline void stage124_pixel(unsigned sl,unsigned xt,unsigned xp,
+                           unsigned ntaddr,unsigned ataddr,unsigned raw,
+                           unsigned shift,unsigned decoded,unsigned pattern,
+                           unsigned combined,unsigned pixelcolor,
+                           unsigned xbuf) {
+    static const char* env=std::getenv("VPD_STAGE124_QUADRANT_PROBE");
+    if(!env || std::strcmp(env,"1")!=0)return;
+    Quad124Audit& a=stage124_state();
+    if(a.emitted || xt<4 || xt>=30 || xp>=8)return;
+    const MidframeChr& m=stage110_state();
+    if(!m.switched || m.writes!=2 || sl<m.switch_sl+8U || sl>215U)return;
+    if(ntaddr<0x2000U || ntaddr>=0x3000U) {
+        ++a.invalid;
+        return;
+    }
+    const unsigned quadrant=((ntaddr&0x40U)?2U:0U)+
+                            ((ntaddr&0x02U)?1U:0U);
+    if(a.samples[quadrant]>=16)return;
+    const unsigned expected_addr=0x23C0U+(ntaddr&0x0C00U)+
+                                 ((ntaddr&0x0380U)>>4)+
+                                 ((ntaddr&0x001CU)>>2);
+    const unsigned expected_shift=quadrant*2U;
+    const unsigned expected_index=3U+4U*quadrant;
+    const unsigned expected_color=0x30U+quadrant;
+    const unsigned expected_xbuf=0x80U|expected_color;
+    if(ataddr!=expected_addr || raw!=0xE4U ||
+       shift!=expected_shift || decoded!=4U*quadrant ||
+       pattern!=3U || combined!=expected_index ||
+       pixelcolor!=expected_color || xbuf!=expected_xbuf)
+        ++a.invalid;
+    if(a.samples[quadrant]==0)a.colors[quadrant]=xbuf;
+    else if(a.colors[quadrant]!=xbuf)++a.invalid;
+    ++a.samples[quadrant];
+    if(a.samples[0]==16 && a.samples[1]==16 &&
+       a.samples[2]==16 && a.samples[3]==16) {
+        if(a.invalid || a.colors[0]==a.colors[1] ||
+           a.colors[0]==a.colors[2] || a.colors[0]==a.colors[3] ||
+           a.colors[1]==a.colors[2] || a.colors[1]==a.colors[3] ||
+           a.colors[2]==a.colors[3]) {
+            std::fprintf(stderr,
+                "VPD_STAGE124_REJECTED_QUADRANTS invalid=%u "
+                "colors=%u,%u,%u,%u samples=16,16,16,16 "
+                "synthetic_only=yes\n",
+                a.invalid,a.colors[0],a.colors[1],
+                a.colors[2],a.colors[3]);
+        }else{
+            std::fprintf(stderr,
+                "VPD_STAGE124_NATIVE_QUADRANTS_PASS "
+                "groups=4 samples=16,16,16,16 "
+                "indices=3,7,11,15 "
+                "xbuf_colors=%u,%u,%u,%u "
+                "raw_attribute=E4 invalid=0 "
+                "actual_fceux_xbuf=yes synthetic_only=yes "
+                "original_game_palette_proven=no\n",
+                a.colors[0],a.colors[1],a.colors[2],a.colors[3]);
+        }
+        std::fflush(stderr);
+        a.emitted=true;
+    }
+}
+#endif
+
 // Stage109 synthetic-only MMC3 write -> BG CHR read -> framebuffer timeline.
 // Internal runppu tick units are not authoritative NTSC dots or CPU cycles.
 #ifdef VPD_NATIVE_SYNTHETIC_CHR_TIMELINE
