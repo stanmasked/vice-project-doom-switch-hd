@@ -55,11 +55,13 @@ write(first..'.ppu.bin','previous-ppu')
 write(second..'.meta.txt','format=old_completed_snapshot\n')
 dofile('tools/capture_fceux_ppu.lua')
 assert(type(after)=='function' and type(exit)=='function')
+assert(read(dir..'/ppu_capture_session.meta.txt')=='capture_in_progress=yes\n')
 local ok,err=pcall(after)
 assert(not ok and tostring(err):find('16384%-byte string'),
        'Invalid PPU capture should have failed: '..tostring(err))
 assert(read(first..'.meta.txt')=='capture_in_progress=yes\n')
 assert(read(first..'.ppu.bin')=='previous-ppu')
+assert(read(dir..'/ppu_capture_session.meta.txt')=='capture_in_progress=yes\n')
 frame=2;bad_ppu=false
 after()
 local meta=read(second..'.meta.txt')
@@ -68,10 +70,16 @@ assert(not meta:find('capture_in_progress',1,true))
 assert(read(second..'.ppu.bin')==ppu_data)
 assert(read(second..'.ram.bin')==ram_data)
 exit()
+local session=read(dir..'/ppu_capture_session.meta.txt')
+assert(session:find('format=fceux_ppu_session_v1',1,true))
+assert(session:find('complete=no',1,true))
+assert(session:find('capture_failures=1',1,true))
+assert(session:find('frames_captured=1',1,true))
 for _,name in ipairs({
   'frame_000001.meta.txt','frame_000001.ppu.bin',
   'frame_000002.meta.txt','frame_000002.ppu.bin',
   'frame_000002.ram.bin','mmc3_video_writes.tsv',
+  'ppu_capture_session.meta.txt',
 }) do os.remove(dir..'/'..name) end
 assert(os.execute('rmdir "'..dir..'"'))
 print('Stage76 PPU per-frame stale metadata invalidation PASS')
