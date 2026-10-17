@@ -322,7 +322,8 @@ inline void preclear_cpu_read(bool returned_high, bool before_high,
 struct MidframeChr {
     unsigned writes = 0, last_sl = 0, switch_sl = 0;
     unsigned long frame = 0, switch_frame = 0;
-    unsigned pre = 0, post = 0, pre_zero = 0, post_three = 0, invalid = 0;
+    unsigned pre = 0, post = 0, pre_zero = 0, post_three = 0;
+    unsigned long invalid = 0;
     unsigned long long pre_hash = 14695981039346656037ULL;
     unsigned long long post_hash = 14695981039346656037ULL;
     bool switched = false, emitted = false;
