@@ -1339,8 +1339,15 @@ inline void stage119_pixel(unsigned sl,unsigned xt,unsigned xp,
     // the source-level NTRefreshAddr hook; it does not derive an address from
     // tile ID or from framebuffer color. Reject page aliases even if parity
     // and the visible synthetic pattern are otherwise unchanged.
-    const unsigned expected_addr=0x2000U+expected_tile+(after?1U:0U);
-    if(ntaddr!=expected_addr)++a.stride_invalid;
+    // PPU vertical scroll determines the row base. The strict claim is
+    // local tile-column stride, NOT absolute $2000 on an arbitrary scanline.
+    const unsigned first_addr=before
+        ? (a.stride_samples1 ? a.first_ntaddr : ntaddr)
+        : (a.stride_samples2 ? a.second_ntaddr : ntaddr);
+    const unsigned base=first_addr & ~31U;
+    const unsigned expected_addr=base+expected_tile+(after?1U:0U);
+    if(ntaddr!=expected_addr || base<0x2000U || base>=0x3000U)
+        ++a.stride_invalid;
     if(before){
         if(a.stride_samples1>0 && ntaddr!=a.stride_prev1) {
             if(ntaddr!=a.stride_prev1+1U)++a.stride_invalid;
@@ -1387,7 +1394,8 @@ inline void stage119_pixel(unsigned sl,unsigned xt,unsigned xp,
         if(a.invalid || a.stride_invalid ||
            a.stride_samples1!=16 || a.stride_samples2!=16 ||
            a.stride_transitions1!=2 || a.stride_transitions2!=2 ||
-           a.first_ntaddr!=0x2000U || a.second_ntaddr!=0x2001U) {
+           (a.first_ntaddr & 31U)!=0U ||
+           (a.second_ntaddr & 31U)!=1U) {
             std::fprintf(stderr,
                 "VPD_STAGE120_REJECTED_NT_STRIDE invalid=%u "
                 "stage119_invalid=%u samples1=%u samples2=%u "
