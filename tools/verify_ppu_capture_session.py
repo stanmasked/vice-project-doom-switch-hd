@@ -301,6 +301,8 @@ def verify(session_meta, *, require_cycle=False):
             'scanline_timing_proven':False, 'stage_geometry_proven':False,
             'snapshot_bytes_verified':True, 'checksum_type':'adler32_v1',
             'event_logs_verified':True, 'event_checksum_type':'adler32_v1',
+            'snapshot_event_frame_order_verified':True,
+            'physical_frame_boundaries_proven':False,
             'cpu_cycle_order_verified':cycles_checked,
             'cpu_cycle_equal_adjacent':cycle_equal}
 
