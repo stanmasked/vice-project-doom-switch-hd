@@ -104,8 +104,9 @@ class FullSessionBracketingTests(unittest.TestCase):
             'clock_samples_are_ppu_vblank_or_scanline_boundaries'])
         self.assertFalse(pair['camera_displacement_inferred'])
         report_text = json.dumps(report)
+        self.assertFalse(pair['clock_evidence']['scanline_numbers_available'])
         for disallowed in ('cpu_cycle_start', 'bank_register_value',
-                           'scanline_number', 'original_rom_md5'):
+                           'ppu_scanline_index', 'original_rom_md5'):
             self.assertNotIn(disallowed, report_text)
 
     def test_event_equal_previous_callback_clock(self):
