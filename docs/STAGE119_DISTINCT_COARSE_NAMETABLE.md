@@ -16,16 +16,22 @@ fine/coarse scroll pairs 1→15, 3→13, 5→11 and 7→9.
 The private hook observes the real upstream PPU buffered name-table
 byte `bgdata.main[bgtile].nt`, both pattern-plane bytes, fine-X
 pixel position, the actual background pattern and final `XBuf`
-pixel byte. It compares the first 16 pixels of the row after the
-first write with 16 pixels of the row after the second write;
-the coarse increment must change the nametable identity at x=0
-from 0 to 1 and pattern 0 to 3, with distinct real XBuf colors.
+pixel byte. A pinned native CI run rejected the initial x=0..15
+comparison: buffered tiles can be carried over from the previous
+scanline. Stage122 therefore samples x=32..47 in each of the two
+post-write rows, beyond the two-tile lookahead. At x=32 the control
+expects source identity 0→1 and CHR pattern 0→3 with distinct real
+XBuf colors. These are test expectations, not native proof until CI passes.
 
 An undifferentiated-CHR ROM and a probe-disabled ROM are independent
 negative controls. The normal uniform-CHR stage110 positive proof
 is intentionally **not** used for this distinct-tile experiment;
 its register-write/scanline observer supplies timing provenance
 without importing an all-FF framebuffer conclusion.
+
+The synthetic ROM also initializes all 16 background palette entries so
+attribute-selected CHR colors cannot accidentally compare equal because
+of uninitialized palette memory.
 
 All assets are synthetic and generated only inside private CI
 temporary directories. This does not establish original Vice:
