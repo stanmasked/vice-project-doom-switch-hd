@@ -31,7 +31,8 @@ cp "${PATCH}/src/ppu.cpp" "${FCEUX}/src/ppu.cpp"
 cp "${PATCH}/src/vpd_newppu_raw_step_probe.h" "${FCEUX}/src/vpd_newppu_raw_step_probe.h"
 
 # A real native PPU translation-unit change must be present and compile-guarded.
-git -C "${FCEUX}" diff --check
+# Upstream ppu.cpp uses CRLF; Git must not mistake CR as trailing whitespace.
+git -C "${FCEUX}" -c core.whitespace=cr-at-eol diff --check
 git -C "${FCEUX}" diff -- src/ppu.cpp | grep -q 'vpd_ppu_probe::observe'
 grep -q '^#ifdef VPD_NATIVE_RAW_PPU_PROBE' "${FCEUX}/src/ppu.cpp"
 
