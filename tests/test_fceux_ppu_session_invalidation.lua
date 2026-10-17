@@ -19,15 +19,14 @@ emu={
   message=function()end,
 }
 memory={
-  registerwrite=function(addr,size_or_fn,fn)
-    if fn then
-      assert(addr==0x8000 and size_or_fn==0x8000)
-      assert(type(fn)=='function')
-    else
-      assert(type(size_or_fn)=='function')
-    end
+  registerwrite=function(addr,size,fn)
+    assert(type(fn)=='function')
+    assert((addr==0x8000 and size==0x8000) or
+           (addr==0x2000 and size==0x2000))
   end,
-  registerread=function(_,fn)assert(type(fn)=='function')end,
+  registerread=function(addr,size,fn)
+    assert(addr==0x2000 and size==0x2000 and type(fn)=='function')
+  end,
   readbyte=function()return 0 end,
   readbyterange=function(a,size)
     assert(a==0 and size==0x0800)
