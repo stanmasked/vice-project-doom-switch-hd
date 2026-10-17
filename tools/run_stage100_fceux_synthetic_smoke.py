@@ -14,7 +14,8 @@ MARKER = "VPD_STAGE100_NEWPPU_RUNTIME_PASS"
 SIGNATURE = re.compile(
     r"^VPD_STAGE100_NEWPPU_RUNTIME_PASS raw_steps=8192 "
     r"cycle_wraps=(\d+) internal_label_changes=(\d+) "
-    r"invalid_steps=(\d+) normalized_scanlines=no real_game_data=no$",
+    r"invalid_steps=(\d+) zero_advance_calls=(\d+) "
+    r"normalized_scanlines=no real_game_data=no$",
     re.MULTILINE,
 )
 
@@ -31,12 +32,13 @@ def inspect_output(text, *, expect_probe):
         return None
     if len(matches) != 1 or text.count(MARKER) != 1:
         raise SmokeError("Missing, malformed, or duplicate newppu runtime proof marker")
-    wraps, line_changes, invalid = (int(v) for v in matches[0].groups())
+    wraps, line_changes, invalid, zero_calls = (int(v) for v in matches[0].groups())
     if invalid:
-        raise SmokeError("Invalid raw PPU counter events observed")
+        raise SmokeError("Invalid raw PPU counter events observed: " + str(invalid))
     if not wraps or not line_changes:
         raise SmokeError("Raw PPU counter labels or wraparounds did not progress")
     return {"steps": 8192, "wraps": wraps, "label_changes": line_changes,
+            "zero_advance_calls": zero_calls,
             "ntsc_raster_calibration_proven": False}
 
 
