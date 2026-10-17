@@ -142,12 +142,12 @@ def check_log_checksums(path, expected_checksum, expected_header):
     try:
         with path.open('rb') as stream:
             header=stream.readline()
-            if header!=expected_header.encode('ascii')+b'\\n':
+            if header!=expected_header.encode('ascii')+b'\n':
                 raise SessionError(f'Invalid event log header {path.name}')
             rolling=zlib.adler32(header)
             checksums.append(f'{rolling:08X}')
             for lineno,line in enumerate(stream,2):
-                if not line.endswith(b'\\n'):
+                if not line.endswith(b'\n'):
                     raise SessionError(
                         f'Truncated event log {path.name} at line {lineno}')
                 rolling=zlib.adler32(line,rolling)
