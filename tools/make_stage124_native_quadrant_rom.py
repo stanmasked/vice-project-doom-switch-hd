@@ -20,11 +20,16 @@ TILE_PAGE = bytes((0xA2, 0, 0xA9, 1, 0x8D, 7, 0x20, 0xE8, 0xD0, 0xFA))
 ATTR_LOOP_SUFFIX = bytes((0x8D, 7, 0x20, 0xE8, 0xE0, 0x40, 0xD0, 0xF8))
 
 
-def initialization(attribute=ATTRIBUTE_BYTE, distinct_palette=True):
+def initialization(attribute=ATTRIBUTE_BYTE, distinct_palette=True, targeted_quadrant=None):
     if type(attribute) is not int or not 0 <= attribute <= 255:
         raise ValueError("Attribute byte must be an unsigned byte")
     if type(distinct_palette) is not bool:
         raise ValueError("Palette control must be a boolean")
+    if targeted_quadrant is not None and (
+            type(targeted_quadrant) is not int or
+            targeted_quadrant not in range(4) or
+            attribute != ATTRIBUTE_BYTE or not distinct_palette):
+        raise ValueError("Selective color mutation needs E4 and distinct palette")
     stream = bytearray((0xA9, 0x20, 0x8D, 6, 0x20, 0xA9, 0,
                         0x8D, 6, 0x20))
     stream.extend(TILE_PAGE * 16)
@@ -40,6 +45,11 @@ def initialization(attribute=ATTRIBUTE_BYTE, distinct_palette=True):
         0x0F, 0x11, 0x21, 0x30,
         0x0F, 0x12, 0x22, 0x30,
         0x0F, 0x13, 0x23, 0x30)
+    palette = list(palette)
+    if targeted_quadrant is not None:
+        # One and only one background palette entry changes. CHR, source
+        # nametable, all $E4 attributes and the other 15 colors stay fixed.
+        palette[3+4*targeted_quadrant] = 0x34+targeted_quadrant
     for color in palette:
         stream.extend((0xA9, color, 0x8D, 7, 0x20))
     # Restore first nametable address and horizontal/vertical scroll latches.
@@ -49,14 +59,18 @@ def initialization(attribute=ATTRIBUTE_BYTE, distinct_palette=True):
 
 
 def make_rom(dest, *, attribute=ATTRIBUTE_BYTE, distinct_palette=True,
-             switch=True):
+             switch=True, targeted_quadrant=None):
     if type(switch) is not bool:
         raise ValueError("Bank-switch control must be a boolean")
     base = program(switch=switch)
     if base.count(RENDER_SETUP) != 1:
         raise ValueError("Pinned synthetic 6502 raster setup not found exactly once")
-    patched = base.replace(RENDER_SETUP, initialization(attribute, distinct_palette)
-                           + RENDER_SETUP, 1)
+    if targeted_quadrant is not None and not switch:
+        raise ValueError("Selective mutation requires active CHR bank change")
+    patched = base.replace(
+        RENDER_SETUP,
+        initialization(attribute, distinct_palette, targeted_quadrant)
+        + RENDER_SETUP, 1)
     if len(patched) > 8192:
         raise ValueError("Synthetic program exceeds the 8 KiB PRG bank")
     prg_bank = bytearray(b"\xEA" * 8192)
@@ -82,8 +96,10 @@ if __name__ == "__main__":
     cli.add_argument("--zero-attributes", action="store_true")
     cli.add_argument("--uniform-palette", action="store_true")
     cli.add_argument("--fixed-chr", action="store_true")
+    cli.add_argument("--targeted-quadrant", type=int, default=None)
     args = cli.parse_args()
     print("STAGE124_SYNTHETIC_QUADRANT_ROM sha256=" +
           make_rom(args.destination, attribute=0 if args.zero_attributes else ATTRIBUTE_BYTE,
                    distinct_palette=not args.uniform_palette,
-                   switch=not args.fixed_chr))
+                   switch=not args.fixed_chr,
+                   targeted_quadrant=args.targeted_quadrant))
