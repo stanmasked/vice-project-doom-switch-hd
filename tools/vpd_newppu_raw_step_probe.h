@@ -391,6 +391,14 @@ inline void stage110_raster_pixel(unsigned sl, unsigned pattern, unsigned color)
             if (s.writes != 2 || s.pre != 2048 || s.pre_zero != 2048 ||
                 s.post_three != 2048 || s.pre_hash == s.post_hash)
                 ++s.invalid;
+            if (s.invalid != 0) {
+                std::fprintf(stderr,
+                    "VPD_STAGE110_REJECTED_CONTROL invalid=%lu synthetic_only=yes\n",
+                    s.invalid);
+                std::fflush(stderr);
+                s.emitted = true;
+                return;
+            }
             std::fprintf(stderr,
                 "VPD_STAGE110_NATIVE_MIDFRAME_CHR_PASS "
                 "writes=%u switch_sl=%u pre_pixels=%u post_pixels=%u "
