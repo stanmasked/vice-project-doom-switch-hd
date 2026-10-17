@@ -29,7 +29,7 @@ PASS = (
     "nametable0_x0=0 nametable1_x0=1 "
     "pattern0_x0=0 pattern1_x0=3 "
     "first_color=15 second_color=48 "
-    "nt_address0=2000 nt_address1=2001 samples_per_row=16 "
+    "nt_address0=2004 nt_address1=2005 samples_per_row=16 "
     "odd_first=7 odd_second=9 invalid=0 "
     "real_fceux_xbuf=yes synthetic_only=yes "
     "original_game_coarse_scroll_proven=no"
@@ -110,8 +110,8 @@ class Witness(unittest.TestCase):
         good = PASS.format(fine=3, second=5)
         for bad in ("", good+"\n"+good,
                     good.replace("second_color=48", "second_color=15"),
-                    good.replace("nt_address0=2000", "nt_address0=1000"),
-                    good.replace("nt_address1=2001", "nt_address1=2000"),
+                    good.replace("nt_address0=2004", "nt_address0=1000"),
+                    good.replace("nt_address1=2005", "nt_address1=2004"),
                     good.replace("nametable1_x0=1", "nametable1_x0=0"),
                     good.replace("pattern1_x0=3", "pattern1_x0=0"),
                     good.replace("sample_sl2=106", "sample_sl2=107"),
