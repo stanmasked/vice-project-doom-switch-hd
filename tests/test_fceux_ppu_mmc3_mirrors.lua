@@ -37,6 +37,7 @@ ppu={readbyterange=function(a,size)
  assert(a==0 and size==0x4000)
  return ppu_data
 end}
+debugger={getcyclescount=function()return 120 end}
 rom={gethash=function(which)
  assert(which=='md5')
  return string.rep('a',32)
@@ -85,6 +86,7 @@ assert(meta:find('ppuctrl=90',1,true))
 assert(meta:find('ppumask=1E',1,true))
 assert(meta:find('ppu_register_write_coverage=full_2000_3fff_mod8',1,true))
 assert(meta:find('ppu_status_read_coverage=full_2000_3fff_mod8',1,true))
+assert(meta:find('cycle_trace_available=yes',1,true))
 local log=read(dir..'/mmc3_video_writes.tsv')
 for _,fragment in ipairs({
  '8002\t80','8003\t06','9FFE\t85','9FFF\t24',
@@ -94,6 +96,9 @@ for _,fragment in ipairs({
 }) do
  assert(log:find(fragment,1,true),fragment)
 end
+local timed=read(dir..'/mmc3_ppu_cycles.tsv')
+assert(timed:find('\\t3FFA\\t00\\tR',1,true))
+assert(not timed:find('\\t2002\\t7F\\tW',1,true))
 -- A later frame must be tagged incomplete if malformed hooks fire.
 current_frame=2
 local ok,err=pcall(mwrite,0x8002,2,0x80)
@@ -109,7 +114,7 @@ for _,name in ipairs({
  'frame_000001.meta.txt','frame_000001.ppu.bin',
  'frame_000001.ram.bin','frame_000002.meta.txt',
  'frame_000002.ppu.bin','frame_000002.ram.bin',
- 'mmc3_video_writes.tsv'
+ 'mmc3_video_writes.tsv','mmc3_ppu_cycles.tsv'
 }) do os.remove(dir..'/'..name) end
 assert(os.execute('rmdir "'..dir..'"'))
 print('Stage77 FCEUX MMC3 all-four-pairs mirrored video callbacks PASS')
