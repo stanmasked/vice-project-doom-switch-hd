@@ -129,6 +129,36 @@ def check_snapshot_blob(path, size, declared_checksum):
     return actual
 
 
+def check_log_checksums(path, expected_checksum, expected_header):
+    """Checksum complete on-disk TSV and every exact newline-terminated prefix.
+
+    Index 0 is the header checksum; index N covers header plus N records.
+    Return the list to bind individual snapshot checkpoints to log bytes.
+    """
+    path=Path(path)
+    if re.fullmatch(r'[0-9A-F]{8}', expected_checksum or '') is None:
+        raise SessionError(f'Missing/invalid event log checksum {path.name}')
+    try:
+        data=path.read_bytes()
+    except OSError as exc:
+        raise SessionError(f'Missing/unreadable event log {path.name}') from exc
+    if not data.endswith(b'\\n'):
+        raise SessionError(f'Truncated event log {path.name}')
+    lines=data.splitlines(keepends=True)
+    if not lines or lines[0]!=expected_header.encode('ascii')+b'\\n':
+        raise SessionError(f'Invalid event log header {path.name}')
+    rolling=1
+    checksums=[]
+    for line in lines:
+        if not line.endswith(b'\\n'):
+            raise SessionError(f'Invalid event line termination {path.name}')
+        rolling=zlib.adler32(line,rolling)
+        checksums.append(f'{rolling:08X}')
+    if checksums[-1]!=expected_checksum:
+        raise SessionError(f'Event log checksum mismatch {path.name}')
+    return checksums
+
+
 def verify(session_meta, *, require_cycle=False):
     manifest = Path(session_meta)
     props = metadata(manifest)
@@ -141,6 +171,7 @@ def verify(session_meta, *, require_cycle=False):
     required(props, 'mmc3_write_coverage', 'full_8000_ffff_even_odd')
     required(props, 'ppu_register_write_coverage', 'full_2000_3fff_mod8')
     required(props, 'ppu_status_read_coverage', 'full_2000_3fff_mod8')
+    required(props, 'event_checksum', 'adler32_v1')
     token = props.get('session_id', '')
     if not SESSION.fullmatch(token):
         raise SessionError('Invalid session_id')
@@ -165,6 +196,20 @@ def verify(session_meta, *, require_cycle=False):
         raise SessionError('Duplicate or unordered capture frames')
     folder = manifest.parent
     events = read_frame_events(folder/'mmc3_video_writes.tsv')
+    frame_prefixes=check_log_checksums(
+        folder/'mmc3_video_writes.tsv',props.get('frame_log_adler32'),
+        'frame\\taddress\\tvalue')
+    if len(frame_prefixes)!=len(events)+1:
+        raise SessionError('Incorrect frame event checksum row count')
+    cycle_prefixes=None
+    if cycle=='yes':
+        cycle_prefixes=check_log_checksums(
+            folder/'mmc3_ppu_cycles.tsv',props.get('cycle_log_adler32'),
+            'frame\\tcpu_cycle\\taddress\\tvalue\\tkind')
+        if len(cycle_prefixes)!=len(events)+1:
+            raise SessionError('Incorrect CPU-cycle event checksum row count')
+    else:
+        required(props,'cycle_log_adler32','not_captured')
     if len(events) != expected:
         raise SessionError('Truncated or extra frame events')
     last_checkpoint = -1
@@ -187,6 +232,10 @@ def verify(session_meta, *, require_cycle=False):
         if count < last_checkpoint or count > expected:
             raise SessionError('Invalid per-frame event count checkpoint')
         last_checkpoint = count
+        required(m, 'event_checksum', 'adler32_v1')
+        required(m,'frame_log_prefix_adler32',frame_prefixes[count])
+        required(m,'cycle_log_prefix_adler32',
+                 cycle_prefixes[count] if cycle_prefixes is not None else 'not_captured')
         required(m, 'snapshot_checksum', 'adler32_v1')
         for suffix,size,key in (
             ('.ppu.bin',0x4000,'ppu_adler32'),
@@ -216,7 +265,8 @@ def verify(session_meta, *, require_cycle=False):
             'events_checked':len(events), 'cycles_checked':cycles_checked,
             'complete':True, 'game_identity_authenticated':False,
             'scanline_timing_proven':False, 'stage_geometry_proven':False,
-            'snapshot_bytes_verified':True, 'checksum_type':'adler32_v1'}
+            'snapshot_bytes_verified':True, 'checksum_type':'adler32_v1',
+            'event_logs_verified':True, 'event_checksum_type':'adler32_v1'}
 
 
 def main():
