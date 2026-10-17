@@ -56,7 +56,7 @@ def verify_pair(empty_fetch, full_fetch, empty_pixel, full_pixel):
             "original_game_fetch_proven": False}
 
 
-def execute(binary, rom, folder, enabled=True, timeout=25.0):
+def execute(binary, rom, folder, enabled=True, timeout=25.0, timeline=False):
     folder.mkdir(parents=True, exist_ok=True)
     env = os.environ.copy()
     env.update(backend_settings("xvfb", folder))
@@ -66,6 +66,7 @@ def execute(binary, rom, folder, enabled=True, timeout=25.0):
         env[var] = "0"
     env["VPD_STAGE107_BG_PIXEL_PROBE"] = "1" if enabled else "0"
     env["VPD_STAGE108_BG_FETCH_PROBE"] = "1" if enabled else "0"
+    env["VPD_STAGE109_CHR_TIMELINE_PROBE"] = "1" if enabled and timeline else "0"
     command = [str(Path(binary).resolve()), "--newppu", "1", "--sound", "0",
                "--opengl", "0", "--no-config", "1", str(rom.resolve())]
     log = folder / "native.log"
@@ -78,7 +79,7 @@ def execute(binary, rom, folder, enabled=True, timeout=25.0):
             while time.monotonic() < until:
                 time.sleep(0.1)
                 output = log.read_text(encoding="utf8", errors="replace")
-                if enabled and MARKER in output and PIXEL_MARKER in output:
+                if enabled and MARKER in output and PIXEL_MARKER in output and (not timeline or "VPD_STAGE109_NATIVE_CHR_TIMELINE_PASS" in output):
                     break
                 if proc.poll() is not None:
                     break
@@ -93,13 +94,18 @@ def execute(binary, rom, folder, enabled=True, timeout=25.0):
                     proc.wait(timeout=4)
     output = log.read_text(encoding="utf8", errors="replace")
     if not enabled:
-        if MARKER in output or PIXEL_MARKER in output or not survived:
+        if MARKER in output or PIXEL_MARKER in output or "VPD_STAGE109_NATIVE_CHR_TIMELINE_PASS" in output or not survived:
             raise FetchProofError("Disabled native PPU observers not clean")
         return None
     if MARKER not in output or PIXEL_MARKER not in output:
         raise FetchProofError("No paired native CHR fetch/pixel evidence: " +
                               categorize_exit(proc.returncode, output))
-    return verify_fetch(output), verify_pixels(output)
+    fetch, pixels = verify_fetch(output), verify_pixels(output)
+    if timeline:
+        if output.count("VPD_STAGE109_NATIVE_CHR_TIMELINE_PASS") != 1:
+            raise FetchProofError("Missing or repeated native Stage109 chronology")
+        return fetch, pixels, output
+    return fetch, pixels
 
 
 def run(binary, private_folder):

@@ -55,7 +55,7 @@ grep -q '^#ifdef VPD_NATIVE_RAW_PPU_PROBE' "${FCEUX}/src/ppu.cpp"
 # Probe is explicitly enabled in this temporary build. No sink is installed.
 cmake -S "${FCEUX}" -B "${BUILD}" \
   -DQT=5 -DCMAKE_BUILD_TYPE=Release \
-  -DCMAKE_CXX_FLAGS="-DVPD_NATIVE_RAW_PPU_PROBE -DVPD_NATIVE_SYNTHETIC_SMOKE -DVPD_NATIVE_SYNTHETIC_VBLANK -DVPD_NATIVE_SYNTHETIC_PPUSTATUS_READ -DVPD_NATIVE_SYNTHETIC_EVENT_ORDER -DVPD_NATIVE_SYNTHETIC_PRECLEAR -DVPD_NATIVE_SYNTHETIC_MMC3_CHR -DVPD_NATIVE_SYNTHETIC_BG_PIXELS -DVPD_NATIVE_SYNTHETIC_BG_FETCH" \
+  -DCMAKE_CXX_FLAGS="-DVPD_NATIVE_RAW_PPU_PROBE -DVPD_NATIVE_SYNTHETIC_SMOKE -DVPD_NATIVE_SYNTHETIC_VBLANK -DVPD_NATIVE_SYNTHETIC_PPUSTATUS_READ -DVPD_NATIVE_SYNTHETIC_EVENT_ORDER -DVPD_NATIVE_SYNTHETIC_PRECLEAR -DVPD_NATIVE_SYNTHETIC_MMC3_CHR -DVPD_NATIVE_SYNTHETIC_BG_PIXELS -DVPD_NATIVE_SYNTHETIC_BG_FETCH -DVPD_NATIVE_SYNTHETIC_CHR_TIMELINE" \
   -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 cmake --build "${BUILD}" --target fceux --parallel 2
 test -x "${BUILD}/src/fceux"
@@ -99,5 +99,9 @@ xvfb-run -a -s '-screen 0 1024x768x24 -nolisten tcp' \
 # Stage108: same-run BG pattern fetch and framebuffer A/B evidence.
 xvfb-run -a -s '-screen 0 1024x768x24 -nolisten tcp' \
   python3 "$PROJECT/tools/run_stage108_native_bg_fetch.py" \
+    "$BUILD/src/fceux" "$RUNNER_TEMP"
+# Stage109: source-clock order for actual MMC3 write, BG CHR fetch, and pixels.
+xvfb-run -a -s '-screen 0 1024x768x24 -nolisten tcp' \
+  python3 "$PROJECT/tools/run_stage109_native_chr_timeline.py" \
     "$BUILD/src/fceux" "$RUNNER_TEMP"
 printf 'STAGE99_PINNED_FCEUX_NATIVE_BUILD_PASS commit=%s opt_in_probe=yes real_fceux_linked=yes gameplay_raster_verified=no\n' "${PIN}"

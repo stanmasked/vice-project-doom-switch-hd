@@ -3,7 +3,7 @@
 // Install callback explicitly only on a controlled private emulator build.
 #ifndef VPD_NEWPPU_RAW_STEP_PROBE_H
 #define VPD_NEWPPU_RAW_STEP_PROBE_H
-#if defined(VPD_NATIVE_SYNTHETIC_SMOKE) || defined(VPD_NATIVE_SYNTHETIC_VBLANK) || defined(VPD_NATIVE_SYNTHETIC_PPUSTATUS_READ) || defined(VPD_NATIVE_SYNTHETIC_EVENT_ORDER) || defined(VPD_NATIVE_SYNTHETIC_PRECLEAR) || defined(VPD_NATIVE_SYNTHETIC_MMC3_CHR) || defined(VPD_NATIVE_SYNTHETIC_BG_PIXELS) || defined(VPD_NATIVE_SYNTHETIC_BG_FETCH)
+#if defined(VPD_NATIVE_SYNTHETIC_SMOKE) || defined(VPD_NATIVE_SYNTHETIC_VBLANK) || defined(VPD_NATIVE_SYNTHETIC_PPUSTATUS_READ) || defined(VPD_NATIVE_SYNTHETIC_EVENT_ORDER) || defined(VPD_NATIVE_SYNTHETIC_PRECLEAR) || defined(VPD_NATIVE_SYNTHETIC_MMC3_CHR) || defined(VPD_NATIVE_SYNTHETIC_BG_PIXELS) || defined(VPD_NATIVE_SYNTHETIC_BG_FETCH) || defined(VPD_NATIVE_SYNTHETIC_CHR_TIMELINE)
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -316,11 +316,100 @@ inline void preclear_cpu_read(bool returned_high, bool before_high,
 }
 #endif
 
+// Stage109 synthetic-only MMC3 write -> BG CHR read -> framebuffer timeline.
+// Internal runppu tick units are not authoritative NTSC dots or CPU cycles.
+#ifdef VPD_NATIVE_SYNTHETIC_CHR_TIMELINE
+struct ChrChronology {
+    unsigned long writes = 0, fetches = 0, pixels = 0, invalid = 0;
+    unsigned chosen_bank = 0;
+    unsigned long long write_tick = 0, first_fetch_tick = 0;
+    unsigned long long first_pixel_tick = 0, last_fetch_tick = 0;
+    unsigned long long last_pixel_tick = 0;
+    bool emitted = false;
+};
+inline ChrChronology& chr_chronology() {
+    static ChrChronology c;
+    return c;
+}
+inline bool chr_chronology_enabled() {
+    static const char* enabled = std::getenv("VPD_STAGE109_CHR_TIMELINE_PROBE");
+    return enabled && std::strcmp(enabled, "1") == 0;
+}
+inline void chr_chronology_try_emit() {
+    ChrChronology& c = chr_chronology();
+    if (c.emitted || c.fetches < 8192 || c.pixels < 32768) return;
+    const unsigned long long first_fetch_lag =
+        c.first_fetch_tick >= c.write_tick ? c.first_fetch_tick - c.write_tick : 0;
+    const unsigned long long fetch_to_pixel_lag =
+        c.first_pixel_tick >= c.first_fetch_tick ?
+            c.first_pixel_tick - c.first_fetch_tick : 0;
+    const unsigned long long write_to_last_pixel_lag =
+        c.last_pixel_tick >= c.write_tick ? c.last_pixel_tick - c.write_tick : 0;
+    if (c.writes != 1 || c.first_fetch_tick < c.write_tick ||
+        c.first_pixel_tick < c.first_fetch_tick ||
+        c.last_pixel_tick < c.first_pixel_tick ||
+        write_to_last_pixel_lag < first_fetch_lag ||
+        first_fetch_lag > 1000000ULL || fetch_to_pixel_lag > 1000000ULL ||
+        write_to_last_pixel_lag > 1000000ULL) ++c.invalid;
+    std::fprintf(stderr,
+        "VPD_STAGE109_NATIVE_CHR_TIMELINE_PASS writes=%lu fetches=%lu "
+        "pixels=%lu bank=%u first_fetch_lag=%llu "
+        "first_pixel_after_fetch_lag=%llu last_pixel_after_write_lag=%llu "
+        "invalid=%lu synthetic_only=yes original_game_timing_proven=no\n",
+        c.writes, c.fetches, c.pixels, c.chosen_bank,
+        first_fetch_lag, fetch_to_pixel_lag, write_to_last_pixel_lag,
+        c.invalid);
+    std::fflush(stderr);
+    c.emitted = true;
+}
+inline void chr_chronology_write(unsigned selector, unsigned bank) {
+    if (!chr_chronology_enabled()) return;
+    ChrChronology& c = chr_chronology();
+    if (c.emitted) return;
+    if (selector != 2 || bank > 1 || c.writes != 0 ||
+        c.fetches != 0 || c.pixels != 0) ++c.invalid;
+    ++c.writes;
+    c.chosen_bank = bank;
+    c.write_tick = channel().internal_tick_units;
+}
+inline void chr_chronology_fetch(unsigned addr, unsigned byte) {
+    if (!chr_chronology_enabled()) return;
+    ChrChronology& c = chr_chronology();
+    if (c.emitted || c.fetches >= 8192) return;
+    const unsigned long long now = channel().internal_tick_units;
+    if (c.writes != 1 || now < c.write_tick ||
+        (c.fetches > 0 && now < c.last_fetch_tick) ||
+        addr < 0x1000 || addr >= 0x2000 ||
+        byte != (c.chosen_bank ? 255U : 0U)) ++c.invalid;
+    if (c.fetches == 0) c.first_fetch_tick = now;
+    c.last_fetch_tick = now;
+    ++c.fetches;
+    chr_chronology_try_emit();
+}
+inline void chr_chronology_pixel(unsigned pattern) {
+    if (!chr_chronology_enabled()) return;
+    ChrChronology& c = chr_chronology();
+    if (c.emitted || c.pixels >= 32768) return;
+    const unsigned long long now = channel().internal_tick_units;
+    if (c.writes != 1 || c.fetches == 0 ||
+        now < c.first_fetch_tick || now < c.write_tick ||
+        (c.pixels > 0 && now < c.last_pixel_tick) ||
+        pattern != (c.chosen_bank ? 3U : 0U)) ++c.invalid;
+    if (c.pixels == 0) c.first_pixel_tick = now;
+    c.last_pixel_tick = now;
+    ++c.pixels;
+    chr_chronology_try_emit();
+}
+#endif
+
 // Stage106: MMC3 $8001 CHR register writes, source-frame windows ONLY.
 // The source register values are never written to logs. A changed register
 // is not proof that any changed tile was fetched or rendered by a real PPU.
 #ifdef VPD_NATIVE_SYNTHETIC_MMC3_CHR
 inline void observe_native_mmc3_chr_write(unsigned selector, unsigned value) {
+#ifdef VPD_NATIVE_SYNTHETIC_CHR_TIMELINE
+    chr_chronology_write(selector, value);
+#endif
     static const char* opt = std::getenv("VPD_STAGE106_MMC3_CHR_PROBE");
     if (!opt || std::strcmp(opt, "1") != 0) return;
     struct Mmc3Aggregate {
@@ -395,6 +484,9 @@ inline void observe_native_bg_pixel(unsigned bg_pattern, unsigned final_byte) {
     static Aggregate a;
     if (a.emitted) return;
     if (bg_pattern > 3 || final_byte > 255) { ++a.invalid; return; }
+#ifdef VPD_NATIVE_SYNTHETIC_CHR_TIMELINE
+    chr_chronology_pixel(bg_pattern);
+#endif
     ++a.sampled;
     if (bg_pattern == 0) ++a.zero;
     else ++a.nonzero;
@@ -426,6 +518,9 @@ inline void observe_native_bg_fetch(unsigned int address, unsigned int value, bo
     };
     static FetchAggregate a;
     if (a.emitted) return;
+#ifdef VPD_NATIVE_SYNTHETIC_CHR_TIMELINE
+    chr_chronology_fetch(address, value);
+#endif
     if (address < 0x1000 || address >= 0x2000 || value > 0xff) ++a.invalid;
     if (high) {
         ++a.high;
