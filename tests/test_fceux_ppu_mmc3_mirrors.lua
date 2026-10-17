@@ -4,9 +4,11 @@ os.remove(dir)
 assert(os.execute('mkdir -p "'..dir..'"'))
 VPD_CAPTURE_DIRECTORY=dir
 VPD_CAPTURE_INTERVAL=1
-VPD_CAPTURE_LIMIT=1
+VPD_CAPTURE_LIMIT=2
 VPD_CAPTURE_SCREEN=false
 local hooks,after,exit={},nil,nil
+local current_frame=1
+local status_read
 local mwrite
 local ppu_data=string.rep(string.char(0x55),0x4000)
 local ram_data=string.rep(string.char(0x11),0x0800)
@@ -19,7 +21,10 @@ memory={
     hooks[address]=size_or_fn
   end
  end,
- registerread=function(address,fn)assert(address==0x2002 and type(fn)=='function')end,
+ registerread=function(address,fn)
+  assert(address==0x2002 and type(fn)=='function')
+  status_read=fn
+ end,
  readbyte=function()return 0 end,
  readbyterange=function(a,size)
    assert(a==0 and size==0x0800)
@@ -35,7 +40,7 @@ rom={gethash=function(which)
  return string.rep('a',32)
 end}
 emu={
- framecount=function()return 1 end,
+ framecount=function()return current_frame end,
  registerafter=function(fn)after=fn end,
  registerexit=function(fn)exit=fn end,
  message=function()end,
@@ -76,10 +81,22 @@ for _,fragment in ipairs({
 }) do
  assert(log:find(fragment,1,true),fragment)
 end
+-- A later frame must be tagged incomplete if malformed hooks fire.
+current_frame=2
+local ok,err=pcall(mwrite,0x8002,2,0x80)
+assert(not ok and tostring(err):find('Unsupported FCEUX video callback contract',1,true))
+ok,err=pcall(status_read,0x2002,1,0x80)
+assert(not ok and tostring(err):find('Unsupported FCEUX video callback contract',1,true))
+after()
+local badmeta=read(dir..'/frame_000002.meta.txt')
+assert(badmeta:find('callback_errors=2',1,true))
+assert(badmeta:find('register_log_complete=no',1,true))
 exit()
 for _,name in ipairs({
  'frame_000001.meta.txt','frame_000001.ppu.bin',
- 'frame_000001.ram.bin','mmc3_video_writes.tsv'
+ 'frame_000001.ram.bin','frame_000002.meta.txt',
+ 'frame_000002.ppu.bin','frame_000002.ram.bin',
+ 'mmc3_video_writes.tsv'
 }) do os.remove(dir..'/'..name) end
 assert(os.execute('rmdir "'..dir..'"'))
 print('Stage77 FCEUX MMC3 all-four-pairs mirrored video callbacks PASS')
