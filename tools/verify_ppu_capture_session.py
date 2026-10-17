@@ -251,6 +251,12 @@ def verify(session_meta, *, require_cycle=False):
         count = integer(m, 'logged_register_writes')
         if count < last_checkpoint or count > expected:
             raise SessionError('Invalid per-frame event count checkpoint')
+        # registerafter() samples a snapshot at the current frame.
+        # Its flushed event-prefix cannot contain a FUTURE frame label.
+        # This checks logical ordering only, not the physical PPU boundary.
+        if count>0 and events[count-1][0]>frame:
+            raise SessionError(
+                'Snapshot checkpoint includes future event-frame label')
         last_checkpoint = count
         required(m, 'event_checksum', 'adler32_v1')
         required(m,'frame_log_prefix_adler32',frame_prefixes[count])
