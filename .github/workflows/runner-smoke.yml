@@ -1,10 +1,11 @@
 name: GitHub Runner Smoke Test
 
 on:
-  pull_request:
   push:
     branches:
       - research/stage39-video-trace-alignment
+    paths:
+      - .github/workflows/runner-smoke.yml
   workflow_dispatch:
 
 permissions:
