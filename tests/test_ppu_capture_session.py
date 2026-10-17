@@ -8,6 +8,8 @@ from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'tools'))
 from verify_ppu_capture_session import verify,SessionError
 from audit_ppu_reference_frames import analyze_verified
+from audit_ppu_screen_alignment import analyze_verified as compare_verified_screen
+from compare_rendered_frame import reconstructed_indices, PIXELS
 
 TOKEN='0011002200330044'
 
@@ -630,6 +632,107 @@ class CaptureSessionTests(unittest.TestCase):
         self.assertNotIn('original_rom_md5',text)
         self.assertNotIn('raw_ppu',text)
         self.assertEqual(len(report['snapshots']),2)
+
+    def stage89_reference(self, base=0, ppuctrl='00', missing=0):
+        frame=1
+        prefix=self.root/f'frame_{frame:06d}'
+        ppu=bytearray(0x4000)
+        ppu[0x3F00]=0x0F
+        ppu[0x3F01]=0x21
+        ppu[0x2000]=1
+        ppu[base+16]=0x80
+        ppu_path=Path(str(prefix)+'.ppu.bin')
+        ppu_path.write_bytes(ppu)
+        self.frames[frame]['ppu_adler32']=checksum_file(ppu_path)
+        ram=(self.root/'frame_000001.ram.bin').read_bytes()
+        observed=bytearray(reconstructed_indices(ppu,ram,0,base,
+                           sprites=False,mask=0x0A,scroll_x=0,scroll_y=0))
+        for i in range(missing):
+            observed[2*i]=254
+        self.frames[frame]['screen_reference']='yes'
+        self.frames[frame]['ppuctrl']=ppuctrl
+        self.frames[frame]['ppumask']='0A'
+        rgb_path=Path(str(prefix)+'.screen.rgb.bin')
+        pal_path=Path(str(prefix)+'.screen.pal.bin')
+        rgb_path.write_bytes(bytes(PIXELS*3))
+        pal_path.write_bytes(observed)
+        self.frames[frame]['screen_rgb_adler32']=checksum_file(rgb_path)
+        self.frames[frame]['screen_pal_adler32']=checksum_file(pal_path)
+        self.finalize()
+        return prefix
+
+    def test_stage89_observed_ppuctrl_yields_four_static_candidates(self):
+        self.stage89_reference()
+        report=compare_verified_screen(self.manifest,require_screen=True)
+        self.assertTrue(report['session_verified'])
+        self.assertEqual(report['screen_reference_frames'],1)
+        first=report['frames'][0]
+        self.assertEqual(first['static_hypotheses_tested'],4)
+        self.assertEqual(first['lowest_error_hypothesis']['different_pixels'],0)
+        self.assertEqual(first['lowest_error_hypothesis']['nametable_window'],0)
+        self.assertEqual(first['lowest_error_hypothesis']['background_pattern_base'],'0x0000')
+        self.assertEqual(first['lowest_error_hypothesis']['comparable_pixels'],PIXELS)
+        self.assertEqual(first['hypotheses_tied_for_lowest_error'],1)
+        self.assertEqual(report['frames'][1]['reference_status'],'not_captured')
+        self.assertFalse(report['interpretation']['actual_scroll_proven'])
+        self.assertFalse(report['interpretation']['first_level_identity_proven'])
+
+    def test_stage89_unknown_ppuctrl_keeps_both_pattern_hypotheses(self):
+        self.stage89_reference(base=0x1000,ppuctrl='unknown')
+        report=compare_verified_screen(self.manifest)
+        first=report['frames'][0]
+        self.assertEqual(first['static_hypotheses_tested'],8)
+        best=first['lowest_error_hypothesis']
+        self.assertEqual(best['nametable_window'],0)
+        self.assertEqual(best['background_pattern_base'],'0x1000')
+        self.assertEqual(best['different_pixels'],0)
+        self.assertEqual(first['evidence_classification']['ppuctrl'],
+                         'unknown_both_pattern_bases_tested')
+
+    def test_stage89_unknown_screen_pixels_not_counted_as_mismatches(self):
+        self.stage89_reference(missing=19)
+        first=compare_verified_screen(self.manifest)['frames'][0]
+        best=first['lowest_error_hypothesis']
+        self.assertEqual(best['comparable_pixels'],PIXELS-19)
+        self.assertEqual(best['unknown_reference_pixels'],19)
+        self.assertEqual(best['different_pixels'],0)
+
+    def test_stage89_rejects_corrupted_reference_even_when_size_unchanged(self):
+        self.stage89_reference()
+        p=self.root/'frame_000001.screen.pal.bin'
+        data=bytearray(p.read_bytes());data[7]^=1;p.write_bytes(data)
+        with self.assertRaisesRegex(SessionError,'checksum mismatch'):
+            compare_verified_screen(self.manifest)
+
+    def test_stage89_no_screens_keeps_absence_explicit(self):
+        result=compare_verified_screen(self.manifest)
+        self.assertEqual(result['screen_reference_frames'],0)
+        self.assertTrue(all(x['reference_status']=='not_captured'
+                            for x in result['frames']))
+        with self.assertRaisesRegex(ValueError,'No verified rendered-screen'):
+            compare_verified_screen(self.manifest,require_screen=True)
+
+    def test_stage89_all_unknown_reference_pixels_have_no_winning_candidate(self):
+        self.stage89_reference()
+        path=self.root/'frame_000001.screen.pal.bin'
+        path.write_bytes(bytes([254])*PIXELS)
+        self.frames[1]['screen_pal_adler32']=checksum_file(path)
+        self.finalize()
+        frame=compare_verified_screen(self.manifest)['frames'][0]
+        self.assertEqual(frame['known_reference_pixels'],0)
+        self.assertIsNone(frame['lowest_error_hypothesis'])
+        self.assertEqual(frame['hypotheses_tied_for_lowest_error'],0)
+        self.assertEqual(frame['static_hypotheses_tested'],4)
+
+    def test_stage89_report_does_not_export_original_pixels(self):
+        self.stage89_reference()
+        frame=compare_verified_screen(self.manifest)['frames'][0]
+        summary=json.dumps(frame)
+        self.assertNotIn('ppu_sha256',summary)
+        self.assertNotIn('rgb_capture_bytes',summary)
+        self.assertNotIn('palette_index_entries',summary)
+        self.assertNotIn('rom_md5',summary)
+        self.assertFalse(frame['evidence_classification']['sprites']=='included')
 
 
 if __name__=='__main__': unittest.main()
