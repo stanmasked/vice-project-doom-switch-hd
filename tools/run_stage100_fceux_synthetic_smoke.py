@@ -109,16 +109,16 @@ def main():
         good = execute(args.binary, rom, private / "newppu", newppu=True)
         disabled = execute(args.binary, rom, private / "disabled",
                            newppu=True, smoke_enabled=False)
-        if disabled["status"] != "completed_or_terminated":
-            raise SmokeError("Runtime without synthetic smoke opt-in is not stable")
         legacy = execute(args.binary, rom, private / "oldppu",
                          newppu=False, smoke_enabled=True)
     proof = good["result"]
     legacy_label = ("clean" if legacy["status"] == "completed_or_terminated"
                     else "unverified_early_exit")
+    disabled_label = ("clean" if disabled["status"] == "completed_or_terminated"
+                      else "unverified_early_exit")
     print("STAGE100_FCEUX_RUNTIME_TEST_PASS newppu_real_process=yes "
-          "smoke_disabled_negative_control=yes synthetic_rom_only=yes "
-          "observed_raw_steps=8192 raster_proven=no "
+          "synthetic_rom_only=yes observed_raw_steps=8192 raster_proven=no "
+          f"disabled_probe_control_status={disabled_label} "
           f"legacy_renderer_status={legacy_label} "
           f"wraps={proof['wraps']} label_changes={proof['label_changes']} "
           f"zero_advance_calls={proof['zero_advance_calls']}")

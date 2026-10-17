@@ -37,12 +37,18 @@ built FCEUX binary with `QT_QPA_PLATFORM=offscreen` and dummy SDL video/audio.
 - Positive: `--newppu 1` with all probe opt-ins must emit a strict single
   8192-step native runtime marker with zero malformed raw step observations.
 - Independent negative: the same `--newppu 1` emulator and synthetic ROM
-  with `VPD_STAGE100_SYNTHETIC_SMOKE=0` must *not* produce a marker and
-  must stay alive until the harness terminates it.
+  with `VPD_STAGE100_SYNTHETIC_SMOKE=0` must *not* produce a marker. If
+  the headless process exits early, this control is reported as
+  `disabled_probe_control_status=unverified_early_exit`, never as validated.
 - Exploratory legacy check: `--newppu 0` must not emit the newppu marker.
   An early process exit is reported explicitly as
   `legacy_renderer_status=unverified_early_exit`, **not** a successful
   old-PPU execution test. The virtual-display crash needs further diagnosis.
+
+The pinned FCEUX Qt/SDL dummy-backend has shown early exits in the disabled
+and legacy controls; neither control is counted as operational proof until
+this environmental failure is independently diagnosed. The synthetic
+newppu positive witness remains mandatory and fail-closed.
 
 All subprocess runs are bounded. No synthetic-ROM files or native executable
 are uploaded as GitHub artifacts. Regression tests also cover missing,
