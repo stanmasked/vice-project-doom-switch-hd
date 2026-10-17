@@ -103,17 +103,18 @@ def run_native(binary, rom, folder, *, enabled=True, positive=True, timeout=25.0
                              (diagnostics[-1] if diagnostics else
                               categorize_exit(proc.returncode, output)))
     witness = verify_report(output, stage110=verify_pixels(output))
-    if prefetch:
-        if output.count("VPD_STAGE113_NATIVE_PREFETCH_PASS") != 1:
-            raise TileProofError("Absent or repeated native prefetch proof")
-        return witness, output
-    if plane_pairs:
-        if output.count("VPD_STAGE114_NATIVE_PLANE_PAIR_PASS") != 1:
-            raise TileProofError("Missing or repeated native split-plane audit")
-        return witness, output
-    if scanline_carry:
-        if output.count("VPD_STAGE115_NATIVE_EDGE_CARRY_PASS") != 1:
-            raise TileProofError("Missing or repeated native scanline carry proof")
+    if prefetch and output.count("VPD_STAGE113_NATIVE_PREFETCH_PASS") != 1:
+        raise TileProofError("Absent or repeated native prefetch proof")
+    if plane_pairs and output.count("VPD_STAGE114_NATIVE_PLANE_PAIR_PASS") != 1:
+        raise TileProofError("Missing or repeated native split-plane audit")
+    if scanline_carry and output.count("VPD_STAGE115_NATIVE_EDGE_CARRY_PASS") != 1:
+        diagnostics = re.findall(
+            r"VPD_STAGE115_(?:REJECTED_EDGE_CARRY|DIAGNOSTIC) [^\r\n]{0,190}",
+            output)
+        raise TileProofError("Missing or repeated scanline carry proof: " +
+                             (diagnostics[-1] if diagnostics else
+                              categorize_exit(proc.returncode, output)))
+    if prefetch or plane_pairs or scanline_carry:
         return witness, output
     return witness
 

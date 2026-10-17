@@ -819,6 +819,16 @@ inline void stage115_edge_read(unsigned sl, unsigned slot,
     r.epoch = stage110_state().writes;
     r.end_tick = channel().internal_tick_units;
     r.valid = true;
+    if (sl == 111 && slot == 1 && !a.emitted) {
+        const MidframeChr& m = stage110_state();
+        std::fprintf(stderr,
+            "VPD_STAGE115_DIAGNOSTIC total=%u old=%u new=%u "
+            "last_sl=%u last_xt=%u invalid=%u writes=%lu "
+            "switch_sl=%u synthetic_only=yes\n",
+            a.total, a.old_tiles, a.new_tiles, a.last_sl, a.last_tile,
+            a.invalid, m.writes, m.switch_sl);
+        std::fflush(stderr);
+    }
 }
 inline void stage115_edge_draw(unsigned sl, unsigned xt, unsigned xp,
                                 unsigned tile, unsigned fine_x,

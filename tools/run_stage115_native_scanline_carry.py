@@ -30,7 +30,11 @@ class CarryError(ValueError):
 def verify_report(log, tile, plane):
     matched = list(PATTERN.finditer(log))
     if len(matched) != 1 or log.count(MARKER) != 1:
-        raise CarryError("Missing, malformed or duplicated native cross-line carry proof")
+        diagnostics = re.findall(
+            r"VPD_STAGE115_(?:REJECTED_EDGE_CARRY|DIAGNOSTIC) [^\r\n]{0,190}",
+            log)
+        raise CarryError("Missing, malformed or duplicated native cross-line carry proof: " +
+                         (diagnostics[-1] if diagnostics else "no instrumented edge diagnostic"))
     minimum, maximum = map(int, matched[0].groups())
     if not 1 <= minimum <= maximum <= 1000000:
         raise CarryError("Unsupported or contradictory native source-clock distance")
