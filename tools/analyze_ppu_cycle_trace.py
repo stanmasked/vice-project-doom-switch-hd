@@ -33,7 +33,8 @@ def parse_events(path):
             if not (frame>=0 and cycle>=0 and 0<=addr<=65535
                     and 0<=value<=255 and kind in ('W','R')):
                 raise ValueError('Invalid event range/kind at line %d'%lineno)
-            if kind=='R' and addr!=0x2002:
+            if kind=='R' and (not 0x2000<=addr<=0x3FFF
+                              or (addr-0x2000)%8!=2 or value!=0):
                 raise ValueError('Unexpected read marker at line %d'%lineno)
             yield frame,cycle,addr,value,kind
 
@@ -88,7 +89,7 @@ def summarize(events):
                        'chr_inversion':inversion}
                 current['chr_events'].append(event)
                 global_chr_events.append({'frame':frame,**event})
-        elif address==0x2005:
+        elif 0x2000<=address<=0x3FFF and (address-0x2000)%8==5:
             current['scroll_write_count']+=1
         current['observed_chr_registers']=list(chr_regs)
         current['chr_inversion']=inversion
@@ -129,6 +130,9 @@ def check_capture_meta(path):
         raise ValueError('Incomplete MMC3 mirrored register coverage')
     if metadata.get('callback_errors')!='0':
         raise ValueError('Unverified callback integrity')
+    if (metadata.get('ppu_register_write_coverage')!='full_2000_3fff_mod8'
+            or metadata.get('ppu_status_read_coverage')!='full_2000_3fff_mod8'):
+        raise ValueError('Incomplete PPU register mirror observation')
     return metadata
 
 
