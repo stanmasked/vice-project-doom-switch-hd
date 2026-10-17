@@ -45,7 +45,7 @@ grep -q '^#ifdef VPD_NATIVE_RAW_PPU_PROBE' "${FCEUX}/src/ppu.cpp"
 # Probe is explicitly enabled in this temporary build. No sink is installed.
 cmake -S "${FCEUX}" -B "${BUILD}" \
   -DQT=5 -DCMAKE_BUILD_TYPE=Release \
-  -DCMAKE_CXX_FLAGS="-DVPD_NATIVE_RAW_PPU_PROBE -DVPD_NATIVE_SYNTHETIC_SMOKE -DVPD_NATIVE_SYNTHETIC_VBLANK -DVPD_NATIVE_SYNTHETIC_PPUSTATUS_READ" \
+  -DCMAKE_CXX_FLAGS="-DVPD_NATIVE_RAW_PPU_PROBE -DVPD_NATIVE_SYNTHETIC_SMOKE -DVPD_NATIVE_SYNTHETIC_VBLANK -DVPD_NATIVE_SYNTHETIC_PPUSTATUS_READ -DVPD_NATIVE_SYNTHETIC_EVENT_ORDER" \
   -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 cmake --build "${BUILD}" --target fceux --parallel 2
 test -x "${BUILD}/src/fceux"
@@ -69,5 +69,9 @@ xvfb-run -a -s '-screen 0 1024x768x24 -nolisten tcp' \
 # Stage103: original synthetic 6502 repeatedly LDA $2002, proving real reads.
 xvfb-run -a -s '-screen 0 1024x768x24 -nolisten tcp' \
   python3 "${PROJECT}/tools/run_stage103_native_ppustatus_reads.py" \
+    "${BUILD}/src/fceux" "${RUNNER_TEMP}"
+# Stage104: same internal advancing runppu clock for source writes and CPU reads.
+xvfb-run -a -s '-screen 0 1024x768x24 -nolisten tcp' \
+  python3 "${PROJECT}/tools/run_stage104_native_event_order.py" \
     "${BUILD}/src/fceux" "${RUNNER_TEMP}"
 printf 'STAGE99_PINNED_FCEUX_NATIVE_BUILD_PASS commit=%s opt_in_probe=yes real_fceux_linked=yes gameplay_raster_verified=no\n' "${PIN}"
