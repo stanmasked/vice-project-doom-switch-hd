@@ -19,7 +19,7 @@ local function value(meta,key)
     return assert(meta:match('\n'..key..'=([^\n]*)')
         or meta:match('^'..key..'=([^\n]*)'))
 end
-local function run(clock_enabled)
+local function run(clock_enabled,corrupt_final)
     local dir=os.tmpname()
     os.remove(dir)
     assert(os.execute('mkdir -p "'..dir..'"'))
@@ -72,6 +72,33 @@ local function run(clock_enabled)
     local metadata=dir..'/ppu_capture_session.meta.txt'
     local frame_prefixes={}
     local cycle_prefixes={}
+    local logged_reads={frame=0,cycle=0}
+    local tampered=false
+    -- Observe reads done by the real collector. Reads made by this
+    -- test use saved_io and therefore do not affect the counters.
+    io={open=function(path,mode)
+        if mode=='rb' and path==log then
+            logged_reads.frame=logged_reads.frame+1
+        elseif mode=='rb' and path==timed then
+            logged_reads.cycle=logged_reads.cycle+1
+        end
+        local handle,error_message=saved_io.open(path,mode)
+        if not handle then return handle,error_message end
+        if corrupt_final and path==log and mode=='rb' and not tampered then
+            return {
+                read=function(_,amount)
+                    local bytes=handle:read(amount)
+                    if bytes and bytes:find('8002',1,true) then
+                        tampered=true
+                        return (bytes:gsub('8002','8003',1))
+                    end
+                    return bytes
+                end,
+                close=function()return handle:close() end,
+            }
+        end
+        return handle
+    end}
     for n=1,2 do
         frame=n
         write_mmc3(0x8002,1,0x80)
@@ -89,17 +116,32 @@ local function run(clock_enabled)
             assert(value(m,'cycle_log_prefix_adler32')=='not_captured')
         end
         assert(read(metadata)=='capture_in_progress=yes\n')
+        assert(logged_reads.frame==0,'Repeated on-frame TSV readback')
+        assert(logged_reads.cycle==0,'Repeated on-frame CPU-cycle readback')
     end
-    exit()
-    local final=read(metadata)
-    assert(value(final,'complete')=='yes')
-    assert(value(final,'events_recorded')=='4')
-    assert(value(final,'event_checksum')=='adler32_v1')
-    assert(value(final,'frame_log_adler32')==frame_prefixes[2])
-    if clock_enabled then
-        assert(value(final,'cycle_log_adler32')==cycle_prefixes[2])
+    local ok,why=pcall(exit)
+    assert(logged_reads.frame==1,'Final TSV must be read exactly once')
+    assert(logged_reads.cycle==(clock_enabled and 1 or 0),
+           'Final CPU-cycle TSV must be read exactly once, if present')
+    if corrupt_final then
+        assert(not ok and tostring(why):find('readback differs from flushed bytes',1,true),
+               tostring(why))
+        assert(tampered,'Test did not inject changed TSV bytes')
+        assert(read(metadata)=='capture_in_progress=yes\n')
     else
-        assert(value(final,'cycle_log_adler32')=='not_captured')
+        assert(ok,tostring(why))
+    end
+    local final=corrupt_final and nil or read(metadata)
+    if not corrupt_final then
+        assert(value(final,'complete')=='yes')
+        assert(value(final,'events_recorded')=='4')
+        assert(value(final,'event_checksum')=='adler32_v1')
+        assert(value(final,'frame_log_adler32')==frame_prefixes[2])
+        if clock_enabled then
+            assert(value(final,'cycle_log_adler32')==cycle_prefixes[2])
+        else
+            assert(value(final,'cycle_log_adler32')=='not_captured')
+        end
     end
     for n=1,2 do
         local prefix=string.format('%s/frame_%06d',dir,n)
@@ -107,11 +149,14 @@ local function run(clock_enabled)
             assert(os.remove(prefix..ext))
         end
     end
+    -- No collector callbacks remain active beyond this point.
+    io=saved_io
     assert(os.remove(log))
     if clock_enabled then assert(os.remove(timed)) end
     assert(os.remove(metadata))
     assert(os.execute('rmdir "'..dir..'"'))
 end
-run(true)
-run(false)
-print('Stage83 PPU full and per-frame event-log checksum probes PASS')
+run(true,false)
+run(false,false)
+run(true,true)
+print('Stage84 rolling PPU event digests, final readback and corruption rejection PASS')
