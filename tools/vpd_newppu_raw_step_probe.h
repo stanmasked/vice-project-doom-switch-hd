@@ -1317,8 +1317,11 @@ inline void stage119_pixel(unsigned sl,unsigned xt,unsigned xp,
     if(a.emitted || sl<1 || sl>240 || xt>=32 || xp>=8)return;
     if(a.writes==0)return;
     const unsigned x=xt*8+xp;
-    const bool before=sl==a.sl1+1 && x<16;
-    const bool after=a.writes==2 && sl==a.sl2+1 && x<16;
+    // Stage122: skip the first four rendered tiles, which can retain
+    // previous-line BGData lookahead across a coarse-scroll latch change.
+    // The independent same-frame test samples pixels 32..47.
+    const bool before=sl==a.sl1+1 && x>=32 && x<48;
+    const bool after=a.writes==2 && sl==a.sl2+1 && x>=32 && x<48;
     if(!before && !after)return;
     if(a.frame!=stage110_state().frame ||
        (before && a.samples1>=16) || (after && a.samples2>=16))
@@ -1356,7 +1359,7 @@ inline void stage119_pixel(unsigned sl,unsigned xt,unsigned xp,
         a.stride_prev1=ntaddr;
         ++a.stride_samples1;
         if(a.samples1==0){
-            if(x!=0 || nt!=0 || pattern!=0)++a.invalid;
+            if(x!=32 || nt!=0 || pattern!=0)++a.invalid;
             a.first_color=framebuffer_color;
             a.first_nt=nt; a.first_pattern=pattern; a.first_live_ht=liveht;
             a.first_ntaddr=ntaddr;
@@ -1373,7 +1376,7 @@ inline void stage119_pixel(unsigned sl,unsigned xt,unsigned xp,
         a.stride_prev2=ntaddr;
         ++a.stride_samples2;
         if(a.samples2==0){
-            if(x!=0 || nt!=1 || pattern!=3)++a.invalid;
+            if(x!=32 || nt!=1 || pattern!=3)++a.invalid;
             a.second_color=framebuffer_color;
             a.second_nt=nt; a.second_pattern=pattern; a.second_live_ht=liveht;
             a.second_ntaddr=ntaddr;
@@ -1394,8 +1397,8 @@ inline void stage119_pixel(unsigned sl,unsigned xt,unsigned xp,
         if(a.invalid || a.stride_invalid ||
            a.stride_samples1!=16 || a.stride_samples2!=16 ||
            a.stride_transitions1!=2 || a.stride_transitions2!=2 ||
-           (a.first_ntaddr & 31U)!=0U ||
-           (a.second_ntaddr & 31U)!=1U) {
+           (a.first_ntaddr & 31U)!=4U ||
+           (a.second_ntaddr & 31U)!=5U) {
             std::fprintf(stderr,
                 "VPD_STAGE120_REJECTED_NT_STRIDE invalid=%u "
                 "stage119_invalid=%u samples1=%u samples2=%u "
@@ -1464,8 +1467,8 @@ inline void stage121_pixel(unsigned sl,unsigned xt,unsigned xp,
     Stage121AttributeAudit& a=stage121_state();
     if(a.emitted || old.writes==0 || xt>=32 || xp>=8)return;
     const unsigned x=xt*8U+xp;
-    const bool before=sl==old.sl1+1 && x<16;
-    const bool after=old.writes==2 && sl==old.sl2+1 && x<16;
+    const bool before=sl==old.sl1+1 && x>=32 && x<48;
+    const bool after=old.writes==2 && sl==old.sl2+1 && x>=32 && x<48;
     if(!before && !after)return;
     // Independently derive the attribute address and quadrant using the
     // buffered nametable source, not the final framebuffer pixel.
