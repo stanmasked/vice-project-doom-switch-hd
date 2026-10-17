@@ -120,7 +120,7 @@ jobs:
           lua5.4 tests/test_fceux_capture_preflight.lua
       - name: Stage76 reject stale capture metadata during all six FCEUX sessions
         run: lua5.4 tests/test_fceux_capture_session_invalidation.lua
-      - name: Stage77 verify all four mirrored MMC3 video register pairs
+      - name: Stage77-78 verify MMC3 and PPU CPU address mirrors
         run: lua5.4 tests/test_fceux_ppu_mmc3_mirrors.lua
       - name: Stage76 invalidate stale private PPU frame metadata on failure
         run: lua5.4 tests/test_fceux_ppu_session_invalidation.lua
