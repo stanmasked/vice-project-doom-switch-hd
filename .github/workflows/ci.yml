@@ -137,6 +137,8 @@ jobs:
         run: python -m unittest discover -s tests -p 'test_fceux_stage104_native_event_order.py' -v
       - name: Stage105 native PPUSTATUS frame pre-clear versus CPU $2002 read provenance
         run: python -m unittest discover -s tests -p 'test_fceux_stage105_frame_preclear.py' -v
+      - name: Stage106 pinned MMC3 CHR register writes and frame-window native gates
+        run: python -m unittest discover -s tests -p 'test_fceux_stage106_mmc3_chr.py' -v
       - name: Stage89 validated static screen hypotheses and explicit provenance
         run: python -m unittest discover -s tests -p 'test_ppu_capture_session.py' -v
       - name: Stage88 audited PPU reference-frame inventory regressions
