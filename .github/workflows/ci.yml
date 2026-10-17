@@ -157,6 +157,8 @@ jobs:
         run: python -m unittest discover -s tests -p 'test_fceux_stage114_plane_pairs.py' -v
       - name: Stage115 scanline-edge prefetch carry provenance regressions
         run: python -m unittest discover -s tests -p 'test_fceux_stage115_scanline_carry.py' -v
+      - name: Stage116 fine-scroll pixel-to-scanline carry proof tests
+        run: python -m unittest discover -s tests -p 'test_fceux_stage116_fine_scroll.py' -v
       - name: Stage89 validated static screen hypotheses and explicit provenance
         run: python -m unittest discover -s tests -p 'test_ppu_capture_session.py' -v
       - name: Stage88 audited PPU reference-frame inventory regressions

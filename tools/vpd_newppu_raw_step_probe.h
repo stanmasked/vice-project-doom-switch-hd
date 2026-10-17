@@ -3,7 +3,7 @@
 // Install callback explicitly only on a controlled private emulator build.
 #ifndef VPD_NEWPPU_RAW_STEP_PROBE_H
 #define VPD_NEWPPU_RAW_STEP_PROBE_H
-#if defined(VPD_NATIVE_SYNTHETIC_SMOKE) || defined(VPD_NATIVE_SYNTHETIC_VBLANK) || defined(VPD_NATIVE_SYNTHETIC_PPUSTATUS_READ) || defined(VPD_NATIVE_SYNTHETIC_EVENT_ORDER) || defined(VPD_NATIVE_SYNTHETIC_PRECLEAR) || defined(VPD_NATIVE_SYNTHETIC_MMC3_CHR) || defined(VPD_NATIVE_SYNTHETIC_BG_PIXELS) || defined(VPD_NATIVE_SYNTHETIC_BG_FETCH) || defined(VPD_NATIVE_SYNTHETIC_CHR_TIMELINE) || defined(VPD_NATIVE_SYNTHETIC_MIDFRAME_CHR) || defined(VPD_NATIVE_SYNTHETIC_BG_TILES) || defined(VPD_NATIVE_SYNTHETIC_BG_PREFETCH) || defined(VPD_NATIVE_SYNTHETIC_BG_PLANE_PAIRS) || defined(VPD_NATIVE_SYNTHETIC_SCANLINE_CARRY)
+#if defined(VPD_NATIVE_SYNTHETIC_SMOKE) || defined(VPD_NATIVE_SYNTHETIC_VBLANK) || defined(VPD_NATIVE_SYNTHETIC_PPUSTATUS_READ) || defined(VPD_NATIVE_SYNTHETIC_EVENT_ORDER) || defined(VPD_NATIVE_SYNTHETIC_PRECLEAR) || defined(VPD_NATIVE_SYNTHETIC_MMC3_CHR) || defined(VPD_NATIVE_SYNTHETIC_BG_PIXELS) || defined(VPD_NATIVE_SYNTHETIC_BG_FETCH) || defined(VPD_NATIVE_SYNTHETIC_CHR_TIMELINE) || defined(VPD_NATIVE_SYNTHETIC_MIDFRAME_CHR) || defined(VPD_NATIVE_SYNTHETIC_BG_TILES) || defined(VPD_NATIVE_SYNTHETIC_BG_PREFETCH) || defined(VPD_NATIVE_SYNTHETIC_BG_PLANE_PAIRS) || defined(VPD_NATIVE_SYNTHETIC_SCANLINE_CARRY) || defined(VPD_NATIVE_SYNTHETIC_FINE_SCROLL)
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -881,6 +881,126 @@ inline void stage115_edge_draw(unsigned sl, unsigned xt, unsigned xp,
                 "invalid=0 same_synthetic_frame=yes "
                 "original_game_scroll_proven=no\n",
                 a.lag_min, a.lag_max);
+        }
+        std::fflush(stderr);
+        a.emitted = true;
+    }
+}
+#endif
+
+// Stage116: $2005 fine-horizontal scroll and two carried BGData records.
+// Probe first screen tile pixels only. For x in [0,7], bgtile is
+// floor((x+fine_scroll)/8), i.e. record 0 or 1 loaded on prior row.
+// Observed CHR is blank/filled generated Mapper-4 test data, not game art.
+#if defined(VPD_NATIVE_SYNTHETIC_FINE_SCROLL) && defined(VPD_NATIVE_SYNTHETIC_MIDFRAME_CHR)
+struct FineCarryRecord {
+    unsigned from_sl = 0, low = 0, high = 0, write_epoch = 0;
+    unsigned long long read_tick = 0;
+    bool valid = false;
+};
+struct FineScrollAudit {
+    FineCarryRecord record[2];
+    unsigned total = 0, zero = 0, filled = 0, slot0 = 0, slot1 = 0;
+    unsigned first_filled_sl = 0, invalid = 0;
+    unsigned last_sl = 0, last_x = 0;
+    unsigned long long min_lag = 0, max_lag = 0;
+    bool emitted = false;
+};
+inline FineScrollAudit& stage116_audit() {
+    static FineScrollAudit a;
+    return a;
+}
+inline bool stage116_enabled() {
+    static const char* opt = std::getenv("VPD_STAGE116_FINE_SCROLL_PROBE");
+    return opt && std::strcmp(opt, "1") == 0;
+}
+inline unsigned stage116_expected_scroll() {
+    static const char* value = std::getenv("VPD_STAGE116_EXPECT_FINE_SCROLL");
+    if (!value || value[0] < '0' || value[0] > '7' || value[1] != '\0')
+        return 255;
+    return static_cast<unsigned>(value[0] - '0');
+}
+inline void stage116_edge_read(unsigned sl, unsigned slot,
+                                unsigned lo, unsigned hi) {
+    if (!stage116_enabled()) return;
+    FineScrollAudit& a = stage116_audit();
+    if (a.emitted || sl < 95 || sl > 110) return;
+    if (slot >= 2 || lo > 255 || hi > 255) {
+        ++a.invalid;
+        return;
+    }
+    FineCarryRecord& r = a.record[slot];
+    r.from_sl = sl;
+    r.low = lo;
+    r.high = hi;
+    r.write_epoch = stage110_state().writes;
+    r.read_tick = channel().internal_tick_units;
+    r.valid = true;
+}
+inline void stage116_pixel(unsigned sl, unsigned xt, unsigned xp,
+                            unsigned bgtile, unsigned bgpx,
+                            unsigned fine, unsigned lo, unsigned hi,
+                            unsigned pattern) {
+    if (!stage116_enabled() || sl < 96 || sl > 111 || xt != 0) return;
+    FineScrollAudit& a = stage116_audit();
+    if (a.emitted) return;
+    const unsigned target_scroll = stage116_expected_scroll();
+    const unsigned expected_tile = (xp + target_scroll) >> 3;
+    const unsigned expected_pixel = (xp + target_scroll) & 7;
+    if (xp >= 8 || target_scroll > 7 || fine != target_scroll ||
+        bgtile != expected_tile || bgpx != expected_pixel ||
+        bgtile >= 2 || lo > 255 || hi > 255 || pattern > 3 ||
+        (a.total && (sl < a.last_sl ||
+         (sl == a.last_sl && xp <= a.last_x)))) {
+        ++a.invalid;
+        return;
+    }
+    const FineCarryRecord& r = a.record[bgtile];
+    const unsigned long long tick = channel().internal_tick_units;
+    const bool new_bank = sl >= 105;
+    const unsigned target = new_bank ? 255U : 0U;
+    if (!r.valid || r.from_sl + 1 != sl ||
+        r.low != lo || r.high != hi ||
+        lo != target || hi != target ||
+        r.write_epoch != (new_bank ? 2U : 1U) ||
+        tick <= r.read_tick ||
+        pattern != (new_bank ? 3U : 0U)) ++a.invalid;
+    const unsigned long long lag = tick >= r.read_tick ? tick - r.read_tick : 0;
+    if (a.total == 0 || lag < a.min_lag) a.min_lag = lag;
+    if (lag > a.max_lag) a.max_lag = lag;
+    ++a.total;
+    a.last_sl = sl;
+    a.last_x = xp;
+    if (bgtile == 0) ++a.slot0;
+    else ++a.slot1;
+    if (new_bank) {
+        ++a.filled;
+        if (!a.first_filled_sl) a.first_filled_sl = sl;
+    } else ++a.zero;
+    if (a.total == 128 && !a.emitted) {
+        const MidframeChr& m = stage110_state();
+        if (a.zero != 72 || a.filled != 56 ||
+            a.slot0 != 16U * (8U-target_scroll) ||
+            a.slot1 != 16U * target_scroll ||
+            a.first_filled_sl != 105 ||
+            !m.switched || m.writes != 2 || m.switch_sl != 104 ||
+            a.min_lag == 0 || a.max_lag < a.min_lag ||
+            a.max_lag > 1000000ULL) ++a.invalid;
+        if (a.invalid) {
+            std::fprintf(stderr,
+                "VPD_STAGE116_REJECTED_FINE_SCROLL invalid=%u "
+                "samples=%u slot0=%u slot1=%u fine=%u synthetic_only=yes\n",
+                a.invalid, a.total, a.slot0, a.slot1, target_scroll);
+        } else {
+            std::fprintf(stderr,
+                "VPD_STAGE116_NATIVE_FINE_SCROLL_PASS "
+                "fine_scroll=%u source_switch_sl=104 first_new_sl=105 "
+                "samples=128 old_pixels=72 new_pixels=56 "
+                "slot0_pixels=%u slot1_pixels=%u "
+                "lag_min=%llu lag_max=%llu "
+                "invalid=0 same_native_frame=yes synthetic_only=yes "
+                "original_game_scroll_proven=no\n",
+                target_scroll, a.slot0, a.slot1, a.min_lag, a.max_lag);
         }
         std::fflush(stderr);
         a.emitted = true;
