@@ -55,7 +55,7 @@ def verify(log, fine):
 class Source(unittest.TestCase):
     def test_real_pinned_attribute_fetch_and_bgdata_consumption(self):
         patched = stage121_patch(stage119_patch(STAGE118_SOURCE))
-        self.assertEqual(patched.count(GUARD), 8)
+        self.assertEqual(patched.count(GUARD), 4)
         self.assertEqual(patched.count(b"vpd_ppu_probe::stage121_pixel("), 1)
         self.assertIn(b"vpd_stage121_ataddr = RefreshAddr", patched)
         self.assertIn(b"vpd_stage121_atraw = at", patched)
