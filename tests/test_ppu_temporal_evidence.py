@@ -9,7 +9,7 @@ from audit_ppu_temporal_evidence import (
     analyze_verified, event_family, screen_activity_relation,
     summarize_callback_window,
 )
-from test_ppu_capture_session import CaptureSessionTests, checksum_file
+import test_ppu_capture_session as capture_fixtures
 from verify_ppu_capture_session import SessionError
 
 
@@ -94,7 +94,7 @@ class CallbackSignatureTests(unittest.TestCase):
 
 class VerifiedTemporalReportTests(unittest.TestCase):
     def setUp(self):
-        fixture = CaptureSessionTests('test_complete_session')
+        fixture = capture_fixtures.CaptureSessionTests('test_complete_session')
         fixture.setUp()
         self.addCleanup(fixture.doCleanups)
         self.f = fixture
@@ -108,7 +108,7 @@ class VerifiedTemporalReportTests(unittest.TestCase):
             ('.screen.pal.bin', 'screen_pal_adler32')):
             path = Path(str(second) + suffix)
             path.write_bytes(Path(str(first) + suffix).read_bytes())
-            self.f.frames[3][key] = checksum_file(path)
+            self.f.frames[3][key] = capture_fixtures.checksum_file(path)
         self.f.finalize()
         return second
 
@@ -147,7 +147,7 @@ class VerifiedTemporalReportTests(unittest.TestCase):
         data = bytearray(path.read_bytes())
         data[10] ^= 1
         path.write_bytes(data)
-        self.f.frames[3]['screen_pal_adler32'] = checksum_file(path)
+        self.f.frames[3]['screen_pal_adler32'] = capture_fixtures.checksum_file(path)
         self.f.finalize()
         p = analyze_verified(self.f.manifest)['pairs'][0]
         self.assertEqual(p['known_changed_screen_cells'], 1)

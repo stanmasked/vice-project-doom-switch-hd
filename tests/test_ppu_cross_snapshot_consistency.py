@@ -8,7 +8,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'tools'))
 from audit_ppu_cross_snapshot_consistency import (
     TOTAL_CELLS, PIXELS, analyze_verified, compare_saved_screen_cells,
 )
-from test_ppu_capture_session import CaptureSessionTests, checksum_file
+import test_ppu_capture_session as capture_fixtures
 from verify_ppu_capture_session import SessionError
 
 
@@ -48,7 +48,7 @@ class SameCoordinateCellTests(unittest.TestCase):
 
 class VerifiedSessionPairTests(unittest.TestCase):
     def setUp(self):
-        fixture = CaptureSessionTests('test_complete_session')
+        fixture = capture_fixtures.CaptureSessionTests('test_complete_session')
         fixture.setUp()
         self.addCleanup(fixture.doCleanups)
         self.f = fixture
@@ -63,7 +63,7 @@ class VerifiedSessionPairTests(unittest.TestCase):
         ):
             path = Path(str(second) + suffix)
             path.write_bytes(Path(str(first) + suffix).read_bytes())
-            self.f.frames[3][key] = checksum_file(path)
+            self.f.frames[3][key] = capture_fixtures.checksum_file(path)
         self.f.finalize()
         return second
 
@@ -116,7 +116,7 @@ class VerifiedSessionPairTests(unittest.TestCase):
         payload[0] ^= 1
         payload[8] = 254
         path.write_bytes(payload)
-        self.f.frames[3]['screen_pal_adler32'] = checksum_file(path)
+        self.f.frames[3]['screen_pal_adler32'] = capture_fixtures.checksum_file(path)
         self.f.finalize()
         pair = analyze_verified(self.f.manifest)['pairs'][0]
         self.assertEqual(pair['screen_cell_counts']['fully_known_changed'], 1)

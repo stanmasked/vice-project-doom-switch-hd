@@ -8,7 +8,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'tools'))
 from audit_ppu_background_readiness import (
     CLASSES, PIXELS, TOTAL_CELLS, analyze_verified, classify_cells,
 )
-from test_ppu_capture_session import CaptureSessionTests
+import test_ppu_capture_session as capture_fixtures
 from verify_ppu_capture_session import SessionError
 
 
@@ -49,7 +49,7 @@ class CellClassificationTests(unittest.TestCase):
 class VerifiedReadinessTests(unittest.TestCase):
     def setUp(self):
         # Reuse the existing real session-integrity fixture, not a fake proof.
-        fixture = CaptureSessionTests('test_complete_session')
+        fixture = capture_fixtures.CaptureSessionTests('test_complete_session')
         fixture.setUp()
         self.addCleanup(fixture.doCleanups)
         self.capture = fixture
