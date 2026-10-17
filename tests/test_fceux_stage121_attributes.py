@@ -28,14 +28,14 @@ STAGE118_SOURCE = STAGE118_SOURCE.replace(
 )
 STAGE120 = (
     "VPD_STAGE120_NATIVE_NT_STRIDE_PASS fine1={fine} fine2={second} "
-    "nt_addr0=2000 nt_addr1=2001 samples0=16 samples1=16 "
+    "nt_addr0=2004 nt_addr1=2005 samples0=16 samples1=16 "
     "transitions0=2 transitions1=2 invalid=0 "
     "real_fceux_nt_to_xbuf=yes synthetic_only=yes "
     "original_game_nt_stride_proven=no"
 )
 STAGE121 = (
     "VPD_STAGE121_NATIVE_ATTRIBUTE_PASS fine1={fine} fine2={second} "
-    "attr_addr0=23C0 attr_addr1=23C0 samples0=16 samples1=16 "
+    "attr_addr0=23C1 attr_addr1=23C1 samples0=16 samples1=16 "
     "invalid=0 buffered_attribute_to_pixel=yes synthetic_only=yes "
     "original_game_palette_proven=no"
 )
@@ -103,8 +103,8 @@ class Audit(unittest.TestCase):
         good = good_log(3)
         for bad in (
             "", good + "\n" + good,
-            good.replace("attr_addr0=23C0", "attr_addr0=27C0"),
-            good.replace("attr_addr1=23C0", "attr_addr1=23C1"),
+            good.replace("attr_addr0=23C1", "attr_addr0=27C1"),
+            good.replace("attr_addr1=23C1", "attr_addr1=23C0"),
             good.replace("samples0=16", "samples0=15"),
             good.replace("original_game_palette_proven=no",
                          "original_game_palette_proven=yes"),
@@ -147,7 +147,7 @@ int main(int argc,char**) {
    const unsigned ntaddr=0x2000U+tile+(second?1U:0U);
    unsigned attraddr=0x23C0U+(ntaddr&0x0C00U)+
              ((ntaddr&0x0380U)>>4)+((ntaddr&0x001CU)>>2);
-   if(argc>1&&sl==106&&x==8)attraddr+=0x400U;
+   if(argc>1&&sl==106&&x==40)attraddr+=0x400U;
    const unsigned shift=((ntaddr&0x40U)?4U:0U)+
                         ((ntaddr&0x02U)?2U:0U);
    const unsigned raw=attraddr&1U,decoded=((raw>>shift)&3U)<<2;
