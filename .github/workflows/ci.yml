@@ -135,6 +135,8 @@ jobs:
         run: python -m unittest discover -s tests -p 'test_fceux_stage103_ppustatus_reads.py' -v
       - name: Stage104 shared-clock native VBlank source event and $2002 read ordering
         run: python -m unittest discover -s tests -p 'test_fceux_stage104_native_event_order.py' -v
+      - name: Stage105 native PPUSTATUS frame pre-clear versus CPU $2002 read provenance
+        run: python -m unittest discover -s tests -p 'test_fceux_stage105_frame_preclear.py' -v
       - name: Stage89 validated static screen hypotheses and explicit provenance
         run: python -m unittest discover -s tests -p 'test_ppu_capture_session.py' -v
       - name: Stage88 audited PPU reference-frame inventory regressions
