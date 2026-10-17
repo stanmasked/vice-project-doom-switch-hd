@@ -25,10 +25,10 @@ def add_boundary_hooks(raw):
         raise ValueError("Mixed PPU source newlines")
     first = ENTER + nl + ENTER_AFTER
     second = CLEAR + nl + CLEAR_AFTER
-    if raw.count(first) != 1 or raw.count(second) != 1:
-        raise ValueError("Missing/ambiguous pinned newppu status-write anchors")
     if GUARD in raw or b"observe_native_status_assignment" in raw:
         raise ValueError("Already instrumented native VBlank status assignment")
+    if raw.count(first) != 1 or raw.count(second) != 1:
+        raise ValueError("Missing/ambiguous pinned newppu status-write anchors")
     e = (ENTER + nl + GUARD + nl +
          b"\t\tvpd_ppu_probe::observe_native_status_assignment(" +
          b"true, (PPU_status & 0x80) != 0);" + nl +
