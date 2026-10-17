@@ -17,6 +17,9 @@ from run_stage100_fceux_synthetic_smoke import backend_settings, categorize_exit
 
 FINES = (1, 3, 5, 7)
 MARKER = "VPD_STAGE119_NATIVE_NAMETABLE_PASS"
+# Do not terminate native FCEUX after Stage119 flushes but before the
+# Stage121 attribute observer has emitted its separate evidence record.
+FINAL_MARKER = "VPD_STAGE121_NATIVE_ATTRIBUTE_PASS"
 PATTERN = re.compile(
     r"^VPD_STAGE119_NATIVE_NAMETABLE_PASS "
     r"fine1=(\d+) fine2=(\d+) coarse1=0 coarse2=1 "
@@ -108,7 +111,7 @@ def execute(binary, rom, directory, *, fine, enabled=True, positive=True,
             while time.monotonic() < limit:
                 time.sleep(0.1)
                 log = output.read_text(encoding="utf8", errors="replace")
-                if positive and MARKER in log:
+                if positive and FINAL_MARKER in log:
                     break
                 if proc.poll() is not None:
                     break
