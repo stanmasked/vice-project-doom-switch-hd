@@ -1258,6 +1258,7 @@ struct NTIdentityAudit {
     unsigned first_color=0,second_color=0;
     unsigned first_nt=0,second_nt=0,first_pattern=0,second_pattern=0;
     unsigned first_live_ht=0,second_live_ht=0;
+    unsigned first_ntaddr=0,second_ntaddr=0;
     unsigned last_x1=0,last_x2=0;
     unsigned long frame=0;
     bool have_color1=false,have_color2=false,emitted=false;
@@ -1303,7 +1304,7 @@ inline void stage119_write(unsigned fine,unsigned coarse) {
 }
 inline void stage119_pixel(unsigned sl,unsigned xt,unsigned xp,
                            unsigned tile,unsigned bgpx,unsigned fine,
-                           unsigned liveht,unsigned nt,
+                           unsigned liveht,unsigned nt,unsigned ntaddr,
                            unsigned lo,unsigned hi,unsigned pattern,
                            unsigned framebuffer_color) {
     if(!stage119_enabled())return;
@@ -1324,6 +1325,7 @@ inline void stage119_pixel(unsigned sl,unsigned xt,unsigned xp,
     const unsigned expected_byte=expected_nt?255U:0U;
     if(fine!=targetfine || tile!=expected_tile ||
        bgpx!=(source&7U) || nt!=expected_nt ||
+       ntaddr<0x2000U || ntaddr>=0x3000U || (ntaddr&1U)!=nt ||
        lo!=expected_byte || hi!=expected_byte ||
        pattern!=(expected_nt?3U:0U) ||
        framebuffer_color>255 || tile>=34)
@@ -1333,6 +1335,7 @@ inline void stage119_pixel(unsigned sl,unsigned xt,unsigned xp,
             if(x!=0 || nt!=0 || pattern!=0)++a.invalid;
             a.first_color=framebuffer_color;
             a.first_nt=nt; a.first_pattern=pattern; a.first_live_ht=liveht;
+            a.first_ntaddr=ntaddr;
             a.have_color1=true;
         }else if(x<=a.last_x1)++a.invalid;
         a.last_x1=x;
@@ -1343,6 +1346,7 @@ inline void stage119_pixel(unsigned sl,unsigned xt,unsigned xp,
             if(x!=0 || nt!=1 || pattern!=3)++a.invalid;
             a.second_color=framebuffer_color;
             a.second_nt=nt; a.second_pattern=pattern; a.second_live_ht=liveht;
+            a.second_ntaddr=ntaddr;
             a.have_color2=true;
         }else if(x<=a.last_x2)++a.invalid;
         a.last_x2=x;
@@ -1352,6 +1356,7 @@ inline void stage119_pixel(unsigned sl,unsigned xt,unsigned xp,
     if(a.samples1==16 && a.samples2==16 && !a.emitted){
         if(a.invalid || a.writes!=2 || !a.have_color1 ||
            !a.have_color2 || a.first_color==a.second_color ||
+           a.first_ntaddr==a.second_ntaddr ||
            a.odd1==0 || a.odd1>=16 || a.odd2==0 || a.odd2>=16)
            ++a.invalid;
         if(a.invalid){
@@ -1372,11 +1377,13 @@ inline void stage119_pixel(unsigned sl,unsigned xt,unsigned xp,
                 "nametable0_x0=0 nametable1_x0=1 "
                 "pattern0_x0=0 pattern1_x0=3 "
                 "first_color=%u second_color=%u "
+                "nt_address0=%04X nt_address1=%04X "
                 "samples_per_row=16 odd_first=%u odd_second=%u "
                 "invalid=0 real_fceux_xbuf=yes synthetic_only=yes "
                 "original_game_coarse_scroll_proven=no\n",
                 a.f1,a.f2,a.sl1,a.sl2,a.sl1+1,a.sl2+1,
-                a.first_color,a.second_color,a.odd1,a.odd2);
+                a.first_color,a.second_color,
+                a.first_ntaddr,a.second_ntaddr,a.odd1,a.odd2);
         }
         std::fflush(stderr);
         a.emitted=true;

@@ -25,6 +25,7 @@ PATTERN = re.compile(
     r"nametable0_x0=0 nametable1_x0=1 "
     r"pattern0_x0=0 pattern1_x0=3 "
     r"first_color=(\d+) second_color=(\d+) "
+    r"nt_address0=([0-9A-F]{4}) nt_address1=([0-9A-F]{4}) "
     r"samples_per_row=16 odd_first=(\d+) odd_second=(\d+) "
     r"invalid=0 real_fceux_xbuf=yes synthetic_only=yes "
     r"original_game_coarse_scroll_proven=no$", re.MULTILINE,
@@ -39,17 +40,25 @@ def verify_report(log, fine):
     found = list(PATTERN.finditer(log))
     if len(found) != 1 or log.count(MARKER) != 1:
         raise TileIdentityError("Absent/duplicated/forged nametable-to-XBuf evidence")
-    f, g, first, second, sl1, sl2, color1, color2, odd1, odd2 = map(
-        int, found[0].groups())
+    groups = found[0].groups()
+    f, g, first, second, sl1, sl2, color1, color2 = map(int, groups[:8])
+    addr0, addr1 = (int(v, 16) for v in groups[8:10])
+    odd1, odd2 = map(int, groups[10:])
     if (fine not in FINES or f != fine or g != 8-fine or
             not 40 <= first <= 210 or second != first+1 or
             sl1 != first+1 or sl2 != second+1 or
             color1 == color2 or color1 > 255 or color2 > 255 or
+            not 0x2000 <= addr0 < 0x3000 or
+            not 0x2000 <= addr1 < 0x3000 or
+            addr0 == addr1 or (addr0 & 1) != 0 or (addr1 & 1) != 1 or
             not 0 < odd1 < 16 or not 0 < odd2 < 16):
         raise TileIdentityError("Tile identity, framebuffer color or scroll origin inconsistent")
     return {"fine_first": f, "fine_second": g, "source_line": first,
             "second_write_line": second, "first_xbuf_color": color1,
-            "second_xbuf_color": color2, "odd_first": odd1,
+            "second_xbuf_color": color2,
+            "first_nametable_source_address": addr0,
+            "second_nametable_source_address": addr1,
+            "odd_first": odd1,
             "odd_second": odd2, "original_game_coarse_scroll_proven": False}
 
 

@@ -7,7 +7,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
 from make_stage119_nametable_rom import make_rom, nametable_init, START_RENDER_SETUP
 from make_stage110_synthetic_midframe_rom import program
-from inject_fceux_stage119_nametable_pixels import patch, PIXEL, WRITE
+from inject_fceux_stage119_nametable_pixels import patch, PIXEL, WRITE, RECORD, READ_NT
 
 class Generated(unittest.TestCase):
     def test_nt_loop_and_ppu_latch_restore(self):
@@ -46,19 +46,23 @@ class Generated(unittest.TestCase):
                     make_rom(Path(tmp)/"bad.nes",**{key:1})
 
 class PinnedHooks(unittest.TestCase):
-    SAMPLE=(b"vpd_ppu_probe::stage115_edge_read(sl, xt, 0, 0);\r\n"+
+    SAMPLE=(RECORD+b"\r\n"+READ_NT+b"\r\n"+
+            b"vpd_ppu_probe::stage115_edge_read(sl, xt, 0, 0);\r\n"+
             WRITE+b"\r\n"+PIXEL+b"\r\n")
     def test_exact_native_nt_pixel_observer(self):
         out=patch(self.SAMPLE)
         self.assertEqual(out.count(b"stage119_write("),1)
         self.assertEqual(out.count(b"stage119_pixel("),1)
         self.assertIn(b"bgdata.main[bgtile].nt",out)
+        self.assertIn(b"vpd_stage119_ntaddr = NTRefreshAddr",out)
 
     def test_bad_source_rejected(self):
         for data in (self.SAMPLE+self.SAMPLE,patch(self.SAMPLE),
                      self.SAMPLE.replace(WRITE,b"missing"),
                      self.SAMPLE.replace(PIXEL,b"missing"),
-                     self.SAMPLE.replace(b"stage115_edge_read",b"missing")):
+                     self.SAMPLE.replace(b"stage115_edge_read",b"missing"),
+                     self.SAMPLE.replace(READ_NT,b"missing"),
+                     self.SAMPLE.replace(RECORD,b"missing")):
             with self.assertRaises(ValueError):
                 patch(data)
 

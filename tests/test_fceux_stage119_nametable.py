@@ -10,13 +10,14 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
 from make_stage119_nametable_rom import make_rom, nametable_init
 from inject_fceux_stage119_nametable_pixels import (
-    patch, PIXEL, WRITE,
+    patch, PIXEL, WRITE, RECORD, READ_NT,
 )
 from run_stage119_native_nametable import (
     FINES, TileIdentityError, verify_report, verify_sweep,
 )
 
 SOURCE = (
+    RECORD + b"\r\n" + READ_NT + b"\r\n" +
     b"vpd_ppu_probe::stage115_edge_read(sl, xt, bgdata.main[xt].pt[0], "
     b"bgdata.main[xt].pt[1]);\r\n" +
     WRITE + b"\r\n" + PIXEL + b"\r\n"
@@ -27,7 +28,8 @@ PASS = (
     "sample_sl1=105 sample_sl2=106 "
     "nametable0_x0=0 nametable1_x0=1 "
     "pattern0_x0=0 pattern1_x0=3 "
-    "first_color=15 second_color=48 samples_per_row=16 "
+    "first_color=15 second_color=48 "
+    "nt_address0=2000 nt_address1=2001 samples_per_row=16 "
     "odd_first=7 odd_second=9 invalid=0 "
     "real_fceux_xbuf=yes synthetic_only=yes "
     "original_game_coarse_scroll_proven=no"
@@ -79,6 +81,8 @@ class Hook(unittest.TestCase):
         self.assertEqual(out.count(b"stage119_write("), 1)
         self.assertEqual(out.count(b"stage119_pixel("), 1)
         self.assertIn(b"bgdata.main[bgtile].nt", out)
+        self.assertIn(b"vpd_stage119_ntaddr = NTRefreshAddr", out)
+        self.assertIn(b"bgdata.main[bgtile].vpd_stage119_ntaddr", out)
         self.assertIn(b"pixel & 3, *ptr", out)
         self.assertEqual(out.count(b"\r\n"), out.count(b"\n"))
 
@@ -86,7 +90,9 @@ class Hook(unittest.TestCase):
         for source in (SOURCE+SOURCE, patch(SOURCE),
                        SOURCE.replace(PIXEL, b"none"),
                        SOURCE.replace(WRITE, b"none"),
-                       SOURCE.replace(b"stage115_edge_read", b"lost")):
+                       SOURCE.replace(b"stage115_edge_read", b"lost"),
+                       SOURCE.replace(READ_NT, b"lost"),
+                       SOURCE.replace(RECORD, b"lost")):
             with self.subTest(source=source[:25]), self.assertRaises(ValueError):
                 patch(source)
 
@@ -104,6 +110,8 @@ class Witness(unittest.TestCase):
         good = PASS.format(fine=3, second=5)
         for bad in ("", good+"\n"+good,
                     good.replace("second_color=48", "second_color=15"),
+                    good.replace("nt_address0=2000", "nt_address0=1000"),
+                    good.replace("nt_address1=2001", "nt_address1=2000"),
                     good.replace("nametable1_x0=1", "nametable1_x0=0"),
                     good.replace("pattern1_x0=3", "pattern1_x0=0"),
                     good.replace("sample_sl2=106", "sample_sl2=107"),
@@ -143,9 +151,10 @@ int main(int argc, char** argv) {
    const unsigned bgtile=(x+scroll)>>3, bgpx=(x+scroll)&7;
    const unsigned source=(bgtile+(sl>=106?1U:0U))&1U;
    const unsigned n=source, plane=source?255U:0U;
+   const unsigned ntaddr=0x2000U+bgtile+(sl>=106?1U:0U);
    const unsigned pixel=source?3U:0U;
    vpd_ppu_probe::stage119_pixel(sl,x/8,x%8,bgtile,bgpx,
-      scroll,sl>=106?1U:0U,n,plane,plane,pixel,source?48U:15U);
+      scroll,sl>=106?1U:0U,n,ntaddr,plane,plane,pixel,source?48U:15U);
    vpd_ppu_probe::stage110_raster_pixel(sl,sl<105?0U:pixel,
                                          source?48U:15U);
    ++vpd_ppu_probe::channel().internal_tick_units;
