@@ -123,12 +123,12 @@ def check_capture_meta(path):
             metadata[key]=value
     if metadata.get('register_log_complete')!='yes':
         raise ValueError('Register log contains dropped or unverified events')
+    if metadata.get('cycle_trace_available')!='yes':
+        raise ValueError('No FCEUX debugger CPU-cycle timestamps available')
     if metadata.get('mmc3_write_coverage')!='full_8000_ffff_even_odd':
         raise ValueError('Incomplete MMC3 mirrored register coverage')
     if metadata.get('callback_errors')!='0':
         raise ValueError('Unverified callback integrity')
-    if metadata.get('cycle_trace_available')!='yes':
-        raise ValueError('No FCEUX debugger CPU-cycle timestamps available')
     return metadata
 
 
