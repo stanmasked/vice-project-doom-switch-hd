@@ -32,6 +32,24 @@ class CycleTraceTests(unittest.TestCase):
         self.assertEqual(r['frames'][0]['mapper_writes'],4)
         self.assertEqual(r['chr_events'][1]['cpu_cycle'],130)
 
+    def test_mirrored_ppu_status_and_scroll_cycle_events(self):
+        events=[(4,500,0x3FFA,0,'R'),(4,510,0x200D,0x17,'W'),
+                (4,520,0x3FFD,0x27,'W'),(4,530,0x2008,0x80,'W')]
+        result=summarize(events)
+        self.assertEqual(result['frames'][0]['ppu_status_reads'],1)
+        self.assertEqual(result['frames'][0]['scroll_write_count'],2)
+        with tempfile.TemporaryDirectory() as directory:
+            p=Path(directory)/'mirror.tsv'
+            p.write_text(HEADER+'\\n4\\t500\\t3FFA\\t00\\tR\\n'
+                              '4\\t510\\t200D\\t17\\tW\\n',encoding='utf8')
+            self.assertEqual(len(list(parse_events(p))),2)
+            p.write_text(HEADER+'\\n4\\t500\\t3FFB\\t00\\tR\\n')
+            with self.assertRaisesRegex(ValueError,'Unexpected read'):
+                list(parse_events(p))
+            p.write_text(HEADER+'\\n4\\t500\\t3FFA\\tAA\\tR\\n')
+            with self.assertRaisesRegex(ValueError,'Unexpected read'):
+                list(parse_events(p)
+
     def test_counter_reset_creates_new_epoch(self):
         r=summarize([(0,490,0x8000,0,'W'),
                      (0,510,0x8001,7,'W'),
@@ -81,7 +99,7 @@ class CycleTraceTests(unittest.TestCase):
             path.write_text('register_log_complete=yes\ncycle_trace_available=no\n')
             with self.assertRaisesRegex(ValueError,'No FCEUX'):
                 check_capture_meta(path)
-            path.write_text('register_log_complete=yes\ncallback_errors=0\nmmc3_write_coverage=full_8000_ffff_even_odd\ncycle_trace_available=yes\n')
+            path.write_text('register_log_complete=yes\ncallback_errors=0\nmmc3_write_coverage=full_8000_ffff_even_odd\nppu_register_write_coverage=full_2000_3fff_mod8\nppu_status_read_coverage=full_2000_3fff_mod8\ncycle_trace_available=yes\n')
             self.assertEqual(check_capture_meta(path)['cycle_trace_available'],'yes')
             path.write_text('register_log_complete=yes\ncallback_errors=0\n'
                             'cycle_trace_available=yes\n')
@@ -91,6 +109,11 @@ class CycleTraceTests(unittest.TestCase):
                             'mmc3_write_coverage=full_8000_ffff_even_odd\n'
                             'cycle_trace_available=yes\n')
             with self.assertRaisesRegex(ValueError,'callback integrity'):
+                check_capture_meta(path)
+            path.write_text('register_log_complete=yes\\ncallback_errors=0\\n'
+                            'mmc3_write_coverage=full_8000_ffff_even_odd\\n'
+                            'cycle_trace_available=yes\\n')
+            with self.assertRaisesRegex(ValueError,'PPU register mirror'):
                 check_capture_meta(path)
 
 
