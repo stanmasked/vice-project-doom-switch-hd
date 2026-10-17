@@ -110,11 +110,16 @@ local badmeta=read(dir..'/frame_000002.meta.txt')
 assert(badmeta:find('callback_errors=2',1,true))
 assert(badmeta:find('register_log_complete=no',1,true))
 exit()
+local manifest=read(dir..'/ppu_capture_session.meta.txt')
+assert(manifest:find('complete=no',1,true))
+assert(manifest:find('callback_errors=2',1,true))
+assert(manifest:find('frames_captured=2',1,true))
 for _,name in ipairs({
  'frame_000001.meta.txt','frame_000001.ppu.bin',
  'frame_000001.ram.bin','frame_000002.meta.txt',
  'frame_000002.ppu.bin','frame_000002.ram.bin',
- 'mmc3_video_writes.tsv','mmc3_ppu_cycles.tsv'
+ 'mmc3_video_writes.tsv','mmc3_ppu_cycles.tsv',
+ 'ppu_capture_session.meta.txt'
 }) do os.remove(dir..'/'..name) end
 assert(os.execute('rmdir "'..dir..'"'))
 print('Stage77 FCEUX MMC3 all-four-pairs mirrored video callbacks PASS')
