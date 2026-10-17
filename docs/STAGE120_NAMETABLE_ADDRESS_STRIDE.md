@@ -24,8 +24,9 @@ expected = observed_row_base + ((pixel_x + current_fine_x) >> 3) + coarse_phase
 This equation is intentionally scoped to the Stage119 synthetic fixture:
 the nametable writer initializes all four name tables, the sampling
 window is the first 16 pixels of two known scanlines, and the test
-expects the first phase's addresses `$2000/$2001/$2002` and second
-phase's addresses `$2001/$2002/$2003`.
+expects the first phase's *column offsets* `0/1/2` and the second
+phase's offsets `1/2/3`. Row bases are observed from the buffered first
+source address and cannot be assumed to equal `$2000`.
 
 Per 16-pixel window, the observer checks **16 addresses and two
 contiguous tile-address transitions**. Across four independent fine-X
