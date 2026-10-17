@@ -60,6 +60,36 @@ class CycleTraceTests(unittest.TestCase):
         self.assertFalse(r['out_of_order_frame_numbers'])
         self.assertEqual(r['frames'][1]['chr_events'][0]['cycles_since_first_logged_event_this_frame'],5)
 
+    def test_same_frame_decrease_is_possible_discontinuity_not_proven_reset(self):
+        report=summarize([(4,200,0x8000,0,'W'),
+                          (4,150,0x8001,5,'W'),
+                          (4,170,0x3FFA,0,'R')])
+        self.assertEqual(report['cpu_clock_decreases_same_frame'],1)
+        self.assertEqual(report['cpu_clock_decreases_between_frames'],0)
+        self.assertEqual(report['cpu_clock_resets_or_discontinuities'],1)
+        self.assertEqual(report['frames'][0]['cpu_clock_regressions_within_frame'],1)
+        self.assertFalse(report['counter_reset_proven'])
+
+    def test_cross_frame_decrease_and_equal_timestamps_diagnostic(self):
+        report=summarize([(4,200,0x8000,0,'W'),
+                          (4,200,0x8001,5,'W'),
+                          (5,90,0x8000,0,'W'),
+                          (5,90,0x8001,7,'W')])
+        self.assertEqual(report['cpu_clock_decreases_between_frames'],1)
+        self.assertEqual(report['cpu_clock_equal_adjacent'],2)
+        self.assertEqual(report['frames'][0]['cpu_clock_equal_adjacent'],1)
+        self.assertEqual(report['frames'][1]['cpu_clock_equal_adjacent'],1)
+        self.assertEqual(report['frames'][1]['cpu_clock_regressions_from_previous_frame'],1)
+        self.assertFalse(report['counter_reset_proven'])
+
+    def test_stable_clock_does_not_imply_frame_start_timing(self):
+        report=summarize([(12,900,0x8000,0,'W'),
+                          (13,29800,0x8001,6,'W')])
+        self.assertEqual(report['cpu_clock_decreases_same_frame'],0)
+        self.assertEqual(report['cpu_clock_decreases_between_frames'],0)
+        self.assertEqual(report['cpu_clock_equal_adjacent'],0)
+        self.assertFalse(report['counter_reset_proven'])
+
     def test_unobserved_registers_never_guessed(self):
         r=summarize([(0,10,0x8001,3,'W')])
         self.assertEqual(r['unpaired_mmc3_data_writes'],1)
