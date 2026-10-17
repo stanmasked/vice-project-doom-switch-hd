@@ -130,30 +130,30 @@ def check_snapshot_blob(path, size, declared_checksum):
 
 
 def check_log_checksums(path, expected_checksum, expected_header):
-    """Checksum complete on-disk TSV and every exact newline-terminated prefix.
+    """Stream TSV checksums without allocating a duplicate file-sized buffer.
 
-    Index 0 is the header checksum; index N covers header plus N records.
-    Return the list to bind individual snapshot checkpoints to log bytes.
+    Index 0 is the header checksum; index N covers header plus N rows.
+    Independent final and per-snapshot verification remains mandatory.
     """
     path=Path(path)
     if re.fullmatch(r'[0-9A-F]{8}', expected_checksum or '') is None:
         raise SessionError(f'Missing/invalid event log checksum {path.name}')
-    try:
-        data=path.read_bytes()
-    except OSError as exc:
-        raise SessionError(f'Missing/unreadable event log {path.name}') from exc
-    if not data.endswith(b'\n'):
-        raise SessionError(f'Truncated event log {path.name}')
-    lines=data.splitlines(keepends=True)
-    if not lines or lines[0]!=expected_header.encode('ascii')+b'\n':
-        raise SessionError(f'Invalid event log header {path.name}')
-    rolling=1
     checksums=[]
-    for line in lines:
-        if not line.endswith(b'\n'):
-            raise SessionError(f'Invalid event line termination {path.name}')
-        rolling=zlib.adler32(line,rolling)
-        checksums.append(f'{rolling:08X}')
+    try:
+        with path.open('rb') as stream:
+            header=stream.readline()
+            if header!=expected_header.encode('ascii')+b'\\n':
+                raise SessionError(f'Invalid event log header {path.name}')
+            rolling=zlib.adler32(header)
+            checksums.append(f'{rolling:08X}')
+            for lineno,line in enumerate(stream,2):
+                if not line.endswith(b'\\n'):
+                    raise SessionError(
+                        f'Truncated event log {path.name} at line {lineno}')
+                rolling=zlib.adler32(line,rolling)
+                checksums.append(f'{rolling:08X}')
+    except OSError as exc:
+        raise SessionError(f'Missing/unreadable event log {path.name}: {exc}') from exc
     if checksums[-1]!=expected_checksum:
         raise SessionError(f'Event log checksum mismatch {path.name}')
     return checksums
