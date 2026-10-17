@@ -23,9 +23,9 @@ expected = observed_row_base + ((pixel_x + current_fine_x) >> 3) + coarse_phase
 
 This equation is intentionally scoped to the Stage119 synthetic fixture:
 the nametable writer initializes all four name tables, the sampling
-window is the first 16 pixels of two known scanlines, and the test
-expects the first phase's *column offsets* `0/1/2` and the second
-phase's offsets `1/2/3`. Row bases are observed from the buffered first
+window is pixels 32–47 of two known scanlines (the first two buffered
+tile slots are excluded), and the test expects the first phase's
+*column offsets* `4/5/6` and the second phase's offsets `5/6/7`. Row bases are observed from the buffered first
 source address and cannot be assumed to equal `$2000`.
 
 Per 16-pixel window, the observer checks **16 addresses and two
@@ -35,7 +35,8 @@ tile transitions. No raw pixels, ROM bytes, or original-game art are
 logged.
 
 A standalone Stage120 marker must appear in each native FCEUX log
-**before** the Stage119 PASS marker. The Python auditor matches the two
+**before** the Stage119 PASS marker. Both markers remain contingent on
+the pinned emulator actually meeting their independent conditions. The Python auditor matches the two
 certificates, rejects duplicates, contradictory values or a rejection
 marker, and then verifies the complete four-run sweep. Uniform-CHR and
 observer-disabled runs still serve as separate negative controls.
