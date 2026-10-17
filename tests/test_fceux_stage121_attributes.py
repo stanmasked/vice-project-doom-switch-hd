@@ -87,7 +87,8 @@ class Audit(unittest.TestCase):
         self.assertEqual(expected_attribute_address(0x2000), 0x23C0)
         self.assertEqual(expected_attribute_address(0x2003), 0x23C0)
         self.assertEqual(expected_attribute_address(0x2004), 0x23C1)
-        self.assertEqual(expected_attribute_address(0x2080), 0x23D0)
+        self.assertEqual(expected_attribute_address(0x2080), 0x23C8)
+        self.assertEqual(expected_attribute_address(0x2100), 0x23D0)
         self.assertEqual(expected_attribute_address(0x2400), 0x27C0)
         for bad in (0x1FFF, 0x3000, True, 0x2000.0, "2000"):
             with self.assertRaises(AttributeEvidenceError):
