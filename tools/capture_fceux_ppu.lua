@@ -85,13 +85,22 @@ end
 local function on_write(address, size, value)
     checked(type(address)=='number' and address==math.floor(address)
         and ((address>=0x8000 and address<=0xFFFF)
-             or address==0x2000 or address==0x2001
-             or address==0x2005 or address==0x2006 or address==0x2007)
+             or (address>=0x2000 and address<=0x3FFF))
         and size==1 and type(value)=='number' and value==math.floor(value)
         and value>=0 and value<=255,
         'write address/size/byte')
-    if address == 0x2000 then ppuctrl = value end
-    if address == 0x2001 then ppumask = value end
+    if address>=0x2000 and address<=0x3FFF then
+        local port=0x2000+(address-0x2000)%8
+        if port==0x2000 then ppuctrl=value end
+        if port==0x2001 then ppumask=value end
+        -- PPUSTATUS ($2002 mirrors) is read-only: do not accidentally
+        -- encode a write as a status-read reset in the legacy 3-column log.
+        if port==0x2000 or port==0x2001 or port==0x2005
+           or port==0x2006 or port==0x2007 then
+            record_event(address,value)
+        end
+        return
+    end
     if address>=0x8000 and address<=0x9FFF then
         if address%2==0 then
             mmc3_select = value
@@ -104,23 +113,24 @@ local function on_write(address, size, value)
 end
 
 local function on_status_read(address, size, value)
-    checked(address==0x2002 and size==1 and value==0,
-        'PPUSTATUS read address/size/zero sentinel')
-    -- One synthetic address 2002/value 00 marker represents a real
-    -- PPUSTATUS read. The PPU $2005/$2006 shared toggle resets on this read.
-    -- This is not a PPUSTATUS write.
-    record_event(0x2002, 0, 'R')
+    checked(type(address)=='number' and address==math.floor(address)
+        and address>=0x2000 and address<=0x3FFF
+        and size==1 and value==0,
+        'PPU read address/size/zero sentinel')
+    -- Registerread covers all eight mirrored ports, but only PPUSTATUS
+    -- reads (offset 2) reset the shared $2005/$2006 write latch.
+    -- Preserve the actual CPU address and distinguish READ in cycle logs.
+    if (address-0x2000)%8==2 then
+        record_event(address,0,'R')
+    end
 end
 
-for _, addr in ipairs({0x2000,0x2001,0x2005,0x2006,0x2007}) do
-    memory.registerwrite(addr, on_write)
-end
--- The MMC3 has four mirrored even/odd register pairs. A single hook
--- observes their full address space, not just the canonical $xx00/$xx01.
+-- CPU-visible PPU ports mirror every 8 bytes throughout $2000-$3FFF.
+-- Use range hooks and classify by address mod 8, recording original address.
+memory.registerwrite(0x2000,0x2000,on_write)
+memory.registerread(0x2000,0x2000,on_status_read)
+-- MMC3 retains independent mirrored write decoding across $8000-$FFFF.
 memory.registerwrite(0x8000,0x8000,on_write)
--- Reads of $2002 reset the $2005/$2006 shared PPU write latch.
--- Capture these as address=2002/value=00 markers in the event TSV.
-memory.registerread(0x2002, on_status_read)
 
 local function flush()
     if #buffered > 0 then
@@ -154,6 +164,8 @@ local function capture_metadata(frame)
         'logged_register_writes='..tostring(total_writes),
         'callback_errors='..tostring(callback_errors),
         'mmc3_write_coverage=full_8000_ffff_even_odd',
+        'ppu_register_write_coverage=full_2000_3fff_mod8',
+        'ppu_status_read_coverage=full_2000_3fff_mod8',
         'dropped_register_writes='..tostring(dropped_writes),
         'register_log_complete='..(dropped_writes == 0 and callback_errors == 0 and 'yes' or 'no'),
         'scroll_emitter_ram_0b='..hx(memory.readbyte(0x0B)),
