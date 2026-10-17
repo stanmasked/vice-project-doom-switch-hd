@@ -124,7 +124,7 @@ int main() {
             observed = subprocess.run([str(exe)], capture_output=True, text=True)
             self.assertEqual(observed.returncode, 0, observed.stderr)
             self.assertIn("VPD_STAGE114_NATIVE_PLANE_PAIR_PASS", observed.stderr)
-            cpp.write_text(source.replace("unsigned hi=new_bank?255:0;",
+            cpp.write_text(source.replace("unsigned hi=fetch_new?255:0;",
                                           "unsigned hi=(fetch_new?255:0) ^ (sl==104 && xt==3 ? 255 : 0);"))
             built = subprocess.run(flags, capture_output=True, text=True)
             self.assertEqual(built.returncode, 0, built.stderr)
