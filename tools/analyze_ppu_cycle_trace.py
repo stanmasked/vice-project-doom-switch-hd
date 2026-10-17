@@ -8,6 +8,7 @@ This tool does not assert that logged writes were visible on a given scanline.
 import argparse
 import json
 from pathlib import Path
+from verify_ppu_capture_session import verify
 
 HEADER = 'frame\tcpu_cycle\taddress\tvalue\tkind'
 
@@ -140,11 +141,18 @@ def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('cycle_log',type=Path)
     p.add_argument('--metadata',type=Path,required=True,
-                   help='Complete capture metadata required to accept trace')
+                   help='Per-frame metadata (frame prefix only)')
+    p.add_argument('--session-meta',type=Path,required=True,
+                   help='Finalized PPU session manifest required for cycle trace')
     p.add_argument('--out',type=Path,default=Path('private/ppu_cycles_report.json'))
     args=p.parse_args()
     check_capture_meta(args.metadata)
+    if args.cycle_log.resolve()!=(args.session_meta.parent/'mmc3_ppu_cycles.tsv').resolve():
+        p.error('Cycle trace path does not belong to selected session')
+    session=verify(args.session_meta,require_cycle=True)
     result=summarize(parse_events(args.cycle_log))
+    result['session_verified']=session['complete']
+    result['frame_callback_span']=session['frame_callback_span']
     args.out.parent.mkdir(parents=True,exist_ok=True)
     args.out.write_text(json.dumps(result,indent=2)+'\n',encoding='utf8')
     print(json.dumps({'report':str(args.out),
