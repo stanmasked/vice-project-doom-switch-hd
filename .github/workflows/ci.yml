@@ -163,6 +163,8 @@ jobs:
         run: python -m unittest discover -s tests -p 'test_fceux_stage117_dynamic_scroll.py' -v
       - name: Stage118 paired $2005 writes and coarse/fine provenance
         run: python -m unittest discover -s tests -p 'test_fceux_stage118_two_scrolls.py' -v
+      - name: Stage119 distinguishable nametable IDs and coarse-source raster witness
+        run: python -m unittest discover -s tests -p 'test_fceux_stage119_nametable.py' -v
       - name: Stage89 validated static screen hypotheses and explicit provenance
         run: python -m unittest discover -s tests -p 'test_ppu_capture_session.py' -v
       - name: Stage88 audited PPU reference-frame inventory regressions

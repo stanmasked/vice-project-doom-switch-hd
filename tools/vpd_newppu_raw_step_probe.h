@@ -3,7 +3,7 @@
 // Install callback explicitly only on a controlled private emulator build.
 #ifndef VPD_NEWPPU_RAW_STEP_PROBE_H
 #define VPD_NEWPPU_RAW_STEP_PROBE_H
-#if defined(VPD_NATIVE_SYNTHETIC_SMOKE) || defined(VPD_NATIVE_SYNTHETIC_VBLANK) || defined(VPD_NATIVE_SYNTHETIC_PPUSTATUS_READ) || defined(VPD_NATIVE_SYNTHETIC_EVENT_ORDER) || defined(VPD_NATIVE_SYNTHETIC_PRECLEAR) || defined(VPD_NATIVE_SYNTHETIC_MMC3_CHR) || defined(VPD_NATIVE_SYNTHETIC_BG_PIXELS) || defined(VPD_NATIVE_SYNTHETIC_BG_FETCH) || defined(VPD_NATIVE_SYNTHETIC_CHR_TIMELINE) || defined(VPD_NATIVE_SYNTHETIC_MIDFRAME_CHR) || defined(VPD_NATIVE_SYNTHETIC_BG_TILES) || defined(VPD_NATIVE_SYNTHETIC_BG_PREFETCH) || defined(VPD_NATIVE_SYNTHETIC_BG_PLANE_PAIRS) || defined(VPD_NATIVE_SYNTHETIC_SCANLINE_CARRY) || defined(VPD_NATIVE_SYNTHETIC_FINE_SCROLL) || defined(VPD_NATIVE_SYNTHETIC_DYNAMIC_SCROLL) || defined(VPD_NATIVE_SYNTHETIC_TWO_SCROLLS)
+#if defined(VPD_NATIVE_SYNTHETIC_SMOKE) || defined(VPD_NATIVE_SYNTHETIC_VBLANK) || defined(VPD_NATIVE_SYNTHETIC_PPUSTATUS_READ) || defined(VPD_NATIVE_SYNTHETIC_EVENT_ORDER) || defined(VPD_NATIVE_SYNTHETIC_PRECLEAR) || defined(VPD_NATIVE_SYNTHETIC_MMC3_CHR) || defined(VPD_NATIVE_SYNTHETIC_BG_PIXELS) || defined(VPD_NATIVE_SYNTHETIC_BG_FETCH) || defined(VPD_NATIVE_SYNTHETIC_CHR_TIMELINE) || defined(VPD_NATIVE_SYNTHETIC_MIDFRAME_CHR) || defined(VPD_NATIVE_SYNTHETIC_BG_TILES) || defined(VPD_NATIVE_SYNTHETIC_BG_PREFETCH) || defined(VPD_NATIVE_SYNTHETIC_BG_PLANE_PAIRS) || defined(VPD_NATIVE_SYNTHETIC_SCANLINE_CARRY) || defined(VPD_NATIVE_SYNTHETIC_FINE_SCROLL) || defined(VPD_NATIVE_SYNTHETIC_DYNAMIC_SCROLL) || defined(VPD_NATIVE_SYNTHETIC_TWO_SCROLLS) || defined(VPD_NATIVE_SYNTHETIC_NAMETABLE_IDS)
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -1239,6 +1239,134 @@ inline void stage118_pixel(unsigned sl,unsigned xt,unsigned xp,
                 "original_game_coarse_scroll_proven=no\n",
                 a.first_fine,a.second_fine,a.first_sl,a.first_x,
                 a.second_sl,a.second_x,a.first_after,a.second_after);
+        }
+        std::fflush(stderr);
+        a.emitted=true;
+    }
+}
+#endif
+
+// Stage119: compare *actual buffered nametable tile ID* and CHR planes to
+// final native FCEUX XBuf pixels after two scroll writes. The custom ROM
+// writes 0,1 alternating tile IDs and differentiates tile1 (FF) from tile0
+// (00) in CHR bank1, unlike stages 110-118 which use uniform bank1.
+// The post-second-write row must expose the opposite NT ID at x=0.
+#if defined(VPD_NATIVE_SYNTHETIC_NAMETABLE_IDS) && defined(VPD_NATIVE_SYNTHETIC_MIDFRAME_CHR)
+struct NTIdentityAudit {
+    unsigned writes=0,sl1=0,sl2=0,x1=0,x2=0,f1=0,f2=0;
+    unsigned samples1=0,samples2=0,odd1=0,odd2=0,invalid=0;
+    unsigned first_color=0,second_color=0;
+    unsigned last_x1=0,last_x2=0;
+    unsigned long frame=0;
+    bool have_color1=false,have_color2=false,emitted=false;
+};
+inline NTIdentityAudit& stage119_state() {
+    static NTIdentityAudit a;
+    return a;
+}
+inline bool stage119_enabled() {
+    static const char* e=std::getenv("VPD_STAGE119_NAMETABLE_PROBE");
+    return e && std::strcmp(e,"1")==0;
+}
+inline unsigned stage119_expected_first() {
+    static const char* e=std::getenv("VPD_STAGE119_FIRST_FINE");
+    if(!e || e[1]!='\0' || (e[0]!='1' && e[0]!='3' &&
+                            e[0]!='5' && e[0]!='7')) return 255;
+    return static_cast<unsigned>(e[0]-'0');
+}
+inline void stage119_write(unsigned fine,unsigned coarse) {
+    if(!stage119_enabled()) return;
+    NTIdentityAudit& a=stage119_state();
+    const MidframeChr& m=stage110_state();
+    if(a.emitted)return;
+    ++a.writes;
+    if(a.writes==1) {
+        a.sl1=m.last_sl;
+        a.x1=stage118_state().last_x;
+        a.f1=fine; a.frame=m.frame;
+        if(fine!=stage119_expected_first() || coarse!=0 ||
+           m.writes!=2 || !m.switched || m.switch_sl!=a.sl1 ||
+           a.sl1<40 || a.sl1>210 || m.invalid)++a.invalid;
+    }else if(a.writes==2){
+        a.sl2=m.last_sl;
+        a.x2=stage118_state().last_x;
+        a.f2=fine;
+        if(coarse!=1 || fine!=8-a.f1 || a.sl2!=a.sl1+1 ||
+           a.samples1!=16 || m.frame!=a.frame || m.invalid)
+            ++a.invalid;
+    }else ++a.invalid;
+}
+inline void stage119_pixel(unsigned sl,unsigned xt,unsigned xp,
+                           unsigned tile,unsigned bgpx,unsigned fine,
+                           unsigned /* liveht */,unsigned nt,
+                           unsigned lo,unsigned hi,unsigned pattern,
+                           unsigned framebuffer_color) {
+    if(!stage119_enabled())return;
+    NTIdentityAudit& a=stage119_state();
+    if(a.emitted || sl<1 || sl>240 || xt>=32 || xp>=8)return;
+    if(a.writes==0)return;
+    const unsigned x=xt*8+xp;
+    const bool before=sl==a.sl1+1 && x<16;
+    const bool after=a.writes==2 && sl==a.sl2+1 && x<16;
+    if(!before && !after)return;
+    if(a.frame!=stage110_state().frame ||
+       (before && a.samples1>=16) || (after && a.samples2>=16))
+       {++a.invalid; return;}
+    const unsigned targetfine=before?a.f1:a.f2;
+    const unsigned source=x+targetfine;
+    const unsigned expected_tile=source>>3;
+    const unsigned expected_nt=(expected_tile+(after?1U:0U))&1U;
+    const unsigned expected_byte=expected_nt?255U:0U;
+    if(fine!=targetfine || tile!=expected_tile ||
+       bgpx!=(source&7U) || nt!=expected_nt ||
+       lo!=expected_byte || hi!=expected_byte ||
+       pattern!=(expected_nt?3U:0U) ||
+       framebuffer_color>255 || tile>=34)
+        ++a.invalid;
+    if(before){
+        if(a.samples1==0){
+            if(x!=0 || nt!=0 || pattern!=0)++a.invalid;
+            a.first_color=framebuffer_color;
+            a.have_color1=true;
+        }else if(x<=a.last_x1)++a.invalid;
+        a.last_x1=x;
+        ++a.samples1;
+        if(nt==1)++a.odd1;
+    }else{
+        if(a.samples2==0){
+            if(x!=0 || nt!=1 || pattern!=3)++a.invalid;
+            a.second_color=framebuffer_color;
+            a.have_color2=true;
+        }else if(x<=a.last_x2)++a.invalid;
+        a.last_x2=x;
+        ++a.samples2;
+        if(nt==1)++a.odd2;
+    }
+    if(a.samples1==16 && a.samples2==16 && !a.emitted){
+        if(a.invalid || a.writes!=2 || !a.have_color1 ||
+           !a.have_color2 || a.first_color==a.second_color ||
+           a.odd1==0 || a.odd1>=16 || a.odd2==0 || a.odd2>=16)
+           ++a.invalid;
+        if(a.invalid){
+            std::fprintf(stderr,
+                "VPD_STAGE119_REJECTED_NAMETABLE invalid=%u "
+                "samples1=%u samples2=%u odd1=%u odd2=%u "
+                "sl1=%u sl2=%u synthetic_only=yes\n",
+                a.invalid,a.samples1,a.samples2,a.odd1,a.odd2,a.sl1,a.sl2);
+        }else{
+            std::fprintf(stderr,
+                "VPD_STAGE119_NATIVE_NAMETABLE_PASS "
+                "fine1=%u fine2=%u coarse1=0 coarse2=1 "
+                "write_sl1=%u write_sl2=%u "
+                "sample_sl1=%u sample_sl2=%u "
+                "nametable0_x0=0 nametable1_x0=1 "
+                "pattern0_x0=0 pattern1_x0=3 "
+                "first_color=%u second_color=%u "
+                "samples_per_row=16 odd_first=%u odd_second=%u "
+                "invalid=0 real_fceux_xbuf=yes synthetic_only=yes "
+                "original_game_coarse_scroll_proven=no\n",
+                a.f1,a.f2,a.sl1,a.sl2,a.sl1+1,a.sl2+1,
+                a.first_color,a.second_color,a.odd1,a.odd2);
         }
         std::fflush(stderr);
         a.emitted=true;
