@@ -47,4 +47,8 @@ test -x "${BUILD}/src/fceux"
 file "${BUILD}/src/fceux"
 python3 "${PROJECT}/tools/run_stage100_fceux_synthetic_smoke.py" \
   "${BUILD}/src/fceux" "${RUNNER_TEMP}"
+# Independent X11 virtual framebuffer, not Qt offscreen/SDL dummy.
+xvfb-run -a -s '-screen 0 1024x768x24 -nolisten tcp' \
+  python3 "${PROJECT}/tools/run_stage100_fceux_synthetic_smoke.py" \
+    "${BUILD}/src/fceux" "${RUNNER_TEMP}" --backend xvfb
 printf 'STAGE99_PINNED_FCEUX_NATIVE_BUILD_PASS commit=%s opt_in_probe=yes real_fceux_linked=yes gameplay_raster_verified=no\n' "${PIN}"

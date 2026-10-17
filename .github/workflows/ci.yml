@@ -82,7 +82,7 @@ jobs:
           sudo apt-get install -y --no-install-recommends \
             build-essential cmake git pkg-config \
             qtbase5-dev libqt5opengl5-dev libgl1-mesa-dev \
-            libsdl2-dev libminizip-dev zlib1g-dev libarchive-dev
+            libsdl2-dev libminizip-dev zlib1g-dev libarchive-dev xvfb xauth
       - name: Build pinned FCEUX and run synthetic newppu runtime proof
         run: bash tools/ci_fceux_stage99_native_build.sh
 
@@ -127,6 +127,8 @@ jobs:
         run: python -m unittest discover -s tests -p 'test_fceux_newppu_probe_patch.py' -v
       - name: Stage100 synthetic NROM and FCEUX runtime marker acceptance
         run: python -m unittest discover -s tests -p 'test_fceux_stage100_runtime.py' -v
+      - name: Stage101 Xvfb backend and sanitized headless process-exit regressions
+        run: python -m unittest discover -s tests -p 'test_fceux_stage101_headless_diagnostics.py' -v
       - name: Stage89 validated static screen hypotheses and explicit provenance
         run: python -m unittest discover -s tests -p 'test_ppu_capture_session.py' -v
       - name: Stage88 audited PPU reference-frame inventory regressions
