@@ -103,6 +103,8 @@ jobs:
         run: python -m unittest discover -s tests -p 'test_native_ppu_raster_contract.py' -v
       - name: Stage97 pinned FCEUX hook-site audit and C++ native raster prototype
         run: python -m unittest discover -s tests -p 'test_fceux_native_ppu_adapter.py' -v
+      - name: Stage98 opt-in raw newppu hook injection and native C++11 compile gates
+        run: python -m unittest discover -s tests -p 'test_fceux_newppu_probe_patch.py' -v
       - name: Stage89 validated static screen hypotheses and explicit provenance
         run: python -m unittest discover -s tests -p 'test_ppu_capture_session.py' -v
       - name: Stage88 audited PPU reference-frame inventory regressions
