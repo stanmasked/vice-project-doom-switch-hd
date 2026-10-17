@@ -28,20 +28,22 @@ def analyze(events):
                      'unresolved_scroll_writes':0}
             frames.append(current)
         previous=frame
-        if address==0x2002:  # CPU read of PPUSTATUS resets shared write toggle
+        # CPU PPU register mirrors use the low three address bits.
+        port=0x2000+(address-0x2000)%8 if 0x2000<=address<=0x3FFF else address
+        if port==0x2002:  # CPU read of PPUSTATUS resets shared write toggle
             latch=0
             pending_x=None
             current['status_reads']+=1
-        elif address==0x2000:
+        elif port==0x2000:
             chosen_nt=value&3
-        elif address==0x2006:
+        elif port==0x2006:
             current['address_writes']+=1
             if latch is None:
                 pending_x=None
             else:
                 latch=1-latch
                 pending_x=None
-        elif address==0x2005:
+        elif port==0x2005:
             current['scroll_writes']+=1
             if latch is None:
                 current['unresolved_scroll_writes']+=1
@@ -96,6 +98,9 @@ def main():
         if (metadata.get('mmc3_write_coverage')!='full_8000_ffff_even_odd'
                 or metadata.get('callback_errors')!='0'):
             p.error('Missing full MMC3 write coverage or callback integrity')
+        if (metadata.get('ppu_register_write_coverage')!='full_2000_3fff_mod8'
+                or metadata.get('ppu_status_read_coverage')!='full_2000_3fff_mod8'):
+            p.error('Incomplete PPU register mirror observation')
     report=analyze(read_events(args.log))
     args.out.parent.mkdir(parents=True,exist_ok=True)
     args.out.write_text(json.dumps(report,indent=2)+'\n',encoding='utf8')
