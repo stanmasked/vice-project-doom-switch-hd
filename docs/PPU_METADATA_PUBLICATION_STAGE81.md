@@ -18,7 +18,7 @@ writes also now check the result of `close()`.
 `publish_metadata(path, contents)`:
 
 1. Requires the destination to exist and match **exactly**
-   `capture_in_progress=yes\\n` (a prior valid file is not accepted).
+   `capture_in_progress=yes\n` (a prior valid file is not accepted).
 2. Writes `path.tmp` in the same directory and checks the write and
    close operations.
 3. Reopens `path.tmp`, compares its complete bytes with the expected
