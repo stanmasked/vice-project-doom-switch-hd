@@ -103,6 +103,7 @@ def check_cycle_events(path, events):
     count = 0
     previous_cycle = None
     equal_adjacent = 0
+    observed_cycles = []
     for lineno, row in check_tsv(path, 'frame\tcpu_cycle\taddress\tvalue\tkind', 5):
         frame_s, cycle_s, addr_s, value_s, kind = row
         if (DEC.fullmatch(frame_s) is None or DEC.fullmatch(cycle_s) is None
@@ -119,6 +120,7 @@ def check_cycle_events(path, events):
             if cycle == previous_cycle:
                 equal_adjacent += 1
         previous_cycle = cycle
+        observed_cycles.append(cycle)
         addr = int(addr_s, 16)
         expected_kind = 'R' if 0x2000 <= addr <= 0x3FFF and (addr-0x2000) % 8 == 2 else 'W'
         if kind != expected_kind:
@@ -126,7 +128,8 @@ def check_cycle_events(path, events):
         count += 1
     if count != len(events):
         raise SessionError('Cycle trace row count does not match frame trace')
-    return {'checked':count,'equal_adjacent':equal_adjacent}
+    return {'checked':count,'equal_adjacent':equal_adjacent,
+            'cycles':observed_cycles}
 
 
 def check_snapshot_blob(path, size, declared_checksum):
@@ -190,6 +193,10 @@ def verify(session_meta, *, require_cycle=False):
     required(props, 'ppu_status_read_coverage', 'full_2000_3fff_mod8')
     required(props, 'event_checksum', 'adler32_v1')
     required(props, 'cycle_order_policy', 'nondecreasing_v1')
+    mode=props.get('frame_callback_clock_mode')
+    if mode not in ('disabled','sampled_snapshots_v1'):
+        raise SessionError('Invalid registerafter clock sampling mode')
+    required(props, 'frame_callback_clock_boundary_proven', 'no')
     required(props, 'cycle_regressions_same_frame', '0')
     required(props, 'cycle_regressions_between_frames', '0')
     token = props.get('session_id', '')
@@ -204,6 +211,11 @@ def verify(session_meta, *, require_cycle=False):
     callbacks = integer(props, 'frame_callbacks', 1)
     snapshots = integer(props, 'frames_captured', 1)
     expected = integer(props, 'events_recorded')
+    callback_clock_count=integer(props,'frame_callback_clock_samples')
+    if callback_clock_count!=(snapshots if mode=='sampled_snapshots_v1' else 0):
+        raise SessionError('registerafter clock sample count mismatch')
+    if mode=='sampled_snapshots_v1' and cycle!='yes':
+        raise SessionError('registerafter clock sampling requires CPU-cycle trace')
     if last < first or callbacks != last-first+1:
         raise SessionError('Missing callback frame(s)')
     frame_text = props.get('capture_frames','')
@@ -232,6 +244,9 @@ def verify(session_meta, *, require_cycle=False):
         required(props,'cycle_log_adler32','not_captured')
     if len(events) != expected:
         raise SessionError('Truncated or extra frame events')
+    cycle_evidence=(check_cycle_events(folder/'mmc3_ppu_cycles.tsv',events)
+                    if cycle=='yes' else None)
+    last_callback_sample=None
     last_checkpoint = -1
     for index, frame in enumerate(frames, 1):
         prefix = folder / f'frame_{frame:06d}'
@@ -248,6 +263,18 @@ def verify(session_meta, *, require_cycle=False):
         required(m, 'ppu_register_write_coverage', 'full_2000_3fff_mod8')
         required(m, 'ppu_status_read_coverage', 'full_2000_3fff_mod8')
         required(m, 'cycle_trace_available', cycle)
+        required(m, 'frame_callback_clock_scope',
+                 'captured_frame_sample' if mode=='sampled_snapshots_v1' else 'disabled')
+        if mode=='sampled_snapshots_v1':
+            sample=integer(m,'frame_callback_cpu_cycle')
+            if sample>9007199254740991:
+                raise SessionError('registerafter clock sample is not an exact integer')
+            if last_callback_sample is not None and sample<last_callback_sample:
+                raise SessionError('registerafter sample regressed between snapshots')
+            last_callback_sample=sample
+        else:
+            required(m, 'frame_callback_cpu_cycle', 'not_captured')
+            sample=None
         count = integer(m, 'logged_register_writes')
         if count < last_checkpoint or count > expected:
             raise SessionError('Invalid per-frame event count checkpoint')
@@ -257,6 +284,12 @@ def verify(session_meta, *, require_cycle=False):
         if count>0 and events[count-1][0]>frame:
             raise SessionError(
                 'Snapshot checkpoint includes future event-frame label')
+        if sample is not None and cycle_evidence is not None:
+            moments=cycle_evidence['cycles']
+            if count>0 and sample<moments[count-1]:
+                raise SessionError('registerafter sample precedes committed event')
+            if count<len(moments) and sample>moments[count]:
+                raise SessionError('registerafter sample is later than next event')
         last_checkpoint = count
         required(m, 'event_checksum', 'adler32_v1')
         required(m,'frame_log_prefix_adler32',frame_prefixes[count])
@@ -284,8 +317,7 @@ def verify(session_meta, *, require_cycle=False):
     cycle_equal = 0
     if cycle == 'yes':
         required(props, 'cycle_regressions', '0')
-        counts=check_cycle_events(folder/'mmc3_ppu_cycles.tsv', events)
-        cycle_equal=counts['equal_adjacent']
+        cycle_equal=cycle_evidence['equal_adjacent']
         if integer(props, 'cycle_equal_adjacent') != cycle_equal:
             raise SessionError('Cycle equality count disagrees with event trace')
         cycles_checked = True
@@ -303,6 +335,9 @@ def verify(session_meta, *, require_cycle=False):
             'event_logs_verified':True, 'event_checksum_type':'adler32_v1',
             'snapshot_event_frame_order_verified':True,
             'physical_frame_boundaries_proven':False,
+            'frame_callback_clock_samples_verified':
+                callback_clock_count if mode=='sampled_snapshots_v1' else 0,
+            'frame_callback_clock_boundary_proven':False,
             'cpu_cycle_order_verified':cycles_checked,
             'cpu_cycle_equal_adjacent':cycle_equal}
 
