@@ -3,7 +3,7 @@
 // Install callback explicitly only on a controlled private emulator build.
 #ifndef VPD_NEWPPU_RAW_STEP_PROBE_H
 #define VPD_NEWPPU_RAW_STEP_PROBE_H
-#if defined(VPD_NATIVE_SYNTHETIC_SMOKE) || defined(VPD_NATIVE_SYNTHETIC_VBLANK) || defined(VPD_NATIVE_SYNTHETIC_PPUSTATUS_READ)
+#if defined(VPD_NATIVE_SYNTHETIC_SMOKE) || defined(VPD_NATIVE_SYNTHETIC_VBLANK) || defined(VPD_NATIVE_SYNTHETIC_PPUSTATUS_READ) || defined(VPD_NATIVE_SYNTHETIC_EVENT_ORDER)
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -108,10 +108,109 @@ inline void observe(int sl, int before, int after, int modulus, int increment) {
     }
 }
 
+
+// Stage104: source-level sequence relative to the same advancing runppu clock.
+// No scanline/dot, ROM, register byte or original-game information is emitted.
+// These are emulator-assigned status windows, NOT physical NES VBlank timings.
+#ifdef VPD_NATIVE_SYNTHETIC_EVENT_ORDER
+struct EventOrderState {
+    unsigned long source_entries = 0;
+    unsigned long source_clears = 0;
+    unsigned long cpu_reads = 0;
+    unsigned long high_reads = 0;
+    unsigned long high_read_clears = 0;
+    unsigned long high_within_window = 0;
+    unsigned long low_after_high = 0;
+    unsigned long invalid = 0;
+    unsigned long long current_entry_tick = 0;
+    unsigned long long high_lag_min = 0;
+    unsigned long long high_lag_max = 0;
+    bool source_window = false;
+    bool high_read_this_window = false;
+    bool emitted = false;
+};
+
+inline EventOrderState& event_order_state() {
+    static EventOrderState state;
+    return state;
+}
+
+inline bool event_order_enabled() {
+    static const char* opt = std::getenv("VPD_STAGE104_EVENT_ORDER_PROBE");
+    return opt && std::strcmp(opt, "1") == 0;
+}
+
+inline void event_order_assignment(bool entering, bool bit_after) {
+    if (!event_order_enabled()) return;
+    EventOrderState& e = event_order_state();
+    if (e.emitted) return;
+    const unsigned long long tick = channel().internal_tick_units;
+    if (entering) {
+        if (!bit_after || e.source_window) ++e.invalid;
+        ++e.source_entries;
+        e.current_entry_tick = tick;
+        e.source_window = true;
+        e.high_read_this_window = false;
+    } else {
+        if (bit_after || !e.source_window) ++e.invalid;
+        ++e.source_clears;
+        e.source_window = false;
+        e.high_read_this_window = false;
+    }
+}
+
+inline void event_order_read(bool returned_high, bool before_high,
+                             bool after_high) {
+    if (!event_order_enabled()) return;
+    EventOrderState& e = event_order_state();
+    if (e.emitted) return;
+    ++e.cpu_reads;
+    if (returned_high != before_high || after_high) ++e.invalid;
+    if (before_high) {
+        ++e.high_reads;
+        if (!after_high) ++e.high_read_clears;
+        if (e.source_window) {
+            ++e.high_within_window;
+            if (e.high_read_this_window) ++e.invalid;
+            e.high_read_this_window = true;
+        } else {
+            ++e.invalid;
+        }
+        const unsigned long long now = channel().internal_tick_units;
+        if (now < e.current_entry_tick || e.source_entries == 0) {
+            ++e.invalid;
+        } else {
+            const unsigned long long lag = now - e.current_entry_tick;
+            if (e.high_reads == 1 || lag < e.high_lag_min) e.high_lag_min = lag;
+            if (lag > e.high_lag_max) e.high_lag_max = lag;
+        }
+    } else if (e.source_window && e.high_read_this_window) {
+        ++e.low_after_high;
+    }
+    if (e.cpu_reads == 16384) {
+        std::fprintf(stderr,
+            "VPD_STAGE104_NATIVE_EVENT_ORDER_PASS reads=16384 "
+            "source_entries=%lu source_clears=%lu "
+            "high_reads=%lu high_read_clears=%lu "
+            "high_within_window=%lu low_after_high=%lu "
+            "high_lag_min=%llu high_lag_max=%llu invalid=%lu "
+            "source_timeline_only=yes physical_vblank_proven=no\n",
+            e.source_entries, e.source_clears, e.high_reads,
+            e.high_read_clears, e.high_within_window, e.low_after_high,
+            e.high_lag_min, e.high_lag_max, e.invalid);
+        std::fflush(stderr);
+        e.emitted = true;
+    }
+}
+#endif
+
 // Stage102 observes *source-level* PPU_status assignment boundaries, NOT
 // validated hardware VBlank edges. Intentionally export aggregates only.
 #ifdef VPD_NATIVE_SYNTHETIC_VBLANK
 inline void observe_native_status_assignment(bool entering, bool bit_after) {
+#ifdef VPD_NATIVE_SYNTHETIC_EVENT_ORDER
+    event_order_assignment(entering, bit_after);
+#endif
     static const char* enabled = std::getenv("VPD_STAGE102_STATUS_PROBE");
     if (!enabled || std::strcmp(enabled, "1") != 0) return;
     struct Windows {
@@ -166,6 +265,9 @@ inline void observe_native_status_assignment(bool entering, bool bit_after) {
 inline void observe_native_ppustatus_read(bool returned_high,
                                           bool before_high,
                                           bool after_high) {
+#ifdef VPD_NATIVE_SYNTHETIC_EVENT_ORDER
+    event_order_read(returned_high, before_high, after_high);
+#endif
     static const char* env = std::getenv("VPD_STAGE103_PPUSTATUS_READ_PROBE");
     if (!env || std::strcmp(env, "1") != 0) return;
     struct ReadAggregate {
