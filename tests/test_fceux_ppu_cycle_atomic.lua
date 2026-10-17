@@ -53,6 +53,7 @@ local function run(with_clock)
       if cycle_mode=='fraction' then return 10.5 end
       if cycle_mode=='nan' then return 0/0 end
       if cycle_mode=='infinite' then return math.huge end
+      if cycle_mode=='too_large' then return 9007199254740992 end
       cycle=cycle+17
       return cycle
     end}
@@ -66,6 +67,7 @@ local function run(with_clock)
     framecount=function()
       if frame_mode=='error' then error('synthetic frame counter failure') end
       if frame_mode=='nil' then return nil end
+      if frame_mode=='too_large' then return 2147483648 end
       return frame
     end,
     registerafter=function(fn)after=fn end,
@@ -80,7 +82,7 @@ local function run(with_clock)
   ppuwrite(0x200D,1,0x11)
   local errors=0
   if with_clock then
-    for _,mode in ipairs({'error','nil','negative','fraction','nan','infinite'}) do
+    for _,mode in ipairs({'error','nil','negative','fraction','nan','infinite','too_large'}) do
       cycle_mode=mode
       local ok,why=pcall(mwrite,0x8002,1,0x80)
       assert(not ok and tostring(why):find('invalid CPU cycle counter',1,true),
@@ -89,7 +91,7 @@ local function run(with_clock)
     end
     cycle_mode='good'
   end
-  for _,mode in ipairs({'error','nil'}) do
+  for _,mode in ipairs({'error','nil','too_large'}) do
     frame_mode=mode
     local ok,why=pcall(ppuwrite,0x200D,1,0x15)
     assert(not ok and tostring(why):find('invalid frame counter',1,true),
