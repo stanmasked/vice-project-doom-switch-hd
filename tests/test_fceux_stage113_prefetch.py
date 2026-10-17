@@ -113,7 +113,6 @@ int main() {
  setenv("VPD_STAGE110_MIDFRAME_CHR_PROBE","1",1);
  setenv("VPD_STAGE111_BG_TILE_PROBE","1",1);
  setenv("VPD_STAGE113_BG_PREFETCH_PROBE","1",1);
- unsigned old=0, filled=0;
  for (unsigned sl=1; sl<=120; ++sl) {
    for (unsigned xt=0; xt<32; ++xt) {
      if (sl==1 && xt==0) vpd_ppu_probe::stage110_register_write(2,0);
