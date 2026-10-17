@@ -99,6 +99,8 @@ jobs:
         run: python -m unittest discover -s tests -p 'test_ppu_cpu_clock_bracketing.py' -v
       - name: Stage95 fail-closed raster API symbol capability report
         run: python -m unittest discover -s tests -p 'test_fceux_raster_capability_report.py' -v
+      - name: Stage96 synthetic native PPU raster contract and provenance tests
+        run: python -m unittest discover -s tests -p 'test_native_ppu_raster_contract.py' -v
       - name: Stage89 validated static screen hypotheses and explicit provenance
         run: python -m unittest discover -s tests -p 'test_ppu_capture_session.py' -v
       - name: Stage88 audited PPU reference-frame inventory regressions
