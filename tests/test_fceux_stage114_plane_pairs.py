@@ -87,6 +87,7 @@ class Cpp(unittest.TestCase):
 #include <cstdlib>
 int main() {
  setenv("VPD_STAGE114_PLANE_PAIR_PROBE","1",1);
+ setenv("VPD_STAGE110_MIDFRAME_CHR_PROBE","1",1);
  vpd_ppu_probe::stage110_register_write(2,0);
  for(unsigned sl=1; sl<=112; ++sl) {
   for(unsigned xt=0;xt<32;++xt) {
