@@ -83,13 +83,13 @@ class CycleTraceTests(unittest.TestCase):
                 check_capture_meta(path)
             path.write_text('register_log_complete=yes\ncallback_errors=0\nmmc3_write_coverage=full_8000_ffff_even_odd\ncycle_trace_available=yes\n')
             self.assertEqual(check_capture_meta(path)['cycle_trace_available'],'yes')
-            path.write_text('register_log_complete=yes\\ncallback_errors=0\\n'
-                            'cycle_trace_available=yes\\n')
+            path.write_text('register_log_complete=yes\ncallback_errors=0\n'
+                            'cycle_trace_available=yes\n')
             with self.assertRaisesRegex(ValueError,'MMC3 mirrored'):
                 check_capture_meta(path)
-            path.write_text('register_log_complete=yes\\ncallback_errors=2\\n'
-                            'mmc3_write_coverage=full_8000_ffff_even_odd\\n'
-                            'cycle_trace_available=yes\\n')
+            path.write_text('register_log_complete=yes\ncallback_errors=2\n'
+                            'mmc3_write_coverage=full_8000_ffff_even_odd\n'
+                            'cycle_trace_available=yes\n')
             with self.assertRaisesRegex(ValueError,'callback integrity'):
                 check_capture_meta(path)
 
