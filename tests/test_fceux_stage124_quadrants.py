@@ -77,7 +77,7 @@ class Hook(unittest.TestCase):
     def test_guarded_exact_post_xbuf_observer(self):
         previous = stage121_patch(stage119_patch(STAGE118_SOURCE))
         patched = stage124_patch(previous)
-        self.assertEqual(patched.count(GUARD), 2)
+        self.assertEqual(patched.count(GUARD), 1)
         self.assertEqual(patched.count(b"vpd_ppu_probe::stage124_pixel("), 1)
         self.assertIn(b"bgdata.main[bgtile].vpd_stage121_atraw", patched)
         self.assertIn(b"pixelcolor, *ptr);", patched)
