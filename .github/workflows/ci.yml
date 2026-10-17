@@ -126,6 +126,8 @@ jobs:
         run: lua5.4 tests/test_fceux_capture_session_invalidation.lua
       - name: Stage77-78 verify MMC3 and PPU CPU address mirrors
         run: lua5.4 tests/test_fceux_ppu_mmc3_mirrors.lua
+      - name: Stage87 independent registerafter CPU clock stamp probes
+        run: lua5.4 tests/test_fceux_ppu_after_callback_clock.lua
       - name: Stage85 classify CPU-cycle counter decreases and equal timestamps
         run: lua5.4 tests/test_fceux_ppu_counter_order.lua
       - name: Stage84 test streaming 24k-event Adler readback helpers
