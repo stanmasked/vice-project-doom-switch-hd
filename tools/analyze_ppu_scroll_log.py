@@ -93,6 +93,9 @@ def main():
                 metadata[k]=v
         if metadata.get('register_log_complete')!='yes':
             p.error('Incomplete or unverified register log; no trustworthy scroll trace')
+        if (metadata.get('mmc3_write_coverage')!='full_8000_ffff_even_odd'
+                or metadata.get('callback_errors')!='0'):
+            p.error('Missing full MMC3 write coverage or callback integrity')
     report=analyze(read_events(args.log))
     args.out.parent.mkdir(parents=True,exist_ok=True)
     args.out.write_text(json.dumps(report,indent=2)+'\n',encoding='utf8')
