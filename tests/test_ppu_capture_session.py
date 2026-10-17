@@ -9,6 +9,7 @@ sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'tools'))
 from verify_ppu_capture_session import verify,SessionError
 from audit_ppu_reference_frames import analyze_verified
 from audit_ppu_screen_alignment import analyze_verified as compare_verified_screen
+from audit_ppu_event_provenance import audit_verified as audit_verified_registers
 from compare_rendered_frame import reconstructed_indices, PIXELS
 
 TOKEN='0011002200330044'
@@ -733,6 +734,86 @@ class CaptureSessionTests(unittest.TestCase):
         self.assertNotIn('palette_index_entries',summary)
         self.assertNotIn('rom_md5',summary)
         self.assertFalse(frame['evidence_classification']['sprites']=='included')
+
+    def test_stage90_event_windows_follow_verified_snapshot_checkpoints(self):
+        result=audit_verified_registers(self.manifest,require_cycle=True)
+        self.assertEqual(result['format'],'vpd_verified_ppu_event_provenance_v1')
+        self.assertEqual(result['events_recorded'],3)
+        self.assertEqual(result['frames_captured'],2)
+        first,second=result['windows']
+        self.assertEqual(first['from_snapshot_frame'],None)
+        self.assertEqual(first['to_snapshot_frame'],1)
+        self.assertEqual(first['observed_register_events'],2)
+        self.assertEqual(first['event_counts']['mmc3_select_writes'],1)
+        self.assertEqual(first['event_counts']['ppustatus_read_markers'],1)
+        self.assertEqual(first['event_counts']['chr_register_writes'],0)
+        self.assertFalse(first['observed_register_state_at_checkpoint'][
+            'all_six_chr_registers_observed_since_start'])
+        self.assertEqual(second['from_snapshot_frame'],1)
+        self.assertEqual(second['to_snapshot_frame'],3)
+        self.assertEqual(second['observed_register_events'],1)
+        self.assertEqual(second['event_counts']['ppuscroll_writes'],1)
+        self.assertEqual(second['event_counts']['complete_observed_ppuscroll_pairs'],0)
+        self.assertTrue(second['observed_register_state_at_checkpoint'][
+            'pending_first_ppuscroll_write'])
+        self.assertFalse(result['interpretation']['ppu_visible_scroll_proven'])
+
+    def test_stage90_scroll_pair_can_span_verified_frame_checkpoints(self):
+        self.log.write_text(self.log.read_text()+'3\\t2005\\t12\\n')
+        self.cyclelog.write_text(self.cyclelog.read_text()+
+                                 '3\\t101\\t2005\\t12\\tW\\n')
+        self.props['events_recorded']='4'
+        self.props['frame_log_adler32']=checksum_file(self.log)
+        self.props['cycle_log_adler32']=checksum_file(self.cyclelog)
+        self.frames[3]['logged_register_writes']='4'
+        self.frames[3]['frame_log_prefix_adler32']=log_prefixes(self.log)[4]
+        self.frames[3]['cycle_log_prefix_adler32']=log_prefixes(self.cyclelog)[4]
+        self.finalize()
+        result=audit_verified_registers(self.manifest)
+        self.assertEqual(result['windows'][1]['event_counts']['ppuscroll_writes'],2)
+        self.assertEqual(result['windows'][1]['event_counts'][
+            'complete_observed_ppuscroll_pairs'],1)
+        self.assertEqual(result['events_recorded'],4)
+
+    def test_stage90_event_window_comparison_preserves_screen_uncertainty(self):
+        self.stage89_reference()
+        report=compare_verified_screen(self.manifest,require_screen=True)
+        self.assertEqual(report['event_windows_verified'],2)
+        frame=report['frames'][0]
+        window=frame['observed_event_window']
+        self.assertEqual(window['observed_cpu_register_events'],2)
+        self.assertEqual(window['chr_register_writes'],0)
+        self.assertFalse(window['visible_scroll_or_chr_mapping_proven'])
+        self.assertFalse(report['interpretation'][
+            'event_window_to_screen_visibility_proven'])
+        self.assertEqual(report['frames'][1]['observed_event_window'][
+            'ppuscroll_writes'],1)
+
+    def test_stage90_rejects_corrupt_tsv_prior_to_register_analysis(self):
+        self.log.write_text(self.log.read_text().replace('1\\t8002\\t80',
+                                                         '1\\t8002\\t81'))
+        with self.assertRaises(SessionError):
+            audit_verified_registers(self.manifest)
+
+    def test_stage90_no_cycle_logs_are_not_implicitly_clocked(self):
+        self.props['cycle_trace_available']='no'
+        self.props['cycle_log_adler32']='not_captured'
+        for row in self.frames.values():
+            row['cycle_trace_available']='no'
+            row['cycle_log_prefix_adler32']='not_captured'
+        self.finalize()
+        result=audit_verified_registers(self.manifest)
+        self.assertFalse(result['clock_trace_verified'])
+        with self.assertRaisesRegex(SessionError,'CPU-cycle trace unavailable'):
+            audit_verified_registers(self.manifest,require_cycle=True)
+
+    def test_stage90_report_omits_original_register_values(self):
+        result=audit_verified_registers(self.manifest)
+        payload=json.dumps(result)
+        self.assertNotIn('bank_value',payload)
+        self.assertNotIn('original_ppu_bytes',payload)
+        self.assertNotIn('chr_register_values',payload)
+        self.assertFalse(result['interpretation']['level_geometry_reconstructed'])
 
 
 if __name__=='__main__': unittest.main()
