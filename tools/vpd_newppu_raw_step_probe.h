@@ -1282,14 +1282,14 @@ inline void stage119_write(unsigned fine,unsigned coarse) {
     ++a.writes;
     if(a.writes==1) {
         a.sl1=m.last_sl;
-        a.x1=stage118_state().last_x;
+        // Pixel coordinates are sampled directly in stage119_pixel().
         a.f1=fine; a.frame=m.frame;
         if(fine!=stage119_expected_first() || coarse!=0 ||
            m.writes!=2 || !m.switched || m.switch_sl!=a.sl1 ||
            a.sl1<40 || a.sl1>210 || m.invalid)++a.invalid;
     }else if(a.writes==2){
         a.sl2=m.last_sl;
-        a.x2=stage118_state().last_x;
+        // Pixel coordinates are sampled directly in stage119_pixel().
         a.f2=fine;
         if(coarse!=1 || fine!=8-a.f1 || a.sl2!=a.sl1+1 ||
            a.samples1!=16 || m.frame!=a.frame || m.invalid)
