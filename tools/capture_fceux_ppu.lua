@@ -63,6 +63,30 @@ local function write_binary(path, value)
     assert(closed, 'Failed closing '..path..': '..tostring(close_error))
 end
 
+-- Adler-32 is used for accidental corruption detection, NOT security.
+-- The Python verifier independently recalculates it from each saved blob.
+local function adler32_hex(bytes)
+    local a,b=1,0
+    for i=1,#bytes do
+        a=(a+string.byte(bytes,i))%65521
+        b=(b+a)%65521
+    end
+    return string.format('%08X',b*65536+a)
+end
+
+-- Inspect exact bytes on disk before writing the frame's metadata.
+-- This also rejects corruption that preserves the file size.
+local function write_verified_blob(path,bytes)
+    write_binary(path,bytes)
+    local file,open_error=io.open(path,'rb')
+    assert(file,'Cannot reread snapshot '..path..': '..tostring(open_error))
+    local actual=file:read('*a')
+    local closed,close_error=file:close()
+    assert(closed,'Failed closing snapshot readback '..path..': '..tostring(close_error))
+    assert(actual==bytes,'Snapshot readback mismatch '..path)
+    return adler32_hex(bytes)
+end
+
 -- A finalized metadata file is the publication boundary for private
 -- captures. First write/close a sibling temporary file and compare the
 -- exact bytes, then replace the pending marker. On systems where renaming
@@ -227,7 +251,7 @@ local function flush()
     writes_this_frame = 0
 end
 
-local function capture_metadata(frame)
+local function capture_metadata(frame, checksums)
     local result = {
         'format=fceux_ppu_snapshot_v4',
         'session_id='..session_id,
@@ -237,6 +261,11 @@ local function capture_metadata(frame)
         'cycle_trace_counter_epoch=debugger_since_reset',
         'screen_reference='..(CAPTURE_SCREEN and 'yes' or 'no'),
         'screen_size=256x240',
+        'snapshot_checksum=adler32_v1',
+        'ppu_adler32='..checksums.ppu,
+        'ram_adler32='..checksums.ram,
+        'screen_rgb_adler32='..(checksums.rgb or 'not_captured'),
+        'screen_pal_adler32='..(checksums.pal or 'not_captured'),
         'capture_interval='..tostring(FRAME_INTERVAL),
         'capture_limit='..tostring(MAX_CAPTURES),
         'invalid_screen_palette_values='..tostring(invalid_screen_palette_values),
@@ -278,7 +307,7 @@ end
 local function capture_rendered_screen(prefix)
     -- The fourth result from emu.getscreenpixel is the NES palette
     -- index (0-63) or FCEUX's unavailable sentinel (254).
-    if not CAPTURE_SCREEN then return end
+    if not CAPTURE_SCREEN then return nil,nil end
     assert(type(emu.getscreenpixel) == 'function',
            'FCEUX emu.getscreenpixel required for reference capture')
     local rgb_rows, pal_rows = {}, {}
@@ -303,8 +332,11 @@ local function capture_rendered_screen(prefix)
         rgb_rows[#rgb_rows+1]=table.concat(rgb_row)
         pal_rows[#pal_rows+1]=table.concat(pal_row)
     end
-    write_binary(prefix..'.screen.rgb.bin',table.concat(rgb_rows))
-    write_binary(prefix..'.screen.pal.bin',table.concat(pal_rows))
+    local rgb=table.concat(rgb_rows)
+    local palette=table.concat(pal_rows)
+    local rgb_hash=write_verified_blob(prefix..'.screen.rgb.bin',rgb)
+    local pal_hash=write_verified_blob(prefix..'.screen.pal.bin',palette)
+    return rgb_hash,pal_hash
 end
 
 local function capture_frame()
@@ -331,10 +363,12 @@ local function capture_frame()
            'FCEUX ppu.readbyterange must return a 16384-byte string')
     assert(type(ram_bytes) == 'string' and #ram_bytes == 0x0800,
            'FCEUX memory.readbyterange must return a 2048-byte string')
-    write_binary(prefix..'.ppu.bin', ppu_bytes)
-    write_binary(prefix..'.ram.bin', ram_bytes)
-    capture_rendered_screen(prefix)
-    publish_metadata(prefix..'.meta.txt', capture_metadata(frame))
+    local checksums={
+        ppu=write_verified_blob(prefix..'.ppu.bin',ppu_bytes),
+        ram=write_verified_blob(prefix..'.ram.bin',ram_bytes),
+    }
+    checksums.rgb,checksums.pal=capture_rendered_screen(prefix)
+    publish_metadata(prefix..'.meta.txt', capture_metadata(frame,checksums))
     frames_captured = frames_captured + 1
     captured_frame_list[#captured_frame_list+1] = frame
     emu.message('Private PPU/RAM capture '..frames_captured..'/'..MAX_CAPTURES)
