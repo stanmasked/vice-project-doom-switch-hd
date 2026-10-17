@@ -128,6 +128,7 @@ def check_cycle_events(path, events):
         raise SessionError('Cycle trace row count does not match frame trace')
     return {'checked':count,'equal_adjacent':equal_adjacent}
 
+
 def check_snapshot_blob(path, size, declared_checksum):
     """Verify stored bytes, not just file length (Adler-32, not a MAC)."""
     path = Path(path)
