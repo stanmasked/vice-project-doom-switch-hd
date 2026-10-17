@@ -19,6 +19,8 @@ class HeadlessDiagnosticsTests(unittest.TestCase):
         self.assertEqual(env["QT_QPA_PLATFORM"], "offscreen")
         self.assertEqual(env["SDL_VIDEODRIVER"], "dummy")
         self.assertEqual(env["SDL_AUDIODRIVER"], "dummy")
+        self.assertNotIn("QT_OPENGL", env)
+        self.assertNotIn("LIBGL_ALWAYS_SOFTWARE", env)
 
     def test_xvfb_selects_xcb_and_sdl_x11(self):
         with tempfile.TemporaryDirectory() as temp:

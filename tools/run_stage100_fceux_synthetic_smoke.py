@@ -64,17 +64,20 @@ def backend_settings(backend, working):
         raise ValueError("Unsupported isolated FCEUX display backend")
     if backend == "xvfb" and not os.environ.get("DISPLAY"):
         raise SmokeError("Xvfb backend requested without display server")
-    return {
+    env = {
         "QT_QPA_PLATFORM": "offscreen" if backend == "dummy" else "xcb",
         "SDL_VIDEODRIVER": "dummy" if backend == "dummy" else "x11",
         "SDL_AUDIODRIVER": "dummy",
-        "QT_OPENGL": "software",
-        "LIBGL_ALWAYS_SOFTWARE": "1",
         "XDG_CONFIG_HOME": str(working / "xdg-config"),
         "XDG_CACHE_HOME": str(working / "xdg-cache"),
         "XDG_DATA_HOME": str(working / "xdg-data"),
         "HOME": str(working),
     }
+    # Preserve the Stage100 known-working dummy environment byte-for-byte.
+    # Software GL options apply only to the new independent Xvfb experiment.
+    if backend == "xvfb":
+        env.update({"QT_OPENGL": "software", "LIBGL_ALWAYS_SOFTWARE": "1"})
+    return env
 
 
 def execute(binary, rom, working, *, newppu, smoke_enabled=True,
@@ -114,7 +117,7 @@ def execute(binary, rom, working, *, newppu, smoke_enabled=True,
     output = log_path.read_text(encoding="utf8", errors="replace")
     if expect_marker and MARKER not in output:
         # Avoid dumping data or private file paths on failure.
-        raise SmokeError("No real FCEUX newppu callback marker; runtime did not reach proof threshold")
+        raise SmokeError("No real FCEUX newppu callback marker; runtime did not reach proof threshold; exit_category=" + categorize_exit(proc.returncode, output))
     result = inspect_output(output, expect_probe=expect_marker)
     if expect_marker:
         return {"status": "verified", "result": result}
