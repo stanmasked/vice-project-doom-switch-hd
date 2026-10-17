@@ -124,6 +124,8 @@ jobs:
         run: lua5.4 tests/test_fceux_capture_session_invalidation.lua
       - name: Stage77-78 verify MMC3 and PPU CPU address mirrors
         run: lua5.4 tests/test_fceux_ppu_mmc3_mirrors.lua
+      - name: Stage84 test streaming 24k-event Adler readback helpers
+        run: lua5.4 tests/test_fceux_ppu_checksum_streaming.lua
       - name: Stage83 verify per-frame and complete PPU event-log checksums
         run: lua5.4 tests/test_fceux_ppu_event_log_checksums.lua
       - name: Stage82 checksum PPU RAM screenshots and reject same-size corruption
