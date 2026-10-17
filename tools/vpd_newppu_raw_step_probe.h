@@ -24,6 +24,7 @@ struct Channel {
     void* user = nullptr;
     unsigned long observed = 0;
     unsigned long invalid = 0;
+    unsigned long zero_advance_calls = 0;
 };
 
 inline Channel& channel() {
@@ -59,9 +60,10 @@ inline void smoke_callback(const RawStep& step, void*) {
         std::fprintf(stderr,
             "VPD_STAGE100_NEWPPU_RUNTIME_PASS raw_steps=8192 "
             "cycle_wraps=%lu internal_label_changes=%lu "
-            "invalid_steps=%lu normalized_scanlines=no real_game_data=no\n",
+            "invalid_steps=%lu zero_advance_calls=%lu "
+            "normalized_scanlines=no real_game_data=no\n",
             aggregate.wrapped, aggregate.label_changes,
-            channel().invalid);
+            channel().invalid, channel().zero_advance_calls);
         std::fflush(stderr);
         aggregate.emitted = true;
         set_sink(nullptr, nullptr);
@@ -80,12 +82,18 @@ inline void arm_synthetic_smoke_once() {
 inline void observe(int sl, int before, int after, int modulus, int increment) {
     Channel& c = channel();
     // Verifies internal modulo arithmetic only; no PPU scanline semantics.
-    if (sl < 0 || modulus <= 0 || increment < 1 ||
+    if (sl < 0 || modulus <= 0 || increment < 0 ||
         before < 0 || before >= modulus ||
         after < 0 || after >= modulus ||
         static_cast<long long>(after) !=
             (static_cast<long long>(before) + increment) % modulus) {
         ++c.invalid;
+        return;
+    }
+    if (increment == 0) {
+        // FCEUX newppu invokes runppu(garbage_todo) even when 0;
+        // it is not an advancing PPU tick nor a malformed callback.
+        ++c.zero_advance_calls;
         return;
     }
     ++c.observed;
