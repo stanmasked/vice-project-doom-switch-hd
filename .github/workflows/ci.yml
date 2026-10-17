@@ -4,6 +4,12 @@ on:
   push:
   pull_request:
 
+# Keep the latest native FCEUX verification for each trigger; repeated
+# research commits must not saturate runners with obsolete ROM builds.
+concurrency:
+  group: native-core-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   python-regressions:
     runs-on: ubuntu-latest
