@@ -833,10 +833,11 @@ inline void stage115_edge_read(unsigned sl, unsigned slot,
 inline void stage115_edge_draw(unsigned sl, unsigned xt, unsigned xp,
                                 unsigned tile, unsigned fine_x,
                                 unsigned lo, unsigned hi) {
-    if (!stage115_enabled() || sl < 96 || sl > 111 || xp != 0) return;
+    if (!stage115_enabled() || sl < 96 || sl > 111 || xp != 0 ||
+        xt >= 2) return;
     EdgeCarryAudit& a = stage115_audit();
     if (a.emitted) return;
-    if (xt >= 2 || tile >= 2 || tile != xt || fine_x != 0 ||
+    if (tile >= 2 || tile != xt || fine_x != 0 ||
         lo > 255 || hi > 255 || (a.total && sl < a.last_sl) ||
         (a.total && sl == a.last_sl && tile <= a.last_tile)) {
         ++a.invalid; return;

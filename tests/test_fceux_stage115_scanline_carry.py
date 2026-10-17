@@ -103,6 +103,9 @@ int main() {
        vpd_ppu_probe::stage115_edge_draw(sl,xt,0,xt,0,val,val);
        vpd_ppu_probe::channel().internal_tick_units+=16;
      }
+     // All other rendered background tiles are NOT scanline carry slots.
+     for(unsigned ordinary=2;ordinary<32;++ordinary)
+       vpd_ppu_probe::stage115_edge_draw(sl,ordinary,0,ordinary,0,0,0);
    }
    if(sl==104) {
      vpd_ppu_probe::stage110_state().last_sl=104;
