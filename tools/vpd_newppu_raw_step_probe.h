@@ -1559,6 +1559,82 @@ inline Quad124Audit& stage124_state() {
     static Quad124Audit a;
     return a;
 }
+// Stage126: paired counterfactual. The attribute, CHR pattern and all
+// non-target palette colors are identical to the proven Stage124 fixture.
+// This is a separate evidence stream: it never emits Stage124 PASS.
+struct Quad126DeltaAudit {
+    unsigned samples[4]={0,0,0,0};
+    unsigned colors[4]={0,0,0,0};
+    unsigned invalid=0;
+    bool emitted=false;
+};
+inline Quad126DeltaAudit& stage126_delta_state() {
+    static Quad126DeltaAudit a;
+    return a;
+}
+inline bool stage126_delta_target(unsigned& target) {
+    static const char* env=std::getenv("VPD_STAGE126_TARGET_QUADRANT");
+    if(!env)return false;
+    if(env[0]<'0' || env[0]>'3' || env[1]!='\\0')return false;
+    target=(unsigned)(env[0]-'0');
+    return true;
+}
+inline void stage126_delta_pixel(unsigned sl,unsigned xt,unsigned xp,
+                                 unsigned ntaddr,unsigned ataddr,unsigned raw,
+                                 unsigned shift,unsigned decoded,unsigned pattern,
+                                 unsigned combined,unsigned pixelcolor,
+                                 unsigned xbuf,unsigned target) {
+    Quad126DeltaAudit& a=stage126_delta_state();
+    if(a.emitted || xt<4 || xt>=30 || xp>=8)return;
+    const MidframeChr& m=stage110_state();
+    if(!m.switched || m.writes!=2 || sl<m.switch_sl+8U || sl>215U)return;
+    if(ntaddr<0x2000U || ntaddr>=0x3000U) {
+        ++a.invalid;
+        return;
+    }
+    const unsigned quadrant=((ntaddr&0x40U)?2U:0U)+
+                            ((ntaddr&0x02U)?1U:0U);
+    if(a.samples[quadrant]>=16)return;
+    const unsigned expected_addr=0x23C0U+(ntaddr&0x0C00U)+
+                                 ((ntaddr&0x0380U)>>4)+
+                                 ((ntaddr&0x001CU)>>2);
+    const unsigned expected_color=(quadrant==target)
+                                  ? (0x34U+target) : (0x30U+quadrant);
+    const unsigned expected_xbuf=0x80U|expected_color;
+    if(ataddr!=expected_addr || raw!=0xE4U || shift!=2U*quadrant ||
+       decoded!=4U*quadrant || pattern!=3U ||
+       combined!=3U+4U*quadrant || pixelcolor!=expected_color ||
+       xbuf!=expected_xbuf)
+        ++a.invalid;
+    if(!a.samples[quadrant])a.colors[quadrant]=xbuf;
+    else if(a.colors[quadrant]!=xbuf)++a.invalid;
+    ++a.samples[quadrant];
+    if(a.samples[0]==16 && a.samples[1]==16 &&
+       a.samples[2]==16 && a.samples[3]==16) {
+        if(a.invalid) {
+            std::fprintf(stderr,
+                "VPD_STAGE126_REJECTED_PALETTE_DELTA "
+                "target=%u invalid=%u "
+                "observed=%u,%u,%u,%u samples=16,16,16,16 "
+                "synthetic_only=yes\n",
+                target,a.invalid,a.colors[0],a.colors[1],
+                a.colors[2],a.colors[3]);
+        }else{
+            std::fprintf(stderr,
+                "VPD_STAGE126_NATIVE_PALETTE_DELTA_PASS "
+                "target=%u samples=16,16,16,16 "
+                "indices=3,7,11,15 base=176,177,178,179 "
+                "observed=%u,%u,%u,%u changed_quadrants=1 invalid=0 "
+                "actual_fceux_xbuf=yes synthetic_only=yes "
+                "original_game_palette_proven=no\n",
+                target,a.colors[0],a.colors[1],
+                a.colors[2],a.colors[3]);
+        }
+        std::fflush(stderr);
+        a.emitted=true;
+    }
+}
+
 inline void stage124_pixel(unsigned sl,unsigned xt,unsigned xp,
                            unsigned ntaddr,unsigned ataddr,unsigned raw,
                            unsigned shift,unsigned decoded,unsigned pattern,
@@ -1566,6 +1642,12 @@ inline void stage124_pixel(unsigned sl,unsigned xt,unsigned xp,
                            unsigned xbuf) {
     static const char* env=std::getenv("VPD_STAGE124_QUADRANT_PROBE");
     if(!env || std::strcmp(env,"1")!=0)return;
+    unsigned delta_target=0;
+    if(stage126_delta_target(delta_target)) {
+        stage126_delta_pixel(sl,xt,xp,ntaddr,ataddr,raw,shift,decoded,
+                             pattern,combined,pixelcolor,xbuf,delta_target);
+        return;
+    }
     Quad124Audit& a=stage124_state();
     if(a.emitted || xt<4 || xt>=30 || xp>=8)return;
     const MidframeChr& m=stage110_state();
