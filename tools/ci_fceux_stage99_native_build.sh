@@ -51,7 +51,9 @@ python3 "$PROJECT/tools/inject_fceux_stage115_edge_carry.py" \
   "$PATCH/src/ppu_stage114.cpp" "$PATCH/src/ppu_stage115.cpp"
 python3 "$PROJECT/tools/inject_fceux_stage116_fine_scroll.py" \
   "$PATCH/src/ppu_stage115.cpp" "$PATCH/src/ppu_stage116.cpp"
-cp "$PATCH/src/ppu_stage116.cpp" "$FCEUX/src/ppu.cpp"
+python3 "$PROJECT/tools/inject_fceux_stage117_dynamic_scroll.py" \
+  "$PATCH/src/ppu_stage116.cpp" "$PATCH/src/ppu_stage117.cpp"
+cp "$PATCH/src/ppu_stage117.cpp" "$FCEUX/src/ppu.cpp"
 python3 "${PROJECT}/tools/inject_fceux_mmc3_chr_probe.py" \
   "${FCEUX}/src/boards/mmc3.cpp" "${PATCH}/src/mmc3_stage106.cpp"
 cp "${PATCH}/src/mmc3_stage106.cpp" "${FCEUX}/src/boards/mmc3.cpp"
@@ -67,7 +69,7 @@ grep -q '^#ifdef VPD_NATIVE_RAW_PPU_PROBE' "${FCEUX}/src/ppu.cpp"
 # Probe is explicitly enabled in this temporary build. No sink is installed.
 cmake -S "${FCEUX}" -B "${BUILD}" \
   -DQT=5 -DCMAKE_BUILD_TYPE=Release \
-  -DCMAKE_CXX_FLAGS="-DVPD_NATIVE_RAW_PPU_PROBE -DVPD_NATIVE_SYNTHETIC_SMOKE -DVPD_NATIVE_SYNTHETIC_VBLANK -DVPD_NATIVE_SYNTHETIC_PPUSTATUS_READ -DVPD_NATIVE_SYNTHETIC_EVENT_ORDER -DVPD_NATIVE_SYNTHETIC_PRECLEAR -DVPD_NATIVE_SYNTHETIC_MMC3_CHR -DVPD_NATIVE_SYNTHETIC_BG_PIXELS -DVPD_NATIVE_SYNTHETIC_BG_FETCH -DVPD_NATIVE_SYNTHETIC_CHR_TIMELINE -DVPD_NATIVE_SYNTHETIC_MIDFRAME_CHR -DVPD_NATIVE_SYNTHETIC_BG_TILES -DVPD_NATIVE_SYNTHETIC_BG_PREFETCH -DVPD_NATIVE_SYNTHETIC_BG_PLANE_PAIRS -DVPD_NATIVE_SYNTHETIC_SCANLINE_CARRY -DVPD_NATIVE_SYNTHETIC_FINE_SCROLL" \
+  -DCMAKE_CXX_FLAGS="-DVPD_NATIVE_RAW_PPU_PROBE -DVPD_NATIVE_SYNTHETIC_SMOKE -DVPD_NATIVE_SYNTHETIC_VBLANK -DVPD_NATIVE_SYNTHETIC_PPUSTATUS_READ -DVPD_NATIVE_SYNTHETIC_EVENT_ORDER -DVPD_NATIVE_SYNTHETIC_PRECLEAR -DVPD_NATIVE_SYNTHETIC_MMC3_CHR -DVPD_NATIVE_SYNTHETIC_BG_PIXELS -DVPD_NATIVE_SYNTHETIC_BG_FETCH -DVPD_NATIVE_SYNTHETIC_CHR_TIMELINE -DVPD_NATIVE_SYNTHETIC_MIDFRAME_CHR -DVPD_NATIVE_SYNTHETIC_BG_TILES -DVPD_NATIVE_SYNTHETIC_BG_PREFETCH -DVPD_NATIVE_SYNTHETIC_BG_PLANE_PAIRS -DVPD_NATIVE_SYNTHETIC_SCANLINE_CARRY -DVPD_NATIVE_SYNTHETIC_FINE_SCROLL -DVPD_NATIVE_SYNTHETIC_DYNAMIC_SCROLL" \
   -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 cmake --build "${BUILD}" --target fceux --parallel 2
 test -x "${BUILD}/src/fceux"
@@ -143,5 +145,9 @@ xvfb-run -a -s '-screen 0 1024x768x24 -nolisten tcp' \
 # Stage116: real $2005 fine scroll pixel-to-carried-buffer correspondence.
 xvfb-run -a -s '-screen 0 1024x768x24 -nolisten tcp' \
   python3 "$PROJECT/tools/run_stage116_native_fine_scroll.py" \
+    "$BUILD/src/fceux" "$RUNNER_TEMP"
+# Stage117: mid-render $2005 CPU writes and shifted BG buffer sources.
+xvfb-run -a -s '-screen 0 1024x768x24 -nolisten tcp' \
+  python3 "$PROJECT/tools/run_stage117_native_dynamic_scroll.py" \
     "$BUILD/src/fceux" "$RUNNER_TEMP"
 printf 'STAGE99_PINNED_FCEUX_NATIVE_BUILD_PASS commit=%s opt_in_probe=yes real_fceux_linked=yes gameplay_raster_verified=no\n' "${PIN}"

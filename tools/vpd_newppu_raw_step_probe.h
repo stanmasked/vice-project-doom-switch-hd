@@ -3,7 +3,7 @@
 // Install callback explicitly only on a controlled private emulator build.
 #ifndef VPD_NEWPPU_RAW_STEP_PROBE_H
 #define VPD_NEWPPU_RAW_STEP_PROBE_H
-#if defined(VPD_NATIVE_SYNTHETIC_SMOKE) || defined(VPD_NATIVE_SYNTHETIC_VBLANK) || defined(VPD_NATIVE_SYNTHETIC_PPUSTATUS_READ) || defined(VPD_NATIVE_SYNTHETIC_EVENT_ORDER) || defined(VPD_NATIVE_SYNTHETIC_PRECLEAR) || defined(VPD_NATIVE_SYNTHETIC_MMC3_CHR) || defined(VPD_NATIVE_SYNTHETIC_BG_PIXELS) || defined(VPD_NATIVE_SYNTHETIC_BG_FETCH) || defined(VPD_NATIVE_SYNTHETIC_CHR_TIMELINE) || defined(VPD_NATIVE_SYNTHETIC_MIDFRAME_CHR) || defined(VPD_NATIVE_SYNTHETIC_BG_TILES) || defined(VPD_NATIVE_SYNTHETIC_BG_PREFETCH) || defined(VPD_NATIVE_SYNTHETIC_BG_PLANE_PAIRS) || defined(VPD_NATIVE_SYNTHETIC_SCANLINE_CARRY) || defined(VPD_NATIVE_SYNTHETIC_FINE_SCROLL)
+#if defined(VPD_NATIVE_SYNTHETIC_SMOKE) || defined(VPD_NATIVE_SYNTHETIC_VBLANK) || defined(VPD_NATIVE_SYNTHETIC_PPUSTATUS_READ) || defined(VPD_NATIVE_SYNTHETIC_EVENT_ORDER) || defined(VPD_NATIVE_SYNTHETIC_PRECLEAR) || defined(VPD_NATIVE_SYNTHETIC_MMC3_CHR) || defined(VPD_NATIVE_SYNTHETIC_BG_PIXELS) || defined(VPD_NATIVE_SYNTHETIC_BG_FETCH) || defined(VPD_NATIVE_SYNTHETIC_CHR_TIMELINE) || defined(VPD_NATIVE_SYNTHETIC_MIDFRAME_CHR) || defined(VPD_NATIVE_SYNTHETIC_BG_TILES) || defined(VPD_NATIVE_SYNTHETIC_BG_PREFETCH) || defined(VPD_NATIVE_SYNTHETIC_BG_PLANE_PAIRS) || defined(VPD_NATIVE_SYNTHETIC_SCANLINE_CARRY) || defined(VPD_NATIVE_SYNTHETIC_FINE_SCROLL) || defined(VPD_NATIVE_SYNTHETIC_DYNAMIC_SCROLL)
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -1001,6 +1001,124 @@ inline void stage116_pixel(unsigned sl, unsigned xt, unsigned xp,
                 "invalid=0 same_native_frame=yes synthetic_only=yes "
                 "original_game_scroll_proven=no\n",
                 target_scroll, a.slot0, a.slot1, a.min_lag, a.max_lag);
+        }
+        std::fflush(stderr);
+        a.emitted = true;
+    }
+}
+#endif
+
+// Stage117: one real $2005 horizontal fine-scroll write during rendering.
+// A synthetic MMC3 CHR bank change precedes it in the *same source line*.
+// Validate actual newppu buffer selection and PPU pattern bytes in the rest
+// of that line and the following one, not a hardware-exact NES dot count.
+#if defined(VPD_NATIVE_SYNTHETIC_DYNAMIC_SCROLL) && defined(VPD_NATIVE_SYNTHETIC_MIDFRAME_CHR)
+struct DynamicScrollAudit {
+    unsigned writes = 0, target = 0, write_sl = 0, write_x = 0;
+    unsigned last_sl = 0, last_x = 0, row = 0, next = 0;
+    unsigned shifted = 0, invalid = 0;
+    unsigned first_after_x = 0;
+    unsigned long frame = 0;
+    unsigned long long write_tick = 0, first_tick = 0, last_tick = 0;
+    bool first_seen = false, emitted = false;
+};
+inline DynamicScrollAudit& stage117_audit() {
+    static DynamicScrollAudit a;
+    return a;
+}
+inline bool stage117_enabled() {
+    static const char* env = std::getenv("VPD_STAGE117_DYNAMIC_SCROLL_PROBE");
+    return env && std::strcmp(env, "1") == 0;
+}
+inline unsigned stage117_target() {
+    static const char* env = std::getenv("VPD_STAGE117_EXPECT_FINE");
+    if (!env || env[1] != '\0' ||
+        (env[0] != '1' && env[0] != '3' &&
+         env[0] != '5' && env[0] != '7')) return 255;
+    return static_cast<unsigned>(env[0] - '0');
+}
+inline void stage117_scroll_write(unsigned fine, unsigned coarse) {
+    if (!stage117_enabled()) return;
+    DynamicScrollAudit& a = stage117_audit();
+    MidframeChr& m = stage110_state();
+    if (a.emitted) return;
+    ++a.writes;
+    a.target = fine;
+    a.write_sl = m.last_sl;
+    a.write_x = a.last_x;
+    a.frame = m.frame;
+    a.write_tick = channel().internal_tick_units;
+    if (a.writes != 1 || fine != stage117_target() || coarse != 0 ||
+        !m.switched || m.writes != 2 || m.invalid != 0 || m.switch_sl != a.write_sl ||
+        a.last_sl != a.write_sl || a.write_sl < 40 ||
+        a.write_sl > 210 || a.write_x < 4 || a.write_x > 175)
+        ++a.invalid;
+}
+inline void stage117_pixel(unsigned sl, unsigned xt, unsigned xp,
+                           unsigned tile, unsigned bgpx, unsigned fine,
+                           unsigned lo, unsigned hi, unsigned pattern) {
+    if (!stage117_enabled()) return;
+    DynamicScrollAudit& a = stage117_audit();
+    if (a.emitted || sl < 1 || sl > 240 || xt >= 32 || xp >= 8) return;
+    const unsigned x = xt * 8 + xp;
+    if (a.writes == 0) {
+        a.last_sl = sl;
+        a.last_x = x;
+        return;
+    }
+    if (a.writes != 1 || a.frame != stage110_state().frame) {
+        ++a.invalid; return;
+    }
+    const bool same = sl == a.write_sl && x > a.write_x;
+    const bool following = sl == a.write_sl + 1 && x < 16;
+    if (!same && !following) return;
+    if ((same && a.row >= 64) || (following && a.next >= 16))
+        return;
+    const unsigned expected_bgpos = x + a.target;
+    const unsigned expected_tile = expected_bgpos >> 3;
+    const unsigned expected_bgpx = expected_bgpos & 7U;
+    if (fine != a.target || tile != expected_tile || bgpx != expected_bgpx ||
+        tile >= 34 || lo > 255 || hi > 255 ||
+        !((lo == 0 && hi == 0 && pattern == 0) ||
+          (lo == 255 && hi == 255 && pattern == 3)))
+        ++a.invalid;
+    if (same) {
+        if (!a.first_seen) {
+            a.first_seen = true;
+            a.first_after_x = x;
+            a.first_tick = channel().internal_tick_units;
+        }
+        ++a.row;
+        if (expected_bgpx != (x & 7U)) ++a.shifted;
+    } else {
+        ++a.next;
+    }
+    a.last_tick = channel().internal_tick_units;
+    if (a.row == 64 && a.next == 16 && !a.emitted) {
+        const unsigned long long first_lag =
+            a.first_tick >= a.write_tick ? a.first_tick - a.write_tick : 0;
+        if (a.invalid || a.writes != 1 || !a.first_seen ||
+            a.first_after_x <= a.write_x || a.first_after_x > a.write_x+16 ||
+            a.shifted != 64 || first_lag > 1000000ULL ||
+            a.last_tick <= a.first_tick)
+            ++a.invalid;
+        if (a.invalid) {
+            std::fprintf(stderr,
+                "VPD_STAGE117_REJECTED_DYNAMIC_SCROLL invalid=%u "
+                "row=%u next=%u fine=%u write_sl=%u write_x=%u "
+                "synthetic_only=yes\n",
+                a.invalid, a.row, a.next, a.target, a.write_sl, a.write_x);
+        } else {
+            std::fprintf(stderr,
+                "VPD_STAGE117_NATIVE_DYNAMIC_SCROLL_PASS "
+                "old_fine=0 new_fine=%u write_sl=%u write_x=%u "
+                "first_after_x=%u same_line_samples=64 "
+                "next_line_samples=16 shifted_samples=64 "
+                "first_lag=%llu source_clock_only=yes "
+                "same_native_frame=yes synthetic_only=yes "
+                "original_game_midframe_scroll_proven=no\n",
+                a.target, a.write_sl, a.write_x, a.first_after_x,
+                first_lag);
         }
         std::fflush(stderr);
         a.emitted = true;
