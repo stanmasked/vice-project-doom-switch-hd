@@ -10,7 +10,7 @@ from run_stage100_fceux_synthetic_smoke import inspect_output, SmokeError
 
 MARKER = ("VPD_STAGE100_NEWPPU_RUNTIME_PASS raw_steps=8192 "
           "cycle_wraps=24 internal_label_changes=23 invalid_steps=0 "
-          "normalized_scanlines=no real_game_data=no")
+          "zero_advance_calls=3 normalized_scanlines=no real_game_data=no")
 
 
 class Stage100Tests(unittest.TestCase):
@@ -30,6 +30,7 @@ class Stage100Tests(unittest.TestCase):
         result = inspect_output("starting\n" + MARKER + "\n",
                                 expect_probe=True)
         self.assertEqual(result["steps"], 8192)
+        self.assertEqual(result["zero_advance_calls"], 3)
         self.assertFalse(result["ntsc_raster_calibration_proven"])
 
     def test_missing_marker_rejected(self):
