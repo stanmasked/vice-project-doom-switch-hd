@@ -8,9 +8,11 @@ import hashlib
 from pathlib import Path
 
 
-def program(*, switch=True, delay_outer=11):
+def program(*, switch=True, delay_outer=11, phase_nops=0):
     if not 1 <= delay_outer <= 32:
         raise ValueError("Invalid bounded delay")
+    if not 0 <= phase_nops <= 64:
+        raise ValueError("Phase NOP count outside bounded 6502 raster sweep")
     result = bytearray()
     def lda(v):
         result.extend((0xa9, v))
@@ -29,6 +31,9 @@ def program(*, switch=True, delay_outer=11):
     result.extend((0x2c, 0x02, 0x20, 0x10, 0xfb))
     result.extend((0xa2, delay_outer, 0xa0, 255, 0x88, 0xd0, 0xfd,
                    0xca, 0xd0, 0xf8))
+    # 2 CPU cycles per NOP: controlled sub-scanline bank-switch phase.
+    # No PPU state, nametable, CHR, or palette differences between variants.
+    result.extend((0xea,) * phase_nops)
     lda(1 if switch else 0)
     sta(0x8001)
     loop = 0xc000 + len(result)
@@ -36,12 +41,12 @@ def program(*, switch=True, delay_outer=11):
     return bytes(result)
 
 
-def make_rom(destination, *, switch=True, delay_outer=11):
+def make_rom(destination, *, switch=True, delay_outer=11, phase_nops=0):
     destination = Path(destination)
     destination.parent.mkdir(parents=True, exist_ok=True)
     header = b"NES\x1a" + bytes((2, 2, 0x40, 0)) + bytes(8)
     prg_bank = bytearray(b"\xea" * 8192)
-    p = program(switch=switch, delay_outer=delay_outer)
+    p = program(switch=switch, delay_outer=delay_outer, phase_nops=phase_nops)
     prg_bank[:len(p)] = p
     prg = bytearray(prg_bank * 4)
     prg[-6:] = b"\x00\xc0" * 3
@@ -58,7 +63,9 @@ if __name__ == "__main__":
     parser.add_argument("destination", type=Path)
     parser.add_argument("--fixed", action="store_true")
     parser.add_argument("--delay-outer", type=int, default=11)
+    parser.add_argument("--phase-nops", type=int, default=0)
     args = parser.parse_args()
     print("Stage110 original synthetic mapper4 SHA256=" +
           make_rom(args.destination, switch=not args.fixed,
-                   delay_outer=args.delay_outer))
+                   delay_outer=args.delay_outer,
+                   phase_nops=args.phase_nops))

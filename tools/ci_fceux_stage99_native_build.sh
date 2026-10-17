@@ -116,4 +116,8 @@ xvfb-run -a -s '-screen 0 1024x768x24 -nolisten tcp' \
 xvfb-run -a -s '-screen 0 1024x768x24 -nolisten tcp' \
   python3 "$PROJECT/tools/run_stage111_native_tile_boundary.py" \
     "$BUILD/src/fceux" "$RUNNER_TEMP"
+# Stage112: phase-controlled CHR changes at multiple positions within one row.
+xvfb-run -a -s '-screen 0 1024x768x24 -nolisten tcp' \
+  python3 "$PROJECT/tools/run_stage112_native_subscanline_sweep.py" \
+    "$BUILD/src/fceux" "$RUNNER_TEMP"
 printf 'STAGE99_PINNED_FCEUX_NATIVE_BUILD_PASS commit=%s opt_in_probe=yes real_fceux_linked=yes gameplay_raster_verified=no\n' "${PIN}"
