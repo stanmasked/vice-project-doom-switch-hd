@@ -85,6 +85,8 @@ jobs:
         run: ctest --test-dir build/native_core --output-on-failure
       - name: Run synthetic ROM tests
         run: python -m unittest discover -s tests -p 'test_*.py' -v
+      - name: Stage79 full-session video integrity regressions
+        run: python -m unittest discover -s tests -p 'test_ppu_capture_session.py' -v
       - name: Validate stage39 video/dispatcher correlation without original ROM
         run: python -m unittest discover -s tests -p 'test_video_trace_alignment.py' -v
       - name: Install Lua 5.4 for FCEUX capture mock
@@ -122,6 +124,8 @@ jobs:
         run: lua5.4 tests/test_fceux_capture_session_invalidation.lua
       - name: Stage77-78 verify MMC3 and PPU CPU address mirrors
         run: lua5.4 tests/test_fceux_ppu_mmc3_mirrors.lua
+      - name: Stage79 finalized PPU capture session continuity
+        run: lua5.4 tests/test_fceux_ppu_capture_session.lua
       - name: Stage76 invalidate stale private PPU frame metadata on failure
         run: lua5.4 tests/test_fceux_ppu_session_invalidation.lua
       - name: Reject ROMs, PPU snapshots, original art exports and binaries
