@@ -3,7 +3,7 @@
 // Install callback explicitly only on a controlled private emulator build.
 #ifndef VPD_NEWPPU_RAW_STEP_PROBE_H
 #define VPD_NEWPPU_RAW_STEP_PROBE_H
-#if defined(VPD_NATIVE_SYNTHETIC_SMOKE) || defined(VPD_NATIVE_SYNTHETIC_VBLANK) || defined(VPD_NATIVE_SYNTHETIC_PPUSTATUS_READ) || defined(VPD_NATIVE_SYNTHETIC_EVENT_ORDER) || defined(VPD_NATIVE_SYNTHETIC_PRECLEAR) || defined(VPD_NATIVE_SYNTHETIC_MMC3_CHR) || defined(VPD_NATIVE_SYNTHETIC_BG_PIXELS) || defined(VPD_NATIVE_SYNTHETIC_BG_FETCH) || defined(VPD_NATIVE_SYNTHETIC_CHR_TIMELINE) || defined(VPD_NATIVE_SYNTHETIC_MIDFRAME_CHR) || defined(VPD_NATIVE_SYNTHETIC_BG_TILES) || defined(VPD_NATIVE_SYNTHETIC_BG_PREFETCH)
+#if defined(VPD_NATIVE_SYNTHETIC_SMOKE) || defined(VPD_NATIVE_SYNTHETIC_VBLANK) || defined(VPD_NATIVE_SYNTHETIC_PPUSTATUS_READ) || defined(VPD_NATIVE_SYNTHETIC_EVENT_ORDER) || defined(VPD_NATIVE_SYNTHETIC_PRECLEAR) || defined(VPD_NATIVE_SYNTHETIC_MMC3_CHR) || defined(VPD_NATIVE_SYNTHETIC_BG_PIXELS) || defined(VPD_NATIVE_SYNTHETIC_BG_FETCH) || defined(VPD_NATIVE_SYNTHETIC_CHR_TIMELINE) || defined(VPD_NATIVE_SYNTHETIC_MIDFRAME_CHR) || defined(VPD_NATIVE_SYNTHETIC_BG_TILES) || defined(VPD_NATIVE_SYNTHETIC_BG_PREFETCH) || defined(VPD_NATIVE_SYNTHETIC_BG_PLANE_PAIRS)
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -637,6 +637,141 @@ inline void stage113_draw(unsigned sl, unsigned xt, unsigned xp,
                 m.switch_sl, a.first_sl, a.first_xt, a.old_after_write,
                 a.old_started_before, a.old_started_after,
                 a.lag_min, a.lag_max);
+        }
+        std::fflush(stderr);
+        a.emitted = true;
+    }
+}
+#endif
+
+// Stage114: verify BOTH low and high CHR plane bytes actually read by newppu
+// for the buffer that was later used to produce a rendered background tile.
+// Classification is specific to generated all-0 / all-FF synthetic CHR ROM.
+#if defined(VPD_NATIVE_SYNTHETIC_BG_PLANE_PAIRS) && defined(VPD_NATIVE_SYNTHETIC_MIDFRAME_CHR)
+struct NativePlaneRecord {
+    unsigned sl = 0, slot = 0, lo = 0, hi = 0;
+    unsigned addr0 = 0, addr1 = 0, epoch0 = 0, epoch1 = 0;
+    unsigned long long tick0 = 0, tick1 = 0;
+    bool low = false, high = false, complete = false;
+};
+struct PlanePairAudit {
+    NativePlaneRecord records[34];
+    unsigned active_slot = 0;
+    bool active = false, emitted = false;
+    unsigned long old_tiles = 0, new_tiles = 0, mixed_pairs = 0;
+    unsigned long split_writes = 0, invalid = 0;
+    unsigned long long min_gap = 0, max_gap = 0;
+};
+inline PlanePairAudit& stage114_state() {
+    static PlanePairAudit a;
+    return a;
+}
+inline bool stage114_enabled() {
+    static const char* env = std::getenv("VPD_STAGE114_PLANE_PAIR_PROBE");
+    return env && std::strcmp(env,"1") == 0;
+}
+inline void stage114_begin(unsigned sl, unsigned slot) {
+    if (!stage114_enabled()) return;
+    PlanePairAudit& a = stage114_state();
+    a.active = !a.emitted && sl >= 1 && sl <= 240 &&
+               slot >= 2 && slot < 34;
+    if (!a.active) return;
+    a.active_slot = slot;
+    NativePlaneRecord& r = a.records[slot];
+    r = NativePlaneRecord();
+    r.sl = sl;
+    r.slot = slot;
+}
+inline void stage114_plane(unsigned plane, unsigned address, unsigned value) {
+    if (!stage114_enabled()) return;
+    PlanePairAudit& a = stage114_state();
+    if (!a.active || a.emitted) return;
+    NativePlaneRecord& r = a.records[a.active_slot];
+    if (plane > 1 || address < 0x1000 || address >= 0x2000 || value > 255) {
+        ++a.invalid; return;
+    }
+    if (plane == 0) {
+        if (r.low || r.high) ++a.invalid;
+        r.low = true;
+        r.lo = value;
+        r.addr0 = address;
+        r.tick0 = channel().internal_tick_units;
+        r.epoch0 = stage110_state().writes;
+    } else {
+        if (!r.low || r.high) ++a.invalid;
+        r.high = true;
+        r.hi = value;
+        r.addr1 = address;
+        r.tick1 = channel().internal_tick_units;
+        r.epoch1 = stage110_state().writes;
+    }
+}
+inline void stage114_end(unsigned sl, unsigned slot, unsigned lo, unsigned hi) {
+    if (!stage114_enabled()) return;
+    PlanePairAudit& a = stage114_state();
+    if (!a.active || a.emitted) return;
+    NativePlaneRecord& r = a.records[a.active_slot];
+    if (slot != a.active_slot || sl != r.sl || !r.low || !r.high ||
+        r.lo != lo || r.hi != hi || r.addr1 != (r.addr0 | 8) ||
+        r.addr0 >= 0x2000 || r.tick1 <= r.tick0 ||
+        r.tick1 - r.tick0 > 8) ++a.invalid;
+    r.complete = true;
+    a.active = false;
+}
+inline void stage114_draw(unsigned sl, unsigned xt, unsigned xp,
+                          unsigned slot, unsigned lo, unsigned hi) {
+    if (!stage114_enabled() || xp != 0 || xt < 2) return;
+    PlanePairAudit& a = stage114_state();
+    MidframeChr& m = stage110_state();
+    if (a.emitted) return;
+    if (slot != xt || xt >= 32 || sl < 1 || sl > 240) {
+        ++a.invalid; return;
+    }
+    NativePlaneRecord& r = a.records[slot];
+    if (!r.complete || r.sl != sl || r.lo != lo || r.hi != hi ||
+        r.tick1 > channel().internal_tick_units) {
+        ++a.invalid; return;
+    }
+    const bool zero = lo == 0 && hi == 0;
+    const bool filled = lo == 255 && hi == 255;
+    const bool mixed = (lo == 0 && hi == 255) ||
+                       (lo == 255 && hi == 0);
+    if (m.writes == 1 && !m.switched && a.old_tiles < 128) {
+        ++a.old_tiles;
+        if (!zero || r.epoch0 != 1 || r.epoch1 != 1) ++a.invalid;
+    }
+    if (m.writes == 2 && m.switched &&
+        m.switch_frame == m.frame && sl >= m.switch_sl) {
+        if (mixed) ++a.mixed_pairs;
+        if (r.epoch0 != r.epoch1) ++a.split_writes;
+        if (filled && a.new_tiles < 128) {
+            ++a.new_tiles;
+            if (r.epoch0 != 2 || r.epoch1 != 2) ++a.invalid;
+            const unsigned long long gap = r.tick1 - r.tick0;
+            if (a.new_tiles == 1 || gap < a.min_gap) a.min_gap = gap;
+            if (gap > a.max_gap) a.max_gap = gap;
+        } else if (!zero && !mixed && !filled) {
+            ++a.invalid;
+        }
+    }
+    if (a.new_tiles == 128) {
+        if (a.old_tiles != 128 || a.mixed_pairs != 0 ||
+            a.split_writes != 0 || a.min_gap == 0 ||
+            a.max_gap < a.min_gap || a.max_gap > 8) ++a.invalid;
+        if (a.invalid) {
+            std::fprintf(stderr,
+                "VPD_STAGE114_REJECTED_PLANE_PAIR invalid=%lu "
+                "mixed=%lu split=%lu synthetic_only=yes\n",
+                a.invalid, a.mixed_pairs, a.split_writes);
+        } else {
+            std::fprintf(stderr,
+                "VPD_STAGE114_NATIVE_PLANE_PAIR_PASS "
+                "switch_sl=%u old_tiles=128 new_tiles=128 "
+                "mixed_pairs=0 writes_between_planes=0 "
+                "low_to_high_min=%llu low_to_high_max=%llu "
+                "source_clock_only=yes pinned_fceux_only=yes "
+                "synthetic_only=yes original_game_mixed_tiles_proven=no\n",
+                m.switch_sl, a.min_gap, a.max_gap);
         }
         std::fflush(stderr);
         a.emitted = true;
