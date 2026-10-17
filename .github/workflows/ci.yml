@@ -85,6 +85,8 @@ jobs:
         run: ctest --test-dir build/native_core --output-on-failure
       - name: Run synthetic ROM tests
         run: python -m unittest discover -s tests -p 'test_*.py' -v
+      - name: Stage86 observed event-frame transition versus PPU frame boundary checks
+        run: python -m unittest discover -s tests -p 'test_ppu_cycle_trace.py' -v
       - name: Stage79 full-session video integrity regressions
         run: python -m unittest discover -s tests -p 'test_ppu_capture_session.py' -v
       - name: Validate stage39 video/dispatcher correlation without original ROM
