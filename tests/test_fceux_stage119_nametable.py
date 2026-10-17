@@ -131,6 +131,8 @@ int main(int argc, char** argv) {
  setenv("VPD_STAGE119_FIRST_FINE",expected,1);
  setenv("VPD_STAGE110_MIDFRAME_CHR_PROBE","1",1);
  vpd_ppu_probe::stage110_register_write(2,0);
+ // Boot-time $2005 X=0 is not a visible midframe scroll event.
+ vpd_ppu_probe::stage119_write(0,0);
  for(unsigned sl=1;sl<=107;++sl) {
   for(unsigned x=0;x<256;++x) {
    if(sl==104 && x==36) vpd_ppu_probe::stage110_register_write(2,1);
