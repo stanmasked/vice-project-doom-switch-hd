@@ -18,6 +18,14 @@ from inject_fceux_stage121_attributes import patch as stage121_patch, GUARD
 from run_stage119_native_nametable import verify_report as stage119_report
 from test_fceux_stage119_nametable import SOURCE as STAGE118_SOURCE, PASS as STAGE119
 
+# Stage119's tiny fixture does not include the real upstream attribute
+# reads; add those pinned source lines before applying Stage119 then Stage121.
+STAGE118_SOURCE = STAGE118_SOURCE.replace(
+    b"\t\t\tnt = CALL_PPUREAD(RefreshAddr);",
+    b"\t\t\tnt = CALL_PPUREAD(RefreshAddr);\r\n"
+    b"\t\t\tat = CALL_PPUREAD(RefreshAddr);\r\n"
+    b"\t\t\tat <<= 2;",
+)
 STAGE120 = (
     "VPD_STAGE120_NATIVE_NT_STRIDE_PASS fine1={fine} fine2={second} "
     "nt_addr0=2000 nt_addr1=2001 samples0=16 samples1=16 "
