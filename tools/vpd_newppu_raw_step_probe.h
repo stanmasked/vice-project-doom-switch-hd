@@ -3,7 +3,7 @@
 // Install callback explicitly only on a controlled private emulator build.
 #ifndef VPD_NEWPPU_RAW_STEP_PROBE_H
 #define VPD_NEWPPU_RAW_STEP_PROBE_H
-#if defined(VPD_NATIVE_SYNTHETIC_SMOKE) || defined(VPD_NATIVE_SYNTHETIC_VBLANK) || defined(VPD_NATIVE_SYNTHETIC_PPUSTATUS_READ) || defined(VPD_NATIVE_SYNTHETIC_EVENT_ORDER)
+#if defined(VPD_NATIVE_SYNTHETIC_SMOKE) || defined(VPD_NATIVE_SYNTHETIC_VBLANK) || defined(VPD_NATIVE_SYNTHETIC_PPUSTATUS_READ) || defined(VPD_NATIVE_SYNTHETIC_EVENT_ORDER) || defined(VPD_NATIVE_SYNTHETIC_PRECLEAR)
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -204,10 +204,125 @@ inline void event_order_read(bool returned_high, bool before_high,
 }
 #endif
 
+
+// Stage105: independent pre-clear status snapshot. These are software source
+// callbacks, never NES hardware PPUSTATUS samples or pixel observations.
+#ifdef VPD_NATIVE_SYNTHETIC_PRECLEAR
+struct PreclearState {
+    unsigned long sets = 0, clears = 0, pre_calls = 0, reads = 0;
+    unsigned long high_reads = 0, read_clears = 0, low_after_high = 0;
+    unsigned long pre_low_after_high = 0, pre_high_after_high = 0;
+    unsigned long pre_high_no_read = 0, pre_low_no_read = 0;
+    unsigned long invalid = 0;
+    unsigned long long last_high_tick = 0, lag_min = 0, lag_max = 0;
+    unsigned long long last_pre_tick = 0;
+    bool window = false, high_this_window = false, pre_seen = false;
+    bool emitted = false;
+};
+
+inline PreclearState& preclear_state() {
+    static PreclearState s;
+    return s;
+}
+
+inline bool preclear_enabled() {
+    static const char* opt = std::getenv("VPD_STAGE105_PRECLEAR_PROBE");
+    return opt && std::strcmp(opt, "1") == 0;
+}
+
+inline void preclear_source_assignment(bool entering, bool after_high) {
+    if (!preclear_enabled()) return;
+    PreclearState& s = preclear_state();
+    if (s.emitted) return;
+    if (entering) {
+        if (s.window || !after_high) ++s.invalid;
+        ++s.sets;
+        s.window = true;
+        s.high_this_window = false;
+        s.pre_seen = false;
+    } else {
+        if (!s.window || !s.pre_seen || after_high ||
+            s.last_pre_tick != channel().internal_tick_units)
+            ++s.invalid;
+        ++s.clears;
+        s.window = false;
+        s.high_this_window = false;
+        s.pre_seen = false;
+    }
+}
+
+inline void preclear_before_assignment(bool before_high) {
+    if (!preclear_enabled()) return;
+    PreclearState& s = preclear_state();
+    if (s.emitted) return;
+    ++s.pre_calls;
+    if (!s.window || s.pre_seen) ++s.invalid;
+    s.pre_seen = true;
+    s.last_pre_tick = channel().internal_tick_units;
+    if (s.high_this_window) {
+        if (before_high) {
+            ++s.pre_high_after_high;
+            ++s.invalid;
+        } else {
+            ++s.pre_low_after_high;
+        }
+        if (s.last_pre_tick < s.last_high_tick) {
+            ++s.invalid;
+        } else {
+            unsigned long long lag = s.last_pre_tick - s.last_high_tick;
+            if (s.pre_low_after_high + s.pre_high_after_high == 1 ||
+                lag < s.lag_min) s.lag_min = lag;
+            if (lag > s.lag_max) s.lag_max = lag;
+        }
+    } else if (before_high) {
+        ++s.pre_high_no_read;
+    } else {
+        ++s.pre_low_no_read;
+    }
+}
+
+inline void preclear_cpu_read(bool returned_high, bool before_high,
+                               bool after_high) {
+    if (!preclear_enabled()) return;
+    PreclearState& s = preclear_state();
+    if (s.emitted) return;
+    ++s.reads;
+    if (returned_high != before_high || after_high) ++s.invalid;
+    if (before_high) {
+        ++s.high_reads;
+        if (!after_high) ++s.read_clears;
+        if (!s.window || s.high_this_window || s.pre_seen) ++s.invalid;
+        s.high_this_window = true;
+        s.last_high_tick = channel().internal_tick_units;
+    } else if (s.window && s.high_this_window) {
+        ++s.low_after_high;
+    }
+    if (s.reads == 16384) {
+        std::fprintf(stderr,
+            "VPD_STAGE105_NATIVE_PRECLEAR_PASS reads=16384 "
+            "sets=%lu clears=%lu pre_calls=%lu high_reads=%lu "
+            "read_clears=%lu low_after_high=%lu "
+            "pre_low_after_high=%lu pre_high_after_high=%lu "
+            "pre_high_no_read=%lu pre_low_no_read=%lu "
+            "high_to_pre_min=%llu high_to_pre_max=%llu invalid=%lu "
+            "source_only=yes hardware_vblank_proven=no\n",
+            s.sets, s.clears, s.pre_calls, s.high_reads,
+            s.read_clears, s.low_after_high, s.pre_low_after_high,
+            s.pre_high_after_high, s.pre_high_no_read, s.pre_low_no_read,
+            s.lag_min, s.lag_max, s.invalid);
+        std::fflush(stderr);
+        s.emitted = true;
+    }
+}
+#endif
+
 // Stage102 observes *source-level* PPU_status assignment boundaries, NOT
 // validated hardware VBlank edges. Intentionally export aggregates only.
 #ifdef VPD_NATIVE_SYNTHETIC_VBLANK
 inline void observe_native_status_assignment(bool entering, bool bit_after) {
+#ifdef VPD_NATIVE_SYNTHETIC_PRECLEAR
+    preclear_source_assignment(entering, bit_after);
+#endif
 #ifdef VPD_NATIVE_SYNTHETIC_EVENT_ORDER
     event_order_assignment(entering, bit_after);
 #endif
@@ -265,6 +380,9 @@ inline void observe_native_status_assignment(bool entering, bool bit_after) {
 inline void observe_native_ppustatus_read(bool returned_high,
                                           bool before_high,
                                           bool after_high) {
+#ifdef VPD_NATIVE_SYNTHETIC_PRECLEAR
+    preclear_cpu_read(returned_high, before_high, after_high);
+#endif
 #ifdef VPD_NATIVE_SYNTHETIC_EVENT_ORDER
     event_order_read(returned_high, before_high, after_high);
 #endif
