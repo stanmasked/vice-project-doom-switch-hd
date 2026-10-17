@@ -66,6 +66,24 @@ python3 tests/verify_original_rom.py '/private/path/Vice - Project Doom (USA).ne
 
 **Rights and provenance:** Original commercial game binaries, extracted graphics, disassembly and ROM-bearing build artifacts are not published. The project is research tooling; a distributed remake requires appropriate permissions.
 
+## Stage 89 — quantified reference-screen hypotheses
+
+When **local, validated FCEUX screen references** are available,
+`tools/audit_ppu_screen_alignment.py` compares their NES palette
+indices to four or eight clearly labeled, static zero-scroll
+background hypotheses. It reports mismatch counts and uncertainty
+without exporting the original image or claiming correct game
+level geometry.
+
+```bash
+python3 tools/audit_ppu_screen_alignment.py \
+  private/ppu_capture_session.meta.txt \
+  --require-screen --require-cycle --out private/ppu_screen_alignment.json
+```
+
+See [Stage 89 reference alignment](docs/PPU_SCREEN_ALIGNMENT_STAGE89.md).
+No original screen references or level identity were generated here.
+
 ## Stage 88 — verified PPU reference-frame inventory
 
 A completed, private FCEUX capture can now be audited across **all**
