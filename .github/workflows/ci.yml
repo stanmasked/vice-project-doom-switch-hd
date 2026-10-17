@@ -145,6 +145,8 @@ jobs:
         run: python -m unittest discover -s tests -p 'test_fceux_stage108_bg_fetch.py' -v
       - name: Stage109 synthetic MMC3-CHR-renderer native timeline regression
         run: python -m unittest discover -s tests -p 'test_fceux_stage109_chr_timeline.py' -v
+      - name: Stage110 guarded native midframe CHR switch and framebuffer row proof
+        run: python -m unittest discover -s tests -p 'test_fceux_stage110_midframe.py' -v
       - name: Stage89 validated static screen hypotheses and explicit provenance
         run: python -m unittest discover -s tests -p 'test_ppu_capture_session.py' -v
       - name: Stage88 audited PPU reference-frame inventory regressions

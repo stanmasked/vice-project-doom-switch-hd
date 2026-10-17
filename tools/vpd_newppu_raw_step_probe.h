@@ -3,7 +3,7 @@
 // Install callback explicitly only on a controlled private emulator build.
 #ifndef VPD_NEWPPU_RAW_STEP_PROBE_H
 #define VPD_NEWPPU_RAW_STEP_PROBE_H
-#if defined(VPD_NATIVE_SYNTHETIC_SMOKE) || defined(VPD_NATIVE_SYNTHETIC_VBLANK) || defined(VPD_NATIVE_SYNTHETIC_PPUSTATUS_READ) || defined(VPD_NATIVE_SYNTHETIC_EVENT_ORDER) || defined(VPD_NATIVE_SYNTHETIC_PRECLEAR) || defined(VPD_NATIVE_SYNTHETIC_MMC3_CHR) || defined(VPD_NATIVE_SYNTHETIC_BG_PIXELS) || defined(VPD_NATIVE_SYNTHETIC_BG_FETCH) || defined(VPD_NATIVE_SYNTHETIC_CHR_TIMELINE)
+#if defined(VPD_NATIVE_SYNTHETIC_SMOKE) || defined(VPD_NATIVE_SYNTHETIC_VBLANK) || defined(VPD_NATIVE_SYNTHETIC_PPUSTATUS_READ) || defined(VPD_NATIVE_SYNTHETIC_EVENT_ORDER) || defined(VPD_NATIVE_SYNTHETIC_PRECLEAR) || defined(VPD_NATIVE_SYNTHETIC_MMC3_CHR) || defined(VPD_NATIVE_SYNTHETIC_BG_PIXELS) || defined(VPD_NATIVE_SYNTHETIC_BG_FETCH) || defined(VPD_NATIVE_SYNTHETIC_CHR_TIMELINE) || defined(VPD_NATIVE_SYNTHETIC_MIDFRAME_CHR)
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -316,6 +316,95 @@ inline void preclear_cpu_read(bool returned_high, bool before_high,
 }
 #endif
 
+// Stage110: synthetic mid-frame real MMC3 write and final FCEUX framebuffer bytes.
+// A single rendered frame must have both blank and filled sample windows.
+#ifdef VPD_NATIVE_SYNTHETIC_MIDFRAME_CHR
+struct MidframeChr {
+    unsigned writes = 0, last_sl = 0, switch_sl = 0;
+    unsigned long frame = 0, switch_frame = 0;
+    unsigned pre = 0, post = 0, pre_zero = 0, post_three = 0, invalid = 0;
+    unsigned long long pre_hash = 14695981039346656037ULL;
+    unsigned long long post_hash = 14695981039346656037ULL;
+    bool switched = false, emitted = false;
+};
+inline MidframeChr& stage110_state() {
+    static MidframeChr state;
+    return state;
+}
+inline bool stage110_enabled() {
+    static const char* opt = std::getenv("VPD_STAGE110_MIDFRAME_CHR_PROBE");
+    return opt && std::strcmp(opt, "1") == 0;
+}
+inline void stage110_register_write(unsigned selector, unsigned value) {
+    if (!stage110_enabled()) return;
+    MidframeChr& s = stage110_state();
+    if (s.emitted) return;
+    ++s.writes;
+    if (selector != 2 || s.writes > 2 || value != (s.writes == 1 ? 0U : 1U))
+        ++s.invalid;
+    if (s.writes == 2) {
+        s.switched = true;
+        s.switch_frame = s.frame;
+        s.switch_sl = s.last_sl;
+        if (s.switch_sl < 40 || s.switch_sl > 210 || s.pre < 2048)
+            ++s.invalid;
+        std::fprintf(stderr,
+            "VPD_STAGE110_DIAGNOSTIC switch_sl=%u pre_pixels=%u invalid=%lu "
+            "synthetic_only=yes\n",
+            s.switch_sl, s.pre, s.invalid);
+        std::fflush(stderr);
+    }
+}
+inline void stage110_raster_pixel(unsigned sl, unsigned pattern, unsigned color) {
+    if (!stage110_enabled()) return;
+    MidframeChr& s = stage110_state();
+    if (s.emitted) return;
+    if (sl < 1 || sl > 240 || pattern > 3 || color > 255) {
+        ++s.invalid;
+        return;
+    }
+    if (sl < s.last_sl) {
+        ++s.frame;
+        if (s.switched && s.switch_frame != s.frame) ++s.invalid;
+        if (!s.switched) {
+            s.pre = s.pre_zero = 0;
+            s.pre_hash = 14695981039346656037ULL;
+        }
+    }
+    s.last_sl = sl;
+    if (s.writes == 1 && !s.switched && s.pre < 2048) {
+        ++s.pre;
+        if (pattern == 0) ++s.pre_zero;
+        else ++s.invalid;
+        s.pre_hash = (s.pre_hash ^ static_cast<unsigned long long>(color)) *
+            1099511628211ULL;
+    }
+    if (s.switched && s.frame == s.switch_frame &&
+        sl >= s.switch_sl + 4 && s.post < 2048) {
+        ++s.post;
+        if (pattern == 3) ++s.post_three;
+        else ++s.invalid;
+        s.post_hash = (s.post_hash ^ static_cast<unsigned long long>(color)) *
+            1099511628211ULL;
+        if (s.post == 2048) {
+            if (s.writes != 2 || s.pre != 2048 || s.pre_zero != 2048 ||
+                s.post_three != 2048 || s.pre_hash == s.post_hash)
+                ++s.invalid;
+            std::fprintf(stderr,
+                "VPD_STAGE110_NATIVE_MIDFRAME_CHR_PASS "
+                "writes=%u switch_sl=%u pre_pixels=%u post_pixels=%u "
+                "pre_zero=%u post_three=%u pre_fnv64=%llu post_fnv64=%llu "
+                "invalid=%lu same_native_frame=yes synthetic_only=yes "
+                "original_game_raster_proven=no\n",
+                s.writes, s.switch_sl, s.pre, s.post,
+                s.pre_zero, s.post_three, s.pre_hash, s.post_hash, s.invalid);
+            std::fflush(stderr);
+            s.emitted = true;
+        }
+    }
+}
+#endif
+
 // Stage109 synthetic-only MMC3 write -> BG CHR read -> framebuffer timeline.
 // Internal runppu tick units are not authoritative NTSC dots or CPU cycles.
 #ifdef VPD_NATIVE_SYNTHETIC_CHR_TIMELINE
@@ -407,6 +496,9 @@ inline void chr_chronology_pixel(unsigned pattern) {
 // is not proof that any changed tile was fetched or rendered by a real PPU.
 #ifdef VPD_NATIVE_SYNTHETIC_MMC3_CHR
 inline void observe_native_mmc3_chr_write(unsigned selector, unsigned value) {
+#ifdef VPD_NATIVE_SYNTHETIC_MIDFRAME_CHR
+    stage110_register_write(selector, value);
+#endif
 #ifdef VPD_NATIVE_SYNTHETIC_CHR_TIMELINE
     chr_chronology_write(selector, value);
 #endif
