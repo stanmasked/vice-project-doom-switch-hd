@@ -87,6 +87,19 @@ local function write_verified_blob(path,bytes)
     return adler32_hex(bytes)
 end
 
+-- Readback of flushed event logs. Adler-32 is an accidental-damage
+-- detector, never an authenticity or anti-tampering signature.
+local function event_log_checksum(path)
+    local source,reason=io.open(path,'rb')
+    assert(source,'Cannot read event log '..path..': '..tostring(reason))
+    local bytes=source:read('*a')
+    local closed,close_error=source:close()
+    assert(closed,'Failed closing event-log readback '..path..': '..tostring(close_error))
+    assert(type(bytes)=='string' and #bytes>0 and bytes:sub(-1)=='\n',
+           'Incomplete event log '..path)
+    return adler32_hex(bytes)
+end
+
 -- A finalized metadata file is the publication boundary for private
 -- captures. First write/close a sibling temporary file and compare the
 -- exact bytes, then replace the pending marker. On systems where renaming
@@ -144,6 +157,7 @@ end
 -- Per-frame metadata must NOT be treated as session-wide completeness.
 write_binary(session_path,'capture_in_progress=yes\n')
 local log_path = OUTPUT_DIRECTORY..'/mmc3_video_writes.tsv'
+local timed_path = OUTPUT_DIRECTORY..'/mmc3_ppu_cycles.tsv'
 local log, open_error = io.open(log_path, 'wb')
 assert(log, 'Create a writable private capture directory: '..log_path..' ('..tostring(open_error)..')')
 assert(log:write('frame\taddress\tvalue\n'))
@@ -151,8 +165,7 @@ assert(log:write('frame\taddress\tvalue\n'))
 -- not PPU scanlines: cycle-counter reset can change their epoch.
 local timed_log = nil
 if clock_available then
-    local path = OUTPUT_DIRECTORY..'/mmc3_ppu_cycles.tsv'
-    timed_log = assert(io.open(path,'wb'))
+    timed_log = assert(io.open(timed_path,'wb'))
     assert(timed_log:write('frame\tcpu_cycle\taddress\tvalue\tkind\n'))
 end
 
@@ -262,6 +275,9 @@ local function capture_metadata(frame, checksums)
         'screen_reference='..(CAPTURE_SCREEN and 'yes' or 'no'),
         'screen_size=256x240',
         'snapshot_checksum=adler32_v1',
+        'event_checksum=adler32_v1',
+        'frame_log_prefix_adler32='..checksums.frame_log,
+        'cycle_log_prefix_adler32='..checksums.cycle_log,
         'ppu_adler32='..checksums.ppu,
         'ram_adler32='..checksums.ram,
         'screen_rgb_adler32='..(checksums.rgb or 'not_captured'),
@@ -366,6 +382,8 @@ local function capture_frame()
     local checksums={
         ppu=write_verified_blob(prefix..'.ppu.bin',ppu_bytes),
         ram=write_verified_blob(prefix..'.ram.bin',ram_bytes),
+        frame_log=event_log_checksum(log_path),
+        cycle_log=(timed_log and event_log_checksum(timed_path) or 'not_captured'),
     }
     checksums.rgb,checksums.pal=capture_rendered_screen(prefix)
     publish_metadata(prefix..'.meta.txt', capture_metadata(frame,checksums))
@@ -386,6 +404,11 @@ emu.registerexit(function()
     flush()
     assert(log:close(),'Failed closing frame event log')
     if timed_log then assert(timed_log:close(),'Failed closing CPU-cycle log') end
+    -- Final checksum is calculated from the exact bytes on disk,
+    -- independently of in-memory event counts or snapshot metadata.
+    local frame_log_hash=event_log_checksum(log_path)
+    local cycle_log_hash=timed_log and event_log_checksum(timed_path)
+                         or 'not_captured'
     local complete = frames_captured>0 and dropped_writes==0
         and callback_errors==0 and capture_failures==0 and callback_gaps==0
     local report={
@@ -399,6 +422,9 @@ emu.registerexit(function()
         'frames_captured='..tostring(frames_captured),
         'capture_frames='..table.concat(captured_frame_list,','),
         'events_recorded='..tostring(total_writes),
+        'event_checksum=adler32_v1',
+        'frame_log_adler32='..frame_log_hash,
+        'cycle_log_adler32='..cycle_log_hash,
         'events_dropped='..tostring(dropped_writes),
         'callback_errors='..tostring(callback_errors),
         'capture_failures='..tostring(capture_failures),
