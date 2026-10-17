@@ -17,6 +17,12 @@ from run_stage100_fceux_synthetic_smoke import backend_settings, categorize_exit
 
 MARKER = "VPD_STAGE124_NATIVE_QUADRANTS_PASS"
 REJECTED = "VPD_STAGE124_REJECTED_QUADRANTS"
+REJECTION_PATTERN = re.compile(
+    r"^VPD_STAGE124_REJECTED_QUADRANTS invalid=(\\d+) "
+    r"bad_attribute=(\\d+) bad_color=(\\d+) "
+    r"colors=(\\d+),(\\d+),(\\d+),(\\d+) "
+    r"samples=16,16,16,16 synthetic_only=yes$", re.MULTILINE,
+)
 PATTERN = re.compile(
     r"^VPD_STAGE124_NATIVE_QUADRANTS_PASS "
     r"groups=4 samples=16,16,16,16 indices=3,7,11,15 "
@@ -44,7 +50,30 @@ def verify(log):
             "original_game_palette_proven": False}
 
 
-def execute(binary, rom, directory, *, enabled=True, positive=True, timeout=35):
+def verify_rejection(log, cause):
+    if cause not in ("attribute", "palette") or not isinstance(log, str):
+        raise QuadrantNativeError("Invalid rejection control")
+    if log.count(REJECTED) != 1 or MARKER in log:
+        raise QuadrantNativeError("Missing, duplicated or positive negative control")
+    matches = list(REJECTION_PATTERN.finditer(log))
+    if len(matches) != 1:
+        raise QuadrantNativeError("Malformed native rejection evidence")
+    invalid, bad_attribute, bad_color, *colors = map(int, matches[0].groups())
+    if (invalid <= 0 or tuple(colors) != (176, 176, 176, 176) or
+            bad_color <= 0 or
+            (cause == "attribute" and bad_attribute <= 0) or
+            (cause == "palette" and bad_attribute != 0)):
+        raise QuadrantNativeError("Negative control did not expose its causal mismatch")
+    return {"cause": cause, "invalid": invalid, "bad_attribute": bad_attribute,
+            "bad_color": bad_color, "xbuf_colors": colors,
+            "native_rejection_observed": True}
+
+
+def execute(binary, rom, directory, *, enabled=True, positive=True,
+            expect_rejection=None, timeout=35):
+    if expect_rejection is not None and (
+            expect_rejection not in ("attribute", "palette") or positive or not enabled):
+        raise ValueError("Expected rejection requires an enabled negative control")
     directory.mkdir(parents=True, exist_ok=True)
     env = os.environ.copy()
     env.update(backend_settings("xvfb", directory))
@@ -68,13 +97,13 @@ def execute(binary, rom, directory, *, enabled=True, positive=True, timeout=35):
     with log_path.open("wb") as handle:
         proc = subprocess.Popen(cmd, cwd=directory, env=env, stdout=handle,
                                 stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL)
-        limit = time.monotonic() + (timeout if positive else 2)
+        limit = time.monotonic() + (timeout if positive or expect_rejection else 2)
         alive = False
         try:
             while time.monotonic() < limit:
                 time.sleep(0.1)
                 log = log_path.read_text(encoding="utf8", errors="replace")
-                if positive and (MARKER in log or REJECTED in log):
+                if (positive or expect_rejection) and (MARKER in log or REJECTED in log):
                     break
                 if proc.poll() is not None:
                     break
@@ -91,6 +120,10 @@ def execute(binary, rom, directory, *, enabled=True, positive=True, timeout=35):
     if not positive:
         if MARKER in log or not alive:
             raise QuadrantNativeError("False-positive or early-exit negative control")
+        if expect_rejection:
+            return verify_rejection(log, expect_rejection)
+        if REJECTED in log:
+            raise QuadrantNativeError("Disabled observer emitted a rejection")
         return None
     try:
         return verify(log)
@@ -109,11 +142,24 @@ def run(binary, temp):
         witness = execute(binary, positive, root / "positive")
         attr_control = root / "uniform_attributes.nes"
         make_rom(attr_control, attribute=0)
-        execute(binary, attr_control, root / "uniform_attr", positive=False)
+        attr_failure = execute(
+            binary, attr_control, root / "uniform_attr",
+            positive=False, expect_rejection="attribute")
         palette_control = root / "uniform_palette.nes"
         make_rom(palette_control, distinct_palette=False)
-        execute(binary, palette_control, root / "uniform_pal", positive=False)
+        palette_failure = execute(
+            binary, palette_control, root / "uniform_pal",
+            positive=False, expect_rejection="palette")
         execute(binary, positive, root / "disabled", enabled=False, positive=False)
+    print(
+        "STAGE125_NATIVE_NEGATIVE_CAUSAL_PROOF "
+        "native_fceux=yes synthetic_mapper4_only=yes "
+        "uniform_attr_rejected=yes uniform_palette_rejected=yes "
+        "attribute_failures=%d palette_color_failures=%d "
+        "disabled_observer_control=clean "
+        "original_game_palette_proven=no" %
+        (attr_failure["bad_attribute"], palette_failure["bad_color"])
+    )
     print(
         "STAGE124_NATIVE_FOUR_QUADRANT_COLOR_PROOF "
         "native_fceux=yes synthetic_mapper4_only=yes groups=4 "
