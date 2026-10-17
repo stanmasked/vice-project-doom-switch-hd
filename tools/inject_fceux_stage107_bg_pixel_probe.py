@@ -4,7 +4,7 @@ import argparse
 import re
 from pathlib import Path
 
-ASSIGNMENT = re.compile(rb"(?m)^(\t+)\*ptr = PaletteAdjustPixel\(pixelcolor\);$")
+ASSIGNMENT = re.compile(rb"(?m)^(\t+)\*ptr = PaletteAdjustPixel\(pixelcolor\);(?=\r?\n)")
 CALL = b"vpd_ppu_probe::observe_native_bg_pixel"
 GUARD = b"VPD_NATIVE_SYNTHETIC_BG_PIXELS"
 
