@@ -21,7 +21,7 @@ class ScrollEventTests(unittest.TestCase):
         # $3FFA mirrors $2002; $200D mirrors $2005; $3456 mirrors $2006.
         events=[(0,0x200D,9),(0,0x3FFA,0),(0,0x3FF8,2),
                 (0,0x200D,21),(0,0x3FFD,41),
-                (1,0x3456,0x23),(1,0x200D,90),
+                (1,0x3456,0x23),(1,0x3FFA,0),(1,0x200D,90),
                 (1,0x200D,100)]
         result=analyze(events)
         self.assertEqual(result['frames'][0]['status_reads'],1)
