@@ -35,7 +35,9 @@ python3 "${PROJECT}/tools/inject_fceux_ppustatus_read_probe.py" \
 python3 "${PROJECT}/tools/inject_fceux_frame_preclear_probe.py" \
   "${FCEUX}/src/ppu.cpp" "${PATCH}/src/ppu_stage103.cpp" \
   "${PATCH}/src/ppu_stage105.cpp"
-cp "${PATCH}/src/ppu_stage105.cpp" "${FCEUX}/src/ppu.cpp"
+python3 "$PROJECT/tools/inject_fceux_stage107_bg_pixel_probe.py" \
+  "$PATCH/src/ppu_stage105.cpp" "$PATCH/src/ppu_stage107.cpp"
+cp "$PATCH/src/ppu_stage107.cpp" "$FCEUX/src/ppu.cpp"
 python3 "${PROJECT}/tools/inject_fceux_mmc3_chr_probe.py" \
   "${FCEUX}/src/boards/mmc3.cpp" "${PATCH}/src/mmc3_stage106.cpp"
 cp "${PATCH}/src/mmc3_stage106.cpp" "${FCEUX}/src/boards/mmc3.cpp"
@@ -51,7 +53,7 @@ grep -q '^#ifdef VPD_NATIVE_RAW_PPU_PROBE' "${FCEUX}/src/ppu.cpp"
 # Probe is explicitly enabled in this temporary build. No sink is installed.
 cmake -S "${FCEUX}" -B "${BUILD}" \
   -DQT=5 -DCMAKE_BUILD_TYPE=Release \
-  -DCMAKE_CXX_FLAGS="-DVPD_NATIVE_RAW_PPU_PROBE -DVPD_NATIVE_SYNTHETIC_SMOKE -DVPD_NATIVE_SYNTHETIC_VBLANK -DVPD_NATIVE_SYNTHETIC_PPUSTATUS_READ -DVPD_NATIVE_SYNTHETIC_EVENT_ORDER -DVPD_NATIVE_SYNTHETIC_PRECLEAR -DVPD_NATIVE_SYNTHETIC_MMC3_CHR" \
+  -DCMAKE_CXX_FLAGS="-DVPD_NATIVE_RAW_PPU_PROBE -DVPD_NATIVE_SYNTHETIC_SMOKE -DVPD_NATIVE_SYNTHETIC_VBLANK -DVPD_NATIVE_SYNTHETIC_PPUSTATUS_READ -DVPD_NATIVE_SYNTHETIC_EVENT_ORDER -DVPD_NATIVE_SYNTHETIC_PRECLEAR -DVPD_NATIVE_SYNTHETIC_MMC3_CHR -DVPD_NATIVE_SYNTHETIC_BG_PIXELS" \
   -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 cmake --build "${BUILD}" --target fceux --parallel 2
 test -x "${BUILD}/src/fceux"
@@ -88,4 +90,8 @@ xvfb-run -a -s '-screen 0 1024x768x24 -nolisten tcp' \
 xvfb-run -a -s '-screen 0 1024x768x24 -nolisten tcp' \
   python3 "${PROJECT}/tools/run_stage106_native_mmc3_chr.py" \
     "${BUILD}/src/fceux" "${RUNNER_TEMP}"
+# Stage107: paired synthetic nonblank CHR banks and final framebuffer evidence.
+xvfb-run -a -s '-screen 0 1024x768x24 -nolisten tcp' \
+  python3 "$PROJECT/tools/run_stage107_native_bg_pixels.py" \
+    "$BUILD/src/fceux" "$RUNNER_TEMP"
 printf 'STAGE99_PINNED_FCEUX_NATIVE_BUILD_PASS commit=%s opt_in_probe=yes real_fceux_linked=yes gameplay_raster_verified=no\n' "${PIN}"

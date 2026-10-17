@@ -3,7 +3,7 @@
 // Install callback explicitly only on a controlled private emulator build.
 #ifndef VPD_NEWPPU_RAW_STEP_PROBE_H
 #define VPD_NEWPPU_RAW_STEP_PROBE_H
-#if defined(VPD_NATIVE_SYNTHETIC_SMOKE) || defined(VPD_NATIVE_SYNTHETIC_VBLANK) || defined(VPD_NATIVE_SYNTHETIC_PPUSTATUS_READ) || defined(VPD_NATIVE_SYNTHETIC_EVENT_ORDER) || defined(VPD_NATIVE_SYNTHETIC_PRECLEAR) || defined(VPD_NATIVE_SYNTHETIC_MMC3_CHR)
+#if defined(VPD_NATIVE_SYNTHETIC_SMOKE) || defined(VPD_NATIVE_SYNTHETIC_VBLANK) || defined(VPD_NATIVE_SYNTHETIC_PPUSTATUS_READ) || defined(VPD_NATIVE_SYNTHETIC_EVENT_ORDER) || defined(VPD_NATIVE_SYNTHETIC_PRECLEAR) || defined(VPD_NATIVE_SYNTHETIC_MMC3_CHR) || defined(VPD_NATIVE_SYNTHETIC_BG_PIXELS)
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -375,6 +375,36 @@ inline void observe_native_mmc3_chr_write(unsigned selector, unsigned value) {
             "source_only=yes chr_pixel_causality_proven=no\n",
             a.changed, a.inside, a.outside, a.after_cpu_high,
             a.inside_tick_lag_min, a.inside_tick_lag_max, a.invalid);
+        std::fflush(stderr);
+        a.emitted = true;
+    }
+}
+#endif
+
+// Stage107: synthetic ROM only; actual final newppu framebuffer byte aggregate.
+// No per-frame screenshots, pixel positions, or original game bytes published.
+#ifdef VPD_NATIVE_SYNTHETIC_BG_PIXELS
+inline void observe_native_bg_pixel(unsigned bg_pattern, unsigned final_byte) {
+    static const char* enabled = std::getenv("VPD_STAGE107_BG_PIXEL_PROBE");
+    if (!enabled || std::strcmp(enabled, "1") != 0) return;
+    struct Aggregate {
+        unsigned long sampled = 0, zero = 0, nonzero = 0, invalid = 0;
+        unsigned long long hash = 14695981039346656037ULL;
+        bool emitted = false;
+    };
+    static Aggregate a;
+    if (a.emitted) return;
+    if (bg_pattern > 3 || final_byte > 255) { ++a.invalid; return; }
+    ++a.sampled;
+    if (bg_pattern == 0) ++a.zero;
+    else ++a.nonzero;
+    a.hash = (a.hash ^ static_cast<unsigned long long>(final_byte)) * 1099511628211ULL;
+    if (a.sampled == 32768) {
+        std::fprintf(stderr,
+            "VPD_STAGE107_NATIVE_BG_PIXEL_PASS sampled=32768 "
+            "bg_zero=%lu bg_nonzero=%lu final_fnv64=%llu invalid=%lu "
+            "synthetic_only=yes original_pixel_proof=no\n",
+            a.zero, a.nonzero, a.hash, a.invalid);
         std::fflush(stderr);
         a.emitted = true;
     }
