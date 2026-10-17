@@ -9,20 +9,22 @@ VPD_CAPTURE_SCREEN=false
 local hooks,after,exit={},nil,nil
 local current_frame=1
 local status_read
-local mwrite
+local mwrite,ppuwrite
 local ppu_data=string.rep(string.char(0x55),0x4000)
 local ram_data=string.rep(string.char(0x11),0x0800)
 memory={
  registerwrite=function(address,size_or_fn,fn)
-  if fn~=nil then
-    assert(address==0x8000 and size_or_fn==0x8000 and not mwrite)
+  assert(type(fn)=='function')
+  if address==0x8000 then
+    assert(size_or_fn==0x8000 and not mwrite)
     mwrite=fn
   else
-    hooks[address]=size_or_fn
+    assert(address==0x2000 and size_or_fn==0x2000 and not ppuwrite)
+    ppuwrite=fn
   end
  end,
- registerread=function(address,fn)
-  assert(address==0x2002 and type(fn)=='function')
+ registerread=function(address,size,fn)
+  assert(address==0x2000 and size==0x2000 and type(fn)=='function')
   status_read=fn
  end,
  readbyte=function()return 0 end,
@@ -46,8 +48,8 @@ emu={
  message=function()end,
 }
 dofile('tools/capture_fceux_ppu.lua')
-assert(type(mwrite)=='function' and type(after)=='function' and type(exit)=='function')
-assert(type(hooks[0x2000])=='function')
+assert(type(mwrite)=='function' and type(ppuwrite)=='function' and
+       type(status_read)=='function' and type(after)=='function' and type(exit)=='function')
 assert(hooks[0x8000]==nil and hooks[0xA000]==nil)
 mwrite(0x8002,1,0x80)  -- R0, inversion
 mwrite(0x8003,1,0x06)  -- CHR R0
@@ -59,7 +61,14 @@ mwrite(0xC006,1,0x0B)  -- IRQ latch
 mwrite(0xDFFF,1,0x12)  -- IRQ reload
 mwrite(0xE00E,1,0x34)  -- IRQ disable
 mwrite(0xFFFF,1,0x56)  -- IRQ enable
-hooks[0x2000](0x2000,1,0x90)
+ppuwrite(0x2008,1,0x90) -- PPUCTRL mirror
+ppuwrite(0x3FF9,1,0x1E) -- PPUMASK mirror
+ppuwrite(0x200D,1,0x24) -- PPUSCROLL mirror
+ppuwrite(0x3456,1,0x20) -- PPUADDR mirror
+ppuwrite(0x200F,1,0x34) -- PPUDATA mirror
+ppuwrite(0x2002,1,0x7F) -- ignored read-only PPUSTATUS write
+status_read(0x2004,1,0) -- unrelated register read, no status marker
+status_read(0x3FFA,1,0) -- mirrored PPUSTATUS: status marker
 after()
 local function read(path)
  local f=assert(io.open(path,'rb'))
@@ -73,11 +82,15 @@ assert(meta:find('mmc3_select=85',1,true))
 assert(meta:find('chr_r0=06',1,true))
 assert(meta:find('chr_r5=24',1,true))
 assert(meta:find('ppuctrl=90',1,true))
+assert(meta:find('ppumask=1E',1,true))
+assert(meta:find('ppu_register_write_coverage=full_2000_3fff_mod8',1,true))
+assert(meta:find('ppu_status_read_coverage=full_2000_3fff_mod8',1,true))
 local log=read(dir..'/mmc3_video_writes.tsv')
 for _,fragment in ipairs({
  '8002\t80','8003\t06','9FFE\t85','9FFF\t24',
  'A002\t01','BFFF\t80','C006\t0B','DFFF\t12',
- 'E00E\t34','FFFF\t56'
+ 'E00E\t34','FFFF\t56',
+ '2008\t90','3FF9\t1E','200D\t24','3456\t20','200F\t34','3FFA\t00'
 }) do
  assert(log:find(fragment,1,true),fragment)
 end
@@ -85,7 +98,7 @@ end
 current_frame=2
 local ok,err=pcall(mwrite,0x8002,2,0x80)
 assert(not ok and tostring(err):find('Unsupported FCEUX video callback contract',1,true))
-ok,err=pcall(status_read,0x2002,1,0x80)
+ok,err=pcall(status_read,0x3FFA,1,0x80)
 assert(not ok and tostring(err):find('Unsupported FCEUX video callback contract',1,true))
 after()
 local badmeta=read(dir..'/frame_000002.meta.txt')
