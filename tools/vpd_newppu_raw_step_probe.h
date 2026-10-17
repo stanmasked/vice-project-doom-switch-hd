@@ -3,7 +3,7 @@
 // Install callback explicitly only on a controlled private emulator build.
 #ifndef VPD_NEWPPU_RAW_STEP_PROBE_H
 #define VPD_NEWPPU_RAW_STEP_PROBE_H
-#if defined(VPD_NATIVE_SYNTHETIC_SMOKE) || defined(VPD_NATIVE_SYNTHETIC_VBLANK)
+#if defined(VPD_NATIVE_SYNTHETIC_SMOKE) || defined(VPD_NATIVE_SYNTHETIC_VBLANK) || defined(VPD_NATIVE_SYNTHETIC_PPUSTATUS_READ)
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -156,6 +156,45 @@ inline void observe_native_status_assignment(bool entering, bool bit_after) {
             w.invalid);
         std::fflush(stderr);
         w.emitted = true;
+    }
+}
+#endif
+
+// Stage103: the *CPU A2002 read path* (not the frame-loop assignment).
+// Aggregates booleans only; returned register byte is never written out.
+#ifdef VPD_NATIVE_SYNTHETIC_PPUSTATUS_READ
+inline void observe_native_ppustatus_read(bool returned_high,
+                                          bool before_high,
+                                          bool after_high) {
+    static const char* env = std::getenv("VPD_STAGE103_PPUSTATUS_READ_PROBE");
+    if (!env || std::strcmp(env, "1") != 0) return;
+    struct ReadAggregate {
+        unsigned long reads = 0;
+        unsigned long returned_high = 0;
+        unsigned long before_high = 0;
+        unsigned long cleared_high = 0;
+        unsigned long after_high = 0;
+        unsigned long invalid = 0;
+        bool emitted = false;
+    };
+    static ReadAggregate reads;
+    if (reads.emitted) return;
+    ++reads.reads;
+    if (returned_high) ++reads.returned_high;
+    if (before_high) ++reads.before_high;
+    if (before_high && !after_high) ++reads.cleared_high;
+    if (after_high) ++reads.after_high;
+    if (returned_high != before_high || after_high) ++reads.invalid;
+    if (reads.reads == 16384) {
+        std::fprintf(stderr,
+            "VPD_STAGE103_NATIVE_PPUSTATUS_READ_PASS reads=16384 "
+            "returned_high=%lu before_high=%lu cleared_high=%lu "
+            "after_high=%lu invalid=%lu source_only=yes "
+            "hardware_vblank_proven=no\n",
+            reads.returned_high, reads.before_high,
+            reads.cleared_high, reads.after_high, reads.invalid);
+        std::fflush(stderr);
+        reads.emitted = true;
     }
 }
 #endif
