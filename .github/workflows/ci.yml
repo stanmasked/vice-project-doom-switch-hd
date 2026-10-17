@@ -66,6 +66,26 @@ jobs:
           echo "Later group: $LATE_OUTCOME"
           echo "READ provenance group: $PROVENANCE_OUTCOME"
           test "$EARLY_OUTCOME" = success && test "$LATE_OUTCOME" = success && test "$PROVENANCE_OUTCOME" = success
+  pinned-fceux-native:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout Vice project build harness
+        uses: actions/checkout@v4
+      - name: Set up Python for pinned source audit
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install native FCEUX Qt SDL OpenGL build dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            build-essential cmake git pkg-config \
+            qtbase5-dev libqt5opengl5-dev libgl1-mesa-dev \
+            libsdl2-dev libminizip-dev zlib1g-dev libarchive-dev
+      - name: Build pinned upstream FCEUX with opt-in raw newppu hook
+        run: bash tools/ci_fceux_stage99_native_build.sh
+
   code-and-tests:
     runs-on: ubuntu-latest
     steps:
