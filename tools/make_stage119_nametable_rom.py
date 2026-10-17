@@ -19,9 +19,23 @@ def nametable_init():
     # 6502: LDX #0; TXA; AND #1; STA $2007; INX; BNE -9.
     loop = bytes((0xa2, 0, 0x8a, 0x29, 1, 0x8d, 7, 0x20,
                   0xe8, 0xd0, 0xf7))
+    # Fully initialize the first four background palettes, not just
+    # indices $3F00..$3F03 from the Stage110 program. Otherwise the
+    # attribute-selected color 7 can equal uninitialized color 4 even
+    # when CHR pattern and tile ID are genuinely different.
+    palette = (0x0F, 0x16, 0x27, 0x30,
+               0x0F, 0x11, 0x21, 0x31,
+               0x0F, 0x12, 0x22, 0x32,
+               0x0F, 0x13, 0x23, 0x33)
+    palette_bytes = b"".join(
+        bytes((0xA9, color, 0x8D, 7, 0x20)) for color in palette)
     return (bytes((0xa9, 0x20, 0x8d, 6, 0x20,
                    0xa9, 0, 0x8d, 6, 0x20)) +
             loop * 16 +
+            # Initialize all synthetic background palette entries.
+            bytes((0xA9, 0x3F, 0x8D, 6, 0x20,
+                   0xA9, 0, 0x8D, 6, 0x20)) +
+            palette_bytes +
             # Reset VRAM and both $2005 X/Y latches before drawing.
             bytes((0xa9, 0x20, 0x8d, 6, 0x20,
                    0xa9, 0, 0x8d, 6, 0x20,
