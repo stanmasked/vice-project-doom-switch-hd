@@ -151,6 +151,8 @@ jobs:
         run: python -m unittest discover -s tests -p 'test_fceux_stage111_tile_boundary.py' -v
       - name: Stage112 controlled MMC3 CHR subscanline phase sweep tests
         run: python -m unittest discover -s tests -p 'test_fceux_stage112_subscanline_sweep.py' -v
+      - name: Stage113 background tile prefetch/read-to-draw native witness
+        run: python -m unittest discover -s tests -p 'test_fceux_stage113_prefetch.py' -v
       - name: Stage89 validated static screen hypotheses and explicit provenance
         run: python -m unittest discover -s tests -p 'test_ppu_capture_session.py' -v
       - name: Stage88 audited PPU reference-frame inventory regressions

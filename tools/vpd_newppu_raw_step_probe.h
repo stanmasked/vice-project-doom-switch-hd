@@ -3,7 +3,7 @@
 // Install callback explicitly only on a controlled private emulator build.
 #ifndef VPD_NEWPPU_RAW_STEP_PROBE_H
 #define VPD_NEWPPU_RAW_STEP_PROBE_H
-#if defined(VPD_NATIVE_SYNTHETIC_SMOKE) || defined(VPD_NATIVE_SYNTHETIC_VBLANK) || defined(VPD_NATIVE_SYNTHETIC_PPUSTATUS_READ) || defined(VPD_NATIVE_SYNTHETIC_EVENT_ORDER) || defined(VPD_NATIVE_SYNTHETIC_PRECLEAR) || defined(VPD_NATIVE_SYNTHETIC_MMC3_CHR) || defined(VPD_NATIVE_SYNTHETIC_BG_PIXELS) || defined(VPD_NATIVE_SYNTHETIC_BG_FETCH) || defined(VPD_NATIVE_SYNTHETIC_CHR_TIMELINE) || defined(VPD_NATIVE_SYNTHETIC_MIDFRAME_CHR) || defined(VPD_NATIVE_SYNTHETIC_BG_TILES)
+#if defined(VPD_NATIVE_SYNTHETIC_SMOKE) || defined(VPD_NATIVE_SYNTHETIC_VBLANK) || defined(VPD_NATIVE_SYNTHETIC_PPUSTATUS_READ) || defined(VPD_NATIVE_SYNTHETIC_EVENT_ORDER) || defined(VPD_NATIVE_SYNTHETIC_PRECLEAR) || defined(VPD_NATIVE_SYNTHETIC_MMC3_CHR) || defined(VPD_NATIVE_SYNTHETIC_BG_PIXELS) || defined(VPD_NATIVE_SYNTHETIC_BG_FETCH) || defined(VPD_NATIVE_SYNTHETIC_CHR_TIMELINE) || defined(VPD_NATIVE_SYNTHETIC_MIDFRAME_CHR) || defined(VPD_NATIVE_SYNTHETIC_BG_TILES) || defined(VPD_NATIVE_SYNTHETIC_BG_PREFETCH)
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -326,6 +326,7 @@ struct MidframeChr {
     unsigned long invalid = 0;
     unsigned long long pre_hash = 14695981039346656037ULL;
     unsigned long long post_hash = 14695981039346656037ULL;
+    unsigned long long switch_tick = 0;
     bool switched = false, emitted = false;
 };
 inline MidframeChr& stage110_state() {
@@ -347,6 +348,7 @@ inline void stage110_register_write(unsigned selector, unsigned value) {
         s.switched = true;
         s.switch_frame = s.frame;
         s.switch_sl = s.last_sl;
+        s.switch_tick = channel().internal_tick_units;
         if (s.switch_sl < 40 || s.switch_sl > 210 || s.pre < 2048)
             ++s.invalid;
         std::fprintf(stderr,
@@ -508,6 +510,136 @@ inline void stage111_tile_pixel(unsigned sl, unsigned xt, unsigned xp,
         }
         std::fflush(stderr);
         t.emitted = true;
+    }
+}
+#endif
+
+// Stage113: bounded provenance of buffered 8-pixel tile records actually
+// prefetched by BGData::Record::Read. Source-clock values are NOT PPU dots.
+#if defined(VPD_NATIVE_SYNTHETIC_BG_PREFETCH) && defined(VPD_NATIVE_SYNTHETIC_BG_TILES) && defined(VPD_NATIVE_SYNTHETIC_MIDFRAME_CHR)
+struct PrefetchRecord {
+    unsigned sl = 0, lo = 0, hi = 0;
+    unsigned long long start = 0, end = 0;
+    bool begun = false, valid = false;
+};
+struct PrefetchAggregate {
+    PrefetchRecord records[34];
+    unsigned long matched_old = 0, matched_new = 0;
+    unsigned long old_after_write = 0, old_started_before = 0;
+    unsigned long old_started_after = 0, new_started_after = 0;
+    unsigned long invalid = 0;
+    unsigned long long lag_min = 0, lag_max = 0;
+    unsigned first_sl = 0, first_xt = 0;
+    bool saw_new = false, emitted = false;
+};
+inline PrefetchAggregate& stage113_state() {
+    static PrefetchAggregate a;
+    return a;
+}
+inline bool stage113_enabled() {
+    static const char* env = std::getenv("VPD_STAGE113_BG_PREFETCH_PROBE");
+    return env && std::strcmp(env, "1") == 0;
+}
+inline void stage113_begin(unsigned sl, unsigned slot) {
+    if (!stage113_enabled()) return;
+    PrefetchAggregate& a = stage113_state();
+    if (a.emitted) return;
+    if (sl > 240 || slot < 2 || slot >= 34) { ++a.invalid; return; }
+    PrefetchRecord& r = a.records[slot];
+    r.sl = sl;
+    r.start = channel().internal_tick_units;
+    r.begun = true;
+    r.valid = false;
+}
+inline void stage113_end(unsigned sl, unsigned slot, unsigned lo, unsigned hi) {
+    if (!stage113_enabled()) return;
+    PrefetchAggregate& a = stage113_state();
+    if (a.emitted) return;
+    if (sl > 240 || slot < 2 || slot >= 34 || lo > 255 || hi > 255) {
+        ++a.invalid;
+        return;
+    }
+    PrefetchRecord& r = a.records[slot];
+    r.end = channel().internal_tick_units;
+    if (!r.begun || r.sl != sl || r.end < r.start) ++a.invalid;
+    r.lo = lo;
+    r.hi = hi;
+    r.valid = true;
+}
+inline void stage113_draw(unsigned sl, unsigned xt, unsigned xp,
+                          unsigned index, unsigned lo, unsigned hi) {
+    if (!stage113_enabled() || xp != 0 || xt < 2) return;
+    PrefetchAggregate& a = stage113_state();
+    MidframeChr& m = stage110_state();
+    if (a.emitted) return;
+    if (sl < 1 || sl > 240 || xt >= 32 || index != xt ||
+        lo > 255 || hi > 255) { ++a.invalid; return; }
+    PrefetchRecord& r = a.records[index];
+    const unsigned long long now = channel().internal_tick_units;
+    if (!r.valid || r.sl != sl || r.lo != lo || r.hi != hi ||
+        r.end > now) { ++a.invalid; return; }
+    if (m.writes == 1 && !m.switched) {
+        if (a.matched_old < 128) {
+            ++a.matched_old;
+            if (lo != 0 || hi != 0) ++a.invalid;
+        }
+    } else if (m.writes == 2 && m.switched &&
+               m.switch_frame == m.frame && sl >= m.switch_sl) {
+        if (lo == 0 && hi == 0 && !a.saw_new) {
+            ++a.old_after_write;
+            if (r.start < m.switch_tick) ++a.old_started_before;
+            else ++a.old_started_after;
+        } else if (lo == 255 && hi == 255) {
+            if (!a.saw_new) {
+                a.saw_new = true;
+                a.first_sl = sl;
+                a.first_xt = xt;
+            }
+            if (a.matched_new < 128) {
+                ++a.matched_new;
+                if (r.start >= m.switch_tick) ++a.new_started_after;
+                else ++a.invalid;
+                const unsigned long long lag = now - r.end;
+                if (a.matched_new == 1 || lag < a.lag_min) a.lag_min = lag;
+                if (lag > a.lag_max) a.lag_max = lag;
+            }
+        } else {
+            ++a.invalid;
+        }
+    }
+    if (a.matched_new == 128 && !a.emitted) {
+        const TileBoundary& t = stage111_state();
+        if (a.matched_old != 128 || a.old_after_write != t.transient_old ||
+            a.old_after_write > 64 ||
+            a.old_started_before + a.old_started_after != a.old_after_write ||
+            a.new_started_after != 128 ||
+            a.first_sl != t.first_new_sl ||
+            a.first_xt != t.first_new_xt ||
+            a.first_sl < m.switch_sl || a.first_sl > m.switch_sl + 3 ||
+            a.lag_min == 0 || a.lag_max < a.lag_min ||
+            a.lag_max > 1000000ULL || t.invalid != 0)
+            ++a.invalid;
+        if (a.invalid) {
+            std::fprintf(stderr,
+                "VPD_STAGE113_REJECTED_PREFETCH invalid=%lu "
+                "matched_old=%lu matched_new=%lu synthetic_only=yes\n",
+                a.invalid, a.matched_old, a.matched_new);
+        } else {
+            std::fprintf(stderr,
+                "VPD_STAGE113_NATIVE_PREFETCH_PASS "
+                "switch_sl=%u first_new_sl=%u first_new_xt=%u "
+                "lookahead_tiles=2 matched_old=128 matched_new=128 "
+                "old_after_write=%lu old_prefetched_before=%lu "
+                "old_read_started_after=%lu new_read_started_after=128 "
+                "fetch_to_draw_min=%llu fetch_to_draw_max=%llu invalid=0 "
+                "paired_tile_xbuf_frame=yes synthetic_only=yes "
+                "original_game_prefetch_proven=no\n",
+                m.switch_sl, a.first_sl, a.first_xt, a.old_after_write,
+                a.old_started_before, a.old_started_after,
+                a.lag_min, a.lag_max);
+        }
+        std::fflush(stderr);
+        a.emitted = true;
     }
 }
 #endif

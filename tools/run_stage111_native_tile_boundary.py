@@ -51,7 +51,7 @@ def verify_report(output, *, stage110=None):
             "original_game_tile_proven": False}
 
 
-def run_native(binary, rom, folder, *, enabled=True, positive=True, timeout=25.0):
+def run_native(binary, rom, folder, *, enabled=True, positive=True, timeout=25.0, prefetch=False):
     folder.mkdir(parents=True, exist_ok=True)
     env = os.environ.copy()
     env.update(backend_settings("xvfb", folder))
@@ -63,6 +63,7 @@ def run_native(binary, rom, folder, *, enabled=True, positive=True, timeout=25.0
         env[tag] = "0"
     env["VPD_STAGE110_MIDFRAME_CHR_PROBE"] = "1" if enabled else "0"
     env["VPD_STAGE111_BG_TILE_PROBE"] = "1" if enabled else "0"
+    env["VPD_STAGE113_BG_PREFETCH_PROBE"] = "1" if enabled and prefetch else "0"
     cmd = [str(Path(binary).resolve()), "--newppu", "1", "--sound", "0",
            "--opengl", "0", "--no-config", "1", str(rom.resolve())]
     log = folder / "native.log"
@@ -75,7 +76,7 @@ def run_native(binary, rom, folder, *, enabled=True, positive=True, timeout=25.0
             while time.monotonic() < end:
                 time.sleep(0.1)
                 output = log.read_text(encoding="utf8", errors="replace")
-                if positive and MARKER in output and PIXEL_MARKER in output:
+                if positive and MARKER in output and PIXEL_MARKER in output and (not prefetch or "VPD_STAGE113_NATIVE_PREFETCH_PASS" in output):
                     break
                 if proc.poll() is not None:
                     break
@@ -90,7 +91,7 @@ def run_native(binary, rom, folder, *, enabled=True, positive=True, timeout=25.0
                     proc.wait(timeout=4)
     output = log.read_text(encoding="utf8", errors="replace")
     if not positive:
-        if MARKER in output or PIXEL_MARKER in output or not survived:
+        if MARKER in output or PIXEL_MARKER in output or "VPD_STAGE113_NATIVE_PREFETCH_PASS" in output or not survived:
             raise TileProofError("Disabled/fixed-bank native control not clean")
         return None
     if output.count(MARKER) != 1 or output.count(PIXEL_MARKER) != 1:
@@ -99,7 +100,12 @@ def run_native(binary, rom, folder, *, enabled=True, positive=True, timeout=25.0
         raise TileProofError("Missing paired native tile/XBuf witness: " +
                              (diagnostics[-1] if diagnostics else
                               categorize_exit(proc.returncode, output)))
-    return verify_report(output, stage110=verify_pixels(output))
+    witness = verify_report(output, stage110=verify_pixels(output))
+    if prefetch:
+        if output.count("VPD_STAGE113_NATIVE_PREFETCH_PASS") != 1:
+            raise TileProofError("Absent or repeated native prefetch proof")
+        return witness, output
+    return witness
 
 
 def run(binary, private_dir):
