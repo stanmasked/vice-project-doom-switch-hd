@@ -142,15 +142,15 @@ def check_log_checksums(path, expected_checksum, expected_header):
         data=path.read_bytes()
     except OSError as exc:
         raise SessionError(f'Missing/unreadable event log {path.name}') from exc
-    if not data.endswith(b'\\n'):
+    if not data.endswith(b'\n'):
         raise SessionError(f'Truncated event log {path.name}')
     lines=data.splitlines(keepends=True)
-    if not lines or lines[0]!=expected_header.encode('ascii')+b'\\n':
+    if not lines or lines[0]!=expected_header.encode('ascii')+b'\n':
         raise SessionError(f'Invalid event log header {path.name}')
     rolling=1
     checksums=[]
     for line in lines:
-        if not line.endswith(b'\\n'):
+        if not line.endswith(b'\n'):
             raise SessionError(f'Invalid event line termination {path.name}')
         rolling=zlib.adler32(line,rolling)
         checksums.append(f'{rolling:08X}')
@@ -198,14 +198,14 @@ def verify(session_meta, *, require_cycle=False):
     events = read_frame_events(folder/'mmc3_video_writes.tsv')
     frame_prefixes=check_log_checksums(
         folder/'mmc3_video_writes.tsv',props.get('frame_log_adler32'),
-        'frame\\taddress\\tvalue')
+        'frame\taddress\tvalue')
     if len(frame_prefixes)!=len(events)+1:
         raise SessionError('Incorrect frame event checksum row count')
     cycle_prefixes=None
     if cycle=='yes':
         cycle_prefixes=check_log_checksums(
             folder/'mmc3_ppu_cycles.tsv',props.get('cycle_log_adler32'),
-            'frame\\tcpu_cycle\\taddress\\tvalue\\tkind')
+            'frame\tcpu_cycle\taddress\tvalue\tkind')
         if len(cycle_prefixes)!=len(events)+1:
             raise SessionError('Incorrect CPU-cycle event checksum row count')
     else:
