@@ -1552,7 +1552,7 @@ inline void stage121_pixel(unsigned sl,unsigned xt,unsigned xp,
 struct Quad124Audit {
     unsigned samples[4]={0,0,0,0};
     unsigned colors[4]={0,0,0,0};
-    unsigned invalid=0;
+    unsigned invalid=0,bad_attribute=0,bad_color=0;
     bool emitted=false;
 };
 inline Quad124Audit& stage124_state() {
@@ -1584,6 +1584,8 @@ inline void stage124_pixel(unsigned sl,unsigned xt,unsigned xp,
     const unsigned expected_index=3U+4U*quadrant;
     const unsigned expected_color=0x30U+quadrant;
     const unsigned expected_xbuf=0x80U|expected_color;
+    if(raw!=0xE4U)++a.bad_attribute;
+    if(pixelcolor!=expected_color || xbuf!=expected_xbuf)++a.bad_color;
     if(ataddr!=expected_addr || raw!=0xE4U ||
        shift!=expected_shift || decoded!=4U*quadrant ||
        pattern!=3U || combined!=expected_index ||
@@ -1600,10 +1602,11 @@ inline void stage124_pixel(unsigned sl,unsigned xt,unsigned xp,
            a.colors[2]==a.colors[3]) {
             std::fprintf(stderr,
                 "VPD_STAGE124_REJECTED_QUADRANTS invalid=%u "
+                "bad_attribute=%u bad_color=%u "
                 "colors=%u,%u,%u,%u samples=16,16,16,16 "
                 "synthetic_only=yes\n",
-                a.invalid,a.colors[0],a.colors[1],
-                a.colors[2],a.colors[3]);
+                a.invalid,a.bad_attribute,a.bad_color,
+                a.colors[0],a.colors[1],a.colors[2],a.colors[3]);
         }else{
             std::fprintf(stderr,
                 "VPD_STAGE124_NATIVE_QUADRANTS_PASS "
