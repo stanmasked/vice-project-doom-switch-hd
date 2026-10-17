@@ -41,13 +41,15 @@ PPU initialization writes alternating 0/1 throughout $2000–$2FFF,
 including attribute bytes. The observed byte range 0..1 is checked,
 but these ROMs **do not yet exercise all four distinct attribute
 quadrants or demonstrate four different palette colors**. A subsequent
-experiment needs a custom attribute pattern and populated palette RAM
-to prove chromatic selection, without disturbing existing Stage119
-controls.
+experiment needs a custom attribute pattern to prove all four
+quadrants, without disturbing existing Stage119 controls. Stage122
+initializes sixteen synthetic background palette entries to make the
+existing pattern-0 versus pattern-3 color check meaningful.
 
 The native observer processes 16 pixels in each of two known rows
-and requires the full 4-phase fine-X sweep, amounting to 128
-sampled background indices. The independently compiled C++ regression
+at raster positions x=32..47 and requires the full four-phase fine-X
+sweep, amounting to 128 sampled background indices. This window skips
+the two-tile scanline carry observed by prior native source tests. The independently compiled C++ regression
 mutates only a fetched attribute address to its +$0400 alias.
 Stages119–120 must still pass, while Stage121 rejects the false origin.
 
