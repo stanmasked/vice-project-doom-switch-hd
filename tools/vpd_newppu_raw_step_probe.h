@@ -823,7 +823,7 @@ inline void stage115_edge_read(unsigned sl, unsigned slot,
         const MidframeChr& m = stage110_state();
         std::fprintf(stderr,
             "VPD_STAGE115_DIAGNOSTIC total=%u old=%u new=%u "
-            "last_sl=%u last_xt=%u invalid=%u writes=%lu "
+            "last_sl=%u last_xt=%u invalid=%u writes=%u "
             "switch_sl=%u synthetic_only=yes\n",
             a.total, a.old_tiles, a.new_tiles, a.last_sl, a.last_tile,
             a.invalid, m.writes, m.switch_sl);

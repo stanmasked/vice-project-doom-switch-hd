@@ -67,7 +67,7 @@ class Acceptance(unittest.TestCase):
     def test_enabled_native_subprobes_do_not_skip_carry_marker_gate(self):
         runner = (ROOT / "tools" / "run_stage111_native_tile_boundary.py").read_text()
         self.assertIn("if prefetch or plane_pairs or scanline_carry:", runner)
-        self.assertIn("VPD_STAGE115_DIAGNOSTIC", runner)
+        self.assertIn("REJECTED_EDGE_CARRY|DIAGNOSTIC", runner)
         self.assertNotIn("return witness, output\n    if plane_pairs:", runner)
 
     def test_reject_forged_or_cross_frame_claims(self):
