@@ -18,14 +18,14 @@ STAGE119 = (
     "coarse1=0 coarse2=1 write_sl1=104 write_sl2=105 "
     "sample_sl1=105 sample_sl2=106 nametable0_x0=0 nametable1_x0=1 "
     "pattern0_x0=0 pattern1_x0=3 first_color=15 second_color=48 "
-    "nt_address0=2000 nt_address1=2001 samples_per_row=16 "
+    "nt_address0=2004 nt_address1=2005 samples_per_row=16 "
     "odd_first=7 odd_second=9 invalid=0 "
     "real_fceux_xbuf=yes synthetic_only=yes "
     "original_game_coarse_scroll_proven=no"
 )
 STAGE120 = (
     "VPD_STAGE120_NATIVE_NT_STRIDE_PASS "
-    "fine1={fine} fine2={second} nt_addr0=2000 nt_addr1=2001 "
+    "fine1={fine} fine2={second} nt_addr0=2004 nt_addr1=2005 "
     "samples0=16 samples1=16 transitions0=2 transitions1=2 "
     "invalid=0 real_fceux_nt_to_xbuf=yes synthetic_only=yes "
     "original_game_nt_stride_proven=no"
@@ -53,20 +53,20 @@ class Report(unittest.TestCase):
         # Its *tile columns* still have strict increments and are
         # bound between Stage119 and Stage120.
         good = mocked(3)
-        moved = (good.replace("nt_address0=2000", "nt_address0=20A0")
-                     .replace("nt_address1=2001", "nt_address1=20A1")
-                     .replace("nt_addr0=2000", "nt_addr0=20A0")
-                     .replace("nt_addr1=2001", "nt_addr1=20A1"))
+        moved = (good.replace("nt_address0=2004", "nt_address0=20A4")
+                     .replace("nt_address1=2005", "nt_address1=20A5")
+                     .replace("nt_addr0=2004", "nt_addr0=20A4")
+                     .replace("nt_addr1=2005", "nt_addr1=20A5"))
         origin = verify_stage119(moved, 3)
         self.assertEqual(verify_stride_report(moved, 3, origin)["addresses"],
-                         [0x20A0, 0x20A1])
+                         [0x20A4, 0x20A5])
 
     def test_mutations_fail_closed_even_if_stage119_still_passes(self):
         good = mocked(3)
         mutations = (
             "", good + "\n" + good,
-            good.replace("nt_addr0=2000", "nt_addr0=2400"),
-            good.replace("nt_addr1=2001", "nt_addr1=2401"),
+            good.replace("nt_addr0=2004", "nt_addr0=2404"),
+            good.replace("nt_addr1=2005", "nt_addr1=2405"),
             good.replace("transitions0=2", "transitions0=1"),
             good.replace("transitions1=2", "transitions1=3"),
             good.replace("samples1=16", "samples1=15"),
@@ -124,7 +124,7 @@ int main(int argc,char**) {
    unsigned addr=0x2000U+tile+(second?1U:0U);
    // This is the new negative control: parity, ID, planes, XBuf all
    // remain correct. Only buffered source address changes to its alias.
-   if(argc>1&&sl==106&&x==8)addr+=0x400U;
+   if(argc>1&&sl==106&&x==40)addr+=0x400U;
    vpd_ppu_probe::stage119_pixel(
       sl,x/8,x%8,tile,bgpx,scroll,second?1U:0U,
       nt,addr,plane,plane,nt?3U:0U,nt?48U:15U);
@@ -154,7 +154,7 @@ int main(int argc,char**) {
             alias = subprocess.run([str(binary), "alias"],
                                    capture_output=True, text=True)
             self.assertEqual(alias.returncode, 0, alias.stderr)
-            # Previous stage would have accepted the falsified $2402 source.
+            # Previous stage would have accepted the falsified $2406 source.
             self.assertIn("VPD_STAGE119_NATIVE_NAMETABLE_PASS", alias.stderr)
             self.assertIn("VPD_STAGE120_REJECTED_NT_STRIDE", alias.stderr)
             self.assertNotIn("VPD_STAGE120_NATIVE_NT_STRIDE_PASS", alias.stderr)
