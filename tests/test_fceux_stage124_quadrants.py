@@ -14,7 +14,7 @@ from make_stage124_native_quadrant_rom import (
     make_rom, initialization, TILE_PAGE, ATTR_LOOP_SUFFIX, PAGE_HIGHS,
 )
 from run_stage124_native_quadrants import (
-    verify, QuadrantNativeError, MARKER, REJECTED,
+    verify, verify_rejection, QuadrantNativeError, MARKER, REJECTED,
 )
 from inject_fceux_stage119_nametable_pixels import patch as stage119_patch
 from inject_fceux_stage121_attributes import patch as stage121_patch
@@ -126,7 +126,7 @@ class Native(unittest.TestCase):
         fixture = r"""
 #include "vpd_newppu_raw_step_probe.h"
 #include <cstdlib>
-int main(int argc,char**) {
+int main(int argc,char**argv) {
  setenv("VPD_STAGE124_QUADRANT_PROBE","1",1);
  setenv("VPD_STAGE110_MIDFRAME_CHR_PROBE","1",1);
  vpd_ppu_probe::stage110_register_write(2,0);
@@ -137,11 +137,14 @@ int main(int argc,char**) {
    const unsigned quad=((nt&0x40U)?2U:0U)+((nt&2U)?1U:0U);
    const unsigned ataddr=0x23C0U+(nt&0x0C00U)+
              ((nt&0x0380U)>>4)+((nt&0x001CU)>>2);
-   const unsigned index=quad*4U+3U;
-   const unsigned color=(argc>2)?0x30U:(0x30U+quad);
+   const bool wrong_attr=argc>1&&argv[1][0]=='a';
+   const bool wrong_color=argc>1&&argv[1][0]=='p';
+   const unsigned decoded=wrong_attr?0U:4U*quad;
+   const unsigned index=decoded+3U;
+   const unsigned color=(wrong_attr||wrong_color)?0x30U:(0x30U+quad);
    vpd_ppu_probe::stage124_pixel(
-       sl,x/8U,x%8U,nt,ataddr,argc>1?0U:0xE4U,
-       2U*quad,4U*quad,3U,index,color,0x80U|color);
+       sl,x/8U,x%8U,nt,ataddr,wrong_attr?0U:0xE4U,
+       2U*quad,decoded,3U,index,color,0x80U|color);
    vpd_ppu_probe::stage110_raster_pixel(
        sl,sl<105?0U:3U,0x80U|color);
    ++vpd_ppu_probe::channel().internal_tick_units;
@@ -164,12 +167,15 @@ int main(int argc,char**) {
             self.assertEqual(positive.returncode, 0, positive.stderr)
             self.assertIn(MARKER, positive.stderr)
             verify(positive.stderr)
-            for args in (["attr"], ["attr", "collision"]):
-                control = subprocess.run([str(exe)] + args,
+            for name, cause in (("attribute", "attribute"),
+                                ("palette", "palette")):
+                control = subprocess.run([str(exe), name],
                                          capture_output=True, text=True)
                 self.assertEqual(control.returncode, 0, control.stderr)
                 self.assertNotIn(MARKER, control.stderr)
                 self.assertIn(REJECTED, control.stderr)
+                self.assertTrue(
+                    verify_rejection(control.stderr, cause)["native_rejection_observed"])
 
 
 if __name__ == "__main__":
