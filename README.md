@@ -66,6 +66,24 @@ python3 tests/verify_original_rom.py '/private/path/Vice - Project Doom (USA).ne
 
 **Rights and provenance:** Original commercial game binaries, extracted graphics, disassembly and ROM-bearing build artifacts are not published. The project is research tooling; a distributed remake requires appropriate permissions.
 
+## Stage 90 — verified MMC3 and PPU event provenance
+
+The new event audit attaches observed MMC3 CHR-register writes,
+PPUSCROLL latch activity, PPUSTATUS reset markers, and any known
+register-state coverage to the strict snapshot checkpoints. Stage89's
+static screen hypotheses now include **observed event-window counts**
+without claiming exact scroll, CHR bank mapping, scanlines or stage
+geometry.
+
+```bash
+python3 tools/audit_ppu_event_provenance.py \
+  private/ppu_capture_session.meta.txt \
+  --require-cycle --out private/ppu_event_provenance.json
+```
+
+See [stage90 event provenance](docs/PPU_EVENT_PROVENANCE_STAGE90.md).
+Only private, independently verified FCEUX captures can be analyzed.
+
 ## Stage 89 — quantified reference-screen hypotheses
 
 When **local, validated FCEUX screen references** are available,
