@@ -40,15 +40,15 @@ class CycleTraceTests(unittest.TestCase):
         self.assertEqual(result['frames'][0]['scroll_write_count'],2)
         with tempfile.TemporaryDirectory() as directory:
             p=Path(directory)/'mirror.tsv'
-            p.write_text(HEADER+'\\n4\\t500\\t3FFA\\t00\\tR\\n'
-                              '4\\t510\\t200D\\t17\\tW\\n',encoding='utf8')
+            p.write_text(HEADER+'\n4\t500\t3FFA\t00\tR\n'
+                              '4\t510\t200D\t17\tW\n',encoding='utf8')
             self.assertEqual(len(list(parse_events(p))),2)
-            p.write_text(HEADER+'\\n4\\t500\\t3FFB\\t00\\tR\\n')
+            p.write_text(HEADER+'\n4\t500\t3FFB\t00\tR\n')
             with self.assertRaisesRegex(ValueError,'Unexpected read'):
                 list(parse_events(p))
-            p.write_text(HEADER+'\\n4\\t500\\t3FFA\\tAA\\tR\\n')
+            p.write_text(HEADER+'\n4\t500\t3FFA\tAA\tR\n')
             with self.assertRaisesRegex(ValueError,'Unexpected read'):
-                list(parse_events(p)
+                list(parse_events(p))
 
     def test_counter_reset_creates_new_epoch(self):
         r=summarize([(0,490,0x8000,0,'W'),
@@ -110,9 +110,9 @@ class CycleTraceTests(unittest.TestCase):
                             'cycle_trace_available=yes\n')
             with self.assertRaisesRegex(ValueError,'callback integrity'):
                 check_capture_meta(path)
-            path.write_text('register_log_complete=yes\\ncallback_errors=0\\n'
-                            'mmc3_write_coverage=full_8000_ffff_even_odd\\n'
-                            'cycle_trace_available=yes\\n')
+            path.write_text('register_log_complete=yes\ncallback_errors=0\n'
+                            'mmc3_write_coverage=full_8000_ffff_even_odd\n'
+                            'cycle_trace_available=yes\n')
             with self.assertRaisesRegex(ValueError,'PPU register mirror'):
                 check_capture_meta(path)
 
