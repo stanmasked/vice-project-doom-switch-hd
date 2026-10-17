@@ -3,6 +3,7 @@ import json
 import sys
 import tempfile
 import unittest
+import zlib
 from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'tools'))
 from verify_ppu_capture_session import verify,SessionError
@@ -12,6 +13,10 @@ TOKEN='0011002200330044'
 
 def data_file(path, size):
     Path(path).write_bytes(bytes([size%251])*size)
+
+
+def checksum_file(path):
+    return f'{zlib.adler32(Path(path).read_bytes()):08X}'
 
 
 class CaptureSessionTests(unittest.TestCase):
@@ -47,6 +52,11 @@ class CaptureSessionTests(unittest.TestCase):
             self.frames[frame]=props
             data_file(str(path)+'.ppu.bin',0x4000)
             data_file(str(path)+'.ram.bin',0x800)
+            props['snapshot_checksum']='adler32_v1'
+            props['ppu_adler32']=checksum_file(str(path)+'.ppu.bin')
+            props['ram_adler32']=checksum_file(str(path)+'.ram.bin')
+            props['screen_rgb_adler32']='not_captured'
+            props['screen_pal_adler32']='not_captured'
         self.log=self.root/'mmc3_video_writes.tsv'
         self.log.write_text('frame\taddress\tvalue\n1\t8002\t80\n1\t3FFA\t00\n3\t200D\t22\n')
         self.cyclelog=self.root/'mmc3_ppu_cycles.tsv'
@@ -73,6 +83,8 @@ class CaptureSessionTests(unittest.TestCase):
         self.assertTrue(report['cycles_checked'])
         self.assertFalse(report['game_identity_authenticated'])
         self.assertFalse(report['stage_geometry_proven'])
+        self.assertTrue(report['snapshot_bytes_verified'])
+        self.assertEqual(report['checksum_type'],'adler32_v1')
 
     def test_pending_manifest_is_not_completed(self):
         self.manifest.write_text('capture_in_progress=yes\n')
@@ -150,7 +162,70 @@ class CaptureSessionTests(unittest.TestCase):
         self.fail_if(True)
         data_file(self.root/'frame_000001.screen.rgb.bin',256*240*3)
         data_file(self.root/'frame_000001.screen.pal.bin',256*240)
+        self.frames[1]['screen_rgb_adler32']=checksum_file(
+            self.root/'frame_000001.screen.rgb.bin')
+        self.frames[1]['screen_pal_adler32']=checksum_file(
+            self.root/'frame_000001.screen.pal.bin')
+        self.finalize()
         self.assertTrue(verify(self.manifest)['complete'])
+
+    def test_same_size_ppu_bit_flip_is_rejected(self):
+        path=self.root/'frame_000001.ppu.bin'
+        payload=bytearray(path.read_bytes())
+        payload[123]^=0x01
+        path.write_bytes(payload)
+        self.assertEqual(path.stat().st_size,0x4000)
+        with self.assertRaisesRegex(SessionError,'checksum mismatch'):
+            verify(self.manifest)
+
+    def test_same_size_ram_bit_flip_is_rejected(self):
+        path=self.root/'frame_000003.ram.bin'
+        payload=bytearray(path.read_bytes())
+        payload[-3]^=0x40
+        path.write_bytes(payload)
+        self.assertEqual(path.stat().st_size,0x800)
+        with self.assertRaisesRegex(SessionError,'checksum mismatch'):
+            verify(self.manifest)
+
+    def test_missing_snapshot_checksum_metadata_rejected(self):
+        self.frames[1].pop('ppu_adler32')
+        self.finalize()
+        self.fail_if(True)
+
+    def test_legacy_snapshot_without_checksum_version_rejected(self):
+        self.frames[3].pop('snapshot_checksum')
+        self.finalize()
+        self.fail_if(True)
+
+    def test_bad_declared_checksum_rejected(self):
+        self.frames[1]['ram_adler32']='00000000'
+        self.finalize()
+        with self.assertRaisesRegex(SessionError,'checksum mismatch'):
+            verify(self.manifest)
+
+    def test_no_screen_requires_explicit_absent_checksum(self):
+        self.frames[3]['screen_rgb_adler32']='00000000'
+        self.finalize()
+        self.fail_if(True)
+
+    def test_screen_same_size_corruption_rejected(self):
+        self.frames[1]['screen_reference']='yes'
+        rgb=self.root/'frame_000001.screen.rgb.bin'
+        pal=self.root/'frame_000001.screen.pal.bin'
+        data_file(rgb,256*240*3)
+        data_file(pal,256*240)
+        self.frames[1]['screen_rgb_adler32']=checksum_file(rgb)
+        self.frames[1]['screen_pal_adler32']=checksum_file(pal)
+        self.finalize()
+        self.assertTrue(verify(self.manifest)['complete'])
+        data=bytearray(rgb.read_bytes());data[2048]^=0x20;rgb.write_bytes(data)
+        with self.assertRaisesRegex(SessionError,'checksum mismatch'):
+            verify(self.manifest)
+        data[2048]^=0x20;rgb.write_bytes(data)
+        palbytes=bytearray(pal.read_bytes());palbytes[11]^=0x01
+        pal.write_bytes(palbytes)
+        with self.assertRaisesRegex(SessionError,'checksum mismatch'):
+            verify(self.manifest)
 
 
 if __name__=='__main__': unittest.main()
