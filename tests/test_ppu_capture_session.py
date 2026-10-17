@@ -15,6 +15,16 @@ def data_file(path, size):
     Path(path).write_bytes(bytes([size%251])*size)
 
 
+def log_prefixes(path):
+    lines=Path(path).read_bytes().splitlines(keepends=True)
+    checksum=1
+    result=[]
+    for line in lines:
+        checksum=zlib.adler32(line,checksum)
+        result.append(f'{checksum:08X}')
+    return result
+
+
 def checksum_file(path):
     return f'{zlib.adler32(Path(path).read_bytes()):08X}'
 
@@ -63,6 +73,16 @@ class CaptureSessionTests(unittest.TestCase):
         self.cyclelog.write_text('frame\tcpu_cycle\taddress\tvalue\tkind\n'
                                  '1\t10\t8002\t80\tW\n1\t14\t3FFA\t00\tR\n'
                                  '3\t100\t200D\t22\tW\n')
+        frame_prefix=log_prefixes(self.log)
+        cycle_prefix=log_prefixes(self.cyclelog)
+        self.props['event_checksum']='adler32_v1'
+        self.props['frame_log_adler32']=frame_prefix[-1]
+        self.props['cycle_log_adler32']=cycle_prefix[-1]
+        for frame,props in self.frames.items():
+            checkpoint=int(props['logged_register_writes'])
+            props['event_checksum']='adler32_v1'
+            props['frame_log_prefix_adler32']=frame_prefix[checkpoint]
+            props['cycle_log_prefix_adler32']=cycle_prefix[checkpoint]
         self.finalize()
 
     def finalize(self):
@@ -85,6 +105,8 @@ class CaptureSessionTests(unittest.TestCase):
         self.assertFalse(report['stage_geometry_proven'])
         self.assertTrue(report['snapshot_bytes_verified'])
         self.assertEqual(report['checksum_type'],'adler32_v1')
+        self.assertTrue(report['event_logs_verified'])
+        self.assertEqual(report['event_checksum_type'],'adler32_v1')
 
     def test_pending_manifest_is_not_completed(self):
         self.manifest.write_text('capture_in_progress=yes\n')
@@ -142,7 +164,10 @@ class CaptureSessionTests(unittest.TestCase):
         self.cyclelog.unlink()
         self.fail_if(True)
         self.props['cycle_trace_available']='no'
-        for meta in self.frames.values():meta['cycle_trace_available']='no'
+        self.props['cycle_log_adler32']='not_captured'
+        for meta in self.frames.values():
+            meta['cycle_trace_available']='no'
+            meta['cycle_log_prefix_adler32']='not_captured'
         self.finalize()
         r=verify(self.manifest)
         self.assertFalse(r['cycles_checked'])
@@ -225,6 +250,81 @@ class CaptureSessionTests(unittest.TestCase):
         palbytes=bytearray(pal.read_bytes());palbytes[11]^=0x01
         pal.write_bytes(palbytes)
         with self.assertRaisesRegex(SessionError,'checksum mismatch'):
+            verify(self.manifest)
+
+    def test_same_size_frame_tsv_corruption_rejected(self):
+        text=self.log.read_text()
+        self.log.write_text(text.replace('1\\t8002\\t80','1\\t8002\\t81'))
+        self.assertEqual(len(self.log.read_bytes()),len(text.encode()))
+        with self.assertRaisesRegex(SessionError,'checksum mismatch'):
+            verify(self.manifest)
+
+    def test_same_size_cycle_counter_corruption_rejected(self):
+        text=self.cyclelog.read_text()
+        self.cyclelog.write_text(text.replace('1\\t10\\t','1\\t11\\t'))
+        self.assertEqual(len(self.cyclelog.read_bytes()),len(text.encode()))
+        with self.assertRaisesRegex(SessionError,'checksum mismatch'):
+            verify(self.manifest)
+
+    def test_wrong_frame_log_prefix_rejected(self):
+        self.frames[1]['frame_log_prefix_adler32']='00000000'
+        self.finalize()
+        with self.assertRaisesRegex(SessionError,'frame_log_prefix_adler32'):
+            verify(self.manifest)
+
+    def test_wrong_cycle_log_prefix_rejected(self):
+        self.frames[3]['cycle_log_prefix_adler32']='00000000'
+        self.finalize()
+        with self.assertRaisesRegex(SessionError,'cycle_log_prefix_adler32'):
+            verify(self.manifest)
+
+    def test_missing_full_log_checksum_rejected(self):
+        self.props.pop('frame_log_adler32')
+        self.finalize()
+        self.fail_if(True)
+
+    def test_missing_cycle_log_checksum_rejected(self):
+        self.props.pop('cycle_log_adler32')
+        self.finalize()
+        self.fail_if(True)
+
+    def test_legacy_missing_event_checksum_schema_rejected(self):
+        self.props.pop('event_checksum')
+        self.finalize()
+        self.fail_if(True)
+
+    def test_wrong_event_checksum_version_rejected(self):
+        self.frames[1]['event_checksum']='legacy'
+        self.finalize()
+        self.fail_if(True)
+
+    def test_truncated_event_log_does_not_pass(self):
+        original=self.log.read_bytes()
+        self.log.write_bytes(original[:-1])
+        self.fail_if(True)
+
+    def test_truncated_cycle_log_does_not_pass(self):
+        original=self.cyclelog.read_bytes()
+        self.cyclelog.write_bytes(original[:-1])
+        self.fail_if(True)
+
+    def test_no_clock_requires_not_captured_checksums(self):
+        self.props['cycle_trace_available']='no'
+        self.props['cycle_log_adler32']='not_captured'
+        for meta in self.frames.values():
+            meta['cycle_trace_available']='no'
+            meta['cycle_log_prefix_adler32']='not_captured'
+        self.finalize()
+        self.assertFalse(verify(self.manifest)['cycles_checked'])
+        self.props['cycle_log_adler32']='00000000'
+        self.finalize()
+        self.fail_if(False)
+
+    def test_snapshot_checkpoint_bound_to_exact_prefix(self):
+        self.assertTrue(verify(self.manifest)['event_logs_verified'])
+        self.frames[1]['logged_register_writes']='1'
+        self.finalize()
+        with self.assertRaisesRegex(SessionError,'frame_log_prefix_adler32'):
             verify(self.manifest)
 
 
