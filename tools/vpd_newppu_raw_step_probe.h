@@ -3,6 +3,11 @@
 // Install callback explicitly only on a controlled private emulator build.
 #ifndef VPD_NEWPPU_RAW_STEP_PROBE_H
 #define VPD_NEWPPU_RAW_STEP_PROBE_H
+#ifdef VPD_NATIVE_SYNTHETIC_SMOKE
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#endif
 
 namespace vpd_ppu_probe {
 struct RawStep {
@@ -32,6 +37,46 @@ inline void set_sink(Sink callback, void* user) {
     c.user = user;
 }
 
+// Stage100: synthetic-only, double-opt-in aggregate witness; no raw positions.
+#ifdef VPD_NATIVE_SYNTHETIC_SMOKE
+inline void smoke_callback(const RawStep& step, void*) {
+    struct Aggregate {
+        unsigned long count = 0;
+        unsigned long wrapped = 0;
+        unsigned long label_changes = 0;
+        int previous_label = -1;
+        bool emitted = false;
+    };
+    static Aggregate aggregate;
+    if (aggregate.emitted) return;
+    ++aggregate.count;
+    if (step.cycle_after < step.cycle_before) ++aggregate.wrapped;
+    if (aggregate.previous_label >= 0 &&
+        aggregate.previous_label != step.internal_scanline)
+        ++aggregate.label_changes;
+    aggregate.previous_label = step.internal_scanline;
+    if (aggregate.count == 8192) {
+        std::fprintf(stderr,
+            "VPD_STAGE100_NEWPPU_RUNTIME_PASS raw_steps=8192 "
+            "cycle_wraps=%lu internal_label_changes=%lu "
+            "invalid_steps=%lu normalized_scanlines=no real_game_data=no\n",
+            aggregate.wrapped, aggregate.label_changes,
+            channel().invalid);
+        std::fflush(stderr);
+        aggregate.emitted = true;
+        set_sink(nullptr, nullptr);
+    }
+}
+inline void arm_synthetic_smoke_once() {
+    static bool checked = false;
+    if (checked) return;
+    checked = true;
+    const char* opt_in = std::getenv("VPD_STAGE100_SYNTHETIC_SMOKE");
+    if (opt_in && std::strcmp(opt_in, "1") == 0)
+        set_sink(smoke_callback, nullptr);
+}
+#endif
+
 inline void observe(int sl, int before, int after, int modulus, int increment) {
     Channel& c = channel();
     // Verifies internal modulo arithmetic only; no PPU scanline semantics.
@@ -44,6 +89,9 @@ inline void observe(int sl, int before, int after, int modulus, int increment) {
         return;
     }
     ++c.observed;
+#ifdef VPD_NATIVE_SYNTHETIC_SMOKE
+    arm_synthetic_smoke_once();
+#endif
     if (c.callback) {
         const RawStep step{sl, before, after, modulus, increment};
         c.callback(step, c.user);
