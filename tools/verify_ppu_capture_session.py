@@ -193,6 +193,7 @@ def verify(session_meta, *, require_cycle=False):
         cycles_checked = True
     return {'format':'fceux_ppu_verified_session_v1',
             'session_id':token, 'frames_captured':snapshots,
+            'capture_frames':frames,
             'frame_callback_span':[first,last], 'frames_observed':callbacks,
             'events_checked':len(events), 'cycles_checked':cycles_checked,
             'complete':True, 'game_identity_authenticated':False,
