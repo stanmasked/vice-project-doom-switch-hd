@@ -46,6 +46,9 @@ def summarize(events):
     last_cycle=None
     counter_epoch=0
     epoch_resets=0
+    same_frame_regressions=0
+    cross_frame_regressions=0
+    equal_adjacent=0
     frame_order_error=False
     selection=None
     chr_regs=[None]*6
@@ -64,8 +67,22 @@ def summarize(events):
             current={'frame':frame,'cpu_clock_first_event':cycle,
                      'cpu_clock_last_event':cycle,'event_count':0,
                      'chr_events':[],'scroll_write_count':0,
-                     'ppu_status_reads':0,'mapper_writes':0}
+                     'ppu_status_reads':0,'mapper_writes':0,
+                     'cpu_clock_equal_adjacent':0,
+                     'cpu_clock_regressions_within_frame':0,
+                     'cpu_clock_regressions_from_previous_frame':0}
             frames.append(current)
+        if last_cycle is not None:
+            if cycle<last_cycle:
+                if frame==last_frame:
+                    same_frame_regressions+=1
+                    current['cpu_clock_regressions_within_frame']+=1
+                else:
+                    cross_frame_regressions+=1
+                    current['cpu_clock_regressions_from_previous_frame']+=1
+            elif cycle==last_cycle:
+                equal_adjacent+=1
+                current['cpu_clock_equal_adjacent']+=1
         current['cpu_clock_last_event']=cycle
         current['event_count']+=1
         total+=1
@@ -103,6 +120,10 @@ def summarize(events):
         'total_events':total,
         'chr_events':global_chr_events,
         'cpu_clock_resets_or_discontinuities':epoch_resets,
+        'cpu_clock_decreases_same_frame':same_frame_regressions,
+        'cpu_clock_decreases_between_frames':cross_frame_regressions,
+        'cpu_clock_equal_adjacent':equal_adjacent,
+        'counter_reset_proven':False,
         'out_of_order_frame_numbers':frame_order_error,
         'unpaired_mmc3_data_writes':unknown_bank_writes,
         'frames_with_all_six_chr_values':sum(
@@ -110,7 +131,8 @@ def summarize(events):
         'limitations':[
             'CPU cycle offset is measured relative to first *logged event*, not frame start',
             'PPU scanline/dot offset cannot be derived reliably from frame labels alone',
-            'Counter reset or restart creates a new epoch, so cross-epoch intervals are invalid',
+            'A decreasing CPU counter is a possible reset/restart or trace anomaly, not proof of an actual reset',
+            'Cross-discontinuity cycle intervals cannot be certified',
             'Existing CHR state is unknown until all six registers are observed',
             'Dropped-event capture logs cannot establish full raster timing'
         ]
@@ -157,6 +179,8 @@ def main():
     result=summarize(parse_events(args.cycle_log))
     result['session_verified']=session['complete']
     result['frame_callback_span']=session['frame_callback_span']
+    result['cpu_cycle_order_verified']=session['cpu_cycle_order_verified']
+    result['cpu_clock_equal_adjacent_verified']=session['cpu_cycle_equal_adjacent']
     args.out.parent.mkdir(parents=True,exist_ok=True)
     args.out.write_text(json.dumps(result,indent=2)+'\n',encoding='utf8')
     print(json.dumps({'report':str(args.out),
