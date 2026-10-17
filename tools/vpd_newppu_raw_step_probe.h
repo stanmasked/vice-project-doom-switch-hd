@@ -3,7 +3,7 @@
 // Install callback explicitly only on a controlled private emulator build.
 #ifndef VPD_NEWPPU_RAW_STEP_PROBE_H
 #define VPD_NEWPPU_RAW_STEP_PROBE_H
-#if defined(VPD_NATIVE_SYNTHETIC_SMOKE) || defined(VPD_NATIVE_SYNTHETIC_VBLANK) || defined(VPD_NATIVE_SYNTHETIC_PPUSTATUS_READ) || defined(VPD_NATIVE_SYNTHETIC_EVENT_ORDER) || defined(VPD_NATIVE_SYNTHETIC_PRECLEAR) || defined(VPD_NATIVE_SYNTHETIC_MMC3_CHR) || defined(VPD_NATIVE_SYNTHETIC_BG_PIXELS)
+#if defined(VPD_NATIVE_SYNTHETIC_SMOKE) || defined(VPD_NATIVE_SYNTHETIC_VBLANK) || defined(VPD_NATIVE_SYNTHETIC_PPUSTATUS_READ) || defined(VPD_NATIVE_SYNTHETIC_EVENT_ORDER) || defined(VPD_NATIVE_SYNTHETIC_PRECLEAR) || defined(VPD_NATIVE_SYNTHETIC_MMC3_CHR) || defined(VPD_NATIVE_SYNTHETIC_BG_PIXELS) || defined(VPD_NATIVE_SYNTHETIC_BG_FETCH)
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -405,6 +405,51 @@ inline void observe_native_bg_pixel(unsigned bg_pattern, unsigned final_byte) {
             "bg_zero=%lu bg_nonzero=%lu final_fnv64=%llu invalid=%lu "
             "synthetic_only=yes original_pixel_proof=no\n",
             a.zero, a.nonzero, a.hash, a.invalid);
+        std::fflush(stderr);
+        a.emitted = true;
+    }
+}
+#endif
+
+// Stage108: actual newppu background pattern fetch values, synthetic ROM ONLY.
+// Never logs addresses, bytes, ROM contents, or any screen pixels.
+#ifdef VPD_NATIVE_SYNTHETIC_BG_FETCH
+inline void observe_native_bg_fetch(unsigned int address, unsigned int value, bool high) {
+    static const char* enabled = std::getenv("VPD_STAGE108_BG_FETCH_PROBE");
+    if (!enabled || std::strcmp(enabled, "1") != 0) return;
+    struct FetchAggregate {
+        unsigned long reads = 0, low = 0, high = 0, zero = 0, ff = 0;
+        unsigned long other = 0, pairs = 0, invalid = 0;
+        unsigned int last_low = 0;
+        bool expecting_high = false;
+        bool emitted = false;
+    };
+    static FetchAggregate a;
+    if (a.emitted) return;
+    if (address < 0x1000 || address >= 0x2000 || value > 0xff) ++a.invalid;
+    if (high) {
+        ++a.high;
+        if (!a.expecting_high || address != (a.last_low | 8)) ++a.invalid;
+        else ++a.pairs;
+        a.expecting_high = false;
+    } else {
+        ++a.low;
+        if (a.expecting_high || (address & 8) != 0) ++a.invalid;
+        a.last_low = address;
+        a.expecting_high = true;
+    }
+    if (value == 0) ++a.zero;
+    else if (value == 0xff) ++a.ff;
+    else ++a.other;
+    ++a.reads;
+    if (a.reads == 8192) {
+        if (a.expecting_high) ++a.invalid;
+        std::fprintf(stderr,
+            "VPD_STAGE108_NATIVE_BG_FETCH_PASS reads=8192 "
+            "low=%lu high=%lu zero=%lu ff=%lu other=%lu "
+            "paired=%lu invalid=%lu synthetic_only=yes "
+            "original_game_fetch_proven=no\n",
+            a.low, a.high, a.zero, a.ff, a.other, a.pairs, a.invalid);
         std::fflush(stderr);
         a.emitted = true;
     }

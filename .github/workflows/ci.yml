@@ -141,6 +141,8 @@ jobs:
         run: python -m unittest discover -s tests -p 'test_fceux_stage106_mmc3_chr.py' -v
       - name: Stage107 synthetic MMC3 framebuffer causality acceptance and patch guards
         run: python -m unittest discover -s tests -p 'test_fceux_stage107_bg_pixels.py' -v
+      - name: Stage108 native background CHR fetch pairing and fail-closed gates
+        run: python -m unittest discover -s tests -p 'test_fceux_stage108_bg_fetch.py' -v
       - name: Stage89 validated static screen hypotheses and explicit provenance
         run: python -m unittest discover -s tests -p 'test_ppu_capture_session.py' -v
       - name: Stage88 audited PPU reference-frame inventory regressions
