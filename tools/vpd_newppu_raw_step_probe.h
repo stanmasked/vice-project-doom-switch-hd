@@ -1575,7 +1575,7 @@ inline Quad126DeltaAudit& stage126_delta_state() {
 inline bool stage126_delta_target(unsigned& target) {
     static const char* env=std::getenv("VPD_STAGE126_TARGET_QUADRANT");
     if(!env)return false;
-    if(env[0]<'0' || env[0]>'3' || env[1]!='\\0')return false;
+    if(env[0]<'0' || env[0]>'3' || env[1]!='\0')return false;
     target=(unsigned)(env[0]-'0');
     return true;
 }
