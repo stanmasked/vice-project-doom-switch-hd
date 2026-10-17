@@ -38,7 +38,7 @@ class ROM(unittest.TestCase):
     def test_6502_nametable_loop_and_nes_dimensions(self):
         init = nametable_init()
         self.assertEqual(init.count(bytes((0xa2, 0, 0x8a, 0x29, 1,
-                                          0x8d, 7, 0x20, 0xe8, 0xd0, 0xf7))), 4)
+                                          0x8d, 7, 0x20, 0xe8, 0xd0, 0xf7))), 16)
         with tempfile.TemporaryDirectory() as tmp:
             for fine in FINES:
                 path = Path(tmp) / ("%d.nes" % fine)
