@@ -336,7 +336,9 @@ class CaptureSessionTests(unittest.TestCase):
         # per-frame prefix commitments still detect the divergent bytes.
         content=self.log.read_text()
         self.log.write_text(content.replace('1\t8002\t80','1\t8002\t81'))
+        self.cyclelog.write_text(self.cyclelog.read_text().replace('1\t10\t8002\t80','1\t10\t8002\t81'))
         self.props['frame_log_adler32']=checksum_file(self.log)
+        self.props['cycle_log_adler32']=checksum_file(self.cyclelog)
         self.finalize()
         with self.assertRaisesRegex(SessionError,'frame_log_prefix_adler32'):
             verify(self.manifest)
