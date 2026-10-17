@@ -1477,7 +1477,7 @@ inline void stage121_pixel(unsigned sl,unsigned xt,unsigned xp,
     const unsigned expected_palette=((raw>>expected_shift)&3U)<<2;
     if(ntaddr<0x2000U || ntaddr>=0x3000U ||
        ataddr!=expected_addr || (ataddr&0x3C0U)!=0x3C0U ||
-       raw>1U || shift!=expected_shift || decoded!=expected_palette ||
+       raw>1U || raw!=(ataddr&1U) || shift!=expected_shift || decoded!=expected_palette ||
        (decoded&3U)!=0U || bgpattern>3U ||
        combined_pixel!=(bgpattern|decoded) || combined_pixel>15U)
         ++a.invalid;
