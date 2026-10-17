@@ -29,7 +29,10 @@ test -f "${PATCH}/src/ppu.cpp"
 test -f "${PATCH}/src/vpd_newppu_raw_step_probe.h"
 python3 "${PROJECT}/tools/inject_fceux_vblank_status_probe.py" \
   "${FCEUX}/src/ppu.cpp" "${PATCH}/src/ppu.cpp" "${PATCH}/src/ppu_stage102.cpp"
-cp "${PATCH}/src/ppu_stage102.cpp" "${FCEUX}/src/ppu.cpp"
+python3 "${PROJECT}/tools/inject_fceux_ppustatus_read_probe.py" \
+  "${FCEUX}/src/ppu.cpp" "${PATCH}/src/ppu_stage102.cpp" \
+  "${PATCH}/src/ppu_stage103.cpp"
+cp "${PATCH}/src/ppu_stage103.cpp" "${FCEUX}/src/ppu.cpp"
 cp "${PATCH}/src/vpd_newppu_raw_step_probe.h" "${FCEUX}/src/vpd_newppu_raw_step_probe.h"
 
 # A real native PPU translation-unit change must be present and compile-guarded.
@@ -42,7 +45,7 @@ grep -q '^#ifdef VPD_NATIVE_RAW_PPU_PROBE' "${FCEUX}/src/ppu.cpp"
 # Probe is explicitly enabled in this temporary build. No sink is installed.
 cmake -S "${FCEUX}" -B "${BUILD}" \
   -DQT=5 -DCMAKE_BUILD_TYPE=Release \
-  -DCMAKE_CXX_FLAGS="-DVPD_NATIVE_RAW_PPU_PROBE -DVPD_NATIVE_SYNTHETIC_SMOKE -DVPD_NATIVE_SYNTHETIC_VBLANK" \
+  -DCMAKE_CXX_FLAGS="-DVPD_NATIVE_RAW_PPU_PROBE -DVPD_NATIVE_SYNTHETIC_SMOKE -DVPD_NATIVE_SYNTHETIC_VBLANK -DVPD_NATIVE_SYNTHETIC_PPUSTATUS_READ" \
   -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 cmake --build "${BUILD}" --target fceux --parallel 2
 test -x "${BUILD}/src/fceux"
@@ -62,5 +65,9 @@ xvfb-run -a -s '-screen 0 1024x768x24 -nolisten tcp' \
 # Stage102: independent native source status transitions, on synthetic ROM.
 xvfb-run -a -s '-screen 0 1024x768x24 -nolisten tcp' \
   python3 "${PROJECT}/tools/run_stage102_native_status_window.py" \
+    "${BUILD}/src/fceux" "${RUNNER_TEMP}"
+# Stage103: original synthetic 6502 repeatedly LDA $2002, proving real reads.
+xvfb-run -a -s '-screen 0 1024x768x24 -nolisten tcp' \
+  python3 "${PROJECT}/tools/run_stage103_native_ppustatus_reads.py" \
     "${BUILD}/src/fceux" "${RUNNER_TEMP}"
 printf 'STAGE99_PINNED_FCEUX_NATIVE_BUILD_PASS commit=%s opt_in_probe=yes real_fceux_linked=yes gameplay_raster_verified=no\n' "${PIN}"
