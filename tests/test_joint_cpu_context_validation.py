@@ -92,7 +92,7 @@ class JointContextTests(unittest.TestCase):
 
     def test_legacy_callback_contract_rejected(self):
         self.meta.write_text(self.meta.read_text().replace(
-            'callback_contract=address_size_value_v1\\n',''))
+            'callback_contract=address_size_value_v1\n',''))
         with self.assertRaisesRegex(ValueError,'provenance'):
             validate(self.trace,self.meta)
 
