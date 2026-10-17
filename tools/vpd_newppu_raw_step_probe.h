@@ -1260,6 +1260,11 @@ struct NTIdentityAudit {
     unsigned first_live_ht=0,second_live_ht=0;
     unsigned first_ntaddr=0,second_ntaddr=0;
     unsigned last_x1=0,last_x2=0;
+    // Stage120: address stride is independent of Stage119's ID/parity audit.
+    unsigned stride_samples1=0,stride_samples2=0;
+    unsigned stride_transitions1=0,stride_transitions2=0;
+    unsigned stride_invalid=0;
+    unsigned stride_prev1=0,stride_prev2=0;
     unsigned long frame=0;
     bool have_color1=false,have_color2=false,emitted=false;
 };
@@ -1330,7 +1335,19 @@ inline void stage119_pixel(unsigned sl,unsigned xt,unsigned xp,
        pattern!=(expected_nt?3U:0U) ||
        framebuffer_color>255 || tile>=34)
         ++a.invalid;
+    // Stage120 reads exactly the nametable address stored with BGData by
+    // the source-level NTRefreshAddr hook; it does not derive an address from
+    // tile ID or from framebuffer color. Reject page aliases even if parity
+    // and the visible synthetic pattern are otherwise unchanged.
+    const unsigned expected_addr=0x2000U+expected_tile+(after?1U:0U);
+    if(ntaddr!=expected_addr)++a.stride_invalid;
     if(before){
+        if(a.stride_samples1>0 && ntaddr!=a.stride_prev1) {
+            if(ntaddr!=a.stride_prev1+1U)++a.stride_invalid;
+            ++a.stride_transitions1;
+        }
+        a.stride_prev1=ntaddr;
+        ++a.stride_samples1;
         if(a.samples1==0){
             if(x!=0 || nt!=0 || pattern!=0)++a.invalid;
             a.first_color=framebuffer_color;
@@ -1342,6 +1359,12 @@ inline void stage119_pixel(unsigned sl,unsigned xt,unsigned xp,
         ++a.samples1;
         if(nt==1)++a.odd1;
     }else{
+        if(a.stride_samples2>0 && ntaddr!=a.stride_prev2) {
+            if(ntaddr!=a.stride_prev2+1U)++a.stride_invalid;
+            ++a.stride_transitions2;
+        }
+        a.stride_prev2=ntaddr;
+        ++a.stride_samples2;
         if(a.samples2==0){
             if(x!=0 || nt!=1 || pattern!=3)++a.invalid;
             a.second_color=framebuffer_color;
@@ -1359,6 +1382,27 @@ inline void stage119_pixel(unsigned sl,unsigned xt,unsigned xp,
            a.first_ntaddr==a.second_ntaddr ||
            a.odd1==0 || a.odd1>=16 || a.odd2==0 || a.odd2>=16)
            ++a.invalid;
+        // Stage120 is an additional native witness: a Stage119 PASS alone
+        // cannot certify the full per-tile nametable-address sequence.
+        if(a.invalid || a.stride_invalid ||
+           a.stride_samples1!=16 || a.stride_samples2!=16 ||
+           a.stride_transitions1!=2 || a.stride_transitions2!=2 ||
+           a.first_ntaddr!=0x2000U || a.second_ntaddr!=0x2001U) {
+            std::fprintf(stderr,
+                "VPD_STAGE120_REJECTED_NT_STRIDE invalid=%u "
+                "stage119_invalid=%u samples1=%u samples2=%u "
+                "transitions1=%u transitions2=%u synthetic_only=yes\n",
+                a.stride_invalid,a.invalid,a.stride_samples1,a.stride_samples2,
+                a.stride_transitions1,a.stride_transitions2);
+        }else{
+            std::fprintf(stderr,
+                "VPD_STAGE120_NATIVE_NT_STRIDE_PASS "
+                "fine1=%u fine2=%u nt_addr0=%04X nt_addr1=%04X "
+                "samples0=16 samples1=16 transitions0=2 transitions1=2 "
+                "invalid=0 real_fceux_nt_to_xbuf=yes synthetic_only=yes "
+                "original_game_nt_stride_proven=no\n",
+                a.f1,a.f2,a.first_ntaddr,a.second_ntaddr);
+        }
         if(a.invalid){
             std::fprintf(stderr,
                 "VPD_STAGE119_REJECTED_NAMETABLE invalid=%u "
