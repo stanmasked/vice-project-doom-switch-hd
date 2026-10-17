@@ -42,6 +42,9 @@ def parse_events(path):
 
 def summarize(events):
     frames=[]
+    # Event-frame transitions are not physical frame-boundary timestamps.
+    frame_boundary_observations=[]
+    unobserved_frame_labels=0
     last_frame=None
     last_cycle=None
     counter_epoch=0
@@ -64,6 +67,26 @@ def summarize(events):
             epoch_resets+=1
             counter_epoch+=1
         if current is None or frame!=last_frame:
+            if last_frame is not None:
+                frame_delta=frame-last_frame
+                # The interval between two logged events is observable;
+                # neither event establishes the start/end of a PPU frame.
+                valid_interval=frame_delta>0 and cycle>=last_cycle
+                event_gap=cycle-last_cycle if valid_interval else None
+                if frame_delta>1:
+                    unobserved_frame_labels+=frame_delta-1
+                frame_boundary_observations.append({
+                    'previous_event_frame':last_frame,
+                    'current_event_frame':frame,
+                    'frame_label_delta':frame_delta,
+                    'last_logged_cycle_previous_frame':last_cycle,
+                    'first_logged_cycle_current_frame':cycle,
+                    'cycles_between_adjacent_logged_events':event_gap,
+                    'cpu_counter_discontinuity':cycle<last_cycle,
+                    'frame_labels_skipped_without_events':max(0,frame_delta-1),
+                    'physical_frame_start_cycle':None,
+                    'physical_frame_duration_cycles':None,
+                })
             current={'frame':frame,'cpu_clock_first_event':cycle,
                      'cpu_clock_last_event':cycle,'event_count':0,
                      'chr_events':[],'scroll_write_count':0,
@@ -118,6 +141,11 @@ def summarize(events):
         'format':'fceux_cycle_trace_v1',
         'frames':frames,
         'total_events':total,
+        'frame_boundary_observations':frame_boundary_observations,
+        'frame_transition_count':len(frame_boundary_observations),
+        'frame_labels_skipped_without_events':unobserved_frame_labels,
+        'frame_start_cycle_proven':False,
+        'ppu_scanline_position_proven':False,
         'chr_events':global_chr_events,
         'cpu_clock_resets_or_discontinuities':epoch_resets,
         'cpu_clock_decreases_same_frame':same_frame_regressions,
@@ -130,6 +158,9 @@ def summarize(events):
             frame['has_all_chr_register_values'] for frame in frames),
         'limitations':[
             'CPU cycle offset is measured relative to first *logged event*, not frame start',
+            'Frame transitions are changes of event frame labels, not measured PPU frame boundaries',
+            'Skipped frame labels may contain no logged register accesses and do not prove missed video frames',
+            'Cross-frame logged-event intervals are not physical frame duration estimates',
             'PPU scanline/dot offset cannot be derived reliably from frame labels alone',
             'A decreasing CPU counter is a possible reset/restart or trace anomaly, not proof of an actual reset',
             'Cross-discontinuity cycle intervals cannot be certified',
