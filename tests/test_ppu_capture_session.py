@@ -45,6 +45,8 @@ class CaptureSessionTests(unittest.TestCase):
             'capture_failures':'0','cycle_trace_available':'yes',
             'cycle_order_policy':'nondecreasing_v1',
             'cycle_regressions':'0','cycle_equal_adjacent':'0',
+            'cycle_regressions_same_frame':'0',
+            'cycle_regressions_between_frames':'0',
             'mmc3_write_coverage':'full_8000_ffff_even_odd',
             'ppu_register_write_coverage':'full_2000_3fff_mod8',
             'ppu_status_read_coverage':'full_2000_3fff_mod8'}
@@ -381,6 +383,16 @@ class CaptureSessionTests(unittest.TestCase):
 
     def test_nonzero_regression_claim_invalidates_complete_manifest(self):
         self.props['cycle_regressions']='1'
+        self.finalize()
+        self.fail_if(True)
+
+    def test_same_frame_regression_claim_rejected(self):
+        self.props['cycle_regressions_same_frame']='1'
+        self.finalize()
+        self.fail_if(True)
+
+    def test_cross_frame_regression_claim_rejected(self):
+        self.props['cycle_regressions_between_frames']='1'
         self.finalize()
         self.fail_if(True)
 
