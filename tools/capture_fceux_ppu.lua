@@ -69,7 +69,7 @@ end
 -- over an existing file is unsupported, removing the pending marker
 -- before rename is safe: missing metadata is *not* valid evidence.
 local function publish_metadata(path, contents)
-    local pending='capture_in_progress=yes\\n'
+    local pending='capture_in_progress=yes\n'
     local previous, previous_error=io.open(path,'rb')
     assert(previous,'Missing pending metadata '..path..': '..tostring(previous_error))
     local existing=previous:read('*a')
