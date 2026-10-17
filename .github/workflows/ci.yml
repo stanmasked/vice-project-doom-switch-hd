@@ -124,6 +124,8 @@ jobs:
         run: lua5.4 tests/test_fceux_capture_session_invalidation.lua
       - name: Stage77-78 verify MMC3 and PPU CPU address mirrors
         run: lua5.4 tests/test_fceux_ppu_mmc3_mirrors.lua
+      - name: Stage80 atomic PPU frame and CPU-cycle callback failures
+        run: lua5.4 tests/test_fceux_ppu_cycle_atomic.lua
       - name: Stage79 finalized PPU capture session continuity
         run: lua5.4 tests/test_fceux_ppu_capture_session.lua
       - name: Stage76 invalidate stale private PPU frame metadata on failure
