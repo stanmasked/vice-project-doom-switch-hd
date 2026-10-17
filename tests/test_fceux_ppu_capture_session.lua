@@ -5,7 +5,7 @@ local function read(path)
   assert(f:close())
   return s
 end
-local function check(frames,should_complete)
+local function check(frames,should_complete,clock_pattern)
   local dir=os.tmpname()
   os.remove(dir)
   assert(os.execute('mkdir -p "'..dir..'"'))
@@ -37,8 +37,14 @@ local function check(frames,should_complete)
     assert(addr==0 and size==0x4000)
     return string.rep('p',size)
   end}
+  local cycle_calls=0
   debugger={getcyclescount=function()
-    cycle=cycle+7;return cycle
+    cycle_calls=cycle_calls+1
+    cycle=cycle+7
+    if clock_pattern=='within' and cycle_calls==2 then return 0 end
+    if clock_pattern=='boundary' and cycle_calls==4 then return 0 end
+    if clock_pattern=='equal' and cycle_calls==2 then return 7 end
+    return cycle
   end}
   rom={gethash=function(hash)
     assert(hash=='md5')
@@ -75,7 +81,17 @@ local function check(frames,should_complete)
   assert(m:find('frames_captured=2',1,true))
   assert(m:find('events_recorded=6',1,true))
   assert(m:find('capture_frames='..table.concat(frames,','),1,true))
-  assert(m:find('frame_callback_gaps='..(should_complete and 0 or 1),1,true))
+  assert(m:find('frame_callback_gaps='..
+    ((frames[2]>frames[1]+1) and 1 or 0),1,true))
+  assert(m:find('cycle_order_policy=nondecreasing_v1',1,true))
+  local regress=(clock_pattern=='within' or clock_pattern=='boundary') and 1 or 0
+  local equals=(clock_pattern=='equal') and 1 or 0
+  assert(m:find('cycle_regressions='..regress,1,true))
+  assert(m:find('cycle_equal_adjacent='..equals,1,true))
+  assert(m:find('cycle_regressions_same_frame='..
+    ((clock_pattern=='within') and 1 or 0),1,true))
+  assert(m:find('cycle_regressions_between_frames='..
+    ((clock_pattern=='boundary') and 1 or 0),1,true))
   local log=read(dir..'/mmc3_video_writes.tsv')
   assert(log:find('3FFA\t00',1,true))
   local cycle_log=read(dir..'/mmc3_ppu_cycles.tsv')
@@ -94,4 +110,7 @@ local function check(frames,should_complete)
 end
 check({1,2},true)
 check({1,3},false)
-print('Stage79 PPU complete/gapped session manifests PASS')
+check({1,2},false,'within')
+check({1,2},false,'boundary')
+check({1,2},true,'equal')
+print('Stage85 PPU continuity / counter regressions / equality PASS')
