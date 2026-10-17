@@ -8,7 +8,8 @@ import hashlib
 from pathlib import Path
 
 
-def program(*, switch=True, delay_outer=11, phase_nops=0, fine_scroll=0, dynamic_fine_scroll=None):
+def program(*, switch=True, delay_outer=11, phase_nops=0, fine_scroll=0,
+            dynamic_fine_scroll=None, second_dynamic_scroll=None):
     if not 1 <= delay_outer <= 32:
         raise ValueError("Invalid bounded delay")
     if type(phase_nops) is not int or not 0 <= phase_nops <= 64:
@@ -19,6 +20,12 @@ def program(*, switch=True, delay_outer=11, phase_nops=0, fine_scroll=0, dynamic
             type(dynamic_fine_scroll) is not int or
             dynamic_fine_scroll not in (1, 3, 5, 7) or fine_scroll != 0):
         raise ValueError("Midframe $2005 requires initial X=0, target 1/3/5/7")
+    if second_dynamic_scroll is not None and (
+            type(second_dynamic_scroll) is not int or
+            second_dynamic_scroll not in (9, 11, 13, 15) or
+            dynamic_fine_scroll is None or
+            second_dynamic_scroll != 16-dynamic_fine_scroll):
+        raise ValueError("Second $2005 X must increment coarse and change fine")
     result = bytearray()
     def lda(v):
         result.extend((0xa9, v))
@@ -52,19 +59,25 @@ def program(*, switch=True, delay_outer=11, phase_nops=0, fine_scroll=0, dynamic
     if dynamic_fine_scroll is not None:
         lda(dynamic_fine_scroll); sta(0x2005)
         lda(0); sta(0x2005)
+    if second_dynamic_scroll is not None:
+        # 28 times 5 cycles moves the next X write to the next visible row.
+        result.extend((0xa2, 28, 0xca, 0xd0, 0xfd))
+        lda(second_dynamic_scroll); sta(0x2005)
+        lda(0); sta(0x2005)
     loop = 0xc000 + len(result)
     result.extend((0x4c, loop & 255, loop >> 8))
     return bytes(result)
 
 
 def make_rom(destination, *, switch=True, delay_outer=11, phase_nops=0,
-             fine_scroll=0, dynamic_fine_scroll=None):
+             fine_scroll=0, dynamic_fine_scroll=None, second_dynamic_scroll=None):
     destination = Path(destination)
     destination.parent.mkdir(parents=True, exist_ok=True)
     header = b"NES\x1a" + bytes((2, 2, 0x40, 0)) + bytes(8)
     prg_bank = bytearray(b"\xea" * 8192)
     p = program(switch=switch, delay_outer=delay_outer, phase_nops=phase_nops,
-                fine_scroll=fine_scroll, dynamic_fine_scroll=dynamic_fine_scroll)
+                fine_scroll=fine_scroll, dynamic_fine_scroll=dynamic_fine_scroll,
+                second_dynamic_scroll=second_dynamic_scroll)
     prg_bank[:len(p)] = p
     prg = bytearray(prg_bank * 4)
     prg[-6:] = b"\x00\xc0" * 3
@@ -84,10 +97,12 @@ if __name__ == "__main__":
     parser.add_argument("--phase-nops", type=int, default=0)
     parser.add_argument("--fine-scroll", type=int, default=0)
     parser.add_argument("--dynamic-fine-scroll", type=int, default=None)
+    parser.add_argument("--second-dynamic-scroll", type=int, default=None)
     args = parser.parse_args()
     print("Stage110 original synthetic mapper4 SHA256=" +
           make_rom(args.destination, switch=not args.fixed,
                    delay_outer=args.delay_outer,
                    phase_nops=args.phase_nops,
                    fine_scroll=args.fine_scroll,
-                   dynamic_fine_scroll=args.dynamic_fine_scroll))
+                   dynamic_fine_scroll=args.dynamic_fine_scroll,
+                   second_dynamic_scroll=args.second_dynamic_scroll))

@@ -3,7 +3,7 @@
 // Install callback explicitly only on a controlled private emulator build.
 #ifndef VPD_NEWPPU_RAW_STEP_PROBE_H
 #define VPD_NEWPPU_RAW_STEP_PROBE_H
-#if defined(VPD_NATIVE_SYNTHETIC_SMOKE) || defined(VPD_NATIVE_SYNTHETIC_VBLANK) || defined(VPD_NATIVE_SYNTHETIC_PPUSTATUS_READ) || defined(VPD_NATIVE_SYNTHETIC_EVENT_ORDER) || defined(VPD_NATIVE_SYNTHETIC_PRECLEAR) || defined(VPD_NATIVE_SYNTHETIC_MMC3_CHR) || defined(VPD_NATIVE_SYNTHETIC_BG_PIXELS) || defined(VPD_NATIVE_SYNTHETIC_BG_FETCH) || defined(VPD_NATIVE_SYNTHETIC_CHR_TIMELINE) || defined(VPD_NATIVE_SYNTHETIC_MIDFRAME_CHR) || defined(VPD_NATIVE_SYNTHETIC_BG_TILES) || defined(VPD_NATIVE_SYNTHETIC_BG_PREFETCH) || defined(VPD_NATIVE_SYNTHETIC_BG_PLANE_PAIRS) || defined(VPD_NATIVE_SYNTHETIC_SCANLINE_CARRY) || defined(VPD_NATIVE_SYNTHETIC_FINE_SCROLL) || defined(VPD_NATIVE_SYNTHETIC_DYNAMIC_SCROLL)
+#if defined(VPD_NATIVE_SYNTHETIC_SMOKE) || defined(VPD_NATIVE_SYNTHETIC_VBLANK) || defined(VPD_NATIVE_SYNTHETIC_PPUSTATUS_READ) || defined(VPD_NATIVE_SYNTHETIC_EVENT_ORDER) || defined(VPD_NATIVE_SYNTHETIC_PRECLEAR) || defined(VPD_NATIVE_SYNTHETIC_MMC3_CHR) || defined(VPD_NATIVE_SYNTHETIC_BG_PIXELS) || defined(VPD_NATIVE_SYNTHETIC_BG_FETCH) || defined(VPD_NATIVE_SYNTHETIC_CHR_TIMELINE) || defined(VPD_NATIVE_SYNTHETIC_MIDFRAME_CHR) || defined(VPD_NATIVE_SYNTHETIC_BG_TILES) || defined(VPD_NATIVE_SYNTHETIC_BG_PREFETCH) || defined(VPD_NATIVE_SYNTHETIC_BG_PLANE_PAIRS) || defined(VPD_NATIVE_SYNTHETIC_SCANLINE_CARRY) || defined(VPD_NATIVE_SYNTHETIC_FINE_SCROLL) || defined(VPD_NATIVE_SYNTHETIC_DYNAMIC_SCROLL) || defined(VPD_NATIVE_SYNTHETIC_TWO_SCROLLS)
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -1122,6 +1122,126 @@ inline void stage117_pixel(unsigned sl, unsigned xt, unsigned xp,
         }
         std::fflush(stderr);
         a.emitted = true;
+    }
+}
+#endif
+
+// Stage118: two real first-toggle $2005 writes in a single synthetic frame.
+// Source-index differences result from fine scroll. The coarse horizontal
+// register update is observed, but distinct coarse-tile art is NOT proven.
+#if defined(VPD_NATIVE_SYNTHETIC_TWO_SCROLLS) && defined(VPD_NATIVE_SYNTHETIC_MIDFRAME_CHR)
+struct TwoScrollAudit {
+    unsigned writes=0, first_sl=0, first_x=0, second_sl=0, second_x=0;
+    unsigned first_fine=0, second_fine=0;
+    unsigned first_samples=0, second_samples=0, next_samples=0;
+    unsigned shifted1=0, shifted2=0, invalid=0;
+    unsigned last_sl=0, last_x=0, first_after=0, second_after=0;
+    unsigned long frame=0;
+    unsigned long long tick1=0, tick2=0;
+    bool emitted=false;
+};
+inline TwoScrollAudit& stage118_state(){
+    static TwoScrollAudit s;
+    return s;
+}
+inline bool stage118_enabled(){
+    static const char* e=std::getenv("VPD_STAGE118_TWO_SCROLL_PROBE");
+    return e && std::strcmp(e,"1")==0;
+}
+inline unsigned stage118_expected_first(){
+    static const char* e=std::getenv("VPD_STAGE118_FIRST_FINE");
+    if (!e || e[1]!='\0' || (e[0]!='1' && e[0]!='3' &&
+                                e[0]!='5' && e[0]!='7')) return 255;
+    return static_cast<unsigned>(e[0]-'0');
+}
+inline void stage118_write(unsigned fine,unsigned coarse){
+    if(!stage118_enabled()) return;
+    TwoScrollAudit& a=stage118_state();
+    const MidframeChr& m=stage110_state();
+    if(a.emitted) return;
+    ++a.writes;
+    if(a.writes==1){
+        a.first_sl=m.last_sl; a.first_x=a.last_x;
+        a.first_fine=fine; a.frame=m.frame;
+        a.tick1=channel().internal_tick_units;
+        if(coarse!=0 || fine!=stage118_expected_first() ||
+           m.invalid!=0 || m.writes!=2 || !m.switched ||
+           a.first_sl!=m.switch_sl || a.last_sl!=a.first_sl ||
+           a.first_x<4 || a.first_x>175) ++a.invalid;
+    }else if(a.writes==2){
+        a.second_sl=m.last_sl; a.second_x=a.last_x;
+        a.second_fine=fine; a.tick2=channel().internal_tick_units;
+        if(coarse!=1 || fine!=8-a.first_fine ||
+           a.first_samples!=64 || a.second_sl<=a.first_sl ||
+           a.second_sl>a.first_sl+5 || a.last_sl!=a.second_sl ||
+           a.second_x<4 || a.second_x>175 || a.tick2<=a.tick1 ||
+           a.frame!=m.frame || m.invalid!=0) ++a.invalid;
+    }else ++a.invalid;
+}
+inline void stage118_pixel(unsigned sl,unsigned xt,unsigned xp,
+                           unsigned tile,unsigned bgpx,unsigned fine,
+                           unsigned lo,unsigned hi,unsigned pattern){
+    if(!stage118_enabled()) return;
+    TwoScrollAudit& a=stage118_state();
+    if(a.emitted || sl<1 || sl>240 || xt>=32 || xp>=8) return;
+    const unsigned x=xt*8+xp;
+    if(a.writes==0){a.last_sl=sl; a.last_x=x; return;}
+    if(a.frame!=stage110_state().frame || a.writes>2){
+        ++a.invalid; return;
+    }
+    const bool phase1=a.writes==1 && sl==a.first_sl &&
+                      x>a.first_x && a.first_samples<64;
+    const bool phase2=a.writes==2 && sl==a.second_sl &&
+                      x>a.second_x && a.second_samples<64;
+    const bool next=a.writes==2 && sl==a.second_sl+1 &&
+                    x<16 && a.next_samples<16;
+    if(!phase1 && !phase2 && !next){
+        a.last_sl=sl; a.last_x=x; return;
+    }
+    const unsigned desired=phase1?a.first_fine:a.second_fine;
+    const unsigned pos=x+desired;
+    if(fine!=desired || tile!=(pos>>3) || bgpx!=(pos&7U) ||
+       tile>=34 || lo>255 || hi>255 ||
+       !((lo==0 && hi==0 && pattern==0) ||
+         (lo==255 && hi==255 && pattern==3))) ++a.invalid;
+    if(phase1){
+        if(a.first_samples==0) a.first_after=x;
+        ++a.first_samples;
+        if(bgpx!=(x&7U)) ++a.shifted1;
+    }else if(phase2){
+        if(a.second_samples==0) a.second_after=x;
+        ++a.second_samples;
+        if(bgpx!=(x&7U)) ++a.shifted2;
+    }else ++a.next_samples;
+    a.last_sl=sl; a.last_x=x;
+    if(a.first_samples==64 && a.second_samples==64 &&
+       a.next_samples==16 && !a.emitted){
+        if(a.invalid || a.writes!=2 || a.shifted1!=64 || a.shifted2!=64 ||
+           a.first_after<=a.first_x || a.first_after>a.first_x+16 ||
+           a.second_after<=a.second_x || a.second_after>a.second_x+16)
+           ++a.invalid;
+        if(a.invalid){
+            std::fprintf(stderr,
+                "VPD_STAGE118_REJECTED_TWO_SCROLLS invalid=%u "
+                "first=%u second=%u next=%u first_sl=%u first_x=%u "
+                "second_sl=%u second_x=%u synthetic_only=yes\n",
+                a.invalid,a.first_samples,a.second_samples,a.next_samples,
+                a.first_sl,a.first_x,a.second_sl,a.second_x);
+        }else{
+            std::fprintf(stderr,
+                "VPD_STAGE118_NATIVE_TWO_SCROLL_PASS "
+                "first_fine=%u second_fine=%u coarse_first=0 coarse_second=1 "
+                "first_sl=%u first_x=%u second_sl=%u second_x=%u "
+                "first_after_x=%u second_after_x=%u "
+                "first_pixels=64 second_pixels=64 next_pixels=16 "
+                "shifted_first=64 shifted_second=64 "
+                "same_synthetic_frame=yes source_clock_only=yes "
+                "original_game_coarse_scroll_proven=no\n",
+                a.first_fine,a.second_fine,a.first_sl,a.first_x,
+                a.second_sl,a.second_x,a.first_after,a.second_after);
+        }
+        std::fflush(stderr);
+        a.emitted=true;
     }
 }
 #endif
