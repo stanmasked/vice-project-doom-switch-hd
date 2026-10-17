@@ -47,6 +47,9 @@ class CaptureSessionTests(unittest.TestCase):
             'cycle_regressions':'0','cycle_equal_adjacent':'0',
             'cycle_regressions_same_frame':'0',
             'cycle_regressions_between_frames':'0',
+            'frame_callback_clock_mode':'disabled',
+            'frame_callback_clock_samples':'0',
+            'frame_callback_clock_boundary_proven':'no',
             'mmc3_write_coverage':'full_8000_ffff_even_odd',
             'ppu_register_write_coverage':'full_2000_3fff_mod8',
             'ppu_status_read_coverage':'full_2000_3fff_mod8'}
@@ -61,6 +64,8 @@ class CaptureSessionTests(unittest.TestCase):
                 'ppu_register_write_coverage':'full_2000_3fff_mod8',
                 'ppu_status_read_coverage':'full_2000_3fff_mod8',
                 'cycle_trace_available':'yes','logged_register_writes':str(index+1),
+                'frame_callback_clock_scope':'disabled',
+                'frame_callback_cpu_cycle':'not_captured',
                 'screen_reference':'no'}
             path=self.root/f'frame_{frame:06d}'
             self.frames[frame]=props
@@ -437,6 +442,8 @@ class CaptureSessionTests(unittest.TestCase):
         result=verify(self.manifest)
         self.assertTrue(result['snapshot_event_frame_order_verified'])
         self.assertFalse(result['physical_frame_boundaries_proven'])
+        self.assertEqual(result['frame_callback_clock_samples_verified'],0)
+        self.assertFalse(result['frame_callback_clock_boundary_proven'])
 
     def test_counter_overflow_accepted_neither_by_checksum_nor_parser(self):
         self.cyclelog.write_text(self.cyclelog.read_text().replace('1\t14\t3FFA',
@@ -447,6 +454,79 @@ class CaptureSessionTests(unittest.TestCase):
         self.finalize()
         with self.assertRaisesRegex(SessionError,'exact integer range'):
             verify(self.manifest)
+
+
+    def enable_callback_clock(self, first=20, second=120):
+        self.props['frame_callback_clock_mode']='sampled_snapshots_v1'
+        self.props['frame_callback_clock_samples']='2'
+        for frame,cycle in ((1,first),(3,second)):
+            self.frames[frame]['frame_callback_clock_scope']='captured_frame_sample'
+            self.frames[frame]['frame_callback_cpu_cycle']=str(cycle)
+        self.finalize()
+
+    def test_callback_clock_samples_bracket_snapshot_events(self):
+        self.enable_callback_clock()
+        r=verify(self.manifest, require_cycle=True)
+        self.assertEqual(r['frame_callback_clock_samples_verified'],2)
+        self.assertFalse(r['frame_callback_clock_boundary_proven'])
+
+    def test_callback_clock_before_committed_event_rejected(self):
+        self.enable_callback_clock(first=9)
+        with self.assertRaisesRegex(SessionError,'precedes committed event'):
+            verify(self.manifest)
+
+    def test_callback_clock_after_next_event_rejected(self):
+        self.enable_callback_clock(first=101)
+        with self.assertRaisesRegex(SessionError,'later than next event'):
+            verify(self.manifest)
+
+    def test_callback_clock_decreasing_across_snapshots_rejected(self):
+        self.enable_callback_clock(first=30,second=20)
+        self.frames[3]['logged_register_writes']='2'
+        self.frames[3]['frame_log_prefix_adler32']=log_prefixes(self.log)[2]
+        self.frames[3]['cycle_log_prefix_adler32']=log_prefixes(self.cyclelog)[2]
+        self.finalize()
+        with self.assertRaisesRegex(SessionError,'regressed between snapshots'):
+            verify(self.manifest)
+
+    def test_callback_clock_missing_metadata_rejected(self):
+        self.enable_callback_clock()
+        self.frames[3].pop('frame_callback_cpu_cycle')
+        self.finalize()
+        self.fail_if(True)
+
+    def test_callback_clock_rejects_unsafe_integer(self):
+        self.enable_callback_clock(second=9007199254740992)
+        with self.assertRaisesRegex(SessionError,'not an exact integer'):
+            verify(self.manifest)
+
+    def test_callback_clock_requires_cpu_cycle_trace(self):
+        self.enable_callback_clock()
+        self.props['cycle_trace_available']='no'
+        self.props['cycle_log_adler32']='not_captured'
+        for m in self.frames.values():
+            m['cycle_trace_available']='no'
+            m['cycle_log_prefix_adler32']='not_captured'
+        self.finalize()
+        with self.assertRaisesRegex(SessionError,'requires CPU-cycle trace'):
+            verify(self.manifest)
+
+    def test_callback_clock_count_lie_rejected(self):
+        self.enable_callback_clock()
+        self.props['frame_callback_clock_samples']='1'
+        self.finalize()
+        with self.assertRaisesRegex(SessionError,'sample count mismatch'):
+            verify(self.manifest)
+
+    def test_callback_clock_unproven_boundary_claim_rejected(self):
+        self.props['frame_callback_clock_boundary_proven']='yes'
+        self.finalize()
+        self.fail_if(True)
+
+    def test_callback_clock_disabled_must_not_have_implicit_sample(self):
+        self.frames[1]['frame_callback_cpu_cycle']='20'
+        self.finalize()
+        self.fail_if(True)
 
 
 if __name__=='__main__': unittest.main()
