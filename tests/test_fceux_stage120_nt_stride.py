@@ -48,6 +48,19 @@ class Report(unittest.TestCase):
         self.assertEqual(result["total_tile_transitions"], 16)
         self.assertFalse(result["original_game_nt_stride_proven"])
 
+    def test_native_row_origin_is_not_hardcoded_to_2000(self):
+        # The renderer can be on a vertically advanced tile row.
+        # Its *tile columns* still have strict increments and are
+        # bound between Stage119 and Stage120.
+        good = mocked(3)
+        moved = (good.replace("nt_address0=2000", "nt_address0=20A0")
+                     .replace("nt_address1=2001", "nt_address1=20A1")
+                     .replace("nt_addr0=2000", "nt_addr0=20A0")
+                     .replace("nt_addr1=2001", "nt_addr1=20A1"))
+        origin = verify_stage119(moved, 3)
+        self.assertEqual(verify_stride_report(moved, 3, origin)["addresses"],
+                         [0x20A0, 0x20A1])
+
     def test_mutations_fail_closed_even_if_stage119_still_passes(self):
         good = mocked(3)
         mutations = (
