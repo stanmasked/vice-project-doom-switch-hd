@@ -35,6 +35,9 @@ struct SceneView {
     bool external_decor_layout=false;
     bool decor_layout_reload_failed=false;
     std::array<ProjectileView,8> projectiles{};
+    int32_t training_target_x_px=0;
+    int32_t training_target_y_px=0;
+    uint8_t training_target_health=0; // zero means invisible
 };
 constexpr int kSceneWidth=1280;
 constexpr int kSceneHeight=720;
