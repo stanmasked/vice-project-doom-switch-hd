@@ -2,6 +2,7 @@
 // Guest-side ROM-free dash witness. Serialized only after simulation effects.
 #include "simulation.hpp"
 #include <cstdio>
+#include <cstddef>
 #include <cstdint>
 #include <sys/stat.h>
 
