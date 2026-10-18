@@ -212,12 +212,12 @@ int main(int argc,char**argv){
                                            capture_output=True,text=True)
                         self.assertEqual(bad.returncode,0,bad.stderr)
                         self.assertEqual(bad.stderr.count(REJECT),1,bad.stderr)
-                    self.assertEqual(bad.stderr.count(
-                        "VPD_STAGE143_FRAME_PIXEL_DIAGNOSTIC"),1,bad.stderr)
-                    self.assertIn("first_raw=",bad.stderr)
-                    self.assertIn("second_raw=",bad.stderr)
-                    self.assertIn("first_sprite=",bad.stderr)
-                    self.assertIn("second_sprite=",bad.stderr)
+                        self.assertEqual(bad.stderr.count(
+                            "VPD_STAGE143_FRAME_PIXEL_DIAGNOSTIC"),1,bad.stderr)
+                        self.assertIn("first_raw=",bad.stderr)
+                        self.assertIn("second_raw=",bad.stderr)
+                        self.assertIn("first_sprite=",bad.stderr)
+                        self.assertIn("second_sprite=",bad.stderr)
                         self.assertIn("invalid=1",bad.stderr)
                         self.assertNotIn(PASS,bad.stderr)
                         with self.assertRaises(FrameResetError):
