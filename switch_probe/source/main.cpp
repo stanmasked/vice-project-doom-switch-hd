@@ -10,7 +10,7 @@ constexpr int kViewportTiles=40;
 void drawAscii(const vpd::Simulation& game){
     std::printf("\x1b[1;1HVICE: PROJECT DOOM | NATIVE GAME SCAFFOLD\n");
     std::printf("ROM-free test scene; NOT original game or HD art.\n");
-    std::printf("D-pad: move   A/B: jump   Plus: exit\n");
+    std::printf("D-pad: move   A/B: jump   Y: fire   Plus: exit\n");
     std::printf("Frame: %-7u X: %-5ld Y: %-5ld Ground: %d\n",
         game.frame(),static_cast<long>(game.player().x/vpd::kFixed),
         static_cast<long>(game.player().y/vpd::kFixed),
@@ -25,6 +25,12 @@ void drawAscii(const vpd::Simulation& game){
         for(int x=0;x<kViewportTiles;++x){
             const int world_x=x+camera_tile;
             row[x]=game.scene().cell(world_x,y);
+            for(const auto& shot:game.projectiles()){
+                if(!shot.active)continue;
+                const int sx=shot.x/(vpd::kFixed*vpd::kTileSize);
+                const int sy=shot.y/(vpd::kFixed*vpd::kTileSize);
+                if(world_x==sx && y==sy)row[x]='*';
+            }
             if(world_x==hero_x && y==hero_y)row[x]='@';
         }
         row[kViewportTiles]='\0';
@@ -48,6 +54,7 @@ int main(int,char**){
         if(buttons&(HidNpadButton_Left|HidNpadButton_StickLLeft))input|=vpd::Left;
         if(buttons&(HidNpadButton_Right|HidNpadButton_StickLRight))input|=vpd::Right;
         if(buttons&(HidNpadButton_A|HidNpadButton_B))input|=vpd::Jump;
+        if(buttons&HidNpadButton_Y)input|=vpd::Fire;
         game.tick(vpd::Input{input});
         if((game.frame()%2u)==0u){
             drawAscii(game);
