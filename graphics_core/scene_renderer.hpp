@@ -1,8 +1,13 @@
 #pragma once
 #include <cstdint>
+#include <array>
 #include "decor_layout.hpp"
 namespace vpd {
 struct SpriteAtlas;
+struct ProjectileView {
+    int32_t x_px=0,y_px=0;
+    bool active=false;
+};
 // ROM-free renderer interface shared by host tests and Nintendo Switch.
 struct SceneView {
     int32_t player_x_px=0, player_y_px=0, camera_x_px=0;
@@ -29,6 +34,7 @@ struct SceneView {
     DecorLayout decor_layout{};
     bool external_decor_layout=false;
     bool decor_layout_reload_failed=false;
+    std::array<ProjectileView,8> projectiles{};
 };
 constexpr int kSceneWidth=1280;
 constexpr int kSceneHeight=720;
