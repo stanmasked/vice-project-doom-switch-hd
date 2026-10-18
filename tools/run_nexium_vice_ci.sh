@@ -98,3 +98,12 @@ if [[ -s "$out/dash-trace-paths.txt" ]]; then
   cp "$guest" "$out/guest-dash-witness.txt"
 fi
 python3 tools/audit_nexium_dash_guest.py --evidence "$out"
+# A second optional game-system witness: actual first and eighth patrol
+# steps were produced by the guest enemy simulation in manual mode.
+find "$HOME" "$XDG_DATA_HOME" "$XDG_CONFIG_HOME" "$XDG_CACHE_HOME" \
+  -type f -name guard_witness.txt -print > "$out/guard-trace-paths.txt"
+if [[ -s "$out/guard-trace-paths.txt" ]]; then
+  IFS= read -r guest < "$out/guard-trace-paths.txt"
+  cp "$guest" "$out/guest-guard-witness.txt"
+fi
+python3 tools/audit_nexium_guard_guest.py --evidence "$out"

@@ -18,6 +18,21 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
   target_compile_options(vpd_manual_dash_test PRIVATE -Wall -Wextra -Wpedantic -Werror)
 endif()
 add_test(NAME romfree_manual_dash COMMAND vpd_manual_dash_test)
+# Guard enemy is opt-in: existing 200-frame attract-mode hashes remain pinned.
+add_executable(vpd_guard_enemy_test ../tests/test_guard_enemy.cpp)
+target_link_libraries(vpd_guard_enemy_test PRIVATE vpd_simulation)
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+  target_compile_options(vpd_guard_enemy_test PRIVATE -Wall -Wextra -Wpedantic -Werror)
+endif()
+add_test(NAME romfree_guard_enemy_encounter COMMAND vpd_guard_enemy_test)
+# The native guard first-step proof is emitted only by authoritative gameplay.
+add_executable(vpd_guard_guest_witness_test ../tests/test_guard_guest_witness.cpp)
+target_link_libraries(vpd_guard_guest_witness_test PRIVATE vpd_simulation)
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+  target_compile_options(vpd_guard_guest_witness_test PRIVATE
+                         -Wall -Wextra -Wpedantic -Werror)
+endif()
+add_test(NAME romfree_guard_guest_serializer COMMAND vpd_guard_guest_witness_test)
 # The exact serializer used by libnx to record actual NeXium ZR+Right effects.
 add_executable(vpd_dash_guest_witness_test ../tests/test_dash_guest_witness.cpp)
 target_link_libraries(vpd_dash_guest_witness_test PRIVATE vpd_simulation)

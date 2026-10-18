@@ -5,6 +5,7 @@
 #include "demo_witness_sd.hpp"
 #include "manual_input_witness.hpp"
 #include "dash_guest_witness.hpp"
+#include "guard_guest_witness.hpp"
 #include "scene_renderer.hpp"
 #include "combat_scene_bridge.hpp"
 #include "asset_atlas.hpp"
@@ -52,6 +53,7 @@ int main(int,char**) {
     // New run, not leftover emulator/SD evidence from a previous NRO.
     (void)vpd::manualProofReset(has_sd);
     (void)vpd::dashGuestProofReset(has_sd);
+    (void)vpd::guardProofReset(has_sd);
     if(has_sd)assets.reload(kExternalAtlasPath,kExternalAnimationPath);
     bool reload_failed=false;
     constexpr const char* kExternalTerrainPath=
@@ -132,6 +134,9 @@ int main(int,char**) {
             dash_probe_started=false;
             dash_probe_finished=false;
             if(!demo.enabled()){
+                // Preserve ROM-free autoplay hashes: enable encounter only on
+                // entry into explicit manual gameplay, never in attract mode.
+                game.enableEnemyEncounter();
                 manual_seq=1;
                 (void)vpd::manualProofAppend(has_sd,vpd::ManualProofEvent::Enter,
                                              1,game,1);
@@ -203,6 +208,14 @@ int main(int,char**) {
             const auto before_shots=game.shotsFired();
             if(toggle_manual)input=0; // R+A is a mode switch, not a jump
             game.tick(vpd::Input{input});
+            // Two guest-written milestones require a real first and
+            // eighth tick from the opt-in enemy AI, not a host fixture.
+            if(game.frame()==1)
+                (void)vpd::guardProofAppend(
+                    has_sd,vpd::GuardProofEvent::FirstStep,game);
+            if(game.frame()==8)
+                (void)vpd::guardProofAppend(
+                    has_sd,vpd::GuardProofEvent::Patrol,game);
             // Independent dash proof: record only after the live Switch
             // gameplay core has consumed ZR + Right and moved six pixels.
             if(manual_seq==5 && !dash_probe_started &&
