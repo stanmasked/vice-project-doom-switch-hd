@@ -46,11 +46,61 @@ int main(){
         for(int f=0;f<120;++f)held.tick(Input{static_cast<uint8_t>(Jump)});
         check(held.player().grounded && held.player().y==floor_y,
             "holding jump must not auto-repeat");
+        // ROM-free fixed-step projectile combat prototype.
+        Simulation firing,mirror;
+        for(int f=0;f<135;++f) {
+            uint8_t controls=(f<55)?static_cast<uint8_t>(Fire):0;
+            if(f>=60&&f<65)controls|=Left;
+            if(f>=65&&f<100)controls|=Fire;
+            const Input input{controls};
+            firing.tick(input);
+            mirror.tick(input);
+            check(firing.fingerprint()==mirror.fingerprint(),
+                  "projectile physics broke deterministic replay");
+            for(const auto& shot:firing.projectiles()){
+                if(!shot.active)continue;
+                const int px=shot.x/(kFixed*kTileSize);
+                const int py=shot.y/(kFixed*kTileSize);
+                check(!firing.scene().solid(px,py),
+                      "active projectile crossed a solid tile");
+            }
+        }
+        check(firing.shotsFired()>=5,"holding fire never repeated shots");
+        check(firing.fingerprint()!=Simulation{}.fingerprint(),
+              "combat-state fingerprint omitted shots");
+        Simulation cooldown;
+        for(int f=0;f<24;++f)cooldown.tick(Input{Fire});
+        check(cooldown.shotsFired()==3,
+              "fire cooldown should yield frames 1,11,21");
+        Simulation blocking;
+        blocking.scene().setSolid(5,kMapHeight-2,true);
+        blocking.tick(Input{Fire});
+        check(blocking.shotsFired()==1 &&
+              blocking.projectiles()[0].active,
+              "shot was not launched toward the wall");
+        for(int f=0;f<12;++f)blocking.tick(Input{});
+        check(!blocking.projectiles()[0].active,
+              "shot tunneled through adjacent solid wall");
+        Simulation leftshot;
+        leftshot.tick(Input{Left});
+        leftshot.tick(Input{Fire});
+        check(leftshot.projectiles()[0].active &&
+              leftshot.projectiles()[0].vx<0,
+              "shot did not follow last directional input");
+        Simulation expired;
+        expired.tick(Input{Fire});
+        for(int f=0;f<95;++f)expired.tick(Input{});
+        for(const auto& shot:expired.projectiles())
+            check(!shot.active,"expired projectile remains active");
+        firing.reset();
+        check(firing.shotsFired()==0 &&
+              firing.fingerprint()==Simulation{}.fingerprint(),
+              "combat state survived a full gameplay reset");
         Simulation idle;
         for(int f=0;f<600;++f)idle.tick(Input{});
         check(idle.player().grounded && idle.player().y==floor_y,
             "idle floor drift");
-        std::cout<<"PASS: deterministic replay, camera, floor, wall, jump edge, reset\n";
+        std::cout<<"PASS: deterministic replay, camera, floor, wall, jump, ROM-free fire cooldown/collision/lifetime, reset\n";
         return 0;
     } catch(const std::exception& e){
         std::cerr<<"FAIL: "<<e.what()<<'\n';
