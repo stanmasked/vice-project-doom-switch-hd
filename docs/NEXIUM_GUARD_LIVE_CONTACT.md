@@ -21,7 +21,9 @@ The NRO independently captures two events:
   starts the real 32-tick contact-attack cooldown, while receiving Right.
 
 The guest log records strictly bounded frames, the actual fixed-point
-positions, HP, attack count and cooldown. Both records require a live
+positions, HP, attack count and cooldown. It records the guard's **observed**
+remaining HP (1–3) rather than assuming the earlier manual Fire probe could
+never have struck the guard; guard HP must not increase between events. Both records require a live
 direction input and are rejected if a caller merely claims to have
 sent a key but the gameplay simulation did not change.
 
