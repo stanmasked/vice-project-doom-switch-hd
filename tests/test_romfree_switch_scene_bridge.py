@@ -2,7 +2,6 @@
 
 Do not confuse this static check with an emulator/runtime NRO test.
 """
-import re
 import unittest
 from pathlib import Path
 
@@ -40,7 +39,7 @@ class CombatSceneBridgeTests(unittest.TestCase):
         self.assertIn("target.health", source)
         self.assertIn("shots[i].x/kFixed", source)
         self.assertIn("shots[i].y/kFixed", source)
-        self.assertEqual(len(re.findall(r"view\\.projectiles\\[i\\]", source)), 1)
+        self.assertEqual(source.count("view.projectiles[i]"), 1)
 
 
 if __name__ == "__main__":
