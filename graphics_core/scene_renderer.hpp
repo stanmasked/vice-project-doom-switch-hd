@@ -4,6 +4,12 @@
 #include "decor_layout.hpp"
 namespace vpd {
 struct SpriteAtlas;
+struct GuardView {
+    int32_t x_px=0,y_px=0;
+    uint8_t health=0;
+    bool enabled=false;
+    bool alerted=false;
+};
 struct ProjectileView {
     int32_t x_px=0,y_px=0;
     bool active=false;
@@ -44,6 +50,8 @@ struct SceneView {
     bool dash_active=false;
     uint8_t dash_cooldown=0;
     bool dash_ever_used=false;
+    GuardView guard{};
+    uint8_t player_health=5;
 };
 constexpr int kSceneWidth=1280;
 constexpr int kSceneHeight=720;
