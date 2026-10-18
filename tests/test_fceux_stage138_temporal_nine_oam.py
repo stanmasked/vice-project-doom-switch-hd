@@ -70,6 +70,10 @@ class TemporalNineOAM(unittest.TestCase):
                                      bytes(16))
                     self.assertEqual(image[-16384+1024+32:-16384+1024+64],
                                      bytes((255,))*32)
+                    # Even-numbered OAM tile2 must actually fetch from
+                    # PPU $0000 in 8x16 mode, not the BG bank $1000.
+                    self.assertEqual(image[-16384+32:-16384+64],
+                                     bytes((255,))*32)
                     self.assertEqual(image[-16384:][:32],bytes(32))
             before=images["nine_late"]
             for mode,image in images.items():
