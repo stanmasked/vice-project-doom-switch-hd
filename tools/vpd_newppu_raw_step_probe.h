@@ -1635,6 +1635,79 @@ inline void stage126_delta_pixel(unsigned sl,unsigned xt,unsigned xp,
     }
 }
 
+// Stage127: native observation of background pattern0 and universal
+// palette slots $3F00/$3F04/$3F08/$3F0C. Attribute selection remains E4
+// but all quadrants must resolve to the same actual XBuf backdrop byte.
+struct Quad127TransparentAudit {
+    unsigned samples[4]={0,0,0,0};
+    unsigned colors[4]={0,0,0,0};
+    unsigned invalid=0;
+    bool emitted=false;
+};
+inline Quad127TransparentAudit& stage127_state() {
+    static Quad127TransparentAudit a;
+    return a;
+}
+inline bool stage127_backdrop(unsigned& backdrop) {
+    static const char* env=std::getenv("VPD_STAGE127_BACKDROP");
+    if(!env)return false;
+    if(std::strcmp(env,"15")==0){backdrop=15U;return true;}
+    if(std::strcmp(env,"29")==0){backdrop=29U;return true;}
+    return false;
+}
+inline void stage127_pixel(unsigned sl,unsigned xt,unsigned xp,
+                            unsigned ntaddr,unsigned ataddr,unsigned raw,
+                            unsigned shift,unsigned decoded,unsigned pattern,
+                            unsigned combined,unsigned pixelcolor,unsigned xbuf,
+                            unsigned backdrop) {
+    Quad127TransparentAudit& a=stage127_state();
+    if(a.emitted || xt<4 || xt>=30 || xp>=8)return;
+    const MidframeChr& m=stage110_state();
+    if(!m.switched || m.writes!=2 || sl<m.switch_sl+8U || sl>215U)return;
+    if(ntaddr<0x2000U || ntaddr>=0x3000U) {
+        ++a.invalid;
+        return;
+    }
+    const unsigned q=((ntaddr&0x40U)?2U:0U)+((ntaddr&0x02U)?1U:0U);
+    if(a.samples[q]>=16)return;
+    const unsigned expected_addr=0x23C0U+(ntaddr&0x0C00U)+
+                                 ((ntaddr&0x0380U)>>4)+
+                                 ((ntaddr&0x001CU)>>2);
+    const unsigned expected_xbuf=0x80U|backdrop;
+    if(ataddr!=expected_addr || raw!=0xE4U || shift!=2U*q ||
+       decoded!=4U*q || pattern!=0U ||
+       combined!=4U*q || pixelcolor!=backdrop ||
+       xbuf!=expected_xbuf)
+        ++a.invalid;
+    if(a.samples[q]==0)a.colors[q]=xbuf;
+    else if(a.colors[q]!=xbuf)++a.invalid;
+    ++a.samples[q];
+    if(a.samples[0]==16 && a.samples[1]==16 &&
+       a.samples[2]==16 && a.samples[3]==16) {
+        if(a.invalid) {
+            std::fprintf(stderr,
+                "VPD_STAGE127_REJECTED_TRANSPARENT_BG "
+                "backdrop=%u invalid=%u "
+                "xbuf=%u,%u,%u,%u samples=16,16,16,16 "
+                "synthetic_only=yes\n",
+                backdrop,a.invalid,a.colors[0],a.colors[1],
+                a.colors[2],a.colors[3]);
+        }else{
+            std::fprintf(stderr,
+                "VPD_STAGE127_NATIVE_TRANSPARENT_BG_PASS "
+                "backdrop=%u samples=16,16,16,16 "
+                "quadrant_indices=0,4,8,12 "
+                "xbuf=%u,%u,%u,%u invalid=0 "
+                "actual_fceux_xbuf=yes synthetic_only=yes "
+                "original_game_transparency_proven=no\n",
+                backdrop,a.colors[0],a.colors[1],
+                a.colors[2],a.colors[3]);
+        }
+        std::fflush(stderr);
+        a.emitted=true;
+    }
+}
+
 inline void stage124_pixel(unsigned sl,unsigned xt,unsigned xp,
                            unsigned ntaddr,unsigned ataddr,unsigned raw,
                            unsigned shift,unsigned decoded,unsigned pattern,
@@ -1642,6 +1715,12 @@ inline void stage124_pixel(unsigned sl,unsigned xt,unsigned xp,
                            unsigned xbuf) {
     static const char* env=std::getenv("VPD_STAGE124_QUADRANT_PROBE");
     if(!env || std::strcmp(env,"1")!=0)return;
+    unsigned backdrop=0;
+    if(stage127_backdrop(backdrop)) {
+        stage127_pixel(sl,xt,xp,ntaddr,ataddr,raw,shift,decoded,
+                       pattern,combined,pixelcolor,xbuf,backdrop);
+        return;
+    }
     unsigned delta_target=0;
     if(stage126_delta_target(delta_target)) {
         stage126_delta_pixel(sl,xt,xp,ntaddr,ataddr,raw,shift,decoded,
