@@ -45,8 +45,10 @@ def verify(log,mode):
     if len(found)!=1:
         raise Native16Error("Malformed 8x16 native certificate")
     actual,top,bottom,sl_top,sl_bottom,col_top,col_bottom=found[0].groups()
-    top,bottom,sl_top,sl_bottom,col_top,col_bottom=map(
-        int,(top,bottom,sl_top,sl_bottom,col_top,col_bottom))
+    numbers=(top,bottom,sl_top,sl_bottom,col_top,col_bottom)
+    if any(str(int(token))!=token for token in numbers):
+        raise Native16Error("Noncanonical numeric representation in native proof")
+    top,bottom,sl_top,sl_bottom,col_top,col_bottom=map(int,numbers)
     flipped=mode.endswith("vertical")
     normal_order=sl_top<sl_bottom
     if (actual!=mode or not 0<=top<8 or not 8<=bottom<16 or
@@ -67,8 +69,10 @@ def verify_rejection(log):
     if len(found)!=1:
         raise Native16Error("Malformed negative witness")
     mode,invalid,ordering,top,bottom,sl_top,sl_bottom,col_top,col_bottom=found[0].groups()
-    invalid,top,bottom,sl_top,sl_bottom,col_top,col_bottom=map(
-        int,(invalid,top,bottom,sl_top,sl_bottom,col_top,col_bottom))
+    numbers=(invalid,top,bottom,sl_top,sl_bottom,col_top,col_bottom)
+    if any(str(int(token))!=token for token in numbers):
+        raise Native16Error("Noncanonical numeric representation in rejection")
+    invalid,top,bottom,sl_top,sl_bottom,col_top,col_bottom=map(int,numbers)
     if (mode!="even_normal" or invalid<=0 or invalid>16 or
             not 0<=top<8 or not 8<=bottom<16 or
             not 120<=sl_top<=142 or not 120<=sl_bottom<=142 or
