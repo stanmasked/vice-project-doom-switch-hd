@@ -7,6 +7,7 @@
 #include "dash_guest_witness.hpp"
 #include "guard_guest_witness.hpp"
 #include "guard_combat_probe.hpp"
+#include "guard_live_witness.hpp"
 #include "scene_renderer.hpp"
 #include "combat_scene_bridge.hpp"
 #include "asset_atlas.hpp"
@@ -56,6 +57,7 @@ int main(int,char**) {
     (void)vpd::dashGuestProofReset(has_sd);
     (void)vpd::guardProofReset(has_sd);
     (void)vpd::guardCombatProofReset(has_sd);
+    (void)vpd::liveGuardProofReset(has_sd);
     if(has_sd)assets.reload(kExternalAtlasPath,kExternalAnimationPath);
     bool reload_failed=false;
     constexpr const char* kExternalTerrainPath=
@@ -108,6 +110,8 @@ int main(int,char**) {
     bool plus_seen=false;
     bool dash_probe_started=false;
     bool dash_probe_finished=false;
+    bool live_guard_alert_logged=false;
+    bool live_guard_strike_logged=false;
     uint32_t dash_probe_start_frame=0;
     int32_t dash_probe_start_x=0;
     while(appletMainLoop()){
@@ -135,6 +139,8 @@ int main(int,char**) {
             checkpoint_ok=false;
             dash_probe_started=false;
             dash_probe_finished=false;
+            live_guard_alert_logged=false;
+            live_guard_strike_logged=false;
             if(!demo.enabled()){
                 // Preserve ROM-free autoplay hashes: enable encounter only on
                 // entry into explicit manual gameplay, never in attract mode.
@@ -208,8 +214,25 @@ int main(int,char**) {
             // Measure actual simulation effects, not merely keyboard events.
             const auto before_x=game.player().x;
             const auto before_shots=game.shotsFired();
+            const auto was_alerted=game.guardEnemy().alerted;
+            const auto prior_hp=game.playerHealth();
+            const auto prior_attacks=game.guardEnemy().attacks;
             if(toggle_manual)input=0; // R+A is a mode switch, not a jump
             game.tick(vpd::Input{input});
+            // These events are from the *visible*, pad-driven gameplay
+            // instance, unlike the isolated guard-combat script. A host
+            // keystroke by itself cannot satisfy the observed transitions.
+            if(!live_guard_alert_logged && !was_alerted &&
+               game.guardEnemy().alerted &&
+               (input&vpd::Right) && prior_hp==5)
+                live_guard_alert_logged=vpd::liveGuardProofAppend(
+                    has_sd,vpd::LiveGuardEvent::Alert,game,input);
+            if(live_guard_alert_logged && !live_guard_strike_logged &&
+               (input&vpd::Right) && prior_hp==5 &&
+               game.playerHealth()==4 && prior_attacks==0 &&
+               game.guardEnemy().attacks==1)
+                live_guard_strike_logged=vpd::liveGuardProofAppend(
+                    has_sd,vpd::LiveGuardEvent::FirstStrike,game,input);
             // Two guest-written milestones require a real first and
             // eighth tick from the opt-in enemy AI, not a host fixture.
             if(game.frame()==1)
