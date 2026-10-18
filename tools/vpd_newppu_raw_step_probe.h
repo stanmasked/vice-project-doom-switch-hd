@@ -2398,6 +2398,115 @@ inline void stage139_pixel(unsigned sl,unsigned x,unsigned count,
 }
 #endif
 
+// Stage141: real two-frame FCEUX PPU status reset and subsequent OAM/XBuf.
+// Synthetic Mapper4 OAM only. Reset is observed at actual PPU_status=0.
+#if defined(VPD_NATIVE_SYNTHETIC_OVERFLOW_FRAME_RESET) && defined(VPD_NATIVE_SYNTHETIC_MIDFRAME_CHR)
+struct Stage141Audit {
+    unsigned phase=0,invalid=0,samples[2]={0,0};
+    unsigned first_status=0,second_status=0;
+    unsigned before_reset=0,after_reset=0;
+    unsigned color[2]={0,0};
+    unsigned count[2]={0,0};
+    bool emitted=false;
+};
+inline Stage141Audit& stage141_state(){static Stage141Audit s;return s;}
+inline int stage141_mode(){
+    static const char* v=std::getenv("VPD_STAGE141_FRAME_RESET_CASE");
+    if(!v)return -1;
+    if(std::strcmp(v,"nine_overflow")==0)return 1;
+    if(std::strcmp(v,"eight_visible")==0)return 0;
+    return -1;
+}
+inline bool stage141_enabled(){
+    static const char* v=std::getenv("VPD_STAGE141_FRAME_RESET_PROBE");
+    return v && std::strcmp(v,"1")==0 && stage141_mode()>=0;
+}
+inline void stage141_eval(unsigned yp,unsigned count,unsigned status,
+                          unsigned ninth_y,unsigned ninth_x,
+                          unsigned i0,unsigned i1,unsigned i2,unsigned i3,
+                          unsigned i4,unsigned i5,unsigned i6,unsigned i7){
+    if(!stage141_enabled() || yp!=124U || count!=8U)return;
+    Stage141Audit& a=stage141_state();
+    if(a.emitted || (a.phase!=0U && a.phase!=4U))return;
+    const MidframeChr& chr=stage110_state();
+    if(!chr.switched || chr.writes!=2)return;
+    const unsigned sample=a.phase==4U?1U:0U;
+    const unsigned indexes[]={i0,i1,i2,i3,i4,i5,i6,i7};
+    bool wrong=ninth_y!=(stage141_mode()==1?120U:255U) ||
+               ninth_x!=(stage141_mode()==1?64U:255U) ||
+               ((status&0x20U)!=0)!=(stage141_mode()==1);
+    for(unsigned i=0;i<8U;++i)if(indexes[i]!=i)wrong=true;
+    a.invalid+=wrong?1U:0U;
+    a.count[sample]=count;
+    if(sample==0U){
+        a.first_status=status;
+        a.phase=1U;
+    }else{
+        a.second_status=status;
+        a.phase=5U;
+    }
+}
+inline void stage141_before_reset(unsigned status){
+    if(!stage141_enabled())return;
+    Stage141Audit& a=stage141_state();
+    if(a.phase!=2U || a.emitted)return;
+    a.before_reset=status;
+    if(((status&0x20U)!=0)!=(stage141_mode()==1))++a.invalid;
+    a.phase=3U;
+}
+inline void stage141_after_reset(unsigned status){
+    if(!stage141_enabled())return;
+    Stage141Audit& a=stage141_state();
+    if(a.phase!=3U || a.emitted)return;
+    a.after_reset=status;
+    if(status!=0U)++a.invalid;
+    a.phase=4U;
+}
+inline void stage141_pixel(unsigned sl,unsigned x,unsigned count,
+                           unsigned status,unsigned xbuf,bool sprite16){
+    if(!stage141_enabled() || sl!=126U || x<64U || x>=72U)return;
+    Stage141Audit& a=stage141_state();
+    if(a.emitted || (a.phase!=1U && a.phase!=5U))return;
+    const unsigned frame=a.phase==5U?1U:0U;
+    if(a.samples[frame]>=8U)return;
+    const unsigned expected_xbuf=stage141_mode()==1?143U:170U;
+    bool bad=count!=8U || sprite16 || xbuf!=expected_xbuf ||
+        ((status&0x20U)!=0)!=(stage141_mode()==1);
+    a.invalid+=bad?1U:0U;
+    if(a.samples[frame]==0U)a.color[frame]=xbuf;
+    ++a.samples[frame];
+    if(a.samples[frame]<8U)return;
+    if(frame==0U){a.phase=2U;return;}
+    static const char* names[]={"eight_visible","nine_overflow"};
+    if(a.invalid){
+        std::fprintf(stderr,
+            "VPD_STAGE141_REJECTED_FRAME_RESET case=%s invalid=%u "
+            "first_overflow=%s reset_before=%s reset_after=%s "
+            "second_overflow=%s first_xbuf=%u second_xbuf=%u "
+            "samples=16 synthetic_only=yes\n",
+            names[stage141_mode()],a.invalid,
+            (a.first_status&0x20U)?"yes":"no",
+            (a.before_reset&0x20U)?"yes":"no",
+            (a.after_reset&0x20U)?"yes":"no",
+            (a.second_status&0x20U)?"yes":"no",
+            a.color[0],a.color[1]);
+    }else{
+        std::fprintf(stderr,
+            "VPD_STAGE141_NATIVE_FRAME_RESET_PASS case=%s "
+            "first_overflow=%s reset_before=%s reset_after=no "
+            "second_overflow=%s first_xbuf=%u second_xbuf=%u "
+            "samples=16 invalid=0 actual_ppu_reset_and_xbuf=yes "
+            "synthetic_only=yes original_game_frame_reset_proven=no\n",
+            names[stage141_mode()],
+            (a.first_status&0x20U)?"yes":"no",
+            (a.before_reset&0x20U)?"yes":"no",
+            (a.second_status&0x20U)?"yes":"no",
+            a.color[0],a.color[1]);
+    }
+    std::fflush(stderr);a.emitted=true;a.phase=6U;
+}
+#endif
+
 // Stage109 synthetic-only MMC3 write -> BG CHR read -> framebuffer timeline.
 // Internal runppu tick units are not authoritative NTSC dots or CPU cycles.
 #ifdef VPD_NATIVE_SYNTHETIC_CHR_TIMELINE
