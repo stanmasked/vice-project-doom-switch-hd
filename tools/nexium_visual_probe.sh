@@ -77,9 +77,9 @@ else
   echo "target_window_visible_after_plus=unknown" >> "$out/host-gui-lifecycle.txt"
 fi
 if kill -0 "$emu_pid" 2>/dev/null; then
-  echo "emulator_still_alive_after_plus_trial=yes" >> "$out/input-probe.txt"
+  echo "timeout_wrapper_alive_after_plus_trial=yes" >> "$out/input-probe.txt"
 else
-  echo "emulator_still_alive_after_plus_trial=no" >> "$out/input-probe.txt"
+  echo "timeout_wrapper_alive_after_plus_trial=no" >> "$out/input-probe.txt"
 fi
 set +e
 wait "$emu_pid"
