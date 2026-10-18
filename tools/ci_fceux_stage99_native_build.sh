@@ -26,6 +26,8 @@ python3 "${PROJECT}/tools/audit_fceux_native_ppu_hook_sites.py" \
 # upstream revision, independent of our later synthetic PPU instrumentation.
 python3 "${PROJECT}/tools/audit_fceux_stage128_sprite_compositor.py" \
   "${FCEUX}/src/ppu.cpp"
+python3 "${PROJECT}/tools/audit_stage130_two_sprite_order.py" \
+  "${FCEUX}/src/ppu.cpp"
 
 python3 "${PROJECT}/tools/build_fceux_newppu_probe_patch.py" \
   "${FCEUX}/src/ppu.cpp" "${PATCH}"
