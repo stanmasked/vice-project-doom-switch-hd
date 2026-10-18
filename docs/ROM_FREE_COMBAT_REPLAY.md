@@ -12,14 +12,14 @@ reproduce any original commercial game mechanics.
     ctest --test-dir build/game_core --output-on-failure
 
 Builds the existing deterministic simulation test plus new
-\`vpd_combat_replay\`. Three new CTest scenarios exercise the
-independent 200-frame proof, its CSV output, and invalid input refusal.
+`vpd_combat_replay`. Four additional CTest scenarios exercise the
+independent 200-frame proof, its CSV output, invalid input refusal, and independent full-trace audit.
 
 ## Host-side proof
 
     build/game_core/vpd_combat_replay --verify
 
-This runs two *separate* \`Simulation\` instances through the same
+This runs two *separate* `Simulation` instances through the same
 authored 200-frame input script. It requires matching fingerprints after
 **every frame** and verifies the final state:
 
@@ -51,7 +51,7 @@ actual Vice: Project Doom gameplay execution.
 
 Generates one CSV line per simulated frame with a strict header:
 
-\`frame,buttons,x_fixed,y_fixed,camera,shots,target_health,target_hits,active_projectiles,fingerprint\`
+`frame,buttons,x_fixed,y_fixed,camera,shots,target_health,target_hits,active_projectiles,fingerprint`
 
 Coordinates are fixed-point simulation units (one pixel = 256).
 An invalid or out-of-range frame request is rejected; the accepted
