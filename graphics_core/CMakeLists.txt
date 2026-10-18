@@ -152,6 +152,11 @@ add_executable(vpd_guard_enemy_raster_test ../tests/test_guard_enemy_raster.cpp)
 target_link_libraries(vpd_guard_enemy_raster_test
                       PRIVATE vpd_scene_renderer vpd_simulation)
 add_test(NAME romfree_guard_enemy_to_raster COMMAND vpd_guard_enemy_raster_test)
+# Manual HUD layout must remain legible; hit pulses derive from live combat.
+add_executable(vpd_combat_hud_feedback_test ../tests/test_combat_hud_feedback.cpp)
+target_link_libraries(vpd_combat_hud_feedback_test
+                      PRIVATE vpd_scene_renderer vpd_simulation)
+add_test(NAME romfree_combat_hud_feedback COMMAND vpd_combat_hud_feedback_test)
 add_executable(vpd_graphics_animation_test ../tests/test_graphics_animation_integration.cpp)
 target_include_directories(vpd_graphics_animation_test PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/generated)
 add_dependencies(vpd_graphics_animation_test vpd_demo_atlas vpd_demo_animation)
