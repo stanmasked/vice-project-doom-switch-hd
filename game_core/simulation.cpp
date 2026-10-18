@@ -190,6 +190,23 @@ uint64_t Simulation::fingerprint() const{
     append(static_cast<uint32_t>(camera_x_));
     append(frame_);
     append(static_cast<uint32_t>(jump_was_down_?1:0));
+    // Preserve the existing reference hash when the map is untouched, but
+    // include the *exact* live tile bytes whenever gameplay edits geometry.
+    // Two physically identical actors with distinct solid tiles can have
+    // different projectile collisions on the next tick.
+    static const Scene pristine_map{};
+    if(scene_.cells()!=pristine_map.cells()){
+        append(0x4D415031u); // map-state version discriminator
+        const auto& tiles=scene_.cells();
+        for(std::size_t i=0;i<tiles.size();i+=4){
+            const uint32_t word=
+                static_cast<uint32_t>(tiles[i]) |
+                (static_cast<uint32_t>(tiles[i+1])<<8) |
+                (static_cast<uint32_t>(tiles[i+2])<<16) |
+                (static_cast<uint32_t>(tiles[i+3])<<24);
+            append(word);
+        }
+    }
     // Facing changes future projectile direction even before the first shot.
     // Preserve the legacy golden replay (which ends facing right) while
     // preventing false replay identity for an otherwise identical left pose.
