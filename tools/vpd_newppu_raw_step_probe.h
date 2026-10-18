@@ -2487,6 +2487,18 @@ inline void stage141_pixel(unsigned sl,unsigned x,unsigned count,
     if(a.samples[frame]<8U)return;
     if(frame==0U){a.phase=2U;return;}
     static const char* names[]={"eight_visible","nine_overflow"};
+    // Stage147: an XBuf value may match despite an incorrect source.
+    // Only evaluate this extra gate when all earlier native evidence is
+    // consistent, preserving the exact negative-control invalid counts.
+    if(!a.invalid){
+        const unsigned expected_raw=stage141_mode()==1?15U:42U;
+        const bool expected_sprite=stage141_mode()!=1;
+        for(unsigned i=0;i<2U;++i){
+            if(a.rawcolor[i]!=expected_raw ||
+               a.sprite_pixel[i]!=expected_sprite ||
+               a.bgpattern[i]!=0U)++a.invalid;
+        }
+    }
     if(a.invalid){
         // Diagnostic only: never treated as an acceptable PASS witness.
         std::fprintf(stderr,
@@ -2509,6 +2521,18 @@ inline void stage141_pixel(unsigned sl,unsigned x,unsigned count,
             (a.second_status&0x20U)?"yes":"no",
             a.color[0],a.color[1]);
     }else{
+        // An independent positive source witness bound to real FCEUX
+        // pixelcolor/havepixel/background bits, not a model-only value.
+        std::fprintf(stderr,
+            "VPD_STAGE147_NATIVE_FRAME_COLOR_SOURCE_PASS case=%s "
+            "first_raw=%u second_raw=%u first_sprite=%u second_sprite=%u "
+            "first_bgpattern=%u second_bgpattern=%u "
+            "first_xbuf=%u second_xbuf=%u samples=16 invalid=0 "
+            "native_fceux=yes synthetic_only=yes "
+            "original_game_color_source_proven=no\\n",
+            names[stage141_mode()],a.rawcolor[0],a.rawcolor[1],
+            a.sprite_pixel[0]?1U:0U,a.sprite_pixel[1]?1U:0U,
+            a.bgpattern[0],a.bgpattern[1],a.color[0],a.color[1]);
         std::fprintf(stderr,
             "VPD_STAGE141_NATIVE_FRAME_RESET_PASS case=%s "
             "first_overflow=%s reset_before=%s reset_after=no "
