@@ -60,8 +60,12 @@ class GeneratedROM(unittest.TestCase):
             for mode,image in images.items():
                 program=image[16:16+8192]
                 self.assertIn(oam_setup(mode),program)
-                self.assertEqual(image[16:16+8192]*4,image[16:16+32768].replace(
-                    image[16+8192-6:16+8192],image[16+8192-6:16+8192]))
+                self.assertEqual(image[16:16+8192],image[16+8192:16+2*8192])
+                self.assertEqual(image[16:16+8192],image[16+2*8192:16+3*8192])
+                self.assertEqual(image[16:16+8192-6],
+                                 image[16+3*8192:16+4*8192-6])
+                self.assertEqual(image[16+32768-6:16+32768],
+                                 b"\x00\xC0"*3)
                 # Payload must occur once per bank; vector bytes are fixed.
                 self.assertEqual(image[16:16+32768].count(oam_setup(mode)),4)
 
