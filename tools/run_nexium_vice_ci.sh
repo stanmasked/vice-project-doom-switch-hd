@@ -83,3 +83,6 @@ if [[ -s "$out/manual-trace-paths.txt" ]]; then
   cp "$guest" "$out/guest-manual-witness.txt"
 fi
 python3 tools/audit_nexium_vice_manual.py --evidence "$out"
+# Host X11/process status is a separate, conservative diagnostic; it must
+# not substitute for the seven verified guest input/cleanup events.
+python3 tools/audit_nexium_gui_lifecycle.py --evidence "$out"
