@@ -25,11 +25,14 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
 endif()
 add_test(NAME romfree_combat_matrix COMMAND vpd_combat_matrix_test)
 # CSV path must produce the same pinned final row as the verified scenario.
+# The independent audit below validates all rows and the exact CSV SHA256.
+# Avoid a weak PASS_REGULAR_EXPRESSION that accepts a matching substring
+# amid a malformed or truncated transcript.
+find_package(Python3 REQUIRED COMPONENTS Interpreter)
 add_test(NAME romfree_combat_replay_csv
-         COMMAND vpd_combat_replay --frames 200)
-set_tests_properties(romfree_combat_replay_csv PROPERTIES
-    PASS_REGULAR_EXPRESSION
-    "200,0,12288,53760,0,11,0,3,0,5947277116621119566")
+         COMMAND ${Python3_EXECUTABLE}
+                 ${CMAKE_CURRENT_SOURCE_DIR}/../tools/audit_romfree_combat_trace.py
+                 --binary $<TARGET_FILE:vpd_combat_replay>)
 # Fail closed on invalid, out-of-range input rather than overflowing
 # a simulation-frame counter or accepting a malformed control script.
 add_test(NAME romfree_combat_replay_invalid
@@ -37,7 +40,6 @@ add_test(NAME romfree_combat_replay_invalid
 set_tests_properties(romfree_combat_replay_invalid PROPERTIES WILL_FAIL TRUE)
 # Independent Python auditor checks each frame and whole-trace SHA256,
 # rather than trusting the replay binary's own PASS marker.
-find_package(Python3 REQUIRED COMPONENTS Interpreter)
 add_test(NAME romfree_combat_full_trace
          COMMAND ${Python3_EXECUTABLE}
                  ${CMAKE_CURRENT_SOURCE_DIR}/../tools/audit_romfree_combat_trace.py
