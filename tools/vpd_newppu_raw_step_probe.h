@@ -2406,6 +2406,9 @@ struct Stage141Audit {
     unsigned first_status=0,second_status=0;
     unsigned before_reset=0,after_reset=0;
     unsigned color[2]={0,0};
+    // Stage143: source pixel provenance before PaletteAdjustPixel.
+    unsigned rawcolor[2]={0,0}, bgpattern[2]={0,0};
+    bool sprite_pixel[2]={false,false};
     unsigned count[2]={0,0};
     bool emitted=false;
 };
@@ -2463,7 +2466,8 @@ inline void stage141_after_reset(unsigned status){
     a.phase=4U;
 }
 inline void stage141_pixel(unsigned sl,unsigned x,unsigned count,
-                           unsigned status,unsigned xbuf,bool sprite16){
+                           unsigned status,unsigned xbuf,bool sprite16,
+                           unsigned rawcolor,bool havepixel,unsigned bgpattern){
     if(!stage141_enabled() || sl!=126U || x<64U || x>=72U)return;
     Stage141Audit& a=stage141_state();
     if(a.emitted || (a.phase!=1U && a.phase!=5U))return;
@@ -2473,12 +2477,26 @@ inline void stage141_pixel(unsigned sl,unsigned x,unsigned count,
     bool bad=count!=8U || sprite16 || xbuf!=expected_xbuf ||
         ((status&0x20U)!=0)!=(stage141_mode()==1);
     a.invalid+=bad?1U:0U;
-    if(a.samples[frame]==0U)a.color[frame]=xbuf;
+    if(a.samples[frame]==0U){
+        a.color[frame]=xbuf;
+        a.rawcolor[frame]=rawcolor;
+        a.sprite_pixel[frame]=havepixel;
+        a.bgpattern[frame]=bgpattern;
+    }
     ++a.samples[frame];
     if(a.samples[frame]<8U)return;
     if(frame==0U){a.phase=2U;return;}
     static const char* names[]={"eight_visible","nine_overflow"};
     if(a.invalid){
+        // Diagnostic only: never treated as an acceptable PASS witness.
+        std::fprintf(stderr,
+            "VPD_STAGE143_FRAME_PIXEL_DIAGNOSTIC case=%s "
+            "first_raw=%u second_raw=%u first_sprite=%u second_sprite=%u "
+            "first_bgpattern=%u second_bgpattern=%u "
+            "first_xbuf=%u second_xbuf=%u synthetic_only=yes\n",
+            names[stage141_mode()],a.rawcolor[0],a.rawcolor[1],
+            a.sprite_pixel[0]?1U:0U,a.sprite_pixel[1]?1U:0U,
+            a.bgpattern[0],a.bgpattern[1],a.color[0],a.color[1]);
         std::fprintf(stderr,
             "VPD_STAGE141_REJECTED_FRAME_RESET case=%s invalid=%u "
             "first_overflow=%s reset_before=%s reset_after=%s "
