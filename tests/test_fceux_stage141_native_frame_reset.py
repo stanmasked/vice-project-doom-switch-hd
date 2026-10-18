@@ -162,6 +162,7 @@ int main(int argc,char**argv){
  const bool corrupt_index=argc>2 && argv[2][0]=='i';
  const bool corrupt_reset=argc>2 && argv[2][0]=='r';
  const bool stale_jmp=argc>2 && argv[2][0]=='s';
+ const bool altered_raw=argc>2 && argv[2][0]=='a';
  const bool overflow=mode==1 || false_clean;
  setenv("VPD_STAGE141_FRAME_RESET_CASE",
         mode==1?"nine_overflow":"eight_visible",1);
@@ -178,8 +179,10 @@ int main(int argc,char**argv){
    unsigned color=overflow?143:170;
    if(corrupt_pixel && frame==1 && x==71)++color;
    if(stale_jmp && frame==1)color=164;
+   unsigned raw=stale_jmp && frame==1?36U:(overflow?15U:42U);
+   if(altered_raw && frame==1)raw++;
    vpd_ppu_probe::stage141_pixel(126,x,8,status,color,false,
-       stale_jmp && frame==1?36U:(overflow?15U:42U),!overflow,0);
+       raw,!overflow,0);
   }
   if(frame==0){
    vpd_ppu_probe::stage141_before_reset(status);
@@ -202,6 +205,8 @@ int main(int argc,char**argv){
                 p=subprocess.run([str(binary),str(i)],capture_output=True,text=True)
                 self.assertEqual(p.returncode,0,p.stderr)
                 verify(p.stderr,mode)
+                self.assertEqual(p.stderr.count(
+                    "VPD_STAGE147_NATIVE_FRAME_COLOR_SOURCE_PASS"),1,p.stderr)
             neg=subprocess.run([str(binary),"0","wrong"],
                                capture_output=True,text=True)
             self.assertEqual(neg.returncode,0,neg.stderr)
@@ -216,7 +221,7 @@ int main(int argc,char**argv){
             # Fail closed even if only the last pixel of the second frame
             # disagrees while the reported first-pixel XBuf colors match.
             for i,mode in enumerate(MODES):
-                for fault in ("pixel", "index", "reset"):
+                for fault in ("pixel", "index", "reset", "altered_raw"):
                     with self.subTest(mode=mode,fault=fault):
                         bad=subprocess.run([str(binary),str(i),fault],
                                            capture_output=True,text=True)
