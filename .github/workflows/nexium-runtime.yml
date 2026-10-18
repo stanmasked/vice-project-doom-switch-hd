@@ -55,11 +55,13 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y \
-            xvfb xauth xdotool mesa-vulkan-drivers libvulkan1 vulkan-tools \
+            xvfb xauth xdotool x11-apps imagemagick mesa-vulkan-drivers libvulkan1 vulkan-tools \
             libgtk-3-0 libasound2t64 libudev1 libxkbcommon0 libxkbcommon-x11-0 \
             libfontconfig1 libx11-xcb1 libegl1 libgles2 libgl1 libpulse0
       - name: Validate launcher shell syntax
-        run: bash -n tools/run_nexium_vice_ci.sh
+        run: |
+          bash -n tools/run_nexium_vice_ci.sh
+          bash -n tools/nexium_visual_probe.sh
       - name: Install NeXium, launch graphical NRO and check real guest record
         run: bash tools/run_nexium_vice_ci.sh emulator-input/vpd_native_scene.nro emulator-evidence
       - name: Save emulator logs, guest output and diagnostics even if blocked
@@ -73,5 +75,11 @@ jobs:
             emulator-evidence/xdg-config/NeXium/logs/*.log
             emulator-evidence/vulkan.txt
             emulator-evidence/guest-demo-witness.txt
+            emulator-evidence/visual-result.txt
+            emulator-evidence/visual-probe.txt
+            emulator-evidence/input-probe.txt
+            emulator-evidence/ne-x11-windows.txt
+            emulator-evidence/screen-before.png
+            emulator-evidence/screen-after.png
           retention-days: 7
           if-no-files-found: warn
