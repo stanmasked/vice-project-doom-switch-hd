@@ -11,3 +11,7 @@ add_executable(vpd_simulation_test ../tests/test_simulation.cpp)
 target_link_libraries(vpd_simulation_test PRIVATE vpd_simulation)
 enable_testing()
 add_test(NAME deterministic_simulation COMMAND vpd_simulation_test)
+# ROM-free command-line replay is a host-side integration proof only.
+add_executable(vpd_combat_replay combat_replay.cpp)
+target_link_libraries(vpd_combat_replay PRIVATE vpd_simulation)
+add_test(NAME romfree_combat_replay COMMAND vpd_combat_replay --verify)
