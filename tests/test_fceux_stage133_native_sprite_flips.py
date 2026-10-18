@@ -199,9 +199,12 @@ int main(int argc,char** argv) {
     const unsigned pat=vpd_ppu_probe::stage133_pattern(row,col);
     const unsigned color=(pat==1U)?0x1AU:(pat==2U)?0x2BU:0x2AU;
     const unsigned flags=(mode&1U?0x40U:0U)|(mode&2U?0x80U:0U);
+    const bool wrongflag=argc>2&&argv[2][0]=='f';
+    const bool wrongcolor=argc>2&&argv[2][0]=='c'&&x==67U;
+    const unsigned observed_color=wrongcolor?(color^1U):color;
     vpd_ppu_probe::stage133_pixel(
-       sl,x,0,2U,argc>2?flags^0x40U:flags,64U,
-       true,pat,color,0x80U|color,0x2088U);
+       sl,x,0,2U,wrongflag?flags^0x40U:flags,64U,
+       true,pat,observed_color,0x80U|observed_color,0x2088U);
    }
    vpd_ppu_probe::stage110_raster_pixel(sl,3U,0xB0U);
    ++vpd_ppu_probe::channel().internal_tick_units;
@@ -224,11 +227,20 @@ int main(int argc,char** argv) {
                                     text=True,capture_output=True)
                 self.assertEqual(proc.returncode,0,proc.stderr)
                 verify(proc.stderr,mode)
-            bad=subprocess.run([str(exe),"1","badflag"],
+            bad=subprocess.run([str(exe),"1","flipflag"],
                                text=True,capture_output=True)
             self.assertEqual(bad.returncode,0,bad.stderr)
             self.assertIn(REJECTED,bad.stderr)
             self.assertNotIn(MARKER,bad.stderr)
+            color_bad=subprocess.run([str(exe),"0","color"],
+                                     text=True,capture_output=True)
+            self.assertEqual(color_bad.returncode,0,color_bad.stderr)
+            self.assertIn(REJECTED,color_bad.stderr)
+            self.assertNotIn(MARKER,color_bad.stderr)
+            self.assertIn("VPD_STAGE133_COLOR_DIAGNOSTIC",color_bad.stderr)
+            self.assertIn("invalid=1",color_bad.stderr)
+            self.assertIn("bad_meta=0 bad_fetch=0 bad_pattern=0 bad_color=1",
+                          color_bad.stderr)
 
 
 if __name__=="__main__":
