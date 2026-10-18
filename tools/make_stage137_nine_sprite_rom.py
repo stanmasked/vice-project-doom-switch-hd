@@ -15,12 +15,18 @@ from make_stage129_oam_sprite_rom import RENDER_SETUP,MASK_SETUP,SPRITE_Y,explic
 MODES=("eight_visible","nine_overflow","ninth_offscreen","nine_8x16")
 SPRITE_SETUP=b"\xA9\x18\x8D\x00\x20"
 SPRITE16_SETUP=b"\xA9\x38\x8D\x00\x20"
+# Force all 256 OAM bytes to $FF before adding eight or nine visible
+# sprites. LDX #0, LDA #$FF, STA $2004, INX, BNE -6; 256 iterations.
+# Explicitly reset OAMADDR $2003 afterward so OAM0 begins at byte zero.
+OAM_CLEAR=(bytes((0xA9,0,0x8D,3,0x20,0xA2,0,0xA9,255,
+                  0x8D,4,0x20,0xE8,0xD0,0xFA))+
+           bytes((0xA9,0,0x8D,3,0x20)))
 
 
 def oam_setup(mode):
     if mode not in MODES:
         raise ValueError("Unknown synthetic sprite overflow case")
-    out=bytearray(b"\xA9\x00\x8D\x03\x20")  # OAMADDR $00
+    out=bytearray(OAM_CLEAR)  # Clear all 64 records, then OAMADDR $00
     nine=mode!="eight_visible"
     entries=9 if nine else 8
     for index in range(entries):
