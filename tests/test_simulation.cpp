@@ -81,6 +81,28 @@ int main(){
         for(int f=0;f<12;++f)blocking.tick(Input{});
         check(!blocking.projectiles()[0].active,
               "shot tunneled through adjacent solid wall");
+        // Same location, velocity and frame count, but different
+        // future shot direction: hash must distinguish left/right facing.
+        Simulation face_right,face_left;
+        face_right.tick(Input{Left});
+        face_right.tick(Input{Right});
+        face_right.tick(Input{});
+        face_left.tick(Input{Right});
+        face_left.tick(Input{Left});
+        face_left.tick(Input{});
+        check(face_left.player().x==face_right.player().x &&
+              face_left.player().y==face_right.player().y &&
+              face_left.player().vx==face_right.player().vx &&
+              face_left.player().vy==face_right.player().vy &&
+              face_left.frame()==face_right.frame(),
+              "facing hash test did not reach equivalent physical pose");
+        check(face_left.fingerprint()!=face_right.fingerprint(),
+              "opposite shot directions yielded identical replay state");
+        face_left.tick(Input{Fire});
+        face_right.tick(Input{Fire});
+        check(face_left.projectiles()[0].vx<0 &&
+              face_right.projectiles()[0].vx>0,
+              "facing divergence was not observable in fired shots");
         Simulation leftshot;
         leftshot.tick(Input{Left});
         leftshot.tick(Input{Fire});
