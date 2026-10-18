@@ -176,4 +176,9 @@ xvfb-run -a -s '-screen 0 1024x768x24 -nolisten tcp' \
 xvfb-run -a -s '-screen 0 1024x768x24 -nolisten tcp' \
   python3 "$PROJECT/tools/run_stage126_palette_delta.py" \
     "$BUILD/src/fceux" "$RUNNER_TEMP"
+# Stage127: observe zero-CHR universal backdrop through four actually fetched
+# attribute quadrants; modify backdrop, then reject an opaque-CHR control.
+xvfb-run -a -s '-screen 0 1024x768x24 -nolisten tcp' \
+  python3 "$PROJECT/tools/run_stage127_transparent_bg.py" \
+    "$BUILD/src/fceux" "$RUNNER_TEMP"
 printf 'STAGE99_PINNED_FCEUX_NATIVE_BUILD_PASS commit=%s opt_in_probe=yes real_fceux_linked=yes gameplay_raster_verified=no\n' "${PIN}"
