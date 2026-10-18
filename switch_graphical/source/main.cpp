@@ -2,6 +2,7 @@
 #include <switch.h>
 #include "simulation.hpp"
 #include "combat_demo.hpp"
+#include "demo_witness_sd.hpp"
 #include "scene_renderer.hpp"
 #include "combat_scene_bridge.hpp"
 #include "asset_atlas.hpp"
@@ -92,6 +93,8 @@ int main(int,char**) {
     vpd::AnimationPlayer animation;
     vpd::Simulation game;
     vpd::CombatDemo demo; // auto-starts for reproducible emulator smoke tests
+    unsigned witness_cycles=0; // hard cap: four records per launch
+    bool checkpoint_ok=false;
     while(appletMainLoop()){
         padUpdate(&pad);
         const u64 buttons=padGetButtons(&pad);
@@ -102,6 +105,7 @@ int main(int,char**) {
         if((pressed&HidNpadButton_StickL) && !(buttons&HidNpadButton_Y)) {
             demo.toggle(game);
             animation.reset();
+            checkpoint_ok=false;
         }
         if(pressed&HidNpadButton_X) {
             const vpd::BundleReload result=has_sd ?
@@ -174,6 +178,7 @@ int main(int,char**) {
         view.asset_reload_failed=reload_failed;
         view.moving=actor.vx!=0;
         view.replay_demo=demo.enabled();
+        view.demo_checkpoint_ok=checkpoint_ok && demo.enabled();
         // Same adapter is exercised by native host combat/raster CTest.
         vpd::applyCombatOverlay(view,game);
         if(!animation.tick(assets.animation(),
@@ -196,6 +201,15 @@ int main(int,char**) {
                 vpd::kSceneHeight,static_cast<int>(stride/sizeof(uint32_t)),view);
         framebufferEnd(&fb);
         if(!drawn)break;
+        // The checkpoint is written only after a successful framebuffer
+        // submission, not merely because a host test compiled this binary.
+        if(vpd::demoCheckpointReached(demo,game)){
+            checkpoint_ok=vpd::demoCheckpointMatches(game);
+            if(witness_cycles<vpd::kDemoWitnessMaxRecords){
+                ++witness_cycles;
+                (void)vpd::persistDemoWitness(game,witness_cycles,has_sd);
+            }
+        }
         // Diagnostic pacing only, actual Switch frame timing unmeasured.
         svcSleepThread(16666667);
     }

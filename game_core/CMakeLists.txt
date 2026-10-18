@@ -19,6 +19,13 @@ add_test(NAME romfree_combat_replay COMMAND vpd_combat_replay --verify)
 add_executable(vpd_combat_demo_test ../tests/test_combat_demo.cpp)
 target_link_libraries(vpd_combat_demo_test PRIVATE vpd_simulation)
 add_test(NAME romfree_combat_autoplay_demo COMMAND vpd_combat_demo_test)
+# Host-side check of the exact bounded witness text emitted by libnx code.
+add_executable(vpd_demo_witness_test ../tests/test_demo_witness.cpp)
+target_link_libraries(vpd_demo_witness_test PRIVATE vpd_simulation)
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+  target_compile_options(vpd_demo_witness_test PRIVATE -Wall -Wextra -Wpedantic -Werror)
+endif()
+add_test(NAME romfree_switch_demo_witness COMMAND vpd_demo_witness_test)
 # 16 deterministic seed scripts x 512 ticks: movement, fire, jump, wall edits,
 # independent duplicate replays, and strict pinned 8,192-frame FNV witness.
 add_executable(vpd_combat_matrix_test ../tests/test_combat_replay_matrix.cpp)
