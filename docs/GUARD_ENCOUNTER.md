@@ -44,6 +44,15 @@ damage and death. Both join the existing CTest suites in GitHub Actions.
 The prior seven-event manual controller witness, NeXium ZR dash witness,
 normal guest exit, and 200-frame autoplay must continue to pass without
 redefining their schemas. The new guard is enabled only upon **manual**
-play entry and does not yet have a separate NeXium-native guard attack
-witness. Host raster testing and Switch compilation alone do not prove
-native encounter AI execution or physical Switch performance.
+play entry. A new guest-written `guard_witness.txt` records the first
+simulation tick at x=257 px and the eighth patrol tick at x=264 px,
+with the guard still at health 3 and not yet alerted. The independent
+`audit_nexium_guard_guest.py` checks exact event order, values and
+provenance, requiring the earlier manual, dash and process-exit audits.
+Host-side mutation fixtures are not accepted as emulator proof.
+
+These two records, if observed in the new NeXium Actions run, demonstrate
+**actual native guest guard patrol execution**, not native evidence of
+enemy pursuit, melee attack, death, or original-game fidelity. Contact
+combat is verified independently by host C++ simulation and RGBA tests.
+Physical Nintendo Switch performance remains untested.
