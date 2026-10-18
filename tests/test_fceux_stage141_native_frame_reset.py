@@ -203,16 +203,17 @@ int main(int argc,char**argv){
             verify_rejection(neg.stderr)
             # Fail closed even if only the last pixel of the second frame
             # disagrees while the reported first-pixel XBuf colors match.
-            for fault in ("pixel", "index", "reset"):
-                with self.subTest(mode=mode,fault=fault):
-                    bad=subprocess.run([str(binary),str(i),fault],
-                                       capture_output=True,text=True)
-                    self.assertEqual(bad.returncode,0,bad.stderr)
-                    self.assertEqual(bad.stderr.count(REJECT),1,bad.stderr)
-                    self.assertIn("invalid=1",bad.stderr)
-                    self.assertNotIn(PASS,bad.stderr)
-                    with self.assertRaises(FrameResetError):
-                        verify(bad.stderr,mode)
+            for i,mode in enumerate(MODES):
+                for fault in ("pixel", "index", "reset"):
+                    with self.subTest(mode=mode,fault=fault):
+                        bad=subprocess.run([str(binary),str(i),fault],
+                                           capture_output=True,text=True)
+                        self.assertEqual(bad.returncode,0,bad.stderr)
+                        self.assertEqual(bad.stderr.count(REJECT),1,bad.stderr)
+                        self.assertIn("invalid=1",bad.stderr)
+                        self.assertNotIn(PASS,bad.stderr)
+                        with self.assertRaises(FrameResetError):
+                            verify(bad.stderr,mode)
 
 
 if __name__=="__main__":
