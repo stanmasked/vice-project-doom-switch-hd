@@ -2251,7 +2251,7 @@ inline void stage137_pixel(unsigned sl,unsigned x,unsigned slot,
     if(!enabled || std::strcmp(enabled,"1")!=0)return;
     const int mode=stage137_mode();
     if(mode<0 || slot>1U || sl<120U || sl>140U ||
-       x<64U || x>=72U)return;
+       x<64U || x>=72U || (mode==3 && sl<132U))return;
     Stage137Audit& a=stage137_state();
     if(a.emitted)return;
     const MidframeChr& m=stage110_state();
