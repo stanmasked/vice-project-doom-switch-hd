@@ -25,8 +25,11 @@ not evidence of a failed H/V flip.
 
 For Stage133 **only**, the generator now explicitly writes `$2B` to
 PPU palette address `$3F12` using a fresh pair of writes to `$2006`
-followed by one `$2007` write. This directly tests whether
-address-bound initialization repairs the mismatch. Earlier synthetic
+followed by one `$2007` write. It then restores `$2006` to the
+initial nametable address `$2000` and writes both `$2005` scroll
+coordinates, avoiding an unintended palette-address rendering start.
+This directly tests whether address-bound initialization repairs the
+mismatch without changing the display's nametable or scroll state. Earlier synthetic
 ROMs (Stages129–131) are byte-for-byte unchanged. ROM regression tests
 require the explicit-address sequence in all four replicated PRG banks,
 and all four flip modes use identical PRG instructions except OAM flags.
