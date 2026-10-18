@@ -88,6 +88,7 @@ jobs:
             emulator-evidence/manual-result.txt
             emulator-evidence/host-gui-lifecycle.txt
             emulator-evidence/host-lifecycle-result.txt
+            emulator-evidence/native-exit-result.txt
             emulator-evidence/ne-x11-windows-after-plus.txt
             emulator-evidence/manual-trace-paths.txt
             emulator-evidence/guest-manual-witness.txt
