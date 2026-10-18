@@ -79,7 +79,9 @@ python3 "$PROJECT/tools/inject_fceux_stage133_sprite_flips.py" \
   "$PATCH/src/ppu_stage131.cpp" "$PATCH/src/ppu_stage133.cpp"
 python3 "$PROJECT/tools/inject_fceux_stage135_sprite_8x16.py" \
   "$PATCH/src/ppu_stage133.cpp" "$PATCH/src/ppu_stage135.cpp"
-cp "$PATCH/src/ppu_stage135.cpp" "$FCEUX/src/ppu.cpp"
+python3 "$PROJECT/tools/inject_fceux_stage137_nine_oam.py" \
+  "$PATCH/src/ppu_stage135.cpp" "$PATCH/src/ppu_stage137.cpp"
+cp "$PATCH/src/ppu_stage137.cpp" "$FCEUX/src/ppu.cpp"
 python3 "${PROJECT}/tools/inject_fceux_mmc3_chr_probe.py" \
   "${FCEUX}/src/boards/mmc3.cpp" "${PATCH}/src/mmc3_stage106.cpp"
 cp "${PATCH}/src/mmc3_stage106.cpp" "${FCEUX}/src/boards/mmc3.cpp"
