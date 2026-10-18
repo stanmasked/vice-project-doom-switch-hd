@@ -2300,6 +2300,104 @@ inline void stage137_pixel(unsigned sl,unsigned x,unsigned slot,
 }
 #endif
 
+// Stage139: native temporal ninth OAM on distinct 8x16 source rows.
+// Overflow status is sticky: compare source-row 124 and 132 witnesses,
+// not status-bit transitions inferred from later framebuffer rows.
+#if defined(VPD_NATIVE_SYNTHETIC_TEMPORAL_NINE) && defined(VPD_NATIVE_SYNTHETIC_MIDFRAME_CHR)
+struct Stage139Row {
+    bool seen=false;
+    unsigned source_row=0,count=0,status=0;
+    unsigned indices[8]={0,0,0,0,0,0,0,0};
+    unsigned raster_row=0,samples=0,first_xbuf=0;
+};
+struct Stage139Audit {
+    Stage139Row rows[2];
+    unsigned invalid=0;
+    bool emitted=false;
+};
+inline Stage139Audit& stage139_state(){static Stage139Audit s;return s;}
+inline int stage139_mode(){
+    static const char* v=std::getenv("VPD_STAGE139_TEMPORAL_CASE");
+    if(!v)return -1;
+    static const char* const options[]={"eight_stable","nine_late",
+        "seven_plus_late","nine_early"};
+    for(int i=0;i<4;i++)if(std::strcmp(v,options[i])==0)return i;
+    return -1;
+}
+inline void stage139_eval(unsigned yp,unsigned count,unsigned status,
+                          unsigned i0,unsigned i1,unsigned i2,unsigned i3,
+                          unsigned i4,unsigned i5,unsigned i6,unsigned i7){
+    static const char* enabled=std::getenv("VPD_STAGE139_TEMPORAL_PROBE");
+    if(!enabled || std::strcmp(enabled,"1")!=0 ||
+       stage139_mode()<0 || (yp!=124U && yp!=132U))return;
+    Stage139Row& r=stage139_state().rows[yp==132U?1:0];
+    if(r.seen)return;
+    r.seen=true;r.source_row=yp;r.count=count;r.status=status;
+    const unsigned indexes[]={i0,i1,i2,i3,i4,i5,i6,i7};
+    for(unsigned i=0;i<8;i++)r.indices[i]=indexes[i];
+}
+inline void stage139_pixel(unsigned sl,unsigned x,unsigned count,
+                           unsigned status,unsigned xbuf,bool sprite16){
+    static const char* enabled=std::getenv("VPD_STAGE139_TEMPORAL_PROBE");
+    if(!enabled || std::strcmp(enabled,"1")!=0)return;
+    const int mode=stage139_mode();
+    if(mode<0 || (sl!=126U && sl!=134U) || x<64U || x>=72U)return;
+    Stage139Audit& a=stage139_state();
+    if(a.emitted)return;
+    const MidframeChr& m=stage110_state();
+    if(!m.switched || m.writes!=2 || sl<m.switch_sl+8U)return;
+    const unsigned row_id=sl==134U?1U:0U;
+    Stage139Row& r=a.rows[row_id];
+    if(!r.seen || r.samples>=8U)return;
+    if(r.samples==0U)r.raster_row=sl;
+    const unsigned expected_count=mode==2 && row_id==0?7U:8U;
+    const bool expected_overflow=mode==3 || (mode==1 && row_id==1);
+    const unsigned expected_xbuf=mode==2 && row_id==1?170U:143U;
+    bool bad=r.source_row!=(row_id?132U:124U) ||
+             r.count!=expected_count || count!=expected_count ||
+             ((r.status&0x20U)!=0)!=expected_overflow ||
+             ((status&0x20U)!=0)!=expected_overflow ||
+             xbuf!=expected_xbuf || !sprite16 || r.raster_row!=sl;
+    for(unsigned i=0;i<expected_count;i++){
+        const unsigned index=mode==2 && row_id==1 && i==7?8U:i;
+        if(r.indices[i]!=index)bad=true;
+    }
+    if(r.samples==0U)r.first_xbuf=xbuf;
+    a.invalid+=bad?1U:0U;
+    ++r.samples;
+    if(a.rows[0].samples==8U && a.rows[1].samples==8U){
+        static const char* const options[]={"eight_stable","nine_late",
+            "seven_plus_late","nine_early"};
+        if(a.invalid){
+            std::fprintf(stderr,
+                "VPD_STAGE139_REJECTED_TEMPORAL_NINE case=%s invalid=%u "
+                "top_count=%u bottom_count=%u top_overflow=%s "
+                "bottom_overflow=%s top_xbuf=%u bottom_xbuf=%u "
+                "top_sl=%u bottom_sl=%u samples=16 synthetic_only=yes\n",
+                options[mode],a.invalid,a.rows[0].count,a.rows[1].count,
+                (a.rows[0].status&0x20U)?"yes":"no",
+                (a.rows[1].status&0x20U)?"yes":"no",
+                a.rows[0].first_xbuf,a.rows[1].first_xbuf,
+                a.rows[0].raster_row,a.rows[1].raster_row);
+        }else{
+            std::fprintf(stderr,
+                "VPD_STAGE139_NATIVE_TEMPORAL_NINE_PASS case=%s "
+                "top_source=124 bottom_source=132 top_sl=%u bottom_sl=%u "
+                "top_count=%u bottom_count=%u top_overflow=%s "
+                "bottom_overflow=%s top_xbuf=%u bottom_xbuf=%u "
+                "samples=16 invalid=0 native_fceux_xbuf=yes "
+                "synthetic_only=yes original_game_temporal_oam_proven=no\n",
+                options[mode],a.rows[0].raster_row,a.rows[1].raster_row,
+                a.rows[0].count,a.rows[1].count,
+                (a.rows[0].status&0x20U)?"yes":"no",
+                (a.rows[1].status&0x20U)?"yes":"no",
+                a.rows[0].first_xbuf,a.rows[1].first_xbuf);
+        }
+        std::fflush(stderr);a.emitted=true;
+    }
+}
+#endif
+
 // Stage109 synthetic-only MMC3 write -> BG CHR read -> framebuffer timeline.
 // Internal runppu tick units are not authoritative NTSC dots or CPU cycles.
 #ifdef VPD_NATIVE_SYNTHETIC_CHR_TIMELINE
