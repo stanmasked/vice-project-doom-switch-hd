@@ -28,6 +28,17 @@ struct Projectile {
     uint16_t age=0;
     bool active=false;
 };
+// Opt-in ROM-free guard prototype. Absent from the existing auto-demo.
+struct GuardEnemy {
+    int32_t x=16*kTileSize*kFixed;
+    int32_t y=((kMapHeight-1)*kTileSize-kPlayerHeight)*kFixed;
+    uint8_t health=3;
+    bool alerted=false;
+    int8_t direction=1;
+    uint8_t attack_cooldown=0;
+    uint16_t attacks=0;
+    uint16_t projectile_hits=0;
+};
 // Self-authored stationary training target in a synthetic arena.
 struct TrainingTarget {
     int32_t x=25*kTileSize*kFixed;
@@ -63,6 +74,11 @@ public:
     uint8_t dashCooldown() const { return dash_cooldown_; }
     bool dashEverUsed() const { return dash_ever_used_; }
     const TrainingTarget& trainingTarget() const { return target_; }
+    // Manual mode opts into active enemy logic; autoplay remains unchanged.
+    void enableEnemyEncounter();
+    bool enemyEncounterEnabled() const { return encounter_enabled_; }
+    const GuardEnemy& guardEnemy() const { return guard_; }
+    uint8_t playerHealth() const { return player_health_; }
 private:
     Scene scene_;
     Actor player_{};
@@ -79,6 +95,10 @@ private:
     bool dash_ever_used_=false;
     std::array<Projectile,kMaxProjectiles> projectiles_{};
     TrainingTarget target_{};
+    bool encounter_enabled_=false;
+    GuardEnemy guard_{};
+    uint8_t player_health_=5;
+    void advanceGuard();
     void advanceProjectiles();
     void fireProjectile();
     bool collideAt(int32_t x,int32_t y) const;
