@@ -89,8 +89,6 @@ def verify_wrong_case(log):
     category,case,observed=_parse(log,False)
     if category!="REJECT" or case!="preserve_eight" or observed[-1]<1:
         raise DynamicOamError("Wrong OAM case was not rejected at PPU/raster level")
-    try:verify_wrong_case_cpu=verify_wrong_case
-    except NameError:verify_wrong_case_cpu=None
     # Native Stage149 wrong-case witness must be present as well.
     try:
         from run_stage149_native_vblank_oam import verify_wrong_case as cpu_wrong
