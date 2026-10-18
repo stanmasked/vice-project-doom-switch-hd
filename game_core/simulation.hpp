@@ -41,6 +41,8 @@ public:
     bool solid(int tile_x,int tile_y) const;
     void setSolid(int tile_x,int tile_y,bool value);
     char cell(int tile_x,int tile_y) const;
+    // Read-only map bytes, serialized in fixed tile order for replay identity.
+    const std::array<uint8_t,kMapWidth*kMapHeight>& cells() const { return tiles_; }
 private:
     std::array<uint8_t,kMapWidth*kMapHeight> tiles_{};
 };
