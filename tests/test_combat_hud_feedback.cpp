@@ -81,9 +81,11 @@ int main(){
     faded.guard.hit_flash_ticks=0;
     check(render(active)!=render(faded),
           "Guard hit pulse did not alter procedural body pixels");
-    for(int i=0;i<12;++i)firing.tick(vpd::Input{});
+    // Previously launched shots can still be in flight and legitimately
+    // restart the flash. After they finish, the effect must fade away.
+    for(int i=0;i<80;++i)firing.tick(vpd::Input{});
     check(firing.guardEnemy().hit_flash_ticks==0,
-          "Guard flash failed to decay without new hits");
+          "Guard flash did not decay after outstanding projectiles settled");
 
     // Real guard contact lights up the live hero/HUD; compare equivalent
     // frames, varying only the *view* flash to isolate presentation.
