@@ -18,6 +18,8 @@ on:
       - "tests/test_nexium_guard_guest.py"
       - "tools/audit_nexium_guard_combat.py"
       - "tests/test_nexium_guard_combat.py"
+      - "tools/audit_nexium_guard_live.py"
+      - "tests/test_nexium_guard_live.py"
       - "tools/nexium_visual_probe.sh"
       - "game_core/**"
       - "switch_graphical/**"
@@ -98,6 +100,9 @@ jobs:
             emulator-evidence/dash-result.txt
             emulator-evidence/guard-result.txt
             emulator-evidence/guard-combat-result.txt
+            emulator-evidence/guard-live-result.txt
+            emulator-evidence/guard-live-trace-paths.txt
+            emulator-evidence/guest-guard-live-witness.txt
             emulator-evidence/guest-guard-combat-witness.txt
             emulator-evidence/guard-combat-trace-paths.txt
             emulator-evidence/guest-guard-witness.txt
