@@ -239,6 +239,21 @@ bool drawScene(uint32_t* target,int width,int height,int stride_pixels,
             s.rect(gx+2+8*static_cast<int>(n),gy-7,6,3,
                    rgba(247,175,96));
     }
+    // Distinct fixed sentry sprite is absent from the first encounter and
+    // every golden demo frame. It is driven by the wave-two simulation.
+    if(view.sentry.enabled && view.sentry.health>0){
+        const int sx=(view.sentry.x_px-view.camera_x_px)*2;
+        const int sy=(view.sentry.y_px+80)*2;
+        s.rect(sx-2,sy+17,31,13,rgba(33,51,75));
+        s.rect(sx+2,sy+4,24,20,view.sentry.hit_flash_ticks?
+               rgba(255,217,155):rgba(64,159,165));
+        s.rect(sx+8,sy+8,12,7,rgba(25,41,62));
+        s.rect(sx-8,sy+12,13,5,rgba(203,116,75));
+        s.rect(sx-12,sy+13,6,3,rgba(255,212,139));
+        for(unsigned n=0;n<view.sentry.health && n<2;++n)
+            s.rect(sx+2+13*static_cast<int>(n),sy-8,10,4,
+                   rgba(118,228,222));
+    }
     int player_x=(view.player_x_px-view.camera_x_px)*2;
     int player_y=(view.player_y_px+80)*2;
     // Only a real active burst draws motion streaks; replay-demo frames
@@ -272,6 +287,15 @@ bool drawScene(uint32_t* target,int width,int height,int stride_pixels,
         const int sy=(shot.y_px+80)*2;
         s.rect(sx-4,sy-2,16,7,rgba(244,186,76));
         s.rect(sx,sy-1,12,4,rgba(255,235,164));
+    }
+    // Turret projectiles are real hostile physics, visually distinct from
+    // hero bullets, and omitted entirely until wave two activates.
+    for(const auto& shot:view.enemy_projectiles){
+        if(!shot.active)continue;
+        const int x=(shot.x_px-view.camera_x_px)*2;
+        const int y=(shot.y_px+80)*2;
+        s.rect(x-5,y-3,14,6,rgba(226,95,112));
+        s.rect(x-2,y-1,9,2,rgba(255,202,170));
     }
     // Foreground objects are visual only: no hitbox/collision changes.
     if(view.decor_atlas){
@@ -316,7 +340,11 @@ bool drawScene(uint32_t* target,int width,int height,int stride_pixels,
                                               45:view.dash_cooldown);
         s.rect(821,52,90,8,rgba(55,70,88));
         s.rect(821,52,capacity*2,8,rgba(111,204,214));
-        if(view.guard.enabled)
+        if(view.sentry.enabled)
+            s.text(957,50,view.stage_cleared?"STAGE CLEAR":
+                   (view.sentry.health==0?"EXIT OPEN":"WAVE 2"),
+                   rgba(118,228,222),2);
+        else if(view.guard.enabled)
             s.text(957,50,view.guard.health==0?"CLEARED":
                    (view.guard.alerted?"ALERT":"PATROL"),
                    view.guard.health==0?rgba(164,210,193):
