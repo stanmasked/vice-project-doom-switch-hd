@@ -91,3 +91,33 @@ The additional acceptance marker is
 `VPD_ROMFREE_FULL_COMBAT_TRACE_PASS`; it is **host-side synthetic
 evidence only**, never a claim of original NES or Nintendo Switch
 runtime fidelity.
+
+## Combat-to-raster integration
+
+The graphical host build now includes:
+
+    cmake -S graphics_core -B build/graphics_core -DCMAKE_BUILD_TYPE=Release
+    cmake --build build/graphics_core --parallel
+    ctest --test-dir build/graphics_core --output-on-failure
+
+The new `romfree_combat_to_raster_integration` CTest links the **same**
+portable C++ `vpd_simulation` used by the Switch source, and the actual
+`vpd_scene_renderer` RGBA8888 renderer. It runs the identical
+independently authored 200-frame input scenario twice.
+
+At seven selected checkpoints it renders the player, projectiles and
+training target using the real simulation-to-`SceneView` bridge. It
+compares deterministic pixel hashes between the two runs and applies
+explicit negative rendering controls: hiding the live projectile must
+change pixels; hiding the live target must change pixels; restoring
+undamaged health marks after the first hit must change pixels; restoring
+the target after three confirmed impacts must change pixels.
+
+A successful host test emits:
+
+    VPD_ROMFREE_COMBAT_RASTER_BRIDGE_PASS
+
+This demonstrates **host game simulation-to-raster plumbing only**,
+not physical/emulated Switch execution and not original game visuals.
+The existing no-shot framebuffer and 300-frame gameplay golden hashes
+must remain intact.
