@@ -27,6 +27,8 @@ SOURCE=(b'#include "vpd_newppu_raw_step_probe.h"\n'
         b'\tPPUSPL = V & 0x7;\n'
         b'}\nstatic DECLFW(B2004) {\n'
         b'\tif(newppu) {\n'
+        b'\t\tif ((PPU[3] & 3) == 2)\n'
+        b'\t\t\tV &= 0xE3;\n'
         b'\t\tSPRAM[PPU[3]] = V;\n'
         b'\t\tPPU[3] = (PPU[3] + 1) & 0xFF;\n'
         b'\t}\n}\nstatic DECLFW(B2005) {\n}\n'
@@ -50,13 +52,19 @@ class SourceHooks(unittest.TestCase):
         for source in (SOURCE,SOURCE.replace(b"\n",b"\r\n")):
             with self.subTest(crlf=b"\r\n" in source):
                 actual=patch(source)
-                self.assertEqual(actual.count(GUARD),4)
+                self.assertEqual(actual.count(GUARD),5)
                 self.assertEqual(actual.count(EXTRA),1)
                 for name in (b"stage149_status_read(",
                              b"stage149_oam_address(",
                              b"stage149_oam_data("):
                     self.assertEqual(actual.count(name),1)
-                self.assertIn(b"PPU[3],V,SPRAM[PPU[3]],newppu);",actual)
+                self.assertIn(
+                    b"PPU[3],vpd149_cpu_value,SPRAM[PPU[3]],newppu);",actual)
+                entry=actual.index(b"const unsigned vpd149_cpu_value = V;")
+                mask=actual.index(b"V &= 0xE3;")
+                data=actual.index(b"SPRAM[PPU[3]] = V;")
+                self.assertLess(entry,mask)
+                self.assertLess(mask,data)
                 if b"\r\n" in source:
                     self.assertEqual(actual.count(b"\n"),actual.count(b"\r\n"))
                 with self.assertRaises(ValueError):
@@ -70,6 +78,8 @@ class SourceHooks(unittest.TestCase):
                        b"static DECLFW(B2005) {",
                        b"vpd_ppu_probe::stage141_pixel(",
                        b"SPRAM[PPU[3]] = V;",
+                       b"V &= 0xE3;",
+                       b"if ((PPU[3] & 3) == 2)",
                        b"PPUSPL = V & 0x7;",
                        b"(PPU_status & 0x80) != 0);"):
             with self.subTest(anchor=anchor):
