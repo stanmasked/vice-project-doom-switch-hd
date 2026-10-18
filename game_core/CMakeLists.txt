@@ -26,6 +26,13 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
   target_compile_options(vpd_demo_witness_test PRIVATE -Wall -Wextra -Wpedantic -Werror)
 endif()
 add_test(NAME romfree_switch_demo_witness COMMAND vpd_demo_witness_test)
+# Serialize real manual input/effect sequence and lifecycle without libnx.
+add_executable(vpd_manual_input_witness_test ../tests/test_manual_input_witness.cpp)
+target_link_libraries(vpd_manual_input_witness_test PRIVATE vpd_simulation)
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+  target_compile_options(vpd_manual_input_witness_test PRIVATE -Wall -Wextra -Wpedantic -Werror)
+endif()
+add_test(NAME romfree_manual_input_witness COMMAND vpd_manual_input_witness_test)
 # 16 deterministic seed scripts x 512 ticks: movement, fire, jump, wall edits,
 # independent duplicate replays, and strict pinned 8,192-frame FNV witness.
 add_executable(vpd_combat_matrix_test ../tests/test_combat_replay_matrix.cpp)

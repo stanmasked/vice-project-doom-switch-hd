@@ -3,6 +3,7 @@
 #include "simulation.hpp"
 #include "combat_demo.hpp"
 #include "demo_witness_sd.hpp"
+#include "manual_input_witness.hpp"
 #include "scene_renderer.hpp"
 #include "combat_scene_bridge.hpp"
 #include "asset_atlas.hpp"
@@ -47,6 +48,8 @@ int main(int,char**) {
     const Result sd_mount=fsdevMountSdmc();
     const bool we_mounted_sd=R_SUCCEEDED(sd_mount);
     const bool has_sd=we_mounted_sd || fsdevGetDeviceFileSystem("sdmc")!=nullptr;
+    // New run, not leftover emulator/SD evidence from a previous NRO.
+    (void)vpd::manualProofReset(has_sd);
     if(has_sd)assets.reload(kExternalAtlasPath,kExternalAnimationPath);
     bool reload_failed=false;
     constexpr const char* kExternalTerrainPath=
@@ -95,17 +98,36 @@ int main(int,char**) {
     vpd::CombatDemo demo; // auto-starts for reproducible emulator smoke tests
     unsigned witness_cycles=0; // hard cap: four records per launch
     bool checkpoint_ok=false;
+    unsigned manual_seq=0;
+    bool plus_seen=false;
     while(appletMainLoop()){
         padUpdate(&pad);
         const u64 buttons=padGetButtons(&pad);
         const u64 pressed=padGetButtonsDown(&pad);
-        if(buttons&HidNpadButton_Plus)break;
+        if(buttons&HidNpadButton_Plus){
+            // Must have completed the actual ordered manual control probe.
+            if(!demo.enabled() && manual_seq==5){
+                (void)vpd::manualProofAppend(has_sd,vpd::ManualProofEvent::Plus,
+                                             6,game,1);
+                manual_seq=6;
+                plus_seen=true;
+            }
+            break;
+        }
         // Left-stick click switches between 200-frame demo and manual play.
         // StickL+Y still performs the independent development-art reset.
-        if((pressed&HidNpadButton_StickL) && !(buttons&HidNpadButton_Y)) {
+        const bool toggle_manual=
+            ((pressed&HidNpadButton_StickL) && !(buttons&HidNpadButton_Y)) ||
+            ((pressed&HidNpadButton_A) && (buttons&HidNpadButton_R));
+        if(toggle_manual) {
             demo.toggle(game);
             animation.reset();
             checkpoint_ok=false;
+            if(!demo.enabled()){
+                manual_seq=1;
+                (void)vpd::manualProofAppend(has_sd,vpd::ManualProofEvent::Enter,
+                                             1,game,1);
+            } else manual_seq=0;
         }
         if(pressed&HidNpadButton_X) {
             const vpd::BundleReload result=has_sd ?
@@ -162,7 +184,34 @@ int main(int,char**) {
         if(demo.enabled()) {
             if(demo.tick(game)) animation.reset();
         } else {
+            // Measure actual simulation effects, not merely keyboard events.
+            const auto before_x=game.player().x;
+            const auto before_shots=game.shotsFired();
+            if(toggle_manual)input=0; // R+A is a mode switch, not a jump
             game.tick(vpd::Input{input});
+            vpd::ManualProofEvent event=vpd::ManualProofEvent::Enter;
+            int32_t metric=0;
+            if(manual_seq==1 && (input&vpd::Right) &&
+               game.player().x>before_x){
+                event=vpd::ManualProofEvent::Right;
+                metric=game.player().x-before_x;
+            } else if(manual_seq==2 && (input&vpd::Fire) &&
+                      game.shotsFired()>before_shots){
+                event=vpd::ManualProofEvent::Fire;
+                metric=static_cast<int32_t>(game.shotsFired()-before_shots);
+            } else if(manual_seq==3 && (input&vpd::Jump) &&
+                      game.player().vy<0){
+                event=vpd::ManualProofEvent::Jump;
+                metric=-game.player().vy;
+            } else if(manual_seq==4 && (input&vpd::Left) &&
+                      game.player().x<before_x){
+                event=vpd::ManualProofEvent::Left;
+                metric=before_x-game.player().x;
+            }
+            if(metric>0){
+                ++manual_seq;
+                (void)vpd::manualProofAppend(has_sd,event,manual_seq,game,metric);
+            }
         }
         u32 stride=0;
         auto* pixels=static_cast<uint32_t*>(framebufferBegin(&fb,&stride));
@@ -214,6 +263,10 @@ int main(int,char**) {
         svcSleepThread(16666667);
     }
     framebufferClose(&fb);
+    if(plus_seen && manual_seq==6){
+        (void)vpd::manualProofAppend(has_sd,vpd::ManualProofEvent::Exit,
+                                     7,game,1);
+    }
     if(we_mounted_sd)fsdevUnmountDevice("sdmc");
     return 0;
 }
