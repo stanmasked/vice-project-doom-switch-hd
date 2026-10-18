@@ -225,8 +225,14 @@ bool drawScene(uint32_t* target,int width,int height,int stride_pixels,
         const int gy=(view.guard.y_px+80)*2;
         s.rect(gx+3,gy+3,18,23,rgba(65,76,94));
         s.rect(gx+6,gy+1,13,9,rgba(194,110,92));
-        s.rect(gx+5,gy+11,15,10,view.guard.alerted?
-               rgba(220,103,93):rgba(113,146,152));
+        // Each actual projectile hit drives a short bright impact pulse.
+        s.rect(gx+5,gy+11,15,10,view.guard.hit_flash_ticks?
+               rgba(255,222,147):
+               (view.guard.alerted?rgba(220,103,93):rgba(113,146,152)));
+        if(view.guard.hit_flash_ticks){
+            s.rect(gx-4,gy+8,5,3,rgba(255,235,170));
+            s.rect(gx+24,gy+15,6,3,rgba(255,235,170));
+        }
         s.rect(gx+2,gy+20,7,8,rgba(61,71,85));
         s.rect(gx+16,gy+20,7,8,rgba(61,71,85));
         for(unsigned n=0;n<view.guard.health && n<3;++n)
@@ -253,6 +259,11 @@ bool drawScene(uint32_t* target,int width,int height,int stride_pixels,
                            sprite_frame,player_x-4,player_y-12,2,view.facing_left))
             drawHero(s,player_x,player_y,view.frame,view.grounded);
     } else drawHero(s,player_x,player_y,view.frame,view.grounded);
+    // Only a real guard contact hit briefly highlights the hero jacket.
+    if(view.manual_controls && view.player_hit_flash_ticks){
+        s.rect(player_x+4,player_y+16,22,4,rgba(255,220,153));
+        s.rect(player_x,player_y-5,27,2,rgba(252,180,119));
+    }
     // Original, asset-free muzzle/projectile visual; simulation owns movement.
     // Inactive slots are completely invisible, preserving old golden frames.
     for(const auto& shot:view.projectiles){
@@ -280,30 +291,46 @@ bool drawScene(uint32_t* target,int width,int height,int stride_pixels,
         s.text(760,18,"REPLAY DEMO",rgba(240,204,111),2);
     if(view.replay_demo && view.demo_checkpoint_ok)
         s.text(756,42,"CORE STATE MATCH",rgba(164,210,193),2);
+    // Fixed manual-mode HUD zones: title 30..462, subtitle 32..548.
+    // Separate enemy/hero gauges at y=17 and ability status at y=50.
+    // The previous automatic-demo arrangement remains byte-for-byte intact.
     if(view.manual_controls){
-        s.text(574,42,view.dash_active?"DASH : ACTIVE":
+        if(view.guard.enabled){
+            s.text(505,17,"GUARD",rgba(219,159,126),2);
+            for(unsigned n=0;n<3;++n)
+                s.rect(581+15*static_cast<int>(n),18,11,12,
+                       n<view.guard.health?
+                       (view.guard.hit_flash_ticks?rgba(255,224,147):
+                        rgba(219,106,86)):rgba(55,64,79));
+            s.text(697,17,"HERO",rgba(191,208,217),2);
+            for(unsigned n=0;n<5;++n)
+                s.rect(761+15*static_cast<int>(n),18,11,12,
+                       n<view.player_health?
+                       (view.player_hit_flash_ticks?rgba(255,220,153):
+                        rgba(106,198,174)):rgba(55,64,79));
+        }
+        s.text(611,50,view.dash_active?"DASH : ACTIVE":
                (view.dash_cooldown?"DASH : CHARGING":"DASH : READY"),
                view.dash_active?rgba(103,221,228):rgba(173,198,212),2);
-        // Bounded synthetic cooldown: 45 ticks from trigger to availability.
-        s.rect(832,45,90,7,rgba(55,70,88));
         const int capacity=45-static_cast<int>(view.dash_cooldown>45?
                                               45:view.dash_cooldown);
-        s.rect(832,45,capacity*2,7,rgba(111,204,214));
+        s.rect(821,52,90,8,rgba(55,70,88));
+        s.rect(821,52,capacity*2,8,rgba(111,204,214));
+        if(view.guard.enabled)
+            s.text(957,50,view.guard.health==0?"CLEARED":
+                   (view.guard.alerted?"ALERT":"PATROL"),
+                   view.guard.health==0?rgba(164,210,193):
+                   rgba(227,167,119),2);
+    } else {
+        // Preserve the pre-existing HUD of the untouched attract-mode demo.
+        s.rect(932,22,200,16,rgba(56,70,88));
+        s.rect(932,22,125,16,rgba(171,66,75));
+        s.rect(932,47,126,8,rgba(55,88,108));
+        s.rect(932,47,83,8,rgba(87,184,194));
     }
-    if(view.manual_controls && view.guard.enabled){
-        s.text(374,17,"GUARD",rgba(219,159,126),2);
-        for(unsigned n=0;n<view.guard.health && n<3;++n)
-            s.rect(440+12*static_cast<int>(n),20,9,9,rgba(219,106,86));
-        s.text(374,49,"HERO HP",rgba(191,208,217),2);
-        for(unsigned n=0;n<view.player_health && n<5;++n)
-            s.rect(468+12*static_cast<int>(n),50,9,8,rgba(106,198,174));
-    }
-    s.rect(932,22,200,16,rgba(56,70,88));
-    s.rect(932,22,125,16,rgba(171,66,75));
-    s.rect(932,47,126,8,rgba(55,88,108));
-    s.rect(932,47,83,8,rgba(87,184,194));
     if(view.external_animation_source)
-        s.text(788,54,"ANIM: SD OVERRIDE",rgba(164,210,193),2);
+        s.text(view.manual_controls?1050:788,54,"ANIM: SD OVERRIDE",
+               rgba(164,210,193),2);
     if(view.terrain_atlas) {
         const char* terrain_message=view.terrain_reload_failed ?
             "TERRAIN: FAILED" : (view.external_terrain_asset ?

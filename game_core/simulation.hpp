@@ -38,6 +38,7 @@ struct GuardEnemy {
     uint8_t attack_cooldown=0;
     uint16_t attacks=0;
     uint16_t projectile_hits=0;
+    uint8_t hit_flash_ticks=0; // cosmetic feedback after authentic swept damage
 };
 // Self-authored stationary training target in a synthetic arena.
 struct TrainingTarget {
@@ -79,6 +80,7 @@ public:
     bool enemyEncounterEnabled() const { return encounter_enabled_; }
     const GuardEnemy& guardEnemy() const { return guard_; }
     uint8_t playerHealth() const { return player_health_; }
+    uint8_t playerHitFlashTicks() const { return player_hit_flash_ticks_; }
 private:
     Scene scene_;
     Actor player_{};
@@ -98,6 +100,7 @@ private:
     bool encounter_enabled_=false;
     GuardEnemy guard_{};
     uint8_t player_health_=5;
+    uint8_t player_hit_flash_ticks_=0;
     void advanceGuard();
     void advanceProjectiles();
     void fireProjectile();

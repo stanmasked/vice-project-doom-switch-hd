@@ -20,8 +20,10 @@ inline void applyCombatOverlay(SceneView& view,const Simulation& game) {
     view.dash_ever_used=game.dashEverUsed();
     const auto& guard=game.guardEnemy();
     view.guard={guard.x/kFixed,guard.y/kFixed,guard.health,
-                game.enemyEncounterEnabled(),guard.alerted};
+                game.enemyEncounterEnabled(),guard.alerted,
+                guard.hit_flash_ticks};
     view.player_health=game.playerHealth();
+    view.player_hit_flash_ticks=game.playerHitFlashTicks();
     const auto& shots=game.projectiles();
     for(std::size_t i=0;i<kMaxProjectiles;++i){
         view.projectiles[i]={

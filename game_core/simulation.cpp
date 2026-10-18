@@ -68,12 +68,14 @@ void Simulation::reset(){
     encounter_enabled_=false;
     guard_=GuardEnemy{};
     player_health_=5;
+    player_hit_flash_ticks_=0;
 }
 void Simulation::enableEnemyEncounter(){
     if(encounter_enabled_)return;
     encounter_enabled_=true;
     guard_=GuardEnemy{};
     player_health_=5;
+    player_hit_flash_ticks_=0;
 }
 bool Simulation::collideAt(int32_t x,int32_t y) const{
     constexpr int tile=kTileSize*kFixed;
@@ -153,6 +155,7 @@ void Simulation::advanceProjectiles(){
                shot.y>=guard_.y && shot.y<guard_.y+kPlayerHeight*kFixed){
                 --guard_.health;
                 ++guard_.projectile_hits;
+                guard_.hit_flash_ticks=12; // real swept-impact feedback
                 if(!guard_.health)guard_.alerted=false;
                 shot.active=false;
                 break;
@@ -215,11 +218,16 @@ void Simulation::advanceGuard(){
     if(guard_.alerted && new_abs<=kGuardStrike &&
        guard_.attack_cooldown==0 && player_health_>0){
         --player_health_;
+        player_hit_flash_ticks_=16; // follows actual contact damage
         ++guard_.attacks;
         guard_.attack_cooldown=kGuardAttackDelay;
     }
 }
 void Simulation::tick(Input input){
+    if(encounter_enabled_){
+        if(guard_.hit_flash_ticks>0)--guard_.hit_flash_ticks;
+        if(player_hit_flash_ticks_>0)--player_hit_flash_ticks_;
+    }
     const bool left=(input.buttons&Left)!=0;
     const bool right=(input.buttons&Right)!=0;
     if(dash_cooldown_>0)--dash_cooldown_;
@@ -336,7 +344,9 @@ uint64_t Simulation::fingerprint() const{
         append(static_cast<uint32_t>(guard_.attack_cooldown));
         append(static_cast<uint32_t>(guard_.attacks));
         append(static_cast<uint32_t>(guard_.projectile_hits));
+        append(static_cast<uint32_t>(guard_.hit_flash_ticks));
         append(static_cast<uint32_t>(player_health_));
+        append(static_cast<uint32_t>(player_hit_flash_ticks_));
     }
     return hash;
 }
