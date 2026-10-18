@@ -11,6 +11,9 @@ void drawAscii(const vpd::Simulation& game){
     std::printf("\x1b[1;1HVICE: PROJECT DOOM | NATIVE GAME SCAFFOLD\n");
     std::printf("ROM-free test scene; NOT original game or HD art.\n");
     std::printf("D-pad: move   A/B: jump   Y: fire   Plus: exit\n");
+    std::printf("Target health: %u / 3 | hits: %u\n",
+        static_cast<unsigned>(game.trainingTarget().health),
+        static_cast<unsigned>(game.trainingTarget().hits));
     std::printf("Frame: %-7u X: %-5ld Y: %-5ld Ground: %d\n",
         game.frame(),static_cast<long>(game.player().x/vpd::kFixed),
         static_cast<long>(game.player().y/vpd::kFixed),
@@ -25,6 +28,11 @@ void drawAscii(const vpd::Simulation& game){
         for(int x=0;x<kViewportTiles;++x){
             const int world_x=x+camera_tile;
             row[x]=game.scene().cell(world_x,y);
+            const auto& target=game.trainingTarget();
+            if(target.health>0 &&
+               world_x==target.x/(vpd::kFixed*vpd::kTileSize) &&
+               y==target.y/(vpd::kFixed*vpd::kTileSize))
+                row[x]='T';
             for(const auto& shot:game.projectiles()){
                 if(!shot.active)continue;
                 const int sx=shot.x/(vpd::kFixed*vpd::kTileSize);

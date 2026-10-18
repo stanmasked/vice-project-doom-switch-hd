@@ -69,6 +69,27 @@ int main(int argc,char** argv) {
               "inactive projectile raster failed");
         check(checksum(repeat,stride)==original,
               "inactive projectile changed approved legacy frame");
+        view.training_target_x_px=400;
+        view.training_target_y_px=208;
+        view.training_target_health=3;
+        check(vpd::drawScene(repeat.data(),vpd::kSceneWidth,
+                             vpd::kSceneHeight,stride,view),
+              "combat target raster failed");
+        const uint64_t full_target_hash=checksum(repeat,stride);
+        check(full_target_hash!=original,
+              "live target not visible in synthetic scene");
+        view.training_target_health=1;
+        check(vpd::drawScene(repeat.data(),vpd::kSceneWidth,
+                             vpd::kSceneHeight,stride,view),
+              "damaged target raster failed");
+        check(checksum(repeat,stride)!=full_target_hash,
+              "changing target health did not update visual indicator");
+        view.training_target_health=0;
+        check(vpd::drawScene(repeat.data(),vpd::kSceneWidth,
+                             vpd::kSceneHeight,stride,view),
+              "removed target raster failed");
+        check(checksum(repeat,stride)==original,
+              "destroyed target left pixels in old golden frame");
         view.camera_x_px=160;
         view.player_x_px=350;
         view.frame=6;

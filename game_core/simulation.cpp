@@ -49,6 +49,7 @@ void Simulation::reset(){
     fire_cooldown_=0;
     shots_fired_=0;
     projectiles_.fill(Projectile{});
+    target_=TrainingTarget{};
 }
 bool Simulation::collideAt(int32_t x,int32_t y) const{
     constexpr int tile=kTileSize*kFixed;
@@ -118,6 +119,16 @@ void Simulation::advanceProjectiles(){
             const int32_t step=std::min<int32_t>(remaining,kFixed);
             const int32_t next=shot.x+dir*step;
             if(scene_.solid(floorDiv(next,tile),floorDiv(shot.y,tile))){
+                shot.active=false;
+                break;
+            }
+            // Hit test uses the very same one-pixel swept positions as
+            // solid-tile collision, so a shot cannot skip a thin target.
+            if(target_.health>0 &&
+               next>=target_.x && next<target_.x+kTileSize*kFixed &&
+               shot.y>=target_.y && shot.y<target_.y+kTileSize*kFixed) {
+                --target_.health;
+                ++target_.hits;
                 shot.active=false;
                 break;
             }
@@ -207,6 +218,10 @@ uint64_t Simulation::fingerprint() const{
         append(shots_fired_);
         append(static_cast<uint32_t>(fire_cooldown_));
         append(static_cast<uint32_t>(facing_left_?1:0));
+        append(static_cast<uint32_t>(target_.x));
+        append(static_cast<uint32_t>(target_.y));
+        append(static_cast<uint32_t>(target_.health));
+        append(static_cast<uint32_t>(target_.hits));
         for(const auto& shot:projectiles_){
             append(static_cast<uint32_t>(shot.active?1:0));
             append(static_cast<uint32_t>(shot.x));
