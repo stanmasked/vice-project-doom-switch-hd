@@ -185,6 +185,8 @@ jobs:
         run: python -m unittest discover -s tests -p 'test_fceux_stage125_negative_controls.py' -v
       - name: Stage126 paired native single-palette-entry counterfactual regressions
         run: python -m unittest discover -s tests -p 'test_fceux_stage126_palette_delta.py' -v
+      - name: Stage127 transparent CHR universal backdrop and opaque control
+        run: python -m unittest discover -s tests -p 'test_fceux_stage127_transparent_bg.py' -v
       - name: Stage89 validated static screen hypotheses and explicit provenance
         run: python -m unittest discover -s tests -p 'test_ppu_capture_session.py' -v
       - name: Stage88 audited PPU reference-frame inventory regressions
