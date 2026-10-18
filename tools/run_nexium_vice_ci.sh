@@ -107,3 +107,12 @@ if [[ -s "$out/guard-trace-paths.txt" ]]; then
   cp "$guest" "$out/guest-guard-witness.txt"
 fi
 python3 tools/audit_nexium_guard_guest.py --evidence "$out"
+# Isolated source-shared guard detection / contact / bullet-hit probe, run by
+# the NRO itself, not the host or on-screen manual input.
+find "$HOME" "$XDG_DATA_HOME" "$XDG_CONFIG_HOME" "$XDG_CACHE_HOME" \
+  -type f -name guard_combat_witness.txt -print > "$out/guard-combat-trace-paths.txt"
+if [[ -s "$out/guard-combat-trace-paths.txt" ]]; then
+  IFS= read -r guest < "$out/guard-combat-trace-paths.txt"
+  cp "$guest" "$out/guest-guard-combat-witness.txt"
+fi
+python3 tools/audit_nexium_guard_combat.py --evidence "$out"

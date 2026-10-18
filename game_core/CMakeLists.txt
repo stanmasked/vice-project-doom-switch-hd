@@ -33,6 +33,15 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
                          -Wall -Wextra -Wpedantic -Werror)
 endif()
 add_test(NAME romfree_guard_guest_serializer COMMAND vpd_guard_guest_witness_test)
+# Runs exactly the AArch64 guest-script scenarios on the host as a control.
+add_executable(vpd_guard_combat_probe_test ../tests/test_guard_combat_probe.cpp)
+target_link_libraries(vpd_guard_combat_probe_test PRIVATE vpd_simulation)
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+  target_compile_options(vpd_guard_combat_probe_test PRIVATE
+                         -Wall -Wextra -Wpedantic -Werror)
+endif()
+add_test(NAME romfree_guest_scripted_guard_combat
+         COMMAND vpd_guard_combat_probe_test)
 # The exact serializer used by libnx to record actual NeXium ZR+Right effects.
 add_executable(vpd_dash_guest_witness_test ../tests/test_dash_guest_witness.cpp)
 target_link_libraries(vpd_dash_guest_witness_test PRIVATE vpd_simulation)

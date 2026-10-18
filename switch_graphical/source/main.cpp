@@ -6,6 +6,7 @@
 #include "manual_input_witness.hpp"
 #include "dash_guest_witness.hpp"
 #include "guard_guest_witness.hpp"
+#include "guard_combat_probe.hpp"
 #include "scene_renderer.hpp"
 #include "combat_scene_bridge.hpp"
 #include "asset_atlas.hpp"
@@ -54,6 +55,7 @@ int main(int,char**) {
     (void)vpd::manualProofReset(has_sd);
     (void)vpd::dashGuestProofReset(has_sd);
     (void)vpd::guardProofReset(has_sd);
+    (void)vpd::guardCombatProofReset(has_sd);
     if(has_sd)assets.reload(kExternalAtlasPath,kExternalAnimationPath);
     bool reload_failed=false;
     constexpr const char* kExternalTerrainPath=
@@ -213,9 +215,13 @@ int main(int,char**) {
             if(game.frame()==1)
                 (void)vpd::guardProofAppend(
                     has_sd,vpd::GuardProofEvent::FirstStep,game);
-            if(game.frame()==8)
+            if(game.frame()==8){
                 (void)vpd::guardProofAppend(
                     has_sd,vpd::GuardProofEvent::Patrol,game);
+                // Separate scripted guard combat test executed by this very
+                // guest NRO. Does not modify the visible/manual simulation.
+                (void)vpd::persistGuardCombatProof(has_sd);
+            }
             // Independent dash proof: record only after the live Switch
             // gameplay core has consumed ZR + Right and moved six pixels.
             if(manual_seq==5 && !dash_probe_started &&
