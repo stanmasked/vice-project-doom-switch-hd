@@ -27,8 +27,28 @@ the universal backdrop when ninth OAM is rejected, even across the
 subsequent frame, removing the background/scroll confound.
 
 A ROM regression rejects any mutation beyond those four bytes.
-This is a **controlled candidate fix**, not native validation
-until a new pinned-FCEUX run succeeds.
+The subsequent pinned native run
+[39131085609](https://github.com/stanmasked/vice-project-doom-switch-hd/actions/runs/39131085609)
+**still failed** with the same second-frame XBuf value: first=143,
+second=164, invalid=8. Therefore background isolation did not explain
+the discrepancy. Python regressions and C++/ROM checks passed, while
+native FCEUX rejected the two-frame proof.
+
+Stage143 adds *diagnostic-only* provenance to the existing native XBuf
+hook: `pixelcolor` before palette adjustment, `havepixel` from the
+sprite compositor, and `pixel & 3` from the background pixel. These
+fields are captured from the first inspected pixel of each frame,
+printed only on a native REJECT and forwarded to the CI failure summary.
+They are not model values or accepted as a substitute for matching
+every actual XBuf pixel in both frames. The observer still emits no
+native PASS unless the full strict Stage141 gate succeeds. A compiled
+fault-injection regression verifies that corruption of the last pixel
+in the second frame still fails even when the first-pixel colors and
+recorded diagnostics match.
+
+Do not infer that the ninth sprite became visible, or attribute the
+discrepancy to the backdrop or palette, until raw native pixel and
+compositor evidence identifies the source.
 
 ## Native fixture and observation
 
