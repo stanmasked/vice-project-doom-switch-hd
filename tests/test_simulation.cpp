@@ -134,9 +134,8 @@ int main(){
         check(map_b.fingerprint()==original_map_hash,
               "restoring original map should restore original fingerprint");
         map_a.scene().setSolid(57,3,true);
-        check(map_a.fingerprint()==map_b.fingerprint() || 
-              map_a.fingerprint()!=original_map_hash,
-              "modified maps should be independently serialized");
+        check(map_a.fingerprint()!=map_b.fingerprint(),
+              "modified map should differ from restored default map");
         map_b.scene().setSolid(57,3,true);
         check(map_a.fingerprint()==map_b.fingerprint(),
               "identical modified maps differ across replay instances");
