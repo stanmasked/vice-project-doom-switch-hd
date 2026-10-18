@@ -116,7 +116,10 @@ def evaluate(before, after, anchors):
 
 def audit(folder):
     root=Path(folder)
-    progress=(root/"visual-probe.txt").read_text(encoding="ascii").splitlines()
+    visual_marker=root/"visual-probe.txt"
+    if not visual_marker.is_file():
+        raise ValueError("real X11 event-aligned screenshots absent")
+    progress=visual_marker.read_text(encoding="ascii").splitlines()
     if not all(marker in progress for marker in (
         "visual_probe=finished",
         "capture=screen-live-strike",
