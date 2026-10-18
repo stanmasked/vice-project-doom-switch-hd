@@ -130,7 +130,7 @@ class Report(unittest.TestCase):
                         good.replace("invalid=0","invalid=1"),
                         good.replace("samples=8","samples=7"),
                         good.replace("claimed_oam=","claimed_oam=9"),
-                        good.replace("sprite0_hit=yes","sprite0_hit=no"),
+                        good.replace("sprite0_hit=","sprite0_hit=wrong-"),
                         good.replace("actual_fceux_dual_oam_xbuf=yes",
                                      "actual_fceux_dual_oam_xbuf=no"),
                         good.replace("original_game_sprites_proven=no",
