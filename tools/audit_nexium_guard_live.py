@@ -55,7 +55,8 @@ def verify(raw):
         hp=int(row["player_hp"])
         attacks=int(row["attacks"])
         cd=int(row["cooldown"])
-        if (hp,attacks,cd)!=(5,0,0) if seq==1 else (hp,attacks,cd)!=(4,1,32):
+        expected=(5,0,0) if seq==1 else (4,1,32)
+        if (hp,attacks,cd)!=expected:
             raise ValueError("guard damage and attack cooldown not observed")
         if row["guard_hp"]!="3" or row["alerted"]!="1":
             raise ValueError("guard defeated or not alerted in live trace")
