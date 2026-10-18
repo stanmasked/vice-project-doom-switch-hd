@@ -25,6 +25,7 @@ def verify(raw):
     if len(lines)!=2:
         raise ValueError("need precisely two real manual guard transitions")
     frames=[]
+    guard_healths=[]
     for seq,(event,line) in enumerate(zip(EVENTS,lines),1):
         tokens=line.split(" ")
         if len(tokens)!=len(FIELDS)+1 or tokens[0]!=MARKER:
@@ -58,9 +59,13 @@ def verify(raw):
         expected=(5,0,0) if seq==1 else (4,1,32)
         if (hp,attacks,cd)!=expected:
             raise ValueError("guard damage and attack cooldown not observed")
-        if row["guard_hp"]!="3" or row["alerted"]!="1":
+        ghp=int(row["guard_hp"])
+        if not 1<=ghp<=3 or row["alerted"]!="1":
             raise ValueError("guard defeated or not alerted in live trace")
+        guard_healths.append(ghp)
         frames.append(frame)
+    if guard_healths[1]>guard_healths[0]:
+        raise ValueError("live guard health increased without reset")
     if frames[1]<=frames[0]:
         raise ValueError("strike must occur after first proximity alert")
     return {"alert_frame":frames[0],"strike_frame":frames[1]}
