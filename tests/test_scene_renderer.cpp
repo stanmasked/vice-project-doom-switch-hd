@@ -44,6 +44,24 @@ int main(int argc,char** argv) {
         std::vector<uint32_t> repeat(image.size(),guard);
         check(vpd::drawScene(repeat.data(),vpd::kSceneWidth,vpd::kSceneHeight,stride,view),"repeat draw failed");
         check(checksum(repeat,stride)==original,"nondeterministic pixels");
+        // Live projectiles alter only the optional asset-free shot layer.
+        view.projectiles[0]={100,210,true};
+        check(vpd::drawScene(repeat.data(),vpd::kSceneWidth,
+                             vpd::kSceneHeight,stride,view),
+              "fired projectile raster failed");
+        const uint64_t shot_hash=checksum(repeat,stride);
+        check(shot_hash!=original,"visible shot did not change framebuffer");
+        check(vpd::drawScene(image.data(),vpd::kSceneWidth,
+                             vpd::kSceneHeight,stride,view),
+              "repeated projectile raster failed");
+        check(checksum(image,stride)==shot_hash,
+              "projectile raster is not deterministic");
+        view.projectiles[0].active=false;
+        check(vpd::drawScene(repeat.data(),vpd::kSceneWidth,
+                             vpd::kSceneHeight,stride,view),
+              "inactive projectile raster failed");
+        check(checksum(repeat,stride)==original,
+              "inactive projectile changed approved legacy frame");
         view.camera_x_px=160;
         view.player_x_px=350;
         view.frame=6;
