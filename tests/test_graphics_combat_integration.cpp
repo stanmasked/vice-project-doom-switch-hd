@@ -1,6 +1,7 @@
 // Native HOST integration regression for the ROM-free training scene.
 // Exercise actual simulation -> SceneView -> RGBA renderer with no NES assets.
 #include "simulation.hpp"
+#include "combat_demo.hpp"
 #include "scene_renderer.hpp"
 #include "combat_scene_bridge.hpp"
 #include <array>
@@ -16,14 +17,7 @@ void require(bool condition, const char* message) {
 bool solid(void* pointer,int x,int y){
     return static_cast<const vpd::Scene*>(pointer)->solid(x,y);
 }
-vpd::Input inputAt(unsigned frame){
-    using namespace vpd;
-    if(frame<110U)return Input{Fire};
-    if(frame>=115U && frame<145U)return Input{Right};
-    if(frame>=145U && frame<175U)
-        return Input{static_cast<uint8_t>(Left | (frame<150U ? Jump : 0))};
-    return Input{};
-}
+
 vpd::SceneView combatView(const vpd::Simulation& sim){
     const auto& actor=sim.player();
     vpd::SceneView v{
@@ -63,7 +57,7 @@ Report exercise(){
     static constexpr std::array<unsigned,7> chosen{{0,17,57,77,109,159,199}};
     Report report;
     for(unsigned frame=0;frame<200U;++frame){
-        game.tick(inputAt(frame));
+        game.tick(vpd::combatDemoInput(frame));
         bool selected=false;
         for(unsigned wanted:chosen)if(wanted==frame)selected=true;
         if(!selected)continue;
