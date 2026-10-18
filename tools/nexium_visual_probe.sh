@@ -27,16 +27,39 @@ xdotool search --onlyvisible --name '[Nn]e[Xx]ium' > "$out/ne-x11-windows.txt" 2
 capture screen-before
 sleep 10
 capture screen-after
-# Best-effort Plus key trial: QuackShot's pinned NeXium keyboard map
-# uses M for Nintendo Switch Plus. Guest confirmation is independent.
+# QuackShot-proven NeXium keyboard defaults: E=R, C=A, D=right,
+# Z=Y (fire), X=B (jump), A=left, M=Plus. A held under R is an
+# explicit Vice test-only R+A mode switch. Only guest records are proof.
 if [[ -s "$out/ne-x11-windows.txt" ]]; then
   win="$(tail -n 1 "$out/ne-x11-windows.txt")"
   if xdotool windowfocus "$win" >> "$out/input-probe.txt" 2>&1; then
-    xdotool key --clearmodifiers --delay 120 m >> "$out/input-probe.txt" 2>&1 &&
+    xdotool keydown --clearmodifiers e
+    sleep 0.2
+    xdotool key --clearmodifiers --delay 120 c
+    xdotool keyup e
+    sleep 0.45
+    xdotool keydown --clearmodifiers d
+    sleep 0.9
+    xdotool keyup d
+    sleep 0.3
+    xdotool keydown --clearmodifiers z
+    sleep 0.5
+    xdotool keyup z
+    sleep 0.4
+    xdotool keydown --clearmodifiers x
+    sleep 0.4
+    xdotool keyup x
+    sleep 0.35
+    xdotool keydown --clearmodifiers a
+    sleep 0.9
+    xdotool keyup a
+    sleep 0.3
+    echo "host_manual_probe_sent=yes R+A/right/fire/jump/left" >> "$out/input-probe.txt"
+    xdotool key --clearmodifiers --delay 150 m >> "$out/input-probe.txt" 2>&1 &&
       echo "host_plus_key_sent=yes" >> "$out/input-probe.txt"
   fi
 else
-  echo "host_plus_key_sent=no window_not_found=yes" > "$out/input-probe.txt"
+  echo "host_manual_probe_sent=no window_not_found=yes" > "$out/input-probe.txt"
 fi
 sleep 3
 if kill -0 "$emu_pid" 2>/dev/null; then
