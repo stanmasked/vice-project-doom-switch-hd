@@ -4,6 +4,7 @@
 #include "combat_demo.hpp"
 #include "demo_witness_sd.hpp"
 #include "manual_input_witness.hpp"
+#include "dash_guest_witness.hpp"
 #include "scene_renderer.hpp"
 #include "combat_scene_bridge.hpp"
 #include "asset_atlas.hpp"
@@ -50,6 +51,7 @@ int main(int,char**) {
     const bool has_sd=we_mounted_sd || fsdevGetDeviceFileSystem("sdmc")!=nullptr;
     // New run, not leftover emulator/SD evidence from a previous NRO.
     (void)vpd::manualProofReset(has_sd);
+    (void)vpd::dashGuestProofReset(has_sd);
     if(has_sd)assets.reload(kExternalAtlasPath,kExternalAnimationPath);
     bool reload_failed=false;
     constexpr const char* kExternalTerrainPath=
@@ -100,6 +102,10 @@ int main(int,char**) {
     bool checkpoint_ok=false;
     unsigned manual_seq=0;
     bool plus_seen=false;
+    bool dash_probe_started=false;
+    bool dash_probe_finished=false;
+    uint32_t dash_probe_start_frame=0;
+    int32_t dash_probe_start_x=0;
     while(appletMainLoop()){
         padUpdate(&pad);
         const u64 buttons=padGetButtons(&pad);
@@ -123,6 +129,8 @@ int main(int,char**) {
             demo.toggle(game);
             animation.reset();
             checkpoint_ok=false;
+            dash_probe_started=false;
+            dash_probe_finished=false;
             if(!demo.enabled()){
                 manual_seq=1;
                 (void)vpd::manualProofAppend(has_sd,vpd::ManualProofEvent::Enter,
@@ -147,7 +155,10 @@ int main(int,char**) {
             terrain_reload_failed= !has_sd ||
                 terrain.reload(kExternalTerrainPath)!=vpd::TerrainReload::Loaded;
         }
-        if(pressed&HidNpadButton_ZR) {
+        // ZR now dashes in manual play. StickL+ZR retains the developer
+        // terrain reset; autoplay still supports the original ZR reset.
+        if((pressed&HidNpadButton_ZR) &&
+           (demo.enabled() || (buttons&HidNpadButton_StickL))) {
             terrain.reset();
             terrain_reload_failed=false;
         }
@@ -181,6 +192,9 @@ int main(int,char**) {
         if(buttons&(HidNpadButton_A|HidNpadButton_B))input|=vpd::Jump;
         if((buttons&HidNpadButton_Y) && !(buttons&HidNpadButton_StickL))
             input|=vpd::Fire;
+        if(!demo.enabled() && (buttons&HidNpadButton_ZR) &&
+           !(buttons&HidNpadButton_StickL))
+            input|=vpd::Dash;
         if(demo.enabled()) {
             if(demo.tick(game)) animation.reset();
         } else {
@@ -189,6 +203,28 @@ int main(int,char**) {
             const auto before_shots=game.shotsFired();
             if(toggle_manual)input=0; // R+A is a mode switch, not a jump
             game.tick(vpd::Input{input});
+            // Independent dash proof: record only after the live Switch
+            // gameplay core has consumed ZR + Right and moved six pixels.
+            if(manual_seq==5 && !dash_probe_started &&
+               (input&(vpd::Dash|vpd::Right))==(vpd::Dash|vpd::Right) &&
+               game.player().x-before_x==6*vpd::kFixed &&
+               game.dashing() && game.dashCooldown()==45){
+                dash_probe_started=vpd::dashGuestProofAppend(
+                    has_sd,vpd::DashGuestEvent::Start,game,
+                    game.player().x-before_x);
+                if(dash_probe_started){
+                    dash_probe_start_frame=game.frame();
+                    dash_probe_start_x=before_x;
+                }
+            }
+            if(dash_probe_started && !dash_probe_finished &&
+               game.frame()==dash_probe_start_frame+5 &&
+               !game.dashing() && game.dashCooldown()==40 &&
+               game.player().x-dash_probe_start_x==36*vpd::kFixed){
+                dash_probe_finished=vpd::dashGuestProofAppend(
+                    has_sd,vpd::DashGuestEvent::Complete,game,
+                    game.player().x-dash_probe_start_x);
+            }
             vpd::ManualProofEvent event=vpd::ManualProofEvent::Enter;
             int32_t metric=0;
             if(manual_seq==1 && (input&vpd::Right) &&
@@ -227,6 +263,7 @@ int main(int,char**) {
         view.asset_reload_failed=reload_failed;
         view.moving=actor.vx!=0;
         view.replay_demo=demo.enabled();
+        view.manual_controls=!demo.enabled();
         view.demo_checkpoint_ok=checkpoint_ok && demo.enabled();
         // Same adapter is exercised by native host combat/raster CTest.
         vpd::applyCombatOverlay(view,game);

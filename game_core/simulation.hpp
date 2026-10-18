@@ -12,7 +12,7 @@ constexpr int kMapWidth=64;
 constexpr int kMapHeight=15;
 constexpr int kPlayerWidth=12;
 constexpr int kPlayerHeight=14;
-enum Buttons : uint8_t { Left=1, Right=2, Jump=4, Fire=8 };
+enum Buttons : uint8_t { Left=1, Right=2, Jump=4, Fire=8, Dash=16 };
 struct Input { uint8_t buttons=0; };
 struct Actor {
     int32_t x=0;
@@ -59,6 +59,9 @@ public:
     uint64_t fingerprint() const;
     const std::array<Projectile,kMaxProjectiles>& projectiles() const { return projectiles_; }
     uint32_t shotsFired() const { return shots_fired_; }
+    bool dashing() const { return dash_ticks_>0; }
+    uint8_t dashCooldown() const { return dash_cooldown_; }
+    bool dashEverUsed() const { return dash_ever_used_; }
     const TrainingTarget& trainingTarget() const { return target_; }
 private:
     Scene scene_;
@@ -69,6 +72,11 @@ private:
     bool facing_left_=false;
     uint8_t fire_cooldown_=0;
     uint32_t shots_fired_=0;
+    uint8_t dash_ticks_=0;
+    uint8_t dash_cooldown_=0;
+    int8_t dash_direction_=0;
+    bool dash_was_down_=false;
+    bool dash_ever_used_=false;
     std::array<Projectile,kMaxProjectiles> projectiles_{};
     TrainingTarget target_{};
     void advanceProjectiles();

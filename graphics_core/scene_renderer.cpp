@@ -221,6 +221,15 @@ bool drawScene(uint32_t* target,int width,int height,int stride_pixels,
     }
     int player_x=(view.player_x_px-view.camera_x_px)*2;
     int player_y=(view.player_y_px+80)*2;
+    // Only a real active burst draws motion streaks; replay-demo frames
+    // without dash preserve all of their previous pixels.
+    if(view.dash_active){
+        const int trail_dir=view.facing_left?1:-1;
+        for(int i=0;i<3;++i){
+            const int sx=player_x+trail_dir*(18+i*12);
+            s.rect(sx,player_y+7+i*3,17-i*3,4,rgba(103,221,228));
+        }
+    }
     // Atlas-driven sprite when supplied, preserving old fallback for tests.
     if(view.sprite_atlas && view.sprite_atlas->pixels) {
         unsigned sprite_frame=view.sprite_frame>=0?
@@ -257,6 +266,16 @@ bool drawScene(uint32_t* target,int width,int height,int stride_pixels,
         s.text(760,18,"REPLAY DEMO",rgba(240,204,111),2);
     if(view.replay_demo && view.demo_checkpoint_ok)
         s.text(756,42,"CORE STATE MATCH",rgba(164,210,193),2);
+    if(view.manual_controls){
+        s.text(574,42,view.dash_active?"DASH : ACTIVE":
+               (view.dash_cooldown?"DASH : CHARGING":"DASH : READY"),
+               view.dash_active?rgba(103,221,228):rgba(173,198,212),2);
+        // Bounded synthetic cooldown: 45 ticks from trigger to availability.
+        s.rect(832,45,90,7,rgba(55,70,88));
+        const int capacity=45-static_cast<int>(view.dash_cooldown>45?
+                                              45:view.dash_cooldown);
+        s.rect(832,45,capacity*2,7,rgba(111,204,214));
+    }
     s.rect(932,22,200,16,rgba(56,70,88));
     s.rect(932,22,125,16,rgba(171,66,75));
     s.rect(932,47,126,8,rgba(55,88,108));
@@ -294,7 +313,10 @@ bool drawScene(uint32_t* target,int width,int height,int stride_pixels,
                rgba(153,218,195),2);
     }
     s.rect(0,689,1280,31,rgba(13,19,33));
-    s.text(25,697,"MOVE : D PAD  /  JUMP : A OR B  /  EXIT : PLUS",rgba(173,184,207),2);
+    s.text(25,697,view.manual_controls?
+           "MOVE:D PAD  JUMP:A/B  FIRE:Y  DASH:ZR  EXIT:PLUS":
+           "MOVE : D PAD  /  JUMP : A OR B  /  EXIT : PLUS",
+           rgba(173,184,207),2);
     s.text(760,697,view.asset_reload_failed?"RELOAD FAILED":
        (view.external_sprite_asset?"ART: SD OVERRIDE":"ART: EMBEDDED"),
        view.asset_reload_failed?rgba(243,121,104):rgba(164,210,193),2);

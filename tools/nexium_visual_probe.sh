@@ -55,6 +55,16 @@ if [[ -s "$out/ne-x11-windows.txt" ]]; then
     xdotool keyup a
     sleep 0.3
     echo "host_manual_probe_sent=yes R+A/right/fire/jump/left" >> "$out/input-probe.txt"
+    # NeXium's controller_config.rs defaults T=ZR, D=left-stick right.
+    # Distinct guest SD evidence, NOT this host input log, proves the dash.
+    xdotool keydown --clearmodifiers d
+    sleep 0.1
+    xdotool keydown --clearmodifiers t
+    sleep 0.6
+    xdotool keyup t
+    xdotool keyup d
+    sleep 0.25
+    echo "host_dash_probe_sent=yes keys=D+T expected=ZR+Right" >> "$out/input-probe.txt"
     xdotool key --clearmodifiers --delay 150 m >> "$out/input-probe.txt" 2>&1 &&
       echo "host_plus_key_sent=yes" >> "$out/input-probe.txt"
   fi

@@ -89,3 +89,12 @@ python3 tools/audit_nexium_gui_lifecycle.py --evidence "$out"
 # NeXium kernel logs, not window state or guest SD self-report, establish
 # whether the guest svcExitProcess completed and the runner stopped its cores.
 python3 tools/audit_nexium_guest_process_exit.py --evidence "$out"
+# Validate a separate SD trace written by the actual guest gameplay loop.
+# Host keyboard injection and hand-authored fixtures cannot replace this.
+find "$HOME" "$XDG_DATA_HOME" "$XDG_CONFIG_HOME" "$XDG_CACHE_HOME" \
+  -type f -name dash_witness.txt -print > "$out/dash-trace-paths.txt"
+if [[ -s "$out/dash-trace-paths.txt" ]]; then
+  IFS= read -r guest < "$out/dash-trace-paths.txt"
+  cp "$guest" "$out/guest-dash-witness.txt"
+fi
+python3 tools/audit_nexium_dash_guest.py --evidence "$out"
