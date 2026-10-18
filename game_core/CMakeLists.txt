@@ -15,6 +15,15 @@ add_test(NAME deterministic_simulation COMMAND vpd_simulation_test)
 add_executable(vpd_combat_replay combat_replay.cpp)
 target_link_libraries(vpd_combat_replay PRIVATE vpd_simulation)
 add_test(NAME romfree_combat_replay COMMAND vpd_combat_replay --verify)
+# 16 deterministic seed scripts x 512 ticks: movement, fire, jump, wall edits,
+# independent duplicate replays, and strict pinned 8,192-frame FNV witness.
+add_executable(vpd_combat_matrix_test ../tests/test_combat_replay_matrix.cpp)
+target_link_libraries(vpd_combat_matrix_test PRIVATE vpd_simulation)
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+  target_compile_options(vpd_combat_matrix_test PRIVATE
+                         -Wall -Wextra -Wpedantic -Werror)
+endif()
+add_test(NAME romfree_combat_matrix COMMAND vpd_combat_matrix_test)
 # CSV path must produce the same pinned final row as the verified scenario.
 add_test(NAME romfree_combat_replay_csv
          COMMAND vpd_combat_replay --frames 200)
