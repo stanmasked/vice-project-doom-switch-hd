@@ -1785,6 +1785,98 @@ inline void stage124_pixel(unsigned sl,unsigned xt,unsigned xp,
 }
 #endif
 
+// Stage129: real newppu OAM sprite0 pattern, priority, BG CHR and final XBuf.
+// This only observes private generated Mapper-4 OAM ROMs (Y120, tile2/3, X64).
+// Unlike the source-level Stage128 contract, this sees actual pixel output.
+#if defined(VPD_NATIVE_SYNTHETIC_SPRITE_COLLISION) && defined(VPD_NATIVE_SYNTHETIC_MIDFRAME_CHR)
+struct Stage129SpriteAudit {
+    unsigned samples=0,invalid=0,row=0,first_xbuf=0,first_bg=0,first_sp=0;
+    bool emitted=false;
+};
+inline Stage129SpriteAudit& stage129_state() {
+    static Stage129SpriteAudit a;
+    return a;
+}
+inline int stage129_select(const char* name,const char* yes,const char* no) {
+    const char* value=std::getenv(name);
+    if(!value)return -1;
+    if(std::strcmp(value,yes)==0)return 1;
+    if(std::strcmp(value,no)==0)return 0;
+    return -1;
+}
+inline void stage129_pixel(unsigned sl,unsigned x,unsigned oamcount,
+                           unsigned oamy,unsigned tile,unsigned attr,unsigned oamx,
+                           bool sprite_read,unsigned sprite_pattern,bool havepixel,
+                           unsigned bgpattern,unsigned color,unsigned status,
+                           unsigned xbuf,unsigned ntaddr) {
+    static const char* enabled=std::getenv("VPD_STAGE129_SPRITE_PROBE");
+    if(!enabled || std::strcmp(enabled,"1")!=0)return;
+    const int opaque_bg=stage129_select("VPD_STAGE129_BG","opaque","transparent");
+    const int opaque_sp=stage129_select("VPD_STAGE129_SPRITE","solid","transparent");
+    const int behind=stage129_select("VPD_STAGE129_PRIORITY","behind","front");
+    const int sprite_enabled=stage129_select("VPD_STAGE129_MASK","enabled","disabled");
+    if(opaque_bg<0 || opaque_sp<0 || behind<0 || sprite_enabled<0)return;
+    Stage129SpriteAudit& a=stage129_state();
+    if(a.emitted || x<64U || x>=72U || sl<120U || sl>140U)return;
+    const MidframeChr& m=stage110_state();
+    if(!m.switched || m.writes!=2 || sl<m.switch_sl+8U)return;
+    // Do not accept an empty OAM rendering slot as sprite evidence.
+    if(!oamcount)return;
+    if(a.samples==0)a.row=sl;
+    if(sl!=a.row)return;
+    const unsigned q=((ntaddr&0x40U)?2U:0U)+((ntaddr&0x02U)?1U:0U);
+    const unsigned expect_bg=opaque_bg?3U:0U;
+    const unsigned expect_sprite=opaque_sp?3U:0U;
+    const bool expect_have=opaque_sp && sprite_enabled;
+    const bool expect_hit=expect_have && opaque_bg;
+    const bool visible=expect_have && (!behind || !opaque_bg);
+    const unsigned expected_color=visible?0x2AU:(opaque_bg?0x30U+q:0x0FU);
+    const unsigned expected_xbuf=expected_color|0x80U;
+    if(oamy!=120U || tile!=(opaque_sp?2U:3U) ||
+       oamx!=64U || attr!=(behind?0x20U:0U) ||
+       !sprite_read || sprite_pattern!=expect_sprite ||
+       havepixel!=expect_have || bgpattern!=expect_bg ||
+       ((status&0x40U)!=0)!=expect_hit ||
+       ntaddr<0x2000U || ntaddr>=0x3000U ||
+       color!=expected_color || xbuf!=expected_xbuf)
+        ++a.invalid;
+    if(a.samples==0) {
+        a.first_xbuf=xbuf;
+        a.first_bg=bgpattern;
+        a.first_sp=sprite_pattern;
+    }else if(a.first_xbuf!=xbuf || a.first_bg!=bgpattern ||
+              a.first_sp!=sprite_pattern)
+        ++a.invalid;
+    ++a.samples;
+    if(a.samples==8){
+        if(a.invalid){
+            std::fprintf(stderr,
+                "VPD_STAGE129_REJECTED_SPRITE_OAM invalid=%u "
+                "sl=%u bg=%u sp=%u xbuf=%u samples=8 "
+                "synthetic_only=yes\n",
+                a.invalid,a.row,a.first_bg,a.first_sp,a.first_xbuf);
+        }else{
+            std::fprintf(stderr,
+                "VPD_STAGE129_NATIVE_SPRITE_OAM_PASS "
+                "bg=%s sprite=%s priority=%s mask=%s "
+                "sl=%u sample_x=64 samples=8 "
+                "sprite_pattern=%u bg_pattern=%u "
+                "sprite_visible=%s sprite0_hit=%s xbuf=%u invalid=0 "
+                "actual_fceux_oam_and_xbuf=yes synthetic_only=yes "
+                "original_game_sprite_proven=no\n",
+                opaque_bg?"opaque":"transparent",
+                opaque_sp?"solid":"transparent",
+                behind?"behind":"front",
+                sprite_enabled?"enabled":"disabled",
+                a.row,a.first_sp,a.first_bg,
+                visible?"yes":"no",expect_hit?"yes":"no",a.first_xbuf);
+        }
+        std::fflush(stderr);
+        a.emitted=true;
+    }
+}
+#endif
+
 // Stage109 synthetic-only MMC3 write -> BG CHR read -> framebuffer timeline.
 // Internal runppu tick units are not authoritative NTSC dots or CPU cycles.
 #ifdef VPD_NATIVE_SYNTHETIC_CHR_TIMELINE
