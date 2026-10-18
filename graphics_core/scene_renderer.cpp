@@ -208,6 +208,17 @@ bool drawScene(uint32_t* target,int width,int height,int stride_pixels,
             }
         }
     }
+    // Three-hit stationary practice target, not an original game enemy.
+    // This layer is absent when no target is supplied, preserving golden art.
+    if(view.training_target_health>0) {
+        const int tx=(view.training_target_x_px-view.camera_x_px)*2;
+        const int ty=(view.training_target_y_px+80)*2;
+        s.rect(tx,ty,32,32,rgba(99,111,131));
+        s.rect(tx+4,ty+4,24,24,rgba(198,94,79));
+        s.rect(tx+10,ty+10,12,12,rgba(236,191,117));
+        for(unsigned i=0;i<view.training_target_health&&i<3;++i)
+            s.rect(tx+i*10,ty-7,8,4,rgba(238,183,81));
+    }
     int player_x=(view.player_x_px-view.camera_x_px)*2;
     int player_y=(view.player_y_px+80)*2;
     // Atlas-driven sprite when supplied, preserving old fallback for tests.
