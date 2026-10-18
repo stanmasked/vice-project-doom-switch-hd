@@ -45,3 +45,32 @@ it does **not** claim that ZR was exercised inside the emulator until an
 independent guest-native dash witness is implemented. Frame pacing,
 performance on physical Switch, original NES gameplay equivalence and
 the NeXium GUI lifetime remain outside this stage's claims.
+
+## NeXium guest ZR input capture
+
+The input mapping is grounded in the NeXium source
+(`nexium-gui/src/controller_config.rs`): default keyboard `T` is **ZR**,
+and `D` is the left-stick right direction. The X11 test now sends D+T
+after the existing right/fire/jump/left manual verification, and before Plus.
+
+A new guest-only `dash_witness.txt` is truncated during NRO startup and
+receives no events from the host. The actual libnx gameplay loop records:
+
+1. `start` only when the live simulation consumes ZR+Right, moves by
+   1,536 fixed-point units (six pixels), enters the dash state and starts
+   its 45-tick cooldown.
+2. `complete` only five further gameplay ticks later, after a total
+   9,216 fixed-point units (36 pixels), with the dash completed and
+   40 cooldown ticks remaining.
+
+A new independent `tools/audit_nexium_dash_guest.py` requires exactly
+these two guest-generated records, strictly ordered field schemas and
+frame intervals. The native runner also requires the existing seven-event
+manual witness, normal kernel-level NRO exit proof and matching host
+injection record. The mutation regression tests reject host-only,
+missing, altered and reordered evidence.
+
+This new CI assertion is **not** considered proven until the
+`NeXium Vice runtime smoke test` for the exact commit passes.
+The feature remains a synthetic homebrew mechanic, not original game
+parity or physical Nintendo Switch performance evidence.
