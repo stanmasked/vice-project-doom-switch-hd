@@ -2529,7 +2529,7 @@ inline void stage141_pixel(unsigned sl,unsigned x,unsigned count,
             "first_bgpattern=%u second_bgpattern=%u "
             "first_xbuf=%u second_xbuf=%u samples=16 invalid=0 "
             "native_fceux=yes synthetic_only=yes "
-            "original_game_color_source_proven=no\\n",
+            "original_game_color_source_proven=no\n",
             names[stage141_mode()],a.rawcolor[0],a.rawcolor[1],
             a.sprite_pixel[0]?1U:0U,a.sprite_pixel[1]?1U:0U,
             a.bgpattern[0],a.bgpattern[1],a.color[0],a.color[1]);
