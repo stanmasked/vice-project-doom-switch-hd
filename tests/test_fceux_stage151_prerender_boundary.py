@@ -116,8 +116,9 @@ class CompiledBoundary(unittest.TestCase):
 int main(int argc,char**argv){
  if(argc<3)return 3;
  const bool active=argv[1][0]=='a';
- const bool omit=argv[2][0]=='o';
- const bool broken=argv[2][0]=='b';
+ // Full scenario names: "ok" must NOT alias "omit".
+ const bool omit=std::strcmp(argv[2],"omit")==0;
+ const bool broken=std::strcmp(argv[2],"broken")==0;
  setenv("VPD_STAGE149_OAM_WRITES_PROBE","1",1);
  setenv("VPD_STAGE149_OAM_WRITES_CASE",
         active?"activate_ninth":"preserve_eight",1);
