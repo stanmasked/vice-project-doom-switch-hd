@@ -1878,6 +1878,89 @@ inline void stage129_pixel(unsigned sl,unsigned x,unsigned oamcount,
 }
 #endif
 
+// Stage131 synthetic-only paired OAM source, priority and actual XBuf.
+#if defined(VPD_NATIVE_SYNTHETIC_DUAL_SPRITE) && defined(VPD_NATIVE_SYNTHETIC_MIDFRAME_CHR)
+struct Stage131DualAudit {
+    unsigned samples=0,invalid=0,row=0,first_color=0,first_q=0;
+    bool emitted=false;
+};
+inline Stage131DualAudit& stage131_state() {
+    static Stage131DualAudit a;
+    return a;
+}
+inline int stage131_case() {
+    static const char* value=std::getenv("VPD_STAGE131_DUAL_CASE");
+    if(!value)return -1;
+    const char* const options[]={"first_front","palette_swapped",
+        "first_transparent","first_behind","first_behind_clear"};
+    for(int i=0;i<5;++i)if(std::strcmp(value,options[i])==0)return i;
+    return -1;
+}
+inline void stage131_pixel(unsigned sl,unsigned x,unsigned count,
+                           unsigned y0,unsigned tile0,unsigned attr0,unsigned x0,
+                           unsigned y1,unsigned tile1,unsigned attr1,unsigned x1,
+                           bool seen0,unsigned pat0,bool seen1,unsigned pat1,
+                           int claimed,unsigned bgpat,unsigned color,
+                           unsigned status,unsigned xbuf,unsigned ntaddr) {
+    static const char* enabled=std::getenv("VPD_STAGE131_DUAL_PROBE");
+    if(!enabled || std::strcmp(enabled,"1")!=0)return;
+    const int mode=stage131_case();
+    if(mode<0)return;
+    Stage131DualAudit& a=stage131_state();
+    if(a.emitted || x<64U || x>=72U || sl<120U || sl>140U)return;
+    const MidframeChr& m=stage110_state();
+    if(!m.switched || m.writes!=2 || sl<m.switch_sl+8U)return;
+    if(a.samples==0)a.row=sl;
+    if(sl!=a.row)return;
+    const unsigned q=((ntaddr&0x40U)?2U:0U)+((ntaddr&0x02U)?1U:0U);
+    const unsigned expected_first=(mode==2)?0U:3U;
+    const unsigned expected_second=3U;
+    const unsigned expected_tile0=(mode==2)?3U:2U;
+    const unsigned expected_attr0=(mode==1)?1U:((mode>=3)?0x20U:0U);
+    const unsigned expected_attr1=(mode==1)?0U:1U;
+    const unsigned expected_bg=(mode==4)?0U:3U;
+    const int expected_claim=(mode==2)?1:0;
+    const bool expected_hit=mode!=2 && mode!=4;
+    const unsigned expected_color=(mode==1 || mode==2)?0x38U:
+        (mode==3)?0x30U+q:0x2AU;
+    const unsigned expected_xbuf=expected_color|0x80U;
+    if(count!=2 || y0!=120U || y1!=120U || x0!=64U || x1!=64U ||
+       tile0!=expected_tile0 || tile1!=2U ||
+       attr0!=expected_attr0 || attr1!=expected_attr1 ||
+       !seen0 || !seen1 || pat0!=expected_first || pat1!=expected_second ||
+       claimed!=expected_claim || bgpat!=expected_bg ||
+       ((status&0x40U)!=0)!=expected_hit ||
+       ntaddr<0x2000U || ntaddr>=0x3000U ||
+       color!=expected_color || xbuf!=expected_xbuf)
+        ++a.invalid;
+    if(a.samples==0){a.first_color=xbuf;a.first_q=q;}
+    else if(a.first_color!=xbuf || a.first_q!=q)++a.invalid;
+    ++a.samples;
+    if(a.samples==8){
+        static const char* const options[]={"first_front","palette_swapped",
+            "first_transparent","first_behind","first_behind_clear"};
+        if(a.invalid){
+            std::fprintf(stderr,
+                "VPD_STAGE131_REJECTED_DUAL_SPRITES case=%s invalid=%u "
+                "row=%u quadrant=%u xbuf=%u samples=8 synthetic_only=yes\n",
+                options[mode],a.invalid,a.row,a.first_q,a.first_color);
+        }else{
+            std::fprintf(stderr,
+                "VPD_STAGE131_NATIVE_DUAL_SPRITES_PASS "
+                "case=%s row=%u quadrant=%u sample_x=64 samples=8 "
+                "oam_count=2 first_pattern=%u second_pattern=%u "
+                "claimed_oam=%d sprite0_hit=%s xbuf=%u invalid=0 "
+                "actual_fceux_dual_oam_xbuf=yes synthetic_only=yes "
+                "original_game_sprites_proven=no\n",
+                options[mode],a.row,a.first_q,expected_first,expected_second,
+                expected_claim,expected_hit?"yes":"no",a.first_color);
+        }
+        std::fflush(stderr);
+        a.emitted=true;
+    }
+}
+#endif
+
 // Stage109 synthetic-only MMC3 write -> BG CHR read -> framebuffer timeline.
 // Internal runppu tick units are not authoritative NTSC dots or CPU cycles.
 #ifdef VPD_NATIVE_SYNTHETIC_CHR_TIMELINE
