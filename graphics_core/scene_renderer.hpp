@@ -39,6 +39,7 @@ struct SceneView {
     int32_t training_target_y_px=0;
     uint8_t training_target_health=0; // zero means invisible
     bool replay_demo=false; // opt-in ROM-free attract-mode label
+    bool demo_checkpoint_ok=false; // frame-200 synthetic state matched
 };
 constexpr int kSceneWidth=1280;
 constexpr int kSceneHeight=720;
