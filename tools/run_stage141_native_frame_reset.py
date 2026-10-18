@@ -10,7 +10,8 @@ from pathlib import Path
 
 from make_stage144_stable_frame_rom import make_rom,relocate
 from make_stage141_frame_reset_rom import make_rom as make_stale_rom
-from run_stage147_native_frame_source import verify as verify_source
+from run_stage147_native_frame_source import (
+    ColorSourceError,verify as verify_source)
 from run_stage100_fceux_synthetic_smoke import (
     backend_settings,categorize_exit)
 
@@ -184,7 +185,11 @@ def execute(binary,rom,folder,mode,*,enabled=True,reject=False,
         if reject:
             return verify_rejection(log)
         evidence=verify(log,mode)
-        evidence["source"]=verify_source(log,mode)
+        try:
+            evidence["source"]=verify_source(log,mode)
+        except ColorSourceError as exc:
+            raise FrameResetError("Native frame source provenance rejected: "+
+                                  str(exc)) from exc
         return evidence
     except FrameResetError as exc:
         details=re.findall(r"VPD_STAGE141_REJECTED_FRAME_RESET [^\r\n]{0,500}",log)
