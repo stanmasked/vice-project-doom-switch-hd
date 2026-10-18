@@ -40,3 +40,31 @@ This is evidence of running *original ROM-free homebrew test-scene
 control logic* inside NeXium. It does not prove that the emulator GUI
 process terminates, that the physical Switch runs the binary, precise
 frame pacing, or reproduction of original Vice: Project Doom gameplay.
+
+## Host GUI lifecycle diagnostics (subsequent stage)
+
+The Plus event and framebuffer cleanup come from the guest NRO. They do **not**
+mean the NeXium graphical process closed. The original shell probe inspected
+the PID of the `timeout(1)` watchdog and described it as the emulator. That
+PID is not an independent observation of the actual GUI process.
+
+The revised runner preserves the existing seven-event guest proof and adds
+`host-gui-lifecycle.txt`, including the visible state of the originally
+focused X11 window three seconds after injecting Plus, the wait code from
+`timeout(1)` and a conservative host-process classification:
+
+- `watchdog` (124): timeout deadline terminated the subprocess.
+- `signal_or_watchdog` (137): a signal or escalated watchdog; ambiguous.
+- `returned_zero` (0): the wrapped process returned successfully.
+- `returned_nonzero`: another return code; no clean-exit assertion.
+
+The independent `audit_nexium_gui_lifecycle.py` rejects contradictory or
+truncated records, requires the **separate** successful guest and host-key
+audits, and writes `host-lifecycle-result.txt`. A missing original X11
+window does not prove the whole GUI exited; a normal process return after
+Plus alone does not prove Plus *caused* it. The report therefore explicitly
+retains `emulator_gui_exit_caused_by_plus_proven=no`.
+
+This new test provides a reproducible explanation for the previous unknown
+host lifecycle, not a claim of original NES-game fidelity or a release-ready
+Switch port.
