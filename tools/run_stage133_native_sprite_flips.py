@@ -25,7 +25,12 @@ REJECT_PATTERN=re.compile(
     r"^VPD_STAGE133_REJECTED_SPRITE_FLIP "
     r"mode=(none|horizontal|vertical|both) "
     r"invalid=(\d+) row=(\d+) source_row=(\d+) "
-    r"samples=8 synthetic_only=yes$", re.MULTILINE)
+    r"samples=8 bad_meta=(\d+) bad_fetch=(\d+) "
+    r"bad_pattern=(\d+) bad_color=(\d+) "
+    r"fetch_addr=(\d+) fetch_low=(\d+) fetch_high=(\d+) "
+    r"observed_pattern=(\d+) expected_pattern=(\d+) "
+    r"observed_xbuf=(\d+) expected_xbuf=(\d+) synthetic_only=yes$",
+    re.MULTILINE)
 
 
 class NativeFlipError(ValueError):
@@ -77,12 +82,23 @@ def verify_rejection(log):
     matches=list(REJECT_PATTERN.finditer(log))
     if len(matches)!=1:
         raise NativeFlipError("Malformed native reject marker")
-    mode,invalid,row,source_row=matches[0].groups()
-    if (mode!="horizontal" or int(invalid)<=0 or
-            not 120<=int(row)<=140 or
-            not 0<=int(source_row)<8):
+    values=matches[0].groups()
+    mode=values[0]
+    (invalid,row,source_row,bad_meta,bad_fetch,bad_pattern,bad_color,
+     fetch_addr,fetch_low,fetch_high,observed_pattern,expected_pattern,
+     observed_xbuf,expected_xbuf)=map(int,values[1:])
+    if (mode!="horizontal" or invalid<=0 or bad_meta<=0 or
+            invalid<bad_meta or invalid>8 or bad_meta>8 or
+            any(n>8 for n in (bad_fetch,bad_pattern,bad_color)) or
+            not 120<=row<=140 or not 0<=source_row<8 or
+            fetch_addr!=0x1020+source_row or
+            any(n not in range(4) for n in (observed_pattern,expected_pattern)) or
+            observed_xbuf not in range(128,192) or
+            expected_xbuf not in range(128,192)):
         raise NativeFlipError("Failed to prove the wrong flip-flag mismatch")
-    return {"rejected":True,"errors":int(invalid)}
+    return {"rejected":True,"errors":invalid,"bad_meta":bad_meta,
+            "bad_fetch":bad_fetch,"bad_pattern":bad_pattern,
+            "bad_color":bad_color}
 
 
 def verify_sweep(results):
@@ -165,9 +181,11 @@ def execute(binary,rom,folder,mode,*,enabled=True,reject=False,timeout=35):
     try:
         return verify_rejection(log) if reject else verify(log,mode)
     except NativeFlipError as exc:
-        errors=re.findall(r"VPD_STAGE133_REJECTED_SPRITE_FLIP [^\r\n]{0,200}",log)
-        raise NativeFlipError(str(exc)+": "+(errors[-1] if errors else
-                              categorize_exit(p.returncode,log))) from exc
+        errors=re.findall(
+            r"(?:VPD_STAGE133_COLOR_DIAGNOSTIC|VPD_STAGE133_REJECTED_SPRITE_FLIP) "
+            r"[^\r\n]{0,1000}",log)
+        details=" | ".join(errors[-2:]) if errors else categorize_exit(p.returncode,log)
+        raise NativeFlipError(str(exc)+": "+details) from exc
 
 
 def run(binary,temp):
