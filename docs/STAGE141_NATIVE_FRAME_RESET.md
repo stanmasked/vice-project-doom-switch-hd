@@ -90,8 +90,44 @@ and no sprite pixel. The fixed ROM must still pass before the
 `STAGE146_NATIVE_STALE_JMP_CAUSAL_CONTROL` summary can be emitted.
 The observer-off and false-clean controls remain mandatory.
 
-Stage146 is an additional causal verification and must not be claimed
-complete until a fresh native CI run supplies its distinct marker.
+Stage146 is now confirmed by the completed
+[39136164059](https://github.com/stanmasked/vice-project-doom-switch-hd/actions/runs/39136164059)
+pinned native run: `STAGE146_NATIVE_STALE_JMP_CAUSAL_CONTROL` and the
+original `STAGE141_NATIVE_FRAME_OVERFLOW_RESET_PROOF` both passed.
+The old and corrected Mapper4 test ROMs differed by precisely eight
+6502 JMP-operand bytes, and reproduced/stabilized XBuf 143→164/143→143.
+
+## Stage147: positive pixel-source evidence
+
+The native Stage141 observer already records raw `pixelcolor`,
+`havepixel`, and background pattern bits from the actual raster
+source alongside final XBuf. Previously it printed these only for
+rejected frames. Stage147 adds an *independent positive* certificate
+`VPD_STAGE147_NATIVE_FRAME_COLOR_SOURCE_PASS` for every accepted
+two-frame ROM:
+
+- `eight_visible`: raw palette color 42 and a selected sprite pixel
+  in both frames; background pattern bits zero; XBuf 170.
+- `nine_overflow`: raw palette color 15, no selected sprite pixel,
+  background pattern bits zero; XBuf 143 in both frames.
+
+This source gate executes only when pre-existing OAM, status and XBuf
+checks are clean, preserving established negative-control rejection
+counts. It catches a matching final XBuf with the wrong underlying
+sprite/palette/background source. The native Python runner requires
+one such marker **and** the existing Stage141 positive certificate
+per scenario, before either can count toward a sweep.
+
+A compiled C++ regression additionally alters only the raw palette
+value on the second frame, preserving its nominal XBuf, and requires
+a native-observer-style explicit REJECT. A separate Python suite
+rejects duplicate, absent, malformed, noncanonical and forged source
+certificates.
+
+This work uses only synthetic Mapper4 fixtures and must not be
+described as confirmed by pinned FCEUX until CI reports:
+`STAGE147_NATIVE_TWO_FRAME_COLOR_SOURCE_PROOF`.
+It does not validate original game graphics or a Switch build.
 
 ## Native fixture and observation
 

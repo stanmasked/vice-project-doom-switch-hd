@@ -10,6 +10,8 @@ from pathlib import Path
 
 from make_stage144_stable_frame_rom import make_rom,relocate
 from make_stage141_frame_reset_rom import make_rom as make_stale_rom
+from run_stage147_native_frame_source import (
+    ColorSourceError,verify as verify_source)
 from run_stage100_fceux_synthetic_smoke import (
     backend_settings,categorize_exit)
 
@@ -178,8 +180,17 @@ def execute(binary,rom,folder,mode,*,enabled=True,reject=False,
             raise FrameResetError("Disabled native frame observer yielded false proof")
         return None
     try:
-        return (verify_stale_jump_rejection(log) if stale else
-                verify_rejection(log) if reject else verify(log,mode))
+        if stale:
+            return verify_stale_jump_rejection(log)
+        if reject:
+            return verify_rejection(log)
+        evidence=verify(log,mode)
+        try:
+            evidence["source"]=verify_source(log,mode)
+        except ColorSourceError as exc:
+            raise FrameResetError("Native frame source provenance rejected: "+
+                                  str(exc)) from exc
+        return evidence
     except FrameResetError as exc:
         details=re.findall(r"VPD_STAGE141_REJECTED_FRAME_RESET [^\r\n]{0,500}",log)
         diagnostic=re.findall(
@@ -223,6 +234,11 @@ def run(binary,temp):
           "stable_xbuf=143 native_palette_drift_rejected=yes "
           "wrong_clean_control=rejected observer_off_control=clean "
           "original_game_execution_proven=no")
+    print("STAGE147_NATIVE_TWO_FRAME_COLOR_SOURCE_PROOF "
+          "native_fceux=yes synthetic_mapper4_only=yes cases=2 "
+          "frames=4 samples=32 source_raw_palette_checked=yes "
+          "sprite_pixel_identity_checked=yes background_pattern_checked=yes "
+          "native_xbuf_crosschecked=yes original_game_color_source_proven=no")
     print("STAGE141_NATIVE_FRAME_OVERFLOW_RESET_PROOF "
           "native_fceux=yes synthetic_mapper4_only=yes cases=2 "
           "frames=4 samples=32 observed_pre_render_status_reset=yes "
