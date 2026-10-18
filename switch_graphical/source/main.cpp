@@ -1,6 +1,7 @@
 // Independent libnx native raster scene; no NES emulator or proprietary art.
 #include <switch.h>
 #include "simulation.hpp"
+#include "combat_demo.hpp"
 #include "scene_renderer.hpp"
 #include "combat_scene_bridge.hpp"
 #include "asset_atlas.hpp"
@@ -90,11 +91,18 @@ int main(int,char**) {
     bool decor_layout_reload_failed=false;
     vpd::AnimationPlayer animation;
     vpd::Simulation game;
+    vpd::CombatDemo demo; // auto-starts for reproducible emulator smoke tests
     while(appletMainLoop()){
         padUpdate(&pad);
         const u64 buttons=padGetButtons(&pad);
         const u64 pressed=padGetButtonsDown(&pad);
         if(buttons&HidNpadButton_Plus)break;
+        // Left-stick click switches between 200-frame demo and manual play.
+        // StickL+Y still performs the independent development-art reset.
+        if((pressed&HidNpadButton_StickL) && !(buttons&HidNpadButton_Y)) {
+            demo.toggle(game);
+            animation.reset();
+        }
         if(pressed&HidNpadButton_X) {
             const vpd::BundleReload result=has_sd ?
                 assets.reload(kExternalAtlasPath,kExternalAnimationPath) :
@@ -147,7 +155,11 @@ int main(int,char**) {
         if(buttons&(HidNpadButton_A|HidNpadButton_B))input|=vpd::Jump;
         if((buttons&HidNpadButton_Y) && !(buttons&HidNpadButton_StickL))
             input|=vpd::Fire;
-        game.tick(vpd::Input{input});
+        if(demo.enabled()) {
+            if(demo.tick(game)) animation.reset();
+        } else {
+            game.tick(vpd::Input{input});
+        }
         u32 stride=0;
         auto* pixels=static_cast<uint32_t*>(framebufferBegin(&fb,&stride));
         const auto& actor=game.player();
@@ -161,6 +173,7 @@ int main(int,char**) {
         view.external_animation_source=assets.externalAnimation();
         view.asset_reload_failed=reload_failed;
         view.moving=actor.vx!=0;
+        view.replay_demo=demo.enabled();
         // Same adapter is exercised by native host combat/raster CTest.
         vpd::applyCombatOverlay(view,game);
         if(!animation.tick(assets.animation(),
