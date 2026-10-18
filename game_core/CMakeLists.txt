@@ -11,6 +11,13 @@ add_executable(vpd_simulation_test ../tests/test_simulation.cpp)
 target_link_libraries(vpd_simulation_test PRIVATE vpd_simulation)
 enable_testing()
 add_test(NAME deterministic_simulation COMMAND vpd_simulation_test)
+# Manual-only ROM-free burst movement; must not change pinned autoplay hashes.
+add_executable(vpd_manual_dash_test ../tests/test_manual_dash.cpp)
+target_link_libraries(vpd_manual_dash_test PRIVATE vpd_simulation)
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+  target_compile_options(vpd_manual_dash_test PRIVATE -Wall -Wextra -Wpedantic -Werror)
+endif()
+add_test(NAME romfree_manual_dash COMMAND vpd_manual_dash_test)
 # ROM-free command-line replay is a host-side integration proof only.
 add_executable(vpd_combat_replay combat_replay.cpp)
 target_link_libraries(vpd_combat_replay PRIVATE vpd_simulation)
