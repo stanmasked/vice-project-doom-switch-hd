@@ -116,3 +116,12 @@ if [[ -s "$out/guard-combat-trace-paths.txt" ]]; then
   cp "$guest" "$out/guest-guard-combat-witness.txt"
 fi
 python3 tools/audit_nexium_guard_combat.py --evidence "$out"
+# Unlike the previous offscreen diagnostic, these two events arise from
+# the visible manual game.tick(Input{pad}) instance after real X11 controls.
+find "$HOME" "$XDG_DATA_HOME" "$XDG_CONFIG_HOME" "$XDG_CACHE_HOME" \
+  -type f -name guard_live_witness.txt -print > "$out/guard-live-trace-paths.txt"
+if [[ -s "$out/guard-live-trace-paths.txt" ]]; then
+  IFS= read -r guest < "$out/guard-live-trace-paths.txt"
+  cp "$guest" "$out/guest-guard-live-witness.txt"
+fi
+python3 tools/audit_nexium_guard_live.py --evidence "$out"
