@@ -314,7 +314,7 @@ bool drawScene(uint32_t* target,int width,int height,int stride_pixels,
     }
     s.rect(0,689,1280,31,rgba(13,19,33));
     s.text(25,697,view.manual_controls?
-           "MOVE : D PAD  /  JUMP : A OR B  /  FIRE : Y  /  DASH : ZR  /  EXIT : PLUS":
+           "MOVE:D PAD  JUMP:A/B  FIRE:Y  DASH:ZR  EXIT:PLUS":
            "MOVE : D PAD  /  JUMP : A OR B  /  EXIT : PLUS",
            rgba(173,184,207),2);
     s.text(760,697,view.asset_reload_failed?"RELOAD FAILED":
