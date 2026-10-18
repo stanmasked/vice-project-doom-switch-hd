@@ -8,7 +8,8 @@ import tempfile
 import time
 from pathlib import Path
 
-from make_stage144_stable_frame_rom import make_rom
+from make_stage144_stable_frame_rom import make_rom,relocate
+from make_stage141_frame_reset_rom import make_rom as make_stale_rom
 from run_stage100_fceux_synthetic_smoke import (
     backend_settings,categorize_exit)
 
@@ -30,6 +31,13 @@ BAD=re.compile(
     r"reset_after=(yes|no) second_overflow=(yes|no) "
     r"first_xbuf=(\d+) second_xbuf=(\d+) "
     r"samples=16 synthetic_only=yes$", re.MULTILINE)
+STALE_PIXEL=re.compile(
+    r"^VPD_STAGE143_FRAME_PIXEL_DIAGNOSTIC case=nine_overflow "
+    r"first_raw=(\d+) second_raw=(\d+) "
+    r"first_sprite=(\d+) second_sprite=(\d+) "
+    r"first_bgpattern=(\d+) second_bgpattern=(\d+) "
+    r"first_xbuf=(\d+) second_xbuf=(\d+) synthetic_only=yes$",
+    re.MULTILINE)
 
 
 class FrameResetError(ValueError):
@@ -78,6 +86,26 @@ def verify_rejection(log):
     return {"rejected":True,"false_no_overflow":True}
 
 
+def verify_stale_jump_rejection(log):
+    """Require real native stale-ROM color drift, not merely any rejection."""
+    if (not isinstance(log,str) or log.count(REJECT)!=1 or
+            PASS in log or log.count("VPD_STAGE143_FRAME_PIXEL_DIAGNOSTIC")!=1):
+        raise FrameResetError("Stale absolute-JMP control lacks a unique native rejection")
+    bad=list(BAD.finditer(log))
+    pixel=list(STALE_PIXEL.finditer(log))
+    if len(bad)!=1 or len(pixel)!=1:
+        raise FrameResetError("Stale-JMP control lost original raw pixel provenance")
+    mode,invalid,first,before,after,second,c0,c1=bad[0].groups()
+    measurements=tuple(_int(v) for v in pixel[0].groups())
+    if (mode!="nine_overflow" or _int(invalid)!=8 or
+            (first,before,after,second)!=("yes","yes","no","yes") or
+            (_int(c0),_int(c1))!=(143,164) or
+            measurements!=(15,36,0,0,0,0,143,164)):
+        raise FrameResetError("Stale-JMP native witness did not reproduce palette drift")
+    return {"rejected":True,"stale_jmp":True,"first_xbuf":143,
+            "second_xbuf":164,"native_sprite_pixel":False}
+
+
 def verify_sweep(reports):
     if (not isinstance(reports,list) or
             [name for name,_ in reports]!=list(MODES)):
@@ -95,8 +123,10 @@ def verify_sweep(reports):
             "original_game_frame_reset_proven":False}
 
 
-def execute(binary,rom,folder,mode,*,enabled=True,reject=False,timeout=45):
-    if mode not in MODES or (reject and not enabled):
+def execute(binary,rom,folder,mode,*,enabled=True,reject=False,
+            stale=False,timeout=45):
+    if (mode not in MODES or ((reject or stale) and not enabled) or
+            (reject and stale) or (stale and mode!="nine_overflow")):
         raise FrameResetError("Invalid synthetic frame-reset control")
     folder.mkdir(parents=True,exist_ok=True)
     env=os.environ.copy()
@@ -148,7 +178,8 @@ def execute(binary,rom,folder,mode,*,enabled=True,reject=False,timeout=45):
             raise FrameResetError("Disabled native frame observer yielded false proof")
         return None
     try:
-        return verify_rejection(log) if reject else verify(log,mode)
+        return (verify_stale_jump_rejection(log) if stale else
+                verify_rejection(log) if reject else verify(log,mode))
     except FrameResetError as exc:
         details=re.findall(r"VPD_STAGE141_REJECTED_FRAME_RESET [^\r\n]{0,500}",log)
         diagnostic=re.findall(
@@ -169,11 +200,29 @@ def run(binary,temp):
             reports.append((mode,execute(binary,rom,root/mode,mode)))
         wrong=execute(binary,root/"nine_overflow.nes",
                       root/"wrong_clean","eight_visible",reject=True)
+        # Stage146: generate the ORIGINAL broken Stage141 ROM afresh;
+        # eight instruction-operand bytes are the sole stable/stale delta.
+        stale_rom=root/"stale_nine_overflow.nes"
+        make_stale_rom(stale_rom,"nine_overflow")
+        if relocate(stale_rom.read_bytes())!=(
+                root/"nine_overflow.nes").read_bytes():
+            raise FrameResetError("Causal ROM pair differs beyond JMP relocation")
+        stale_report=execute(binary,stale_rom,root/"stale_jmp",
+                             "nine_overflow",stale=True)
         execute(binary,root/"eight_visible.nes",root/"observer_off",
                 "eight_visible",enabled=False)
     result=verify_sweep(reports)
     if not wrong["false_no_overflow"]:
         raise FrameResetError("False clean control was not natively rejected")
+    if not stale_report["stale_jmp"]:
+        raise FrameResetError("Missing native stale-loop causal rejection")
+    print("STAGE146_NATIVE_STALE_JMP_CAUSAL_CONTROL "
+          "native_fceux=yes synthetic_mapper4_only=yes "
+          "byte_delta=8 verified_mirrored_prg_only=yes "
+          "stale_first_xbuf=143 stale_second_xbuf=164 "
+          "stable_xbuf=143 native_palette_drift_rejected=yes "
+          "wrong_clean_control=rejected observer_off_control=clean "
+          "original_game_execution_proven=no")
     print("STAGE141_NATIVE_FRAME_OVERFLOW_RESET_PROOF "
           "native_fceux=yes synthetic_mapper4_only=yes cases=2 "
           "frames=4 samples=32 observed_pre_render_status_reset=yes "
