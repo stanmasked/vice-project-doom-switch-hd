@@ -65,6 +65,14 @@ if [[ -s "$out/ne-x11-windows.txt" ]]; then
     xdotool keyup d
     sleep 0.25
     echo "host_dash_probe_sent=yes keys=D+T expected=ZR+Right" >> "$out/input-probe.txt"
+    # New separate *live* encounter trial: continue moving right without
+    # scripted game-core inputs. Require NRO-produced alert and melee proof.
+    # Up to 3.4 seconds under the existing 38-second emulator watchdog.
+    xdotool keydown --clearmodifiers d
+    sleep 3.4
+    xdotool keyup d
+    sleep 0.15
+    echo "host_guard_live_move_sent=yes key=D duration=3.4s" >> "$out/input-probe.txt"
     xdotool key --clearmodifiers --delay 150 m >> "$out/input-probe.txt" 2>&1 &&
       echo "host_plus_key_sent=yes" >> "$out/input-probe.txt"
   fi
