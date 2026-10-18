@@ -96,6 +96,34 @@ int main(){
         check(firing.shotsFired()==0 &&
               firing.fingerprint()==Simulation{}.fingerprint(),
               "combat state survived a full gameplay reset");
+        // Same synthetic shooting timeline yields the same three target hits.
+        Simulation target_a,target_b;
+        check(target_a.trainingTarget().health==3 &&
+              target_a.trainingTarget().hits==0,
+              "practice target did not initialize");
+        for(int f=0;f<110;++f) {
+            target_a.tick(Input{Fire});
+            target_b.tick(Input{Fire});
+            check(target_a.fingerprint()==target_b.fingerprint(),
+                  "target health or hits lost deterministic replay");
+        }
+        check(target_a.trainingTarget().health==0 &&
+              target_a.trainingTarget().hits==3,
+              "three authentic swept shot impacts must destroy target");
+        for(int f=0;f<110;++f)target_a.tick(Input{Fire});
+        check(target_a.trainingTarget().hits==3,
+              "already destroyed target counted duplicate impacts");
+        Simulation shielded;
+        // An earlier solid column must block every bullet and protect target.
+        shielded.scene().setSolid(10,kMapHeight-2,true);
+        for(int f=0;f<110;++f)shielded.tick(Input{Fire});
+        check(shielded.trainingTarget().health==3 &&
+              shielded.trainingTarget().hits==0,
+              "shots bypassed blocking world geometry to hit target");
+        target_a.reset();
+        check(target_a.trainingTarget().health==3 &&
+              target_a.trainingTarget().hits==0,
+              "reset did not restore target integrity");
         Simulation idle;
         for(int f=0;f<600;++f)idle.tick(Input{});
         check(idle.player().grounded && idle.player().y==floor_y,
