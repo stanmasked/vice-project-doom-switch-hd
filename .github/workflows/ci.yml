@@ -199,6 +199,8 @@ jobs:
         run: python -m unittest discover -s tests -p 'test_fceux_stage132_sprite_flips.py' -v
       - name: Stage133 native asymmetric CHR sprite reflection, XBuf and negative controls
         run: python -m unittest discover -s tests -p 'test_fceux_stage133_native_sprite_flips.py' -v
+      - name: Stage134 8x16 OAM tile-pair and vertical bank-selection ROM controls
+        run: python -m unittest discover -s tests -p 'test_fceux_stage134_sprite_8x16_rom.py' -v
       - name: Stage89 validated static screen hypotheses and explicit provenance
         run: python -m unittest discover -s tests -p 'test_ppu_capture_session.py' -v
       - name: Stage88 audited PPU reference-frame inventory regressions
