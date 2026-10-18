@@ -33,9 +33,17 @@ def relocation_sites(image):
             int.from_bytes(old_jmp[1:], "little") != old_pc):
         raise ValueError("Stage110 absolute idle JMP source changed")
     sites = []
+    reference = image[PRG_START:PRG_START + BANK_SIZE]
+    if reference[:8] != original_program[:8]:
+        raise ValueError("Stage110 CPU reset/PPU-disable prologue changed")
     for bankno in range(PRG_BANKS):
         start = PRG_START + bankno * BANK_SIZE
         bank = image[start:start + BANK_SIZE]
+        # Stage137 repeats the exact same executable bank four times;
+        # only the last six vector bytes differ in the fourth bank.
+        mirror_end = BANK_SIZE - 6 if bankno == PRG_BANKS - 1 else BANK_SIZE
+        if bank[:mirror_end] != reference[:mirror_end]:
+            raise ValueError("Synthetic PRG bank content diverged")
         if bank.count(old_jmp) != 1:
             raise ValueError("Missing or ambiguous relocated JMP in PRG bank")
         relative = bank.index(old_jmp)
