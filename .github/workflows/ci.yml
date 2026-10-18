@@ -213,6 +213,8 @@ jobs:
         run: python -m unittest discover -s tests -p 'test_fceux_stage139_native_temporal_nine.py' -v
       - name: Stage140 overflow PPU status reset source/model regressions
         run: python -m unittest discover -s tests -p 'test_fceux_stage140_frame_overflow_reset.py' -v
+      - name: Stage141 native two-frame PPU status reset and XBuf witnesses
+        run: python -m unittest discover -s tests -p 'test_fceux_stage141_native_frame_reset.py' -v
       - name: Stage89 validated static screen hypotheses and explicit provenance
         run: python -m unittest discover -s tests -p 'test_ppu_capture_session.py' -v
       - name: Stage88 audited PPU reference-frame inventory regressions
