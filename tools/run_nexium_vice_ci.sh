@@ -86,3 +86,6 @@ python3 tools/audit_nexium_vice_manual.py --evidence "$out"
 # Host X11/process status is a separate, conservative diagnostic; it must
 # not substitute for the seven verified guest input/cleanup events.
 python3 tools/audit_nexium_gui_lifecycle.py --evidence "$out"
+# NeXium kernel logs, not window state or guest SD self-report, establish
+# whether the guest svcExitProcess completed and the runner stopped its cores.
+python3 tools/audit_nexium_guest_process_exit.py --evidence "$out"
