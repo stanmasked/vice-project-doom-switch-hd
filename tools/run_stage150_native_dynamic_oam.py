@@ -98,7 +98,8 @@ def verify_wrong_case(log):
     return {"rejected":True,"native_cpu_and_raster_contradiction":True}
 
 
-def execute(binary,rom,folder,mode,*,enabled=True,reject=False,timeout=45):
+def execute(binary,rom,folder,mode,*,enabled=True,reject=False,
+            boundary=False,timeout=45):
     if mode not in MODES or (reject and (not enabled or mode!="preserve_eight")):
         raise DynamicOamError("Invalid native dynamic OAM control request")
     folder=Path(folder)
@@ -110,6 +111,7 @@ def execute(binary,rom,folder,mode,*,enabled=True,reject=False,timeout=45):
             env[key]="0"
     env["VPD_STAGE149_OAM_WRITES_PROBE"]="1" if enabled else "0"
     env["VPD_STAGE150_DYNAMIC_OAM_PROBE"]="1" if enabled else "0"
+    env["VPD_STAGE151_BOUNDARY_PROBE"]="1" if enabled and boundary else "0"
     env["VPD_STAGE149_OAM_WRITES_CASE"]=mode
     env["VPD_STAGE150_DYNAMIC_OAM_CASE"]=mode
     cmd=[str(Path(binary).resolve()),"--newppu","1","--sound","0",
@@ -124,7 +126,11 @@ def execute(binary,rom,folder,mode,*,enabled=True,reject=False,timeout=45):
             while time.monotonic()<deadline:
                 time.sleep(.1)
                 log=logpath.read_text(encoding="utf8",errors="replace")
-                if enabled and (PASS in log or REJECT in log):break
+                if enabled:
+                    marker=("VPD_STAGE151_NATIVE_PRERENDER_OAM_BOUNDARY_"
+                            if boundary else
+                            "VPD_STAGE150_NATIVE_OAM_FRAME_")
+                    if marker in log:break
                 if p.poll() is not None:break
             alive=p.poll() is None
         finally:
@@ -139,7 +145,14 @@ def execute(binary,rom,folder,mode,*,enabled=True,reject=False,timeout=45):
             raise DynamicOamError("Disabled native OAM observer yielded false frame")
         return None
     try:
-        return verify_wrong_case(log) if reject else verify(log,mode)
+        result=verify_wrong_case(log) if reject else verify(log,mode)
+        if boundary:
+            # Stage151 additionally needs the native reset-boundary proof;
+            # a Stage150 pixel certificate alone is insufficient.
+            from run_stage151_native_prerender_boundary import (
+                verify as verify_boundary)
+            result["boundary"]=verify_boundary(log,mode,reject=reject)
+        return result
     except DynamicOamError as exc:
         details=re.findall(r"VPD_STAGE150_NATIVE_OAM_FRAME_[^\r\n]{0,650}",log)
         raise DynamicOamError(str(exc)+": "+(

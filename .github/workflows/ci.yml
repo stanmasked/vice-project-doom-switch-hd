@@ -227,6 +227,8 @@ jobs:
         run: python -m unittest discover -s tests -p 'test_fceux_stage149_native_vblank_oam.py' -v
       - name: Stage150 native dynamic OAM frame source and XBuf certificate regressions
         run: python -m unittest discover -s tests -p 'test_fceux_stage150_dynamic_oam_frames.py' -v
+      - name: Stage151 pre-render reset boundary provenance and C++ rejection regressions
+        run: python -m unittest discover -s tests -p 'test_fceux_stage151_prerender_boundary.py' -v
       - name: Stage89 validated static screen hypotheses and explicit provenance
         run: python -m unittest discover -s tests -p 'test_ppu_capture_session.py' -v
       - name: Stage88 audited PPU reference-frame inventory regressions
