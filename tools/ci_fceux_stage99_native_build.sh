@@ -96,7 +96,12 @@ cp "${PATCH}/src/vpd_newppu_raw_step_probe.h" "${FCEUX}/src/vpd_newppu_raw_step_
 # A real native PPU translation-unit change must be present and compile-guarded.
 # Upstream ppu.cpp uses CRLF; Git must not mistake CR as trailing whitespace.
 git -C "${FCEUX}" -c core.whitespace=cr-at-eol diff --check
-git -C "${FCEUX}" diff -- src/ppu.cpp | grep -q 'vpd_ppu_probe::observe'
+# Avoid SIGPIPE with 'set -o pipefail': grep -q closes its input early
+# when it finds the first match inside the large pinned ppu.cpp diff.
+# Materialize the private source diff in the ephemeral CI patch folder.
+git -C "${FCEUX}" diff -- src/ppu.cpp > "${PATCH}/native-ppu.diff"
+test -s "${PATCH}/native-ppu.diff"
+grep -q 'vpd_ppu_probe::observe' "${PATCH}/native-ppu.diff"
 grep -q '^#ifdef VPD_NATIVE_RAW_PPU_PROBE' "${FCEUX}/src/ppu.cpp"
 
 # Produce and link the real FCEUX executable, not only a stand-alone stub.
