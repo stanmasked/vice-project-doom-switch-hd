@@ -2268,8 +2268,8 @@ inline void stage137_pixel(unsigned sl,unsigned x,unsigned slot,
               ((status&0x20U)!=0)!=expect_overflow ||
               ((e.status&0x20U)!=0)!=expect_overflow ||
               sprite16!=(mode==3) ||
-              e.ninth_x!=(mode==0?0U:64U) ||
-              (mode!=0 && e.ninth_y!=(ninth_offscreen?40U:120U)) ||
+              e.ninth_x!=(mode==0?255U:64U) ||
+              e.ninth_y!=(mode==0?255U:(ninth_offscreen?40U:120U)) ||
               xbuf!=expected_xbuf ||
               e.row<120U || e.row>141U);
     for(unsigned i=0;i<8;i++)if(e.first[i]!=i)bad=true;
