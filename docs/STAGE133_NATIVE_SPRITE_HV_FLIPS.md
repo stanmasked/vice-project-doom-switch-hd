@@ -1,0 +1,43 @@
+# Stage133 — Native sprite horizontal/vertical reflection witness
+
+## Experiment
+
+Stage132 checks the pinned newppu source code for horizontal bit reversal, vertical row reflection and 8×16 pattern addressing. **Stage133 goes further:** it runs the actual instrumented FCEUX PPU on four separately generated Mapper-4 ROMs, each with an asymmetrical, fully opaque 8×8 sprite.
+
+The tile pattern is deterministic and has no transparent pixels:
+
+```text
+pattern(row, column) = 1 + ((2*row + column) % 3)
+```
+
+Each ROM sets OAM sprite0 at X=64, Y=120 with tile2. The only variation between the four positive ROMs is the OAM attribute flag: `00`, `40` (horizontal), `80` (vertical), or `C0` (both). Program flow and CHR bytes are identical; four copies of one 6502 immediate differ in repeated PRG banks.
+
+The sprite uses background-independent palette entries: pattern1 → `0x1A` (XBuf 154), pattern2 → `0x2B` (XBuf 171), pattern3 → `0x2A` (XBuf 170). This distinguishes each source column and makes mirrored outputs observable.
+
+## Actual pinned-FCEUX evidence
+
+The guarded injector records the genuine fetched sprite CHR low/high planes **before** FCEUX's horizontal bit reversal, plus the actual CHR address, row, OAM flip flags, and scan slot. A second hook observes the real raster pixel's chosen two-bit pattern, palette color, and final XBuf byte.
+
+For eight consecutive pixels on the same sprite scanline, the observer independently verifies:
+
+- Sprite tile2, X position 64, and the expected OAM H/V attribute bits.
+- Low/high CHR bytes and source address `$1020 + source_row` read by FCEUX.
+- A valid fetched row 0–7; horizontal reflection selects source column `7 − x` instead of `x`.
+- Each actual pattern value and palette/XBuf byte matches the generated asymmetrical tile.
+- The four runs share the same observed scanline; the V-flipped source row complements the baseline row to seven.
+
+The positive marker `STAGE133_NATIVE_SPRITE_HV_FLIP_PROOF` is produced by the strict Python auditor **only after all four native runs have matched**.
+
+An unchanged non-flipped ROM presented as horizontally flipped must produce an explicit native rejection after eight pixels; absence of evidence is not accepted as success. A disabled-observer control must emit neither PASS nor REJECTED and remain alive.
+
+## Regressions and limitations
+
+```bash
+python -m unittest discover -s tests -p 'test_fceux_stage133_native_sprite_flips.py' -v
+```
+
+Unit tests verify byte differences between all four ROMs, each CHR pattern pixel, source-hook guards, fake/duplicated markers and separately compiled C++ observer behavior. They do not substitute for the full native FCEUX experiment.
+
+CI builds the same pinned FCEUX revision as earlier stages and runs `tools/run_stage133_native_sprite_flips.py` under Xvfb. Stage133 is **not complete until the full pinned FCEUX CI is green**.
+
+The current Stage133 experiment covers 8×8 sprites. Stage132's 8×16 mapping is only source/reference-model checked. Original Vice: Project Doom graphics, sprite identities, game timing and Nintendo Switch rendering remain unverified. Generated NES ROMs and captured PPU contents are never published.
