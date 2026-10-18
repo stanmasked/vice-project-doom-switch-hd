@@ -22,6 +22,8 @@ on:
       - "tests/test_nexium_guard_live.py"
       - "tools/audit_nexium_guard_live_defeat.py"
       - "tests/test_nexium_guard_live_defeat.py"
+      - "tools/audit_nexium_guard_live_raster.py"
+      - "tests/test_nexium_guard_live_raster.py"
       - "tools/nexium_visual_probe.sh"
       - "game_core/**"
       - "switch_graphical/**"
@@ -104,6 +106,7 @@ jobs:
             emulator-evidence/guard-combat-result.txt
             emulator-evidence/guard-live-result.txt
             emulator-evidence/guard-live-defeat-result.txt
+            emulator-evidence/guard-live-raster-result.txt
             emulator-evidence/guard-live-defeat-trace-paths.txt
             emulator-evidence/guest-guard-live-defeat-witness.txt
             emulator-evidence/guard-live-trace-paths.txt
@@ -120,5 +123,9 @@ jobs:
             emulator-evidence/ne-x11-windows.txt
             emulator-evidence/screen-before.png
             emulator-evidence/screen-after.png
+            emulator-evidence/screen-live-strike.png
+            emulator-evidence/screen-live-strike.ppm
+            emulator-evidence/screen-live-defeat.png
+            emulator-evidence/screen-live-defeat.ppm
           retention-days: 7
           if-no-files-found: warn

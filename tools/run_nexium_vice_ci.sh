@@ -134,3 +134,7 @@ if [[ -s "$out/guard-live-defeat-trace-paths.txt" ]]; then
   cp "$guest" "$out/guest-guard-live-defeat-witness.txt"
 fi
 python3 tools/audit_nexium_guard_live_defeat.py --evidence "$out"
+# Two actual X11 captures, aligned by native guest manual melee and defeat
+# records, must show disappearance of the guard's alert-colored torso.
+# Real screenshots complement but cannot replace guest state/exit audits.
+python3 tools/audit_nexium_guard_live_raster.py --evidence "$out"

@@ -86,13 +86,32 @@ if [[ -s "$out/ne-x11-windows.txt" ]]; then
     sleep 0.1
     echo "host_guard_live_move_sent=yes key=D until_guest_strike=$saw_strike" >> "$out/input-probe.txt"
     if [[ "$saw_strike" == yes ]]; then
-      # Original manual fire evidence is a separate, earlier one-shot.
-      # Now attack from the real player's current facing toward the guard.
+      # Allow the native framebuffer to present the reported melee state.
+      # Capture a *real* X11 raster, not a software-generated rendering.
+      sleep 0.12
+      capture screen-live-strike
+      echo "live_raster_strike_after_guest_event=yes" >> "$out/visual-probe.txt"
+      # Keep the preceding one-shot control test unchanged.
       xdotool keydown --clearmodifiers z
       sleep 1.6
       xdotool keyup z
-      sleep 0.1
       echo "host_guard_live_fire_sent=yes key=Z after_guest_strike=yes" >> "$out/input-probe.txt"
+      live_defeat_path="$XDG_CONFIG_HOME/NeXium/sdmc/switch/vice_project_doom/guard_live_defeat_witness.txt"
+      saw_defeat=no
+      for (( attempt=0; attempt<20; ++attempt )); do
+        if [[ -f "$live_defeat_path" ]] &&
+           grep -q '^VPD_ROMFREE_GUARD_LIVE_DEFEAT_V1 seq=[234] event=defeat ' "$live_defeat_path"; then
+          saw_defeat=yes
+          break
+        fi
+        sleep 0.05
+      done
+      if [[ "$saw_defeat" == yes ]]; then
+        sleep 0.12
+        capture screen-live-defeat
+        echo "live_raster_defeat_after_guest_event=yes" >> "$out/visual-probe.txt"
+      fi
+      echo "host_guard_live_defeat_observed=$saw_defeat" >> "$out/input-probe.txt"
     fi
     xdotool key --clearmodifiers --delay 150 m >> "$out/input-probe.txt" 2>&1 &&
       echo "host_plus_key_sent=yes" >> "$out/input-probe.txt"
