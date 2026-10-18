@@ -28,6 +28,8 @@ python3 "${PROJECT}/tools/audit_fceux_stage128_sprite_compositor.py" \
   "${FCEUX}/src/ppu.cpp"
 python3 "${PROJECT}/tools/audit_stage130_two_sprite_order.py" \
   "${FCEUX}/src/ppu.cpp"
+python3 "${PROJECT}/tools/audit_stage132_sprite_flips.py" \
+  "${FCEUX}/src/ppu.cpp"
 
 python3 "${PROJECT}/tools/build_fceux_newppu_probe_patch.py" \
   "${FCEUX}/src/ppu.cpp" "${PATCH}"
