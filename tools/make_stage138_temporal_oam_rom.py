@@ -75,7 +75,11 @@ def make_rom(destination,mode):
     prg=bytearray(bank*4)
     prg[-6:]=b"\x00\xC0"*3
     chr_data=bytearray(16384)
-    # Background zero, sprite both tile2 and tile3 pattern3.
+    # PPUCTRL $38 selects 8x16 sprites. OAM tile2 is even:
+    # its two tiles are fetched from PPU pattern table $0000, not
+    # the BG table $1000, regardless of PPUCTRL sprite-table bit.
+    chr_data[32:64]=b"\xFF"*32
+    # Keep bank1's independently drawn background tile1 transparent.
     chr_data[1024+32:1024+64]=b"\xFF"*32
     image=b"NES\x1a"+bytes((2,2,0x40,0))+bytes(8)+prg+chr_data
     if len(image)!=49168:
