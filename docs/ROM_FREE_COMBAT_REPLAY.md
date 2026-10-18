@@ -121,3 +121,44 @@ This demonstrates **host game simulation-to-raster plumbing only**,
 not physical/emulated Switch execution and not original game visuals.
 The existing no-shot framebuffer and 300-frame gameplay golden hashes
 must remain intact.
+
+## Deterministic combat matrix — 16 scripts, 8,192 frames
+
+The host gameplay CMake additionally builds and runs
+`vpd_combat_matrix_test` via `romfree_combat_matrix` CTest.
+It executes **16 independently seeded, fixed xorshift32 input scripts**
+of 512 frames each, twice, yielding an 8,192-frame test corpus. Every
+frame checks identical replay hashes for two independent simulations,
+non-increasing target health, no duplicate target hits, bounded bullet
+counts/lifetimes, fixed shot velocities and absence of active bullets
+inside solid world tiles.
+
+At fixed checkpoints the test also edits a distant world tile and
+restores it. An intentionally divergent third simulation must have a
+different replay fingerprint until the geometry is restored, then an
+identical fingerprint at the restoration checkpoint. This control
+asserts that live map bytes participate in replay identity even when
+player/shot coordinates are unchanged.
+
+The current ROM-free reference is pinned to:
+
+| Property | Golden value |
+| --- | ---: |
+| Seed scripts | 16 |
+| Frames per script | 512 |
+| Total simulated frames | 8,192 |
+| Total fired shots | 746 |
+| Total target impacts | 44 |
+| Combined deterministic 64-bit FNV digest | 6449042941889583905 |
+
+The native **host C++17 mirror** compiled with
+`-Wall -Wextra -Wpedantic -Werror` and also with
+`-fsanitize=undefined -fno-sanitize-recover=all`. Both passed the
+matrix. A local CMake configuration reported 5/5 successful tests after
+registering the matrix. These checks are local preflight; GitHub-hosted
+Debug/Release CI and Switch NRO execution must be verified separately.
+The matrix uses self-authored terrain and training assets only.
+
+A valid host test emits `VPD_ROMFREE_COMBAT_MATRIX_PASS`. Any changed
+mechanics must update the golden digest intentionally, after
+independent review of the cause and new observed transcript.
