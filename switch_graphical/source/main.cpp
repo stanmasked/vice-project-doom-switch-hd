@@ -8,6 +8,7 @@
 #include "guard_guest_witness.hpp"
 #include "guard_combat_probe.hpp"
 #include "guard_live_witness.hpp"
+#include "guard_live_defeat_witness.hpp"
 #include "scene_renderer.hpp"
 #include "combat_scene_bridge.hpp"
 #include "asset_atlas.hpp"
@@ -58,6 +59,7 @@ int main(int,char**) {
     (void)vpd::guardProofReset(has_sd);
     (void)vpd::guardCombatProofReset(has_sd);
     (void)vpd::liveGuardProofReset(has_sd);
+    (void)vpd::liveGuardDefeatReset(has_sd);
     if(has_sd)assets.reload(kExternalAtlasPath,kExternalAnimationPath);
     bool reload_failed=false;
     constexpr const char* kExternalTerrainPath=
@@ -112,6 +114,9 @@ int main(int,char**) {
     bool dash_probe_finished=false;
     bool live_guard_alert_logged=false;
     bool live_guard_strike_logged=false;
+    bool live_guard_fire_logged=false;
+    bool live_guard_defeated=false;
+    unsigned live_guard_defeat_seq=0;
     uint32_t dash_probe_start_frame=0;
     int32_t dash_probe_start_x=0;
     while(appletMainLoop()){
@@ -141,6 +146,9 @@ int main(int,char**) {
             dash_probe_finished=false;
             live_guard_alert_logged=false;
             live_guard_strike_logged=false;
+            live_guard_fire_logged=false;
+            live_guard_defeated=false;
+            live_guard_defeat_seq=0;
             if(!demo.enabled()){
                 // Preserve ROM-free autoplay hashes: enable encounter only on
                 // entry into explicit manual gameplay, never in attract mode.
@@ -217,6 +225,8 @@ int main(int,char**) {
             const auto was_alerted=game.guardEnemy().alerted;
             const auto prior_hp=game.playerHealth();
             const auto prior_attacks=game.guardEnemy().attacks;
+            const auto prior_guard_hp=game.guardEnemy().health;
+            const auto prior_guard_hits=game.guardEnemy().projectile_hits;
             if(toggle_manual)input=0; // R+A is a mode switch, not a jump
             game.tick(vpd::Input{input});
             // These events are from the *visible*, pad-driven gameplay
@@ -233,6 +243,30 @@ int main(int,char**) {
                game.guardEnemy().attacks==1)
                 live_guard_strike_logged=vpd::liveGuardProofAppend(
                     has_sd,vpd::LiveGuardEvent::FirstStrike,game,input);
+            // A separate attestation of the real player-controlled Fire
+            // sequence after the first melee strike. Only count actual
+            // swept collision changes in this same rendered simulation.
+            if(live_guard_strike_logged && !live_guard_fire_logged &&
+               (input&vpd::Fire) && game.shotsFired()>before_shots &&
+               game.guardEnemy().health>0){
+                live_guard_fire_logged=vpd::liveGuardDefeatAppend(
+                    has_sd,vpd::LiveGuardDefeatEvent::Fire,1,game,input,
+                    prior_guard_hp,prior_guard_hits,before_shots);
+                if(live_guard_fire_logged)live_guard_defeat_seq=1;
+            }
+            if(live_guard_fire_logged && !live_guard_defeated &&
+               game.guardEnemy().projectile_hits==prior_guard_hits+1 &&
+               game.guardEnemy().health+1==prior_guard_hp &&
+               live_guard_defeat_seq<4){
+                const unsigned next_seq=live_guard_defeat_seq+1;
+                if(vpd::liveGuardDefeatAppend(
+                    has_sd,vpd::LiveGuardDefeatEvent::Impact,
+                    next_seq,game,input,prior_guard_hp,prior_guard_hits,
+                    before_shots)){
+                    live_guard_defeat_seq=next_seq;
+                    if(game.guardEnemy().health==0)live_guard_defeated=true;
+                }
+            }
             // Two guest-written milestones require a real first and
             // eighth tick from the opt-in enemy AI, not a host fixture.
             if(game.frame()==1)

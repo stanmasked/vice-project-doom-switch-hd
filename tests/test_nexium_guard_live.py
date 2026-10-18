@@ -61,7 +61,7 @@ class NativeLiveGuardTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,"right-direction"):
                 mod.audit(root)
             (root/"input-probe.txt").write_text(
-                "host_guard_live_move_sent=yes key=D duration=3.4s\n")
+                "host_guard_live_move_sent=yes key=D until_guest_strike=yes\n")
             for file,header in (
                 ("manual-result.txt","VPD_NEXIUM_GUEST_MANUAL_EXIT_PASS "),
                 ("dash-result.txt","VPD_NEXIUM_GUEST_DASH_PASS "),

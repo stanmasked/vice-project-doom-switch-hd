@@ -79,7 +79,7 @@ def audit(folder):
     result=verify(trace.read_bytes())
     host=base/"input-probe.txt"
     if not host.is_file() or (
-        "host_guard_live_move_sent=yes key=D duration=3.4s" not in
+        "host_guard_live_move_sent=yes key=D until_guest_strike=yes" not in
         host.read_text(encoding="ascii").splitlines()
     ):
         raise ValueError("real NeXium right-direction trial was not injected")

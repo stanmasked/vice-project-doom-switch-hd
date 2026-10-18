@@ -125,3 +125,12 @@ if [[ -s "$out/guard-live-trace-paths.txt" ]]; then
   cp "$guest" "$out/guest-guard-live-witness.txt"
 fi
 python3 tools/audit_nexium_guard_live.py --evidence "$out"
+# Same visible manual gameplay instance: actual post-contact Fire buttons,
+# swept projectile hits, and enemy death, never the separate guest script.
+find "$HOME" "$XDG_DATA_HOME" "$XDG_CONFIG_HOME" "$XDG_CACHE_HOME" \
+  -type f -name guard_live_defeat_witness.txt -print > "$out/guard-live-defeat-trace-paths.txt"
+if [[ -s "$out/guard-live-defeat-trace-paths.txt" ]]; then
+  IFS= read -r guest < "$out/guard-live-defeat-trace-paths.txt"
+  cp "$guest" "$out/guest-guard-live-defeat-witness.txt"
+fi
+python3 tools/audit_nexium_guard_live_defeat.py --evidence "$out"

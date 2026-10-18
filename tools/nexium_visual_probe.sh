@@ -68,14 +68,32 @@ if [[ -s "$out/ne-x11-windows.txt" ]]; then
     xdotool keyup d
     sleep 0.25
     echo "host_dash_probe_sent=yes keys=D+T expected=ZR+Right" >> "$out/input-probe.txt"
-    # New separate *live* encounter trial: continue moving right without
-    # scripted game-core inputs. Require NRO-produced alert and melee proof.
-    # Up to 3.4 seconds under the existing 38-second emulator watchdog.
+    # Follow the *live*, pad-driven guard to the first observed strike.
+    # The host uses this guest event only to release movement before
+    # overshooting the opponent; it cannot author the guest witness.
+    live_guard_path="$XDG_CONFIG_HOME/NeXium/sdmc/switch/vice_project_doom/guard_live_witness.txt"
+    saw_strike=no
     xdotool keydown --clearmodifiers d
-    sleep 3.4
+    for (( attempt=0; attempt<95; ++attempt )); do
+      if [[ -f "$live_guard_path" ]] &&
+         grep -q '^VPD_ROMFREE_GUARD_LIVE_V1 seq=2 event=strike ' "$live_guard_path"; then
+        saw_strike=yes
+        break
+      fi
+      sleep 0.05
+    done
     xdotool keyup d
-    sleep 0.15
-    echo "host_guard_live_move_sent=yes key=D duration=3.4s" >> "$out/input-probe.txt"
+    sleep 0.1
+    echo "host_guard_live_move_sent=yes key=D until_guest_strike=$saw_strike" >> "$out/input-probe.txt"
+    if [[ "$saw_strike" == yes ]]; then
+      # Original manual fire evidence is a separate, earlier one-shot.
+      # Now attack from the real player's current facing toward the guard.
+      xdotool keydown --clearmodifiers z
+      sleep 1.6
+      xdotool keyup z
+      sleep 0.1
+      echo "host_guard_live_fire_sent=yes key=Z after_guest_strike=yes" >> "$out/input-probe.txt"
+    fi
     xdotool key --clearmodifiers --delay 150 m >> "$out/input-probe.txt" 2>&1 &&
       echo "host_plus_key_sent=yes" >> "$out/input-probe.txt"
   fi
