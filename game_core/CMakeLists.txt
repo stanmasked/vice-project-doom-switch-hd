@@ -51,6 +51,15 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
 endif()
 add_test(NAME romfree_guard_live_manual_witness
          COMMAND vpd_guard_live_witness_test)
+# Genuine Fire/impact serialization with deterministic source simulation.
+add_executable(vpd_guard_live_defeat_test ../tests/test_guard_live_defeat_witness.cpp)
+target_link_libraries(vpd_guard_live_defeat_test PRIVATE vpd_simulation)
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+  target_compile_options(vpd_guard_live_defeat_test PRIVATE
+                         -Wall -Wextra -Wpedantic -Werror)
+endif()
+add_test(NAME romfree_guard_live_defeat
+         COMMAND vpd_guard_live_defeat_test)
 # The exact serializer used by libnx to record actual NeXium ZR+Right effects.
 add_executable(vpd_dash_guest_witness_test ../tests/test_dash_guest_witness.cpp)
 target_link_libraries(vpd_dash_guest_witness_test PRIVATE vpd_simulation)
