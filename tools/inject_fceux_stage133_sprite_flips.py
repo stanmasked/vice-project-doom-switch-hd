@@ -24,7 +24,7 @@ def patch(data):
         raise ValueError("Mixed pinned FCEUX line endings")
     nl=b"\r\n" if b"\r\n" in data else b"\n"
     fetch=(FETCH+nl+b"#ifdef "+GUARD+nl+
-           b"\t\t\t\tif(s==0) vpd_ppu_probe::stage133_fetch("+
+           b"\t\t\t\tif(s==0 && oam[7] && oam[1]==2 && oam[6]==0) "+b"vpd_ppu_probe::stage133_fetch("+
            b"scanslot,oam[6],line,patternAddress,oam[4],oam[5],oam[2]);"+
            nl+b"#endif")
     draw=(DRAW+nl+b"#ifdef "+GUARD+nl+
