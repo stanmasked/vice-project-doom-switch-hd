@@ -22,7 +22,18 @@ esac
 require_ctest() {
   local build="$1" name="$2" listing
   listing="$("$ctest_cmd" --test-dir "$build" -N)"
-  if ! grep -Fq "$name" <<< "$listing"; then
+  # CTest -N normally prints "Test #N: test_name". Accept bare test
+  # names for lightweight fake runners, but require exact identity in both
+  # formats: substring matches could certify a missing required test.
+  if ! awk -v wanted="$name" '
+    /^[[:space:]]*Test[[:space:]]+#[0-9]+:[[:space:]]*/ {
+      sub(/^[[:space:]]*Test[[:space:]]+#[0-9]+:[[:space:]]*/, "")
+      if ($0 == wanted) found=1
+      next
+    }
+    $0 == wanted { found=1 }
+    END { exit(found ? 0 : 1) }
+  ' <<< "$listing"; then
     printf 'Required ROM-free test not registered: %s\n' "$name" >&2
     exit 1
   fi
