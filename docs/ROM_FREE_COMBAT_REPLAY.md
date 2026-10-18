@@ -106,7 +106,11 @@ portable C++ `vpd_simulation` used by the Switch source, and the actual
 independently authored 200-frame input scenario twice.
 
 At seven selected checkpoints it renders the player, projectiles and
-training target using the real simulation-to-`SceneView` bridge. It
+training target using the **same** `graphics_core/combat_scene_bridge.hpp`
+adapter called by `switch_graphical/source/main.cpp` before each frame.
+A dedicated Python source regression checks that the two consumers
+cannot silently return to divergent copy-pasted overlay assignments
+and that the Switch Makefile depends on the common header. It
 compares deterministic pixel hashes between the two runs and applies
 explicit negative rendering controls: hiding the live projectile must
 change pixels; hiding the live target must change pixels; restoring
