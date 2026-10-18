@@ -20,11 +20,19 @@ TILE_PAGE = bytes((0xA2, 0, 0xA9, 1, 0x8D, 7, 0x20, 0xE8, 0xD0, 0xFA))
 ATTR_LOOP_SUFFIX = bytes((0x8D, 7, 0x20, 0xE8, 0xE0, 0x40, 0xD0, 0xF8))
 
 
-def initialization(attribute=ATTRIBUTE_BYTE, distinct_palette=True, targeted_quadrant=None):
+def initialization(attribute=ATTRIBUTE_BYTE, distinct_palette=True, targeted_quadrant=None,
+                   transparent_chr=False, backdrop_color=0x0F):
     if type(attribute) is not int or not 0 <= attribute <= 255:
         raise ValueError("Attribute byte must be an unsigned byte")
     if type(distinct_palette) is not bool:
         raise ValueError("Palette control must be a boolean")
+    if type(transparent_chr) is not bool:
+        raise ValueError("Transparent CHR control must be boolean")
+    if (type(backdrop_color) is not int or backdrop_color not in (0x0F, 0x1D)
+            or (backdrop_color != 0x0F and not transparent_chr)):
+        raise ValueError("Backdrop mutation requires synthetic blank CHR")
+    if targeted_quadrant is not None and transparent_chr:
+        raise ValueError("Single visible-color mutation incompatible with zero CHR")
     if targeted_quadrant is not None and (
             type(targeted_quadrant) is not int or
             targeted_quadrant not in range(4) or
@@ -46,6 +54,11 @@ def initialization(attribute=ATTRIBUTE_BYTE, distinct_palette=True, targeted_qua
         0x0F, 0x12, 0x22, 0x30,
         0x0F, 0x13, 0x23, 0x30)
     palette = list(palette)
+    if transparent_chr:
+        # $3F00/04/08/0C all encode the universal background. Change
+        # those entries together; preserve all nonzero pattern colors.
+        for i in (0, 4, 8, 12):
+            palette[i] = backdrop_color
     if targeted_quadrant is not None:
         # One and only one background palette entry changes. CHR, source
         # nametable, all $E4 attributes and the other 15 colors stay fixed.
@@ -59,7 +72,8 @@ def initialization(attribute=ATTRIBUTE_BYTE, distinct_palette=True, targeted_qua
 
 
 def make_rom(dest, *, attribute=ATTRIBUTE_BYTE, distinct_palette=True,
-             switch=True, targeted_quadrant=None):
+             switch=True, targeted_quadrant=None,
+             transparent_chr=False, backdrop_color=0x0F):
     if type(switch) is not bool:
         raise ValueError("Bank-switch control must be a boolean")
     base = program(switch=switch)
@@ -69,7 +83,8 @@ def make_rom(dest, *, attribute=ATTRIBUTE_BYTE, distinct_palette=True,
         raise ValueError("Selective mutation requires active CHR bank change")
     patched = base.replace(
         RENDER_SETUP,
-        initialization(attribute, distinct_palette, targeted_quadrant)
+        initialization(attribute, distinct_palette, targeted_quadrant,
+                       transparent_chr, backdrop_color)
         + RENDER_SETUP, 1)
     if len(patched) > 8192:
         raise ValueError("Synthetic program exceeds the 8 KiB PRG bank")
@@ -80,7 +95,8 @@ def make_rom(dest, *, attribute=ATTRIBUTE_BYTE, distinct_palette=True,
     chr_data = bytearray(16384)
     # Only mapper-4 CHR bank1 (selected after VBlank) has solid pixels.
     # Tile1=filled on all 8 rows, both low/high bitplanes -> pattern3.
-    chr_data[1024 + 16:1024 + 32] = b"\xFF" * 16
+    if not transparent_chr:
+        chr_data[1024 + 16:1024 + 32] = b"\xFF" * 16
     result = b"NES\x1a" + bytes((2, 2, 0x40, 0)) + bytes(8) + prg + chr_data
     if len(result) != 49168:
         raise AssertionError("iNES ROM length invariant violated")
@@ -97,9 +113,13 @@ if __name__ == "__main__":
     cli.add_argument("--uniform-palette", action="store_true")
     cli.add_argument("--fixed-chr", action="store_true")
     cli.add_argument("--targeted-quadrant", type=int, default=None)
+    cli.add_argument("--transparent-chr", action="store_true")
+    cli.add_argument("--backdrop-color", type=lambda x: int(x, 0), default=0x0F)
     args = cli.parse_args()
     print("STAGE124_SYNTHETIC_QUADRANT_ROM sha256=" +
           make_rom(args.destination, attribute=0 if args.zero_attributes else ATTRIBUTE_BYTE,
                    distinct_palette=not args.uniform_palette,
                    switch=not args.fixed_chr,
-                   targeted_quadrant=args.targeted_quadrant))
+                   targeted_quadrant=args.targeted_quadrant,
+                   transparent_chr=args.transparent_chr,
+                   backdrop_color=args.backdrop_color))
