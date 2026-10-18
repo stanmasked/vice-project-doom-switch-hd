@@ -2105,6 +2105,113 @@ inline void stage133_pixel(unsigned sl,unsigned x,unsigned renderslot,
 }
 #endif
 
+// Stage135: actual pinned newppu 8x16 OAM tile pair, bank and XBuf.
+// Synthetic Mapper4 CHR only; independently observe upper/lower source rows.
+#if defined(VPD_NATIVE_SYNTHETIC_SPRITE_8X16) && defined(VPD_NATIVE_SYNTHETIC_MIDFRAME_CHR)
+struct Stage135Fetch {
+    bool seen=false;
+    unsigned row=0,address=0,low=0,high=0,flags=0,tile=0;
+    bool sprite16=false;
+};
+struct Stage135Audit {
+    Stage135Fetch fetched[2];
+    unsigned samples=0,invalid=0,top=0,bottom=0;
+    unsigned row_top=0,row_bottom=0,sl_top=0,sl_bottom=0;
+    unsigned first_top_color=0,first_bottom_color=0;
+    bool emitted=false;
+};
+inline Stage135Audit& stage135_state(){static Stage135Audit s;return s;}
+inline int stage135_mode(){
+    static const char* v=std::getenv("VPD_STAGE135_8X16_MODE");
+    if(!v)return -1;
+    const char* const modes[]={"odd_normal","odd_vertical","even_normal","even_vertical"};
+    for(int i=0;i<4;i++)if(std::strcmp(v,modes[i])==0)return i;
+    return -1;
+}
+inline void stage135_fetch(unsigned slot,unsigned index,unsigned row,
+                           unsigned addr,unsigned low,unsigned high,
+                           unsigned flags,unsigned tile,bool is16){
+    if(slot>1U || index!=0U || stage135_mode()<0)return;
+    Stage135Fetch& f=stage135_state().fetched[slot];
+    f.seen=true;f.row=row;f.address=addr;f.low=low;f.high=high;
+    f.flags=flags;f.tile=tile;f.sprite16=is16;
+}
+inline void stage135_pixel(unsigned sl,unsigned x,unsigned slot,unsigned tile,
+                           unsigned flags,unsigned sprite_x,bool sprite_read,
+                           unsigned pattern,unsigned color,unsigned xbuf){
+    static const char* enabled=std::getenv("VPD_STAGE135_8X16_PROBE");
+    if(!enabled || std::strcmp(enabled,"1")!=0)return;
+    int mode=stage135_mode();
+    if(mode<0 || slot>1U || x<64U || x>=72U || sl<120U || sl>142U)return;
+    Stage135Audit& a=stage135_state();
+    if(a.emitted)return;
+    const MidframeChr& m=stage110_state();
+    if(!m.switched || m.writes!=2 || sl<m.switch_sl+8U)return;
+    const Stage135Fetch& f=a.fetched[slot];
+    if(!f.seen || f.row>15U)return;
+    bool odd=mode==0 || mode==1;
+    bool flipped=mode==1 || mode==3;
+    unsigned expected_tile=odd?3U:2U;
+    unsigned expected_flags=flipped?0x80U:0U;
+    unsigned source_half=f.row/8U;
+    // Only take one full eight-pixel raster row from each source half.
+    unsigned& n=source_half?a.bottom:a.top;
+    unsigned& chosen_sl=source_half?a.sl_bottom:a.sl_top;
+    unsigned& chosen_row=source_half?a.row_bottom:a.row_top;
+    if(n==8U)return;
+    if(n==0U){chosen_sl=sl;chosen_row=f.row;}
+    if(sl!=chosen_sl || f.row!=chosen_row)return;
+    unsigned source_pattern=odd?(source_half?3U:1U):(source_half?1U:2U);
+    unsigned expected_addr=(odd?0x1000U:0U)+0x20U+(source_half?0x10U:0U)+(f.row&7U);
+    unsigned expected_low=(source_pattern&1U)?255U:0U;
+    unsigned expected_high=(source_pattern&2U)?255U:0U;
+    unsigned expected_color=source_pattern==1U?0x1AU:
+                           source_pattern==2U?0x2BU:0x2AU;
+    unsigned expected_xbuf=0x80U|expected_color;
+    bool wrong=tile!=expected_tile || sprite_x!=64U ||
+        flags!=expected_flags || f.flags!=expected_flags ||
+        f.tile!=expected_tile || !f.sprite16 || !sprite_read ||
+        f.address!=expected_addr || f.low!=expected_low ||
+        f.high!=expected_high || pattern!=source_pattern ||
+        color!=expected_color || xbuf!=expected_xbuf;
+    a.invalid+=wrong?1U:0U;
+    if(n==0U){
+        if(source_half)a.first_bottom_color=xbuf;
+        else a.first_top_color=xbuf;
+    }
+    ++n;
+    ++a.samples;
+    if(a.top==8U && a.bottom==8U){
+        static const char* const modes[]={"odd_normal","odd_vertical",
+            "even_normal","even_vertical"};
+        // A V-flipped sprite must visit bottom-source before top-source
+        // in the same visible top-to-bottom raster traversal.
+        bool ordering_bad=flipped ? a.sl_bottom>=a.sl_top :
+                                    a.sl_top>=a.sl_bottom;
+        if(a.invalid || ordering_bad){
+            std::fprintf(stderr,
+                "VPD_STAGE135_REJECTED_8X16 mode=%s invalid=%u "
+                "ordering_bad=%s top_row=%u bottom_row=%u "
+                "top_sl=%u bottom_sl=%u top_xbuf=%u bottom_xbuf=%u "
+                "samples=16 synthetic_only=yes\n",
+                modes[mode],a.invalid,ordering_bad?"yes":"no",
+                a.row_top,a.row_bottom,a.sl_top,a.sl_bottom,
+                a.first_top_color,a.first_bottom_color);
+        }else{
+            std::fprintf(stderr,
+                "VPD_STAGE135_NATIVE_8X16_PASS mode=%s "
+                "top_row=%u bottom_row=%u top_sl=%u bottom_sl=%u "
+                "top_xbuf=%u bottom_xbuf=%u samples=16 invalid=0 "
+                "actual_fceux_8x16_xbuf=yes synthetic_only=yes "
+                "original_game_8x16_proven=no\n",
+                modes[mode],a.row_top,a.row_bottom,a.sl_top,a.sl_bottom,
+                a.first_top_color,a.first_bottom_color);
+        }
+        std::fflush(stderr);a.emitted=true;
+    }
+}
+#endif
+
 // Stage109 synthetic-only MMC3 write -> BG CHR read -> framebuffer timeline.
 // Internal runppu tick units are not authoritative NTSC dots or CPU cycles.
 #ifdef VPD_NATIVE_SYNTHETIC_CHR_TIMELINE
