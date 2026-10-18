@@ -147,7 +147,10 @@ int main(int,char**) {
             terrain_reload_failed= !has_sd ||
                 terrain.reload(kExternalTerrainPath)!=vpd::TerrainReload::Loaded;
         }
-        if(pressed&HidNpadButton_ZR) {
+        // ZR now dashes in manual play. StickL+ZR retains the developer
+        // terrain reset; autoplay still supports the original ZR reset.
+        if((pressed&HidNpadButton_ZR) &&
+           (demo.enabled() || (buttons&HidNpadButton_StickL))) {
             terrain.reset();
             terrain_reload_failed=false;
         }
@@ -181,6 +184,9 @@ int main(int,char**) {
         if(buttons&(HidNpadButton_A|HidNpadButton_B))input|=vpd::Jump;
         if((buttons&HidNpadButton_Y) && !(buttons&HidNpadButton_StickL))
             input|=vpd::Fire;
+        if(!demo.enabled() && (buttons&HidNpadButton_ZR) &&
+           !(buttons&HidNpadButton_StickL))
+            input|=vpd::Dash;
         if(demo.enabled()) {
             if(demo.tick(game)) animation.reset();
         } else {
@@ -227,6 +233,7 @@ int main(int,char**) {
         view.asset_reload_failed=reload_failed;
         view.moving=actor.vx!=0;
         view.replay_demo=demo.enabled();
+        view.manual_controls=!demo.enabled();
         view.demo_checkpoint_ok=checkpoint_ok && demo.enabled();
         // Same adapter is exercised by native host combat/raster CTest.
         vpd::applyCombatOverlay(view,game);
