@@ -32,6 +32,8 @@ python3 "${PROJECT}/tools/audit_stage132_sprite_flips.py" \
   "${FCEUX}/src/ppu.cpp"
 python3 "${PROJECT}/tools/audit_stage136_oam_eight_limit.py" \
   "${FCEUX}/src/ppu.cpp"
+python3 "${PROJECT}/tools/audit_stage140_overflow_frame_reset.py" \
+  "${FCEUX}/src/ppu.cpp"
 
 python3 "${PROJECT}/tools/build_fceux_newppu_probe_patch.py" \
   "${FCEUX}/src/ppu.cpp" "${PATCH}"
