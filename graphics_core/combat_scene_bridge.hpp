@@ -24,6 +24,17 @@ inline void applyCombatOverlay(SceneView& view,const Simulation& game) {
                 guard.hit_flash_ticks};
     view.player_health=game.playerHealth();
     view.player_hit_flash_ticks=game.playerHitFlashTicks();
+    static_assert(std::tuple_size<decltype(SceneView{}.enemy_projectiles)>::value
+                  ==kMaxEnemyProjectiles,
+                  "Sentry projectile capacities must agree");
+    const auto& turret=game.sentry();
+    view.sentry={turret.x/kFixed,turret.y/kFixed,turret.health,
+                 turret.hit_flash_ticks,game.secondWaveActive()};
+    view.stage_cleared=game.stageCleared();
+    const auto& hostile=game.enemyProjectiles();
+    for(std::size_t i=0;i<kMaxEnemyProjectiles;++i)
+        view.enemy_projectiles[i]={hostile[i].x/kFixed,
+                                  hostile[i].y/kFixed,hostile[i].active};
     const auto& shots=game.projectiles();
     for(std::size_t i=0;i<kMaxProjectiles;++i){
         view.projectiles[i]={
