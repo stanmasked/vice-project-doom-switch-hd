@@ -8,7 +8,7 @@ from pathlib import Path
 
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/"tools"))
-from make_stage129_oam_sprite_rom import make_rom, asymmetric_pattern
+from make_stage129_oam_sprite_rom import make_rom, asymmetric_pattern, explicit_sprite_palette_slot2
 from run_stage133_native_sprite_flips import (
     MODES,MARKER,REJECTED,NativeFlipError,flags_for,reference,
     verify,verify_rejection,verify_sweep
@@ -70,8 +70,17 @@ class ROM(unittest.TestCase):
             opaque=root/"legacy.nes"
             make_rom(opaque)
             old=opaque.read_bytes()
-            self.assertEqual(old[:32784],base[:32784])
+            self.assertEqual(len(old),len(base))
+            self.assertNotEqual(old[:32784],base[:32784])
             self.assertNotEqual(old[-16384:],base[-16384:])
+            # Stage133 addresses palette slot2 directly after the
+            # sequential palette writes. Legacy Stage129/131 PRG must
+            # remain unmodified and should lack this additional write.
+            explicit=explicit_sprite_palette_slot2()
+            self.assertEqual(len(explicit),15)
+            self.assertEqual(base[16:32784].count(explicit),4)
+            self.assertEqual(old[16:32784].count(explicit),0)
+            self.assertEqual(base[-16384:],originals["horizontal"][-16384:])
 
     def test_invalid_flip_flags_and_chr_coordinates_fail_closed(self):
         with tempfile.TemporaryDirectory() as folder:
