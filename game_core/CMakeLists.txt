@@ -15,3 +15,14 @@ add_test(NAME deterministic_simulation COMMAND vpd_simulation_test)
 add_executable(vpd_combat_replay combat_replay.cpp)
 target_link_libraries(vpd_combat_replay PRIVATE vpd_simulation)
 add_test(NAME romfree_combat_replay COMMAND vpd_combat_replay --verify)
+# CSV path must produce the same pinned final row as the verified scenario.
+add_test(NAME romfree_combat_replay_csv
+         COMMAND vpd_combat_replay --frames 200)
+set_tests_properties(romfree_combat_replay_csv PROPERTIES
+    PASS_REGULAR_EXPRESSION
+    "200,0,12288,53760,0,11,0,3,0,5947277116621119566")
+# Fail closed on invalid, out-of-range input rather than overflowing
+# a simulation-frame counter or accepting a malformed control script.
+add_test(NAME romfree_combat_replay_invalid
+         COMMAND vpd_combat_replay --frames 3601)
+set_tests_properties(romfree_combat_replay_invalid PROPERTIES WILL_FAIL TRUE)
