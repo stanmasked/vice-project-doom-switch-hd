@@ -20,7 +20,7 @@ def fixture(include_guard=True):
     # Palette texture is synthetic test material, never actual NeXium data.
     for y in range(570,625):
         for x in range(320,458):
-            if (x+y)%59==0:
+            if x%9==0:
                 i=3*(y*W+x)
                 data[i:i+3]=bytes((100+(x%6)*11,60+(y%7)*8,70))
     if include_guard:
