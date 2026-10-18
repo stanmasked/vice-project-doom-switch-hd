@@ -5,6 +5,12 @@
 namespace vpd {
 namespace {
 constexpr int32_t kRunSpeed=2*kFixed;
+constexpr int32_t kGuardSpeed=kFixed;
+constexpr int32_t kGuardDetection=144*kFixed;
+constexpr int32_t kGuardStrike=20*kFixed;
+constexpr int32_t kGuardPatrolMin=14*kTileSize*kFixed;
+constexpr int32_t kGuardPatrolMax=20*kTileSize*kFixed;
+constexpr uint8_t kGuardAttackDelay=32;
 // Original, ROM-free prototype only: short grounded directional dash.
 constexpr int32_t kDashSpeed=6*kFixed;
 constexpr uint8_t kDashFrames=6;
@@ -59,6 +65,15 @@ void Simulation::reset(){
     dash_ever_used_=false;
     projectiles_.fill(Projectile{});
     target_=TrainingTarget{};
+    encounter_enabled_=false;
+    guard_=GuardEnemy{};
+    player_health_=5;
+}
+void Simulation::enableEnemyEncounter(){
+    if(encounter_enabled_)return;
+    encounter_enabled_=true;
+    guard_=GuardEnemy{};
+    player_health_=5;
 }
 bool Simulation::collideAt(int32_t x,int32_t y) const{
     constexpr int tile=kTileSize*kFixed;
@@ -131,6 +146,17 @@ void Simulation::advanceProjectiles(){
                 shot.active=false;
                 break;
             }
+            // Opt-in guard uses the same one-pixel swept bullet positions as
+            // the existing stationary target, so no shot can tunnel through it.
+            if(encounter_enabled_ && guard_.health>0 &&
+               next>=guard_.x && next<guard_.x+kPlayerWidth*kFixed &&
+               shot.y>=guard_.y && shot.y<guard_.y+kPlayerHeight*kFixed){
+                --guard_.health;
+                ++guard_.projectile_hits;
+                if(!guard_.health)guard_.alerted=false;
+                shot.active=false;
+                break;
+            }
             // Hit test uses the very same one-pixel swept positions as
             // solid-tile collision, so a shot cannot skip a thin target.
             if(target_.health>0 &&
@@ -159,6 +185,38 @@ void Simulation::fireProjectile(){
         ++shots_fired_;
         fire_cooldown_=kFireInterval;
         return;
+    }
+}
+void Simulation::advanceGuard(){
+    if(!encounter_enabled_ || guard_.health==0)return;
+    if(guard_.attack_cooldown>0)--guard_.attack_cooldown;
+    const int32_t difference=player_.x-guard_.x;
+    const int32_t abs_dx=difference<0?-difference:difference;
+    const int32_t height=player_.y-guard_.y;
+    const int32_t abs_y=height<0?-height:height;
+    guard_.alerted=player_health_>0 && abs_dx<=kGuardDetection &&
+                   abs_y<=kPlayerHeight*kFixed;
+    int dir=guard_.direction;
+    if(guard_.alerted){
+        if(difference<0)dir=-1;
+        else if(difference>0)dir=1;
+    } else if(guard_.x>=kGuardPatrolMax)dir=-1;
+    else if(guard_.x<=kGuardPatrolMin)dir=1;
+    guard_.direction=static_cast<int8_t>(dir);
+    const bool approach=!guard_.alerted || abs_dx>kGuardStrike;
+    if(approach){
+        int32_t next=std::clamp(guard_.x+dir*kGuardSpeed,
+                                kGuardPatrolMin,kGuardPatrolMax);
+        if(!collideAt(next,guard_.y))guard_.x=next;
+        else if(!guard_.alerted)guard_.direction=static_cast<int8_t>(-dir);
+    }
+    const int32_t new_diff=player_.x-guard_.x;
+    const int32_t new_abs=new_diff<0?-new_diff:new_diff;
+    if(guard_.alerted && new_abs<=kGuardStrike &&
+       guard_.attack_cooldown==0 && player_health_>0){
+        --player_health_;
+        ++guard_.attacks;
+        guard_.attack_cooldown=kGuardAttackDelay;
     }
 }
 void Simulation::tick(Input input){
@@ -195,6 +253,7 @@ void Simulation::tick(Input input){
     if(fire_cooldown_>0)--fire_cooldown_;
     if((input.buttons&Fire)!=0 && fire_cooldown_==0)
         fireProjectile();
+    advanceGuard();
     camera_x_=std::clamp(player_.x/kFixed-10*kTileSize,0,(kMapWidth-40)*kTileSize);
     ++frame_;
 }
@@ -266,6 +325,18 @@ uint64_t Simulation::fingerprint() const{
         append(static_cast<uint32_t>(static_cast<int32_t>(dash_direction_)));
         append(static_cast<uint32_t>(dash_was_down_?1:0));
         append(static_cast<uint32_t>(dash_ever_used_?1:0));
+    }
+    if(encounter_enabled_){
+        append(0x47554152u); // GUARD: opt-in enemy-state version
+        append(static_cast<uint32_t>(guard_.x));
+        append(static_cast<uint32_t>(guard_.y));
+        append(static_cast<uint32_t>(guard_.health));
+        append(static_cast<uint32_t>(guard_.alerted?1:0));
+        append(static_cast<uint32_t>(static_cast<int32_t>(guard_.direction)));
+        append(static_cast<uint32_t>(guard_.attack_cooldown));
+        append(static_cast<uint32_t>(guard_.attacks));
+        append(static_cast<uint32_t>(guard_.projectile_hits));
+        append(static_cast<uint32_t>(player_health_));
     }
     return hash;
 }
