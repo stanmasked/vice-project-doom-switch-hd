@@ -1790,7 +1790,7 @@ inline void stage124_pixel(unsigned sl,unsigned xt,unsigned xp,
 // Unlike the source-level Stage128 contract, this sees actual pixel output.
 #if defined(VPD_NATIVE_SYNTHETIC_SPRITE_COLLISION) && defined(VPD_NATIVE_SYNTHETIC_MIDFRAME_CHR)
 struct Stage129SpriteAudit {
-    unsigned samples=0,invalid=0,row=0,first_xbuf=0,first_bg=0,first_sp=0;
+    unsigned samples=0,invalid=0,row=0,first_xbuf=0,first_bg=0,first_sp=0,first_q=0;
     bool emitted=false;
 };
 inline Stage129SpriteAudit& stage129_state() {
@@ -1844,22 +1844,23 @@ inline void stage129_pixel(unsigned sl,unsigned x,unsigned oamcount,
         a.first_xbuf=xbuf;
         a.first_bg=bgpattern;
         a.first_sp=sprite_pattern;
+        a.first_q=q;
     }else if(a.first_xbuf!=xbuf || a.first_bg!=bgpattern ||
-              a.first_sp!=sprite_pattern)
+              a.first_sp!=sprite_pattern || a.first_q!=q)
         ++a.invalid;
     ++a.samples;
     if(a.samples==8){
         if(a.invalid){
             std::fprintf(stderr,
                 "VPD_STAGE129_REJECTED_SPRITE_OAM invalid=%u "
-                "sl=%u bg=%u sp=%u xbuf=%u samples=8 "
+                "sl=%u bg=%u sp=%u quadrant=%u xbuf=%u samples=8 "
                 "synthetic_only=yes\n",
-                a.invalid,a.row,a.first_bg,a.first_sp,a.first_xbuf);
+                a.invalid,a.row,a.first_bg,a.first_sp,a.first_q,a.first_xbuf);
         }else{
             std::fprintf(stderr,
                 "VPD_STAGE129_NATIVE_SPRITE_OAM_PASS "
                 "bg=%s sprite=%s priority=%s mask=%s "
-                "sl=%u sample_x=64 samples=8 "
+                "sl=%u sample_x=64 samples=8 quadrant=%u "
                 "sprite_pattern=%u bg_pattern=%u "
                 "sprite_visible=%s sprite0_hit=%s xbuf=%u invalid=0 "
                 "actual_fceux_oam_and_xbuf=yes synthetic_only=yes "
@@ -1868,7 +1869,7 @@ inline void stage129_pixel(unsigned sl,unsigned x,unsigned oamcount,
                 opaque_sp?"solid":"transparent",
                 behind?"behind":"front",
                 sprite_enabled?"enabled":"disabled",
-                a.row,a.first_sp,a.first_bg,
+                a.row,a.first_q,a.first_sp,a.first_bg,
                 visible?"yes":"no",expect_hit?"yes":"no",a.first_xbuf);
         }
         std::fflush(stderr);
