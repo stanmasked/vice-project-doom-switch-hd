@@ -7,9 +7,32 @@ that observe the PPU status **immediately before and after the exact
 reset assignment** and verify subsequent OAM selection and XBuf
 after the frame boundary.
 
+## Native diagnostic and frame-stable background isolation
+
+The first pinned native run [39129250720](https://github.com/stanmasked/vice-project-doom-switch-hd/actions/runs/39129250720)
+confirmed first-frame overflow, before-reset overflow, after-reset clearing
+and second-frame overflow in the nine-sprite fixture. Its framebuffer
+comparison rejected, however: frame 1 emitted XBuf `143`, whereas the
+same X64 position in frame 2 emitted `164`. This **does not** qualify
+as the full two-frame XBuf proof.
+
+Stage141 now uses a dedicated fixture generator derived from the proven
+Stage137 OAM ROM. It changes **only** the four mirrored CPU PRG
+`PPUMASK` immediate values from `$1E` (BG + sprites) to `$14`
+(sprites enabled, background disabled, left-edge sprite rendering).
+The sprite attributes, CHR banks, initial palette, complete OAM,
+MMC3 transition, instruction sequence, and vector table remain
+unchanged. Turning off background rendering makes X64 unambiguously
+the universal backdrop when ninth OAM is rejected, even across the
+subsequent frame, removing the background/scroll confound.
+
+A ROM regression rejects any mutation beyond those four bytes.
+This is a **controlled candidate fix**, not native validation
+until a new pinned-FCEUX run succeeds.
+
 ## Native fixture and observation
 
-Reuse two independently generated Stage137 private Mapper-4 ROMs,
+Use two independently generated Stage141 sprite-only Mapper-4 ROMs derived from the Stage137 fixtures,
 whose OAM slots are fully initialized and have already produced
 native Stage137 evidence. Both fixtures retain their OAM layouts
 across consecutive frames:
