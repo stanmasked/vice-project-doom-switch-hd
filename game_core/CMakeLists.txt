@@ -18,6 +18,13 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
   target_compile_options(vpd_manual_dash_test PRIVATE -Wall -Wextra -Wpedantic -Werror)
 endif()
 add_test(NAME romfree_manual_dash COMMAND vpd_manual_dash_test)
+# The exact serializer used by libnx to record actual NeXium ZR+Right effects.
+add_executable(vpd_dash_guest_witness_test ../tests/test_dash_guest_witness.cpp)
+target_link_libraries(vpd_dash_guest_witness_test PRIVATE vpd_simulation)
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+  target_compile_options(vpd_dash_guest_witness_test PRIVATE -Wall -Wextra -Wpedantic -Werror)
+endif()
+add_test(NAME romfree_dash_guest_serializer COMMAND vpd_dash_guest_witness_test)
 # ROM-free command-line replay is a host-side integration proof only.
 add_executable(vpd_combat_replay combat_replay.cpp)
 target_link_libraries(vpd_combat_replay PRIVATE vpd_simulation)
