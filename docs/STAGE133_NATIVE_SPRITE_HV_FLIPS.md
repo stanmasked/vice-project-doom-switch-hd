@@ -14,6 +14,27 @@ Each ROM sets OAM sprite0 at X=64, Y=120 with tile2. The only variation between 
 
 The sprite uses background-independent palette entries: pattern1 → `0x1A` (XBuf 154), pattern2 → `0x2B` (XBuf 171), pattern3 → `0x2A` (XBuf 170). This distinguishes each source column and makes mirrored outputs observable.
 
+## Palette-slot fault isolation (18 October 2026)
+
+A native run established the correct CHR source address `$1020`,
+matching low/high CHR bytes and correct eight two-bit sprite patterns.
+However, three pattern-2 pixels were emitted as XBuf `129` (palette
+value `$01`), not XBuf `171` (the requested `$2B`), while pattern-1
+and pattern-3 colors were correct. This is a *palette-slot mismatch*,
+not evidence of a failed H/V flip.
+
+For Stage133 **only**, the generator now explicitly writes `$2B` to
+PPU palette address `$3F12` using a fresh pair of writes to `$2006`
+followed by one `$2007` write. This directly tests whether
+address-bound initialization repairs the mismatch. Earlier synthetic
+ROMs (Stages129–131) are byte-for-byte unchanged. ROM regression tests
+require the explicit-address sequence in all four replicated PRG banks,
+and all four flip modes use identical PRG instructions except OAM flags.
+
+This is a controlled hypothesis, **not** a confirmed repair until the
+pinned native CI proves the expected eight output bytes in all four
+modes. Negative controls and the exact XBuf expectations remain enabled.
+
 ## Actual pinned-FCEUX evidence
 
 The guarded injector records the genuine fetched sprite CHR low/high planes **before** FCEUX's horizontal bit reversal, plus the actual CHR address, row, OAM flip flags, and scan slot. A second hook observes the real raster pixel's chosen two-bit pattern, palette color, and final XBuf byte.
