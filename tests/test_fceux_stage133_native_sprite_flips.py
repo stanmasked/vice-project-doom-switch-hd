@@ -77,7 +77,14 @@ class ROM(unittest.TestCase):
             # sequential palette writes. Legacy Stage129/131 PRG must
             # remain unmodified and should lack this additional write.
             explicit=explicit_sprite_palette_slot2()
-            self.assertEqual(len(explicit),15)
+            self.assertEqual(len(explicit),33)
+            # Last instructions must restore $2006=$2000 and issue
+            # both $2005 scroll writes, not leave PPU at palette $3F13.
+            self.assertEqual(
+                explicit[-18:],
+                bytes((0xA9,0x20,0x8D,6,0x20,
+                       0xA9,0,0x8D,6,0x20,
+                       0xA9,0,0x8D,5,0x20,0x8D,5,0x20)))
             self.assertEqual(base[16:32784].count(explicit),4)
             self.assertEqual(old[16:32784].count(explicit),0)
             self.assertEqual(base[-16384:],originals["horizontal"][-16384:])
