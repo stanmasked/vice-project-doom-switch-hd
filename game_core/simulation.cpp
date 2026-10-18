@@ -179,6 +179,10 @@ uint64_t Simulation::fingerprint() const{
     append(static_cast<uint32_t>(camera_x_));
     append(frame_);
     append(static_cast<uint32_t>(jump_was_down_?1:0));
+    // Facing changes future projectile direction even before the first shot.
+    // Preserve the legacy golden replay (which ends facing right) while
+    // preventing false replay identity for an otherwise identical left pose.
+    if(facing_left_ && !shots_fired_)append(0x4C454654u); // "LEFT"
     // Preserve the existing no-shot golden-replay hash. Projectile state
     // participates in replay identity as soon as shooting is exercised.
     if(shots_fired_){
