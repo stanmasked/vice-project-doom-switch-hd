@@ -28,6 +28,13 @@ struct Projectile {
     uint16_t age=0;
     bool active=false;
 };
+// Self-authored stationary training target in a synthetic arena.
+struct TrainingTarget {
+    int32_t x=25*kTileSize*kFixed;
+    int32_t y=13*kTileSize*kFixed;
+    uint8_t health=3;
+    uint16_t hits=0;
+};
 class Scene {
 public:
     Scene();
@@ -50,6 +57,7 @@ public:
     uint64_t fingerprint() const;
     const std::array<Projectile,kMaxProjectiles>& projectiles() const { return projectiles_; }
     uint32_t shotsFired() const { return shots_fired_; }
+    const TrainingTarget& trainingTarget() const { return target_; }
 private:
     Scene scene_;
     Actor player_{};
@@ -60,6 +68,7 @@ private:
     uint8_t fire_cooldown_=0;
     uint32_t shots_fired_=0;
     std::array<Projectile,kMaxProjectiles> projectiles_{};
+    TrainingTarget target_{};
     void advanceProjectiles();
     void fireProjectile();
     bool collideAt(int32_t x,int32_t y) const;
