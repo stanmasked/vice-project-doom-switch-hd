@@ -155,11 +155,18 @@ class Evidence(unittest.TestCase):
                 verify(good,MODES[(MODES.index(mode)+1)%4])
         fail=("VPD_STAGE133_REJECTED_SPRITE_FLIP "
               "mode=horizontal invalid=8 row=124 source_row=4 "
-              "samples=8 synthetic_only=yes")
+              "samples=8 bad_meta=8 bad_fetch=0 bad_pattern=0 bad_color=0 "
+              "fetch_addr=4132 fetch_low=0 fetch_high=0 "
+              "observed_pattern=1 expected_pattern=1 "
+              "observed_xbuf=154 expected_xbuf=154 synthetic_only=yes")
         self.assertTrue(verify_rejection(fail)["rejected"])
+        self.assertEqual(verify_rejection(fail)["bad_meta"],8)
         for wrong in ("",fail+"\n"+fail,fail+"\n"+report("horizontal"),
                       fail.replace("invalid=8","invalid=0"),
-                      fail.replace("mode=horizontal","mode=vertical")):
+                      fail.replace("mode=horizontal","mode=vertical"),
+                      fail.replace("bad_meta=8","bad_meta=0"),
+                      fail.replace("fetch_addr=4132","fetch_addr=4096"),
+                      fail.replace("invalid=8","invalid=9")):
             with self.assertRaises(NativeFlipError):
                 verify_rejection(wrong)
 
