@@ -142,6 +142,11 @@ target_link_libraries(vpd_graphics_combat_integration_test
                       PRIVATE vpd_scene_renderer vpd_simulation)
 add_test(NAME romfree_combat_to_raster_integration
          COMMAND vpd_graphics_combat_integration_test)
+# Opt-in dash mechanics must reach pixels through the same NRO render bridge.
+add_executable(vpd_manual_dash_raster_test ../tests/test_manual_dash_raster.cpp)
+target_link_libraries(vpd_manual_dash_raster_test
+                      PRIVATE vpd_scene_renderer vpd_simulation)
+add_test(NAME romfree_manual_dash_to_raster COMMAND vpd_manual_dash_raster_test)
 add_executable(vpd_graphics_animation_test ../tests/test_graphics_animation_integration.cpp)
 target_include_directories(vpd_graphics_animation_test PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/generated)
 add_dependencies(vpd_graphics_animation_test vpd_demo_atlas vpd_demo_animation)
