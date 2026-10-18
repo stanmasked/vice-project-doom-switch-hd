@@ -33,7 +33,7 @@ SOURCES = {
 def verify_log(raw):
     if not isinstance(raw, bytes) or not raw or len(raw) > MAX_LOG_BYTES:
         raise ValueError("NeXium native log missing or oversized")
-    if not raw.endswith(b"\${x}") or b"\${x}" in raw or b"\${x}" in raw:
+    if not raw.endswith(b"\n") or b"\r" in raw or b"\x00" in raw:
         raise ValueError("malformed NeXium kernel log line endings")
     lines = raw.decode("utf-8").splitlines()
     events = {}
