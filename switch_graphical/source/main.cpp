@@ -132,6 +132,9 @@ int main(int,char**) {
             dash_probe_started=false;
             dash_probe_finished=false;
             if(!demo.enabled()){
+                // Preserve ROM-free autoplay hashes: enable encounter only on
+                // entry into explicit manual gameplay, never in attract mode.
+                game.enableEnemyEncounter();
                 manual_seq=1;
                 (void)vpd::manualProofAppend(has_sd,vpd::ManualProofEvent::Enter,
                                              1,game,1);
