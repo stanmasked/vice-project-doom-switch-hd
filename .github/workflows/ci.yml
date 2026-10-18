@@ -4,6 +4,12 @@ on:
   push:
   pull_request:
 
+# Avoid accumulating obsolete CI runs on a heavily iterated research branch.
+# Preserve independent runs for other PRs and workflows.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   code-and-tests:
     runs-on: ubuntu-latest
