@@ -36,7 +36,7 @@ def patch(source):
     draw=(DRAW+nl+b"#ifdef "+GUARD+nl+
           b"\t\t\t\t\t\tvpd_ppu_probe::stage141_pixel("
           b"sl,rasterpos,oamcounts[renderslot],"
-          b"PPU_status,*ptr,Sprite16);"+nl+b"#endif")
+          b"PPU_status,*ptr,Sprite16,pixelcolor,havepixel,pixel & 3);"+nl+b"#endif")
     output=source.replace(RESET,reset,1).replace(EVAL,evaluation,1)
     output=output.replace(DRAW,draw,1)
     if output.count(GUARD)!=4:
