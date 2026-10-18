@@ -5,6 +5,10 @@
 namespace vpd {
 namespace {
 constexpr int32_t kRunSpeed=2*kFixed;
+// Original, ROM-free prototype only: short grounded directional dash.
+constexpr int32_t kDashSpeed=6*kFixed;
+constexpr uint8_t kDashFrames=6;
+constexpr uint8_t kDashRecovery=45;
 constexpr int32_t kGravity=54;
 constexpr int32_t kMaxFall=5*kFixed;
 constexpr int32_t kJumpVelocity=-5*kFixed;
@@ -48,6 +52,11 @@ void Simulation::reset(){
     facing_left_=false;
     fire_cooldown_=0;
     shots_fired_=0;
+    dash_ticks_=0;
+    dash_cooldown_=0;
+    dash_direction_=0;
+    dash_was_down_=false;
+    dash_ever_used_=false;
     projectiles_.fill(Projectile{});
     target_=TrainingTarget{};
 }
@@ -155,8 +164,22 @@ void Simulation::fireProjectile(){
 void Simulation::tick(Input input){
     const bool left=(input.buttons&Left)!=0;
     const bool right=(input.buttons&Right)!=0;
-    player_.vx=left==right?0:(left?-kRunSpeed:kRunSpeed);
-    if(left!=right)facing_left_=left;
+    if(dash_cooldown_>0)--dash_cooldown_;
+    const bool dash_down=(input.buttons&Dash)!=0;
+    if(dash_down && !dash_was_down_ && dash_ticks_==0 &&
+       dash_cooldown_==0 && player_.grounded && left!=right){
+        dash_direction_=left?-1:1;
+        dash_ticks_=kDashFrames;
+        dash_cooldown_=kDashRecovery;
+        dash_ever_used_=true;
+    }
+    dash_was_down_=dash_down;
+    const bool dash_step=dash_ticks_>0;
+    player_.vx=dash_step?dash_direction_*kDashSpeed:
+              (left==right?0:(left?-kRunSpeed:kRunSpeed));
+    if(dash_step)facing_left_=dash_direction_<0;
+    else if(left!=right)facing_left_=left;
+    if(dash_step)--dash_ticks_;
     const bool jump_down=(input.buttons&Jump)!=0;
     if(jump_down && !jump_was_down_ && player_.grounded){
         player_.vy=kJumpVelocity;
@@ -165,6 +188,8 @@ void Simulation::tick(Input input){
     jump_was_down_=jump_down;
     player_.vy=std::min(player_.vy+kGravity,kMaxFall);
     moveHorizontal(player_.vx);
+    // A solid wall cancels the remaining burst, without bypassing collision.
+    if(dash_step && player_.vx==0)dash_ticks_=0;
     moveVertical(player_.vy);
     advanceProjectiles();
     if(fire_cooldown_>0)--fire_cooldown_;
@@ -231,6 +256,16 @@ uint64_t Simulation::fingerprint() const{
             append(static_cast<uint32_t>(shot.vx));
             append(static_cast<uint32_t>(shot.age));
         }
+    }
+    // Leave established ROM-free autoplay golden fingerprints untouched,
+    // while distinguishing any input or physics state introduced by dash.
+    if(dash_ever_used_ || dash_was_down_ || dash_ticks_ || dash_cooldown_){
+        append(0x44415348u); // DASH state version discriminator
+        append(static_cast<uint32_t>(dash_ticks_));
+        append(static_cast<uint32_t>(dash_cooldown_));
+        append(static_cast<uint32_t>(static_cast<int32_t>(dash_direction_)));
+        append(static_cast<uint32_t>(dash_was_down_?1:0));
+        append(static_cast<uint32_t>(dash_ever_used_?1:0));
     }
     return hash;
 }
