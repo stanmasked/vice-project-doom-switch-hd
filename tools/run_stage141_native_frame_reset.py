@@ -151,8 +151,12 @@ def execute(binary,rom,folder,mode,*,enabled=True,reject=False,timeout=45):
         return verify_rejection(log) if reject else verify(log,mode)
     except FrameResetError as exc:
         details=re.findall(r"VPD_STAGE141_REJECTED_FRAME_RESET [^\r\n]{0,500}",log)
-        raise FrameResetError(str(exc)+": "+(
-            details[-1] if details else categorize_exit(process.returncode,log))) from exc
+        diagnostic=re.findall(
+            r"VPD_STAGE143_FRAME_PIXEL_DIAGNOSTIC [^\r\n]{0,500}",log)
+        summary=details[-1] if details else categorize_exit(process.returncode,log)
+        if diagnostic:
+            summary+=" | "+diagnostic[-1]
+        raise FrameResetError(str(exc)+": "+summary) from exc
 
 
 def run(binary,temp):
