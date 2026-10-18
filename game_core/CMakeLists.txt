@@ -25,6 +25,14 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
   target_compile_options(vpd_guard_enemy_test PRIVATE -Wall -Wextra -Wpedantic -Werror)
 endif()
 add_test(NAME romfree_guard_enemy_encounter COMMAND vpd_guard_enemy_test)
+# Second-wave gated ROM-free sentry, hostile shots and staged corridor exit.
+add_executable(vpd_second_wave_sentry_test ../tests/test_second_wave_sentry.cpp)
+target_link_libraries(vpd_second_wave_sentry_test PRIVATE vpd_simulation)
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+  target_compile_options(vpd_second_wave_sentry_test PRIVATE
+                         -Wall -Wextra -Wpedantic -Werror)
+endif()
+add_test(NAME romfree_second_wave_sentry COMMAND vpd_second_wave_sentry_test)
 # The native guard first-step proof is emitted only by authoritative gameplay.
 add_executable(vpd_guard_guest_witness_test ../tests/test_guard_guest_witness.cpp)
 target_link_libraries(vpd_guard_guest_witness_test PRIVATE vpd_simulation)
