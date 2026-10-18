@@ -47,7 +47,9 @@ class HostPipelineFailureInjection(unittest.TestCase):
                 'romfree_combat_replay\\nromfree_combat_replay_csv\\n'
                 'romfree_combat_replay_invalid\\n'
                 'romfree_combat_full_trace\\n"\n'
-                '    if [[ "${MISSING_TEST:-}" != "1" ]]; then\n'
+                '    if [[ "${MISSING_TEST:-}" == "1" ]]; then\n'
+                '      printf "romfree_combat_matrix_lookalike\\n"\n'
+                '    else\n'
                 '      printf "romfree_combat_matrix\\n"\n'
                 '    fi\n'
                 '  fi\n'
@@ -73,7 +75,8 @@ class HostPipelineFailureInjection(unittest.TestCase):
             self.assertIn("VPD_ROMFREE_HOST_PIPELINE_PASS scope=all",
                           ok_full.stdout)
             for scenario,changed in (
-                ("missing",{"MISSING_TEST":"1"}),
+                # A substring lookalike must never certify a missing test.
+                ("missing_exact_name",{"MISSING_TEST":"1"}),
                 ("ctest",{"CTEST_FAIL":"1"}),
                 ("auditor",{"AUDIT_FAIL":"1"})
             ):
