@@ -9,6 +9,7 @@ struct GuardView {
     uint8_t health=0;
     bool enabled=false;
     bool alerted=false;
+    uint8_t hit_flash_ticks=0;
 };
 struct ProjectileView {
     int32_t x_px=0,y_px=0;
@@ -52,6 +53,7 @@ struct SceneView {
     bool dash_ever_used=false;
     GuardView guard{};
     uint8_t player_health=5;
+    uint8_t player_hit_flash_ticks=0;
 };
 constexpr int kSceneWidth=1280;
 constexpr int kSceneHeight=720;
