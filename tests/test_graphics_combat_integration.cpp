@@ -2,6 +2,7 @@
 // Exercise actual simulation -> SceneView -> RGBA renderer with no NES assets.
 #include "simulation.hpp"
 #include "scene_renderer.hpp"
+#include "combat_scene_bridge.hpp"
 #include <array>
 #include <cstdint>
 #include <cstdio>
@@ -30,21 +31,8 @@ vpd::SceneView combatView(const vpd::Simulation& sim){
         sim.frame(),actor.grounded,
         const_cast<vpd::Scene*>(&sim.scene()),solid
     };
-    const auto& target=sim.trainingTarget();
-    v.training_target_x_px=target.x/vpd::kFixed;
-    v.training_target_y_px=target.y/vpd::kFixed;
-    v.training_target_health=target.health;
-    const auto& shots=sim.projectiles();
-    static_assert(vpd::kMaxProjectiles==8,
-                  "SceneView must carry all simulation projectile slots");
-    require(v.projectiles.size()==shots.size(),
-            "Projectile slots were lost across the graphics bridge");
-    for(std::size_t i=0;i<shots.size();++i){
-        v.projectiles[i]={
-            shots[i].x/vpd::kFixed,shots[i].y/vpd::kFixed,
-            shots[i].active
-        };
-    }
+    // Exact same immutable-source adapter used by the libnx NRO.
+    vpd::applyCombatOverlay(v,sim);
     return v;
 }
 uint64_t hashPixels(const std::vector<uint32_t>& pixels){
