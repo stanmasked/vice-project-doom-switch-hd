@@ -195,6 +195,8 @@ uint64_t Simulation::fingerprint() const{
     // Two physically identical actors with distinct solid tiles can have
     // different projectile collisions on the next tick.
     static const Scene pristine_map{};
+    static_assert((kMapWidth*kMapHeight)%4==0,
+                  "packed map replay serialization requires four-byte tiles");
     if(scene_.cells()!=pristine_map.cells()){
         append(0x4D415031u); // map-state version discriminator
         const auto& tiles=scene_.cells();
