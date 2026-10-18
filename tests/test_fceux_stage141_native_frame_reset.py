@@ -9,6 +9,9 @@ from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/"tools"))
 
+from make_stage137_nine_sprite_rom import make_rom as stage137_make_rom
+from make_stage141_frame_reset_rom import (
+    make_rom as stage141_make_rom, BG_AND_SPRITES, SPRITES_ONLY)
 from run_stage141_native_frame_reset import (
     MODES,PASS,REJECT,FrameResetError,verify,verify_rejection,verify_sweep)
 from inject_fceux_stage141_frame_reset import (
@@ -34,6 +37,37 @@ def positive(mode):
         "samples=16 invalid=0 actual_ppu_reset_and_xbuf=yes "
         "synthetic_only=yes original_game_frame_reset_proven=no"%
         (mode,bit,bit,bit,color,color))
+
+
+
+class SpriteOnlyROM(unittest.TestCase):
+    def test_background_mask_isolation_preserves_all_nonmask_bytes(self):
+        with tempfile.TemporaryDirectory() as td:
+            for mode in MODES:
+                with self.subTest(mode=mode):
+                    old=Path(td)/(mode+"_old.nes")
+                    new=Path(td)/(mode+"_sprite_only.nes")
+                    stage137_make_rom(old,mode)
+                    stage141_make_rom(new,mode)
+                    original=old.read_bytes()
+                    result=new.read_bytes()
+                    self.assertEqual(len(result),49168)
+                    self.assertEqual(original[:16],result[:16])
+                    self.assertEqual(original[32784:],result[32784:])
+                    self.assertEqual(original[16:32784].count(BG_AND_SPRITES),4)
+                    self.assertEqual(result[16:32784].count(SPRITES_ONLY),4)
+                    self.assertEqual(sum(a!=b for a,b in zip(original,result)),4)
+                    self.assertEqual(result[16:32784],
+                        original[16:32784].replace(BG_AND_SPRITES,SPRITES_ONLY))
+
+    def test_unsupported_scenario_fails_closed(self):
+        with tempfile.TemporaryDirectory() as td:
+            for bad in ("", "ninth_offscreen", "nine_8x16", True, None):
+                with self.subTest(bad=bad):
+                    path=Path(td)/"bad.nes"
+                    with self.assertRaises(ValueError):
+                        stage141_make_rom(path,bad)
+                    self.assertFalse(path.exists())
 
 
 class NativeEvidence(unittest.TestCase):
