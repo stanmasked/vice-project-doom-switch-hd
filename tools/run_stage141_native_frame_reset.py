@@ -71,7 +71,7 @@ def verify_rejection(log):
         raise FrameResetError("Malformed negative frame reset witness")
     mode,invalid,first,before,after,second,c0,c1=matches[0].groups()
     invalid,c0,c1=map(_int,(invalid,c0,c1))
-    if (mode!="eight_visible" or not 1<=invalid<=18 or
+    if (mode!="eight_visible" or invalid!=19 or
             (first,before,after,second)!=("yes","yes","no","yes") or
             (c0,c1)!=(143,143)):
         raise FrameResetError("False eight-sprite control lacks actual overflow")
