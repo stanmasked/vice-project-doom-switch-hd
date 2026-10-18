@@ -1,0 +1,77 @@
+name: NeXium Vice runtime smoke test
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/nexium-runtime.yml"
+      - "tools/run_nexium_vice_ci.sh"
+      - "tools/audit_nexium_vice_witness.py"
+      - "tests/test_nexium_witness_audit.py"
+      - "game_core/**"
+      - "switch_graphical/**"
+      - "graphics_core/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: vice-nexium-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-guest:
+    runs-on: ubuntu-latest
+    container:
+      image: devkitpro/devkita64:latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Add toolchain
+        run: |
+          echo "$DEVKITPRO/devkitA64/bin" >> "$GITHUB_PATH"
+          echo "$DEVKITPRO/portlibs/switch/bin" >> "$GITHUB_PATH"
+      - name: Cross-build exact PR NRO for guest execution
+        run: |
+          make -C switch_graphical -j2
+          python3 tests/check_nro.py switch_graphical/vpd_native_scene.nro
+          sha256sum switch_graphical/vpd_native_scene.nro
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vice-nexium-guest-nro
+          path: switch_graphical/vpd_native_scene.nro
+          retention-days: 7
+          if-no-files-found: error
+
+  emulate:
+    needs: build-guest
+    runs-on: ubuntu-26.04
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: vice-nexium-guest-nro
+          path: emulator-input
+      - name: Ensure headless Vulkan and display dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y \
+            xvfb xauth xdotool mesa-vulkan-drivers libvulkan1 vulkan-tools \
+            libgtk-3-0 libasound2t64 libudev1 libxkbcommon0 libxkbcommon-x11-0 \
+            libfontconfig1 libx11-xcb1 libegl1 libgles2 libgl1 libpulse0
+      - name: Validate launcher shell syntax
+        run: bash -n tools/run_nexium_vice_ci.sh
+      - name: Install NeXium, launch graphical NRO and check real guest record
+        run: bash tools/run_nexium_vice_ci.sh emulator-input/vpd_native_scene.nro emulator-evidence
+      - name: Save emulator logs, guest output and diagnostics even if blocked
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vice-nexium-runtime-evidence
+          path: |
+            emulator-evidence/*.txt
+            emulator-evidence/*.log
+            emulator-evidence/xdg-config/NeXium/logs/*.log
+            emulator-evidence/vulkan.txt
+            emulator-evidence/guest-demo-witness.txt
+          retention-days: 7
+          if-no-files-found: warn
