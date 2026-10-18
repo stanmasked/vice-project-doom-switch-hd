@@ -155,7 +155,10 @@ int main(int argc,char**argv){
  if(argc<2)return 3;
  const unsigned mode=(unsigned)std::atoi(argv[1]);
  if(mode>1)return 4;
- const bool false_clean=argc>2;
+ const bool false_clean=argc>2 && argv[2][0]=='w';
+ const bool corrupt_pixel=argc>2 && argv[2][0]=='p';
+ const bool corrupt_index=argc>2 && argv[2][0]=='i';
+ const bool corrupt_reset=argc>2 && argv[2][0]=='r';
  const bool overflow=mode==1 || false_clean;
  setenv("VPD_STAGE141_FRAME_RESET_CASE",
         mode==1?"nine_overflow":"eight_visible",1);
@@ -166,14 +169,16 @@ int main(int argc,char**argv){
  for(unsigned frame=0;frame<2;++frame){
   const unsigned status=overflow?0x20U:0U;
   vpd_ppu_probe::stage141_eval(124,8,status,
-      overflow?120:255,overflow?64:255,0,1,2,3,4,5,6,7);
+      overflow?120:255,overflow?64:255,0,1,2,3,4,5,6,
+      (corrupt_index && frame==1)?8:7);
   for(unsigned x=64;x<72;++x){
-   vpd_ppu_probe::stage141_pixel(126,x,8,status,
-      overflow?143:170,false);
+   unsigned color=overflow?143:170;
+   if(corrupt_pixel && frame==1 && x==71)++color;
+   vpd_ppu_probe::stage141_pixel(126,x,8,status,color,false);
   }
   if(frame==0){
    vpd_ppu_probe::stage141_before_reset(status);
-   vpd_ppu_probe::stage141_after_reset(0);
+   vpd_ppu_probe::stage141_after_reset(corrupt_reset?0x20U:0U);
   }
  }
  return 0;
@@ -196,6 +201,18 @@ int main(int argc,char**argv){
                                capture_output=True,text=True)
             self.assertEqual(neg.returncode,0,neg.stderr)
             verify_rejection(neg.stderr)
+            # Fail closed even if only the last pixel of the second frame
+            # disagrees while the reported first-pixel XBuf colors match.
+            for fault in ("pixel", "index", "reset"):
+                with self.subTest(mode=mode,fault=fault):
+                    bad=subprocess.run([str(binary),str(i),fault],
+                                       capture_output=True,text=True)
+                    self.assertEqual(bad.returncode,0,bad.stderr)
+                    self.assertEqual(bad.stderr.count(REJECT),1,bad.stderr)
+                    self.assertIn("invalid=1",bad.stderr)
+                    self.assertNotIn(PASS,bad.stderr)
+                    with self.assertRaises(FrameResetError):
+                        verify(bad.stderr,mode)
 
 
 if __name__=="__main__":
