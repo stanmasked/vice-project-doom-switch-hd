@@ -100,6 +100,14 @@ class Injection(unittest.TestCase):
         self.assertEqual(stage133.count(b"vpd_ppu_probe::stage133_pixel("),1)
         self.assertEqual(stage133.count(b"vpd_ppu_probe::stage133_fetch("),1)
         self.assertIn(b"vpd_stage129_pattern",stage133)
+        # FCEUX fills unused evaluation slots with dummy tile0 CHR reads.
+        # The fetch witness must accept only a genuine OAM0 tile2,
+        # rather than allowing a later dummy read to overwrite it.
+        self.assertIn(
+            b"if(s==0 && oam[7] && oam[1]==2 && oam[6]==0)",
+            stage133)
+        self.assertIn(b"vpd_ppu_probe::stage133_fetch(",stage133)
+
         self.assertEqual(stage133.count(b"\r\n"),stage133.count(b"\n"))
         with self.assertRaises(ValueError):
             patch133(stage133)
