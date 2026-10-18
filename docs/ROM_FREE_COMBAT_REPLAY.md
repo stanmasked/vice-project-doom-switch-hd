@@ -63,3 +63,31 @@ The CSV is generated from the simulator; there are no original game
 assets or extracted captures. For actual Nintendo Switch testing,
 build the independent test-scene NRO in its existing workflow and
 test it separately on compatible hardware/emulator.
+
+## Independent full-frame audit
+
+The host pipeline additionally runs:
+
+    python3 tools/audit_romfree_combat_trace.py \
+      --binary build/game_core/vpd_combat_replay
+
+It executes the replay binary with `--frames 200` and independently
+checks **all 200 frames** for input schedule, strict increasing frame
+numbers, monotonic shot/hit totals, valid health transitions, bounded
+active projectiles and canonical CSV values. Four intermediate/final
+snapshots are pinned at frames 1, 58, 78 and 200.
+
+The SHA-256 of the entire canonical 200-row CSV, including the header
+and line endings, must be:
+
+    488674f6d2a7e506b1187fc4dcc4b28ab1f982fbf401966c661e4b63a0454f19
+
+If one frame's input, position, shot state or fingerprint changes, the
+independent auditor rejects the transcript even if the final replay
+hash happens to match. Unit tests separately mutate headers, frame
+ordering, line endings, counts, numeric encodings and the SHA-256.
+
+The additional acceptance marker is
+`VPD_ROMFREE_FULL_COMBAT_TRACE_PASS`; it is **host-side synthetic
+evidence only**, never a claim of original NES or Nintendo Switch
+runtime fidelity.
