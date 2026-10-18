@@ -8,6 +8,9 @@ constexpr int32_t kRunSpeed=2*kFixed;
 constexpr int32_t kGravity=54;
 constexpr int32_t kMaxFall=5*kFixed;
 constexpr int32_t kJumpVelocity=-5*kFixed;
+constexpr int32_t kProjectileSpeed=6*kFixed;
+constexpr uint16_t kProjectileLifetime=90;
+constexpr uint8_t kFireInterval=10;
 // Fixed point floor division, including negatives.
 int floorDiv(int value,int divisor) {
     int quotient=value/divisor;
@@ -42,6 +45,10 @@ void Simulation::reset(){
     frame_=0;
     camera_x_=0;
     jump_was_down_=false;
+    facing_left_=false;
+    fire_cooldown_=0;
+    shots_fired_=0;
+    projectiles_.fill(Projectile{});
 }
 bool Simulation::collideAt(int32_t x,int32_t y) const{
     constexpr int tile=kTileSize*kFixed;
@@ -96,10 +103,49 @@ void Simulation::moveVertical(int32_t delta){
         delta-=step;
     }
 }
+void Simulation::advanceProjectiles(){
+    constexpr int32_t tile=kTileSize*kFixed;
+    // Small swept steps prevent skipping a one-tile obstacle.
+    for(auto& shot:projectiles_){
+        if(!shot.active)continue;
+        if(++shot.age>=kProjectileLifetime){
+            shot.active=false;
+            continue;
+        }
+        const int dir=shot.vx<0?-1:1;
+        int32_t remaining=shot.vx<0?-shot.vx:shot.vx;
+        while(remaining>0){
+            const int32_t step=std::min<int32_t>(remaining,kFixed);
+            const int32_t next=shot.x+dir*step;
+            if(scene_.solid(floorDiv(next,tile),floorDiv(shot.y,tile))){
+                shot.active=false;
+                break;
+            }
+            shot.x=next;
+            remaining-=step;
+        }
+    }
+}
+void Simulation::fireProjectile(){
+    for(auto& shot:projectiles_){
+        if(shot.active)continue;
+        const int dir=facing_left_?-1:1;
+        const int32_t x=player_.x+
+            (facing_left_?-kFixed:kPlayerWidth*kFixed);
+        const int32_t y=player_.y+(kPlayerHeight/2)*kFixed;
+        constexpr int32_t tile=kTileSize*kFixed;
+        if(scene_.solid(floorDiv(x,tile),floorDiv(y,tile)))return;
+        shot=Projectile{x,y,dir*kProjectileSpeed,0,true};
+        ++shots_fired_;
+        fire_cooldown_=kFireInterval;
+        return;
+    }
+}
 void Simulation::tick(Input input){
     const bool left=(input.buttons&Left)!=0;
     const bool right=(input.buttons&Right)!=0;
     player_.vx=left==right?0:(left?-kRunSpeed:kRunSpeed);
+    if(left!=right)facing_left_=left;
     const bool jump_down=(input.buttons&Jump)!=0;
     if(jump_down && !jump_was_down_ && player_.grounded){
         player_.vy=kJumpVelocity;
@@ -109,6 +155,10 @@ void Simulation::tick(Input input){
     player_.vy=std::min(player_.vy+kGravity,kMaxFall);
     moveHorizontal(player_.vx);
     moveVertical(player_.vy);
+    advanceProjectiles();
+    if(fire_cooldown_>0)--fire_cooldown_;
+    if((input.buttons&Fire)!=0 && fire_cooldown_==0)
+        fireProjectile();
     camera_x_=std::clamp(player_.x/kFixed-10*kTileSize,0,(kMapWidth-40)*kTileSize);
     ++frame_;
 }
@@ -129,6 +179,44 @@ uint64_t Simulation::fingerprint() const{
     append(static_cast<uint32_t>(camera_x_));
     append(frame_);
     append(static_cast<uint32_t>(jump_was_down_?1:0));
+    // Preserve the existing reference hash when the map is untouched, but
+    // include the *exact* live tile bytes whenever gameplay edits geometry.
+    // Two physically identical actors with distinct solid tiles can have
+    // different projectile collisions on the next tick.
+    static const Scene pristine_map{};
+    static_assert((kMapWidth*kMapHeight)%4==0,
+                  "packed map replay serialization requires four-byte tiles");
+    if(scene_.cells()!=pristine_map.cells()){
+        append(0x4D415031u); // map-state version discriminator
+        const auto& tiles=scene_.cells();
+        for(std::size_t i=0;i<tiles.size();i+=4){
+            const uint32_t word=
+                static_cast<uint32_t>(tiles[i]) |
+                (static_cast<uint32_t>(tiles[i+1])<<8) |
+                (static_cast<uint32_t>(tiles[i+2])<<16) |
+                (static_cast<uint32_t>(tiles[i+3])<<24);
+            append(word);
+        }
+    }
+    // Facing changes future projectile direction even before the first shot.
+    // Preserve the legacy golden replay (which ends facing right) while
+    // preventing false replay identity for an otherwise identical left pose.
+    if(facing_left_ && !shots_fired_)append(0x4C454654u); // "LEFT"
+    // Preserve the existing no-shot golden-replay hash. Projectile state
+    // participates in replay identity as soon as shooting is exercised.
+    if(shots_fired_){
+        append(0x53484f54u); // explicit SHOT discriminator
+        append(shots_fired_);
+        append(static_cast<uint32_t>(fire_cooldown_));
+        append(static_cast<uint32_t>(facing_left_?1:0));
+        for(const auto& shot:projectiles_){
+            append(static_cast<uint32_t>(shot.active?1:0));
+            append(static_cast<uint32_t>(shot.x));
+            append(static_cast<uint32_t>(shot.y));
+            append(static_cast<uint32_t>(shot.vx));
+            append(static_cast<uint32_t>(shot.age));
+        }
+    }
     return hash;
 }
 }
