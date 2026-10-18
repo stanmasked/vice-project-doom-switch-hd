@@ -46,9 +46,52 @@ fault-injection regression verifies that corruption of the last pixel
 in the second frame still fails even when the first-pixel colors and
 recorded diagnostics match.
 
-Do not infer that the ninth sprite became visible, or attribute the
-discrepancy to the backdrop or palette, until raw native pixel and
-compositor evidence identifies the source.
+The pinned native Stage143 diagnostic in
+[39132581374](https://github.com/stanmasked/vice-project-doom-switch-hd/actions/runs/39132581374)
+settled the previously open ambiguity: first/second raw palette colors
+were 15/36, both sprite-pixel flags were zero and both background
+pattern bits were zero. The second-frame color change was not caused by
+the ninth sprite becoming visible.
+
+## Stage144–145: verified terminal JMP relocation fixes the two-frame ROM
+
+The Stage137/141 fixture added OAM/PPU setup before the original Stage110
+terminal absolute 6502 `JMP`, but retained its old destination address.
+Because the program now occupied more bytes, the CPU repeatedly executed
+injected instructions instead of idling, changing palette state after
+the first frame.
+
+Stage144's `make_stage144_stable_frame_rom.py` independently regenerates
+each Stage141 synthetic ROM, validates all four 8-KiB mirrored PRG banks
+and their interrupt vectors, and fixes exactly the two absolute-JMP
+operand bytes in **each** bank (eight bytes overall). Header, CHR,
+sprite geometry, palettes, and every other instruction remain intact.
+
+The native FCEUX job
+[39134434353](https://github.com/stanmasked/vice-project-doom-switch-hd/actions/runs/39134434353)
+finished **successfully** in all three GitHub Actions jobs.
+The pinned FCEUX log contains:
+
+`STAGE141_NATIVE_FRAME_OVERFLOW_RESET_PROOF native_fceux=yes synthetic_mapper4_only=yes cases=2 frames=4 samples=32 observed_pre_render_status_reset=yes overflow_reappears_next_frame=yes clean_frame_remains_clean=yes wrong_clean_control=rejected observer_off_control=clean original_game_multiframe_proven=no`
+
+All four Stage144 ROM relocation regression tests passed. This is
+actual native proof for the controlled four rendered frames and the
+pre-render overflow reset, not proof about the original game.
+
+## Stage146: same-binary causal regression against the stale JMP
+
+The subsequent experiment adds an explicit paired negative control to
+the **same** pinned FCEUX runner. It regenerates the original Stage141
+nine-sprite ROM with the stale JMP, verifies that relocating its
+terminal operands reproduces the fixed positive ROM exactly, and
+requires the genuine stale ROM to be *rejected* by FCEUX with the
+original first/second-frame XBuf difference 143/164, raw colors 15/36
+and no sprite pixel. The fixed ROM must still pass before the
+`STAGE146_NATIVE_STALE_JMP_CAUSAL_CONTROL` summary can be emitted.
+The observer-off and false-clean controls remain mandatory.
+
+Stage146 is an additional causal verification and must not be claimed
+complete until a fresh native CI run supplies its distinct marker.
 
 ## Native fixture and observation
 
