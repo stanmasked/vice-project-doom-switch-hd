@@ -8,7 +8,7 @@ from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/"tools"))
 
-from make_stage137_nine_sprite_rom import MODES,make_rom,oam_setup
+from make_stage137_nine_sprite_rom import MODES,make_rom,oam_setup,OAM_CLEAR
 from run_stage137_native_nine_oam import (
     verify,verify_rejection,verify_sweep,NativeNineError,expectation,PASS,REJECT
 )
@@ -49,8 +49,12 @@ class GeneratedROM(unittest.TestCase):
                              bytes(16))
             self.assertEqual(images["nine_overflow"][-16384+1024+32:-16384+1024+48],
                              bytes((255,))*16)
-            self.assertEqual(len(oam_setup("eight_visible")),5+8*4*5)
-            self.assertEqual(len(oam_setup("nine_overflow")),5+9*4*5)
+            self.assertEqual(len(oam_setup("eight_visible")),len(OAM_CLEAR)+8*4*5)
+            self.assertEqual(len(oam_setup("nine_overflow")),len(OAM_CLEAR)+9*4*5)
+            self.assertEqual(len(OAM_CLEAR),20)
+            self.assertEqual(OAM_CLEAR[-11:],bytes((0x8D,4,0x20,0xE8,0xD0,0xFA,0xA9,0,0x8D,3,0x20)))
+            for mode in MODES:
+                self.assertTrue(oam_setup(mode).startswith(OAM_CLEAR))
             self.assertEqual(oam_setup("nine_overflow")[-5:],
                              bytes((0xA9,64,0x8D,4,0x20)))
             self.assertEqual(oam_setup("ninth_offscreen")[-20:-15],
@@ -164,9 +168,9 @@ int main(int argc,char** argv){
     const bool real_nine=(mode==1 || mode==3 || wrong);
     const unsigned color=(mode==0 && !wrong)?170U:143U;
     const unsigned status=real_nine?32U:0U;
-    unsigned ninth_y=mode==2?40U:120U;
+    unsigned ninth_y=mode==0&&!wrong?255U:mode==2?40U:120U;
     vpd_ppu_probe::stage137_eval(sl,0,8,status,ninth_y,
-             mode==0&&!wrong?0U:64U,0,1,2,3,4,5,6,7);
+             mode==0&&!wrong?255U:64U,0,1,2,3,4,5,6,7);
     (void)color;
    }
    if((sl==124 || sl==132)&&x>=64 && x<72){
