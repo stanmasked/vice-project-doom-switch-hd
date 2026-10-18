@@ -57,6 +57,13 @@ int main(int argc,char** argv) {
         check(checksum(image,stride)==shot_hash,
               "projectile raster is not deterministic");
         view.projectiles[0].active=false;
+        // Restore the original screenshot buffer before optional PPM export.
+        // The shot-only comparison must not silently contaminate artifacts.
+        check(vpd::drawScene(image.data(),vpd::kSceneWidth,
+                             vpd::kSceneHeight,stride,view),
+              "legacy screenshot restoration failed");
+        check(checksum(image,stride)==original,
+              "optional screenshot buffer was left with test shot pixels");
         check(vpd::drawScene(repeat.data(),vpd::kSceneWidth,
                              vpd::kSceneHeight,stride,view),
               "inactive projectile raster failed");
