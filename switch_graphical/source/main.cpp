@@ -102,7 +102,8 @@ int main(int,char**) {
                           result!=vpd::BundleReload::LoadedAtlasOnly;
             if(!reload_failed)animation.reset(); // clip counts/ticks may change
         }
-        if(pressed&HidNpadButton_Y) {
+        // Y is now Fire; hold left-stick click + Y for developer reset.
+        if((pressed&HidNpadButton_Y) && (buttons&HidNpadButton_StickL)) {
             assets.reset();
             animation.reset();
             reload_failed=false;
@@ -143,6 +144,8 @@ int main(int,char**) {
         if(buttons&(HidNpadButton_Left|HidNpadButton_StickLLeft))input|=vpd::Left;
         if(buttons&(HidNpadButton_Right|HidNpadButton_StickLRight))input|=vpd::Right;
         if(buttons&(HidNpadButton_A|HidNpadButton_B))input|=vpd::Jump;
+        if((buttons&HidNpadButton_Y) && !(buttons&HidNpadButton_StickL))
+            input|=vpd::Fire;
         game.tick(vpd::Input{input});
         u32 stride=0;
         auto* pixels=static_cast<uint32_t*>(framebufferBegin(&fb,&stride));
@@ -157,6 +160,13 @@ int main(int,char**) {
         view.external_animation_source=assets.externalAnimation();
         view.asset_reload_failed=reload_failed;
         view.moving=actor.vx!=0;
+        const auto& shots=game.projectiles();
+        for(std::size_t i=0;i<shots.size();++i){
+            view.projectiles[i]={
+                shots[i].x/vpd::kFixed,
+                shots[i].y/vpd::kFixed,shots[i].active
+            };
+        }
         if(!animation.tick(assets.animation(),
                 vpd::MotionSample{actor.grounded,actor.vx!=0,actor.vy,actor.vx}))break;
         view.sprite_frame=animation.frame(assets.animation());
