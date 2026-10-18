@@ -253,6 +253,8 @@ bool drawScene(uint32_t* target,int width,int height,int stride_pixels,
     s.rect(0,73,1280,3,rgba(170,67,85));
     s.text(30,17,"VICE : NATIVE SCENE TEST",rgba(240,223,216),3);
     s.text(32,51,"ROM-FREE / ART TEST / NOT THE ORIGINAL GAME",rgba(149,178,200),2);
+    if(view.replay_demo)
+        s.text(760,18,"REPLAY DEMO",rgba(240,204,111),2);
     s.rect(932,22,200,16,rgba(56,70,88));
     s.rect(932,22,125,16,rgba(171,66,75));
     s.rect(932,47,126,8,rgba(55,88,108));

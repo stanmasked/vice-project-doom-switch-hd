@@ -1,6 +1,7 @@
 // Original ROM-free gameplay test driver. Does not load NES game assets.
 // Output is a deterministic host-side witness, not Switch runtime evidence.
 #include "simulation.hpp"
+#include "combat_demo.hpp"
 #include <cerrno>
 #include <cstdint>
 #include <cstdlib>
@@ -10,14 +11,7 @@
 #include <stdexcept>
 
 namespace {
-vpd::Input inputAt(unsigned frame) {
-    using namespace vpd;
-    if(frame<110U)return Input{Fire};        // target practice
-    if(frame>=115U && frame<145U)return Input{Right}; // camera motion
-    if(frame>=145U && frame<175U)
-        return Input{static_cast<uint8_t>(Left | (frame<150U ? Jump : 0))};
-    return Input{};
-}
+
 unsigned activeShots(const vpd::Simulation& state){
     unsigned active=0;
     for(const auto& shot:state.projectiles())
@@ -37,7 +31,7 @@ void verify(){
     using namespace vpd;
     Simulation a,b;
     for(unsigned frame=0;frame<200U;++frame){
-        const Input input=inputAt(frame);
+        const Input input=vpd::combatDemoInput(frame);
         a.tick(input);
         b.tick(input);
         if(a.fingerprint()!=b.fingerprint())
@@ -54,7 +48,7 @@ void verify(){
         throw std::runtime_error("Golden 200-frame combat replay changed");
     Simulation wrong_input;
     for(unsigned frame=0;frame<200U;++frame){
-        vpd::Input buttons=inputAt(frame);
+        vpd::Input buttons=vpd::combatDemoInput(frame);
         if(frame==120U)buttons=vpd::Input{}; // omit one Right tick
         wrong_input.tick(buttons);
     }
@@ -88,7 +82,7 @@ void csv(unsigned frames){
     std::cout<<"frame,buttons,x_fixed,y_fixed,camera,shots,target_health,"
                 "target_hits,active_projectiles,fingerprint\n";
     for(unsigned frame=0;frame<frames;++frame){
-        const Input input=inputAt(frame);
+        const Input input=vpd::combatDemoInput(frame);
         game.tick(input);
         const auto& p=game.player();
         const auto& t=game.trainingTarget();

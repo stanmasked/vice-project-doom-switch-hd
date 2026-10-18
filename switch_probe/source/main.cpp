@@ -2,14 +2,17 @@
 // Contains no recovered game physics, map, sprites, or sound.
 #include <switch.h>
 #include "simulation.hpp"
+#include "combat_demo.hpp"
 #include <cstdio>
 #include <cstdint>
 
 namespace {
 constexpr int kViewportTiles=40;
-void drawAscii(const vpd::Simulation& game){
+void drawAscii(const vpd::Simulation& game,bool replay_demo){
     std::printf("\x1b[1;1HVICE: PROJECT DOOM | NATIVE GAME SCAFFOLD\n");
     std::printf("ROM-free test scene; NOT original game or HD art.\n");
+    std::printf("MODE: %s (StickL click to toggle)\n",
+                replay_demo?"REPLAY DEMO":"MANUAL");
     std::printf("D-pad: move   A/B: jump   Y: fire   Plus: exit\n");
     std::printf("Target health: %u / 3 | hits: %u\n",
         static_cast<unsigned>(game.trainingTarget().health),
@@ -53,19 +56,23 @@ int main(int,char**){
     PadState pad;
     padInitializeDefault(&pad);
     vpd::Simulation game;
+    vpd::CombatDemo demo;
     std::printf("\x1b[2J");
     while(appletMainLoop()){
         padUpdate(&pad);
         const u64 buttons=padGetButtons(&pad);
+        const u64 pressed=padGetButtonsDown(&pad);
         if(buttons&HidNpadButton_Plus)break;
+        if(pressed&HidNpadButton_StickL)demo.toggle(game);
         uint8_t input=0;
         if(buttons&(HidNpadButton_Left|HidNpadButton_StickLLeft))input|=vpd::Left;
         if(buttons&(HidNpadButton_Right|HidNpadButton_StickLRight))input|=vpd::Right;
         if(buttons&(HidNpadButton_A|HidNpadButton_B))input|=vpd::Jump;
         if(buttons&HidNpadButton_Y)input|=vpd::Fire;
-        game.tick(vpd::Input{input});
+        if(demo.enabled())demo.tick(game);
+        else game.tick(vpd::Input{input});
         if((game.frame()%2u)==0u){
-            drawAscii(game);
+            drawAscii(game,demo.enabled());
             consoleUpdate(nullptr);
         }
         // Preliminary pacing only; not a verified hardware 60 FPS game loop.
