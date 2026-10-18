@@ -12,6 +12,8 @@ on:
       - "tests/test_nexium_gui_lifecycle.py"
       - "tools/audit_nexium_guest_process_exit.py"
       - "tests/test_nexium_guest_process_exit.py"
+      - "tools/audit_nexium_dash_guest.py"
+      - "tests/test_nexium_dash_guest.py"
       - "tools/nexium_visual_probe.sh"
       - "game_core/**"
       - "switch_graphical/**"
@@ -89,6 +91,9 @@ jobs:
             emulator-evidence/host-gui-lifecycle.txt
             emulator-evidence/host-lifecycle-result.txt
             emulator-evidence/native-exit-result.txt
+            emulator-evidence/dash-result.txt
+            emulator-evidence/guest-dash-witness.txt
+            emulator-evidence/dash-trace-paths.txt
             emulator-evidence/ne-x11-windows-after-plus.txt
             emulator-evidence/manual-trace-paths.txt
             emulator-evidence/guest-manual-witness.txt
