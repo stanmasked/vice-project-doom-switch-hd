@@ -152,6 +152,11 @@ add_executable(vpd_guard_enemy_raster_test ../tests/test_guard_enemy_raster.cpp)
 target_link_libraries(vpd_guard_enemy_raster_test
                       PRIVATE vpd_scene_renderer vpd_simulation)
 add_test(NAME romfree_guard_enemy_to_raster COMMAND vpd_guard_enemy_raster_test)
+# Shared libnx/host proof of turret sprite, HP and hostile shot pixels.
+add_executable(vpd_second_wave_raster_test ../tests/test_second_wave_raster.cpp)
+target_link_libraries(vpd_second_wave_raster_test
+                      PRIVATE vpd_scene_renderer vpd_simulation)
+add_test(NAME romfree_second_wave_to_raster COMMAND vpd_second_wave_raster_test)
 # Manual HUD layout must remain legible; hit pulses derive from live combat.
 add_executable(vpd_combat_hud_feedback_test ../tests/test_combat_hud_feedback.cpp)
 target_link_libraries(vpd_combat_hud_feedback_test
