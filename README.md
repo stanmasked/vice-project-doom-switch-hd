@@ -2,7 +2,7 @@
 
 **Status:** Two ROM-free Nintendo Switch NRO prototypes compile successfully: an ASCII test scene and a **1280x720 native RGBA8888 raster scene** with independently created procedural background and pixel character. The C++ simulation and renderer pass host-side reproducibility tests. Neither NRO is the original game or a playable HD remake; Switch hardware execution remains unverified.
 
-This private repository contains an independent C++ research/development toolchain targeting Nintendo Switch Homebrew. No NES emulation engine, original ROM, or game-derived artwork is included.
+This **public source-code repository** contains an independent C++ research/development toolchain targeting Nintendo Switch Homebrew. Keep original-game ROMs, PPU/RAM captures, screenshots, extracted game artwork and all private reference outputs off GitHub. No NES emulation engine, original ROM, or game-derived artwork is included.
 
 ## Verified milestones
 
@@ -65,6 +65,61 @@ python3 tests/verify_original_rom.py '/private/path/Vice - Project Doom (USA).ne
 ```
 
 **Rights and provenance:** Original commercial game binaries, extracted graphics, disassembly and ROM-bearing build artifacts are not published. The project is research tooling; a distributed remake requires appropriate permissions.
+
+## Stage 90 — verified MMC3 and PPU event provenance
+
+The new event audit attaches observed MMC3 CHR-register writes,
+PPUSCROLL latch activity, PPUSTATUS reset markers, and any known
+register-state coverage to the strict snapshot checkpoints. Stage89's
+static screen hypotheses now include **observed event-window counts**
+without claiming exact scroll, CHR bank mapping, scanlines or stage
+geometry.
+
+```bash
+python3 tools/audit_ppu_event_provenance.py \
+  private/ppu_capture_session.meta.txt \
+  --require-cycle --out private/ppu_event_provenance.json
+```
+
+See [stage90 event provenance](docs/PPU_EVENT_PROVENANCE_STAGE90.md).
+Only private, independently verified FCEUX captures can be analyzed.
+
+## Stage 89 — quantified reference-screen hypotheses
+
+When **local, validated FCEUX screen references** are available,
+`tools/audit_ppu_screen_alignment.py` compares their NES palette
+indices to four or eight clearly labeled, static zero-scroll
+background hypotheses. It reports mismatch counts and uncertainty
+without exporting the original image or claiming correct game
+level geometry.
+
+```bash
+python3 tools/audit_ppu_screen_alignment.py \
+  private/ppu_capture_session.meta.txt \
+  --require-screen --require-cycle --out private/ppu_screen_alignment.json
+```
+
+See [Stage 89 reference alignment](docs/PPU_SCREEN_ALIGNMENT_STAGE89.md).
+No original screen references or level identity were generated here.
+
+## Stage 88 — verified PPU reference-frame inventory
+
+A completed, private FCEUX capture can now be audited across **all**
+saved snapshots, with strict session-integrity checks first. The
+session-wide numeric report summarizes CHR bank-slot changes,
+nametable tile/attribute deltas, palette RAM and potential sprite
+source changes, without outputting original graphics or reconstructing
+level geometry.
+
+```bash
+python3 tools/audit_ppu_reference_frames.py \
+  private/ppu_capture_session.meta.txt \
+  --require-cycle --out private/ppu_reference_inventory.json
+```
+
+See [Stage 88 reference inventory](docs/PPU_REFERENCE_INVENTORY_STAGE88.md).
+This command requires local private capture data; no real first-level
+session is included in the public repository.
 
 ## Local FCEUX snapshot and static OAM sprite reconstruction
 

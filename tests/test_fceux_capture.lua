@@ -7,8 +7,14 @@ local read_hooks={}
 local after, exit
 local frame=0
 memory={
- registerwrite=function(addr, cb) assert(not hooks[addr]);hooks[addr]=cb end,
- registerread=function(addr, cb) assert(not read_hooks[addr]);read_hooks[addr]=cb end,
+ registerwrite=function(addr,size,cb)
+  assert((addr==0x2000 and size==0x2000) or (addr==0x8000 and size==0x8000))
+  assert(not hooks[addr]);hooks[addr]=cb
+ end,
+ registerread=function(addr,size,cb)
+  assert(addr==0x2000 and size==0x2000)
+  assert(not read_hooks[addr]);read_hooks[addr]=cb
+ end,
  readbyterange=function(addr,n)assert(addr==0 and n==2048);return string.rep(string.char(0x42),n)end,
  readbyte=function(addr)return (addr*3)%256 end
 }
@@ -38,11 +44,15 @@ emu={framecount=function()return frame end,
 
 dofile('tools/capture_fceux_ppu.lua')
 assert(type(after)=='function' and type(exit)=='function')
-assert(hooks[0x8000] and hooks[0x8001] and hooks[0x2000])
-assert(type(read_hooks[0x2002])=='function')
-local function write(addr,value) assert(hooks[addr]);hooks[addr](addr,1,value)end
+assert(type(hooks[0x8000])=='function' and type(hooks[0x2000])=='function')
+assert(type(read_hooks[0x2000])=='function')
+local function write(addr,value)
+ local hook=hooks[addr>=0x8000 and 0x8000 or 0x2000]
+ assert(type(hook)=='function')
+ hook(addr,1,value)
+end
 write(0x8000,0x80);write(0x8001,0x14);write(0x2000,0x10)
-read_hooks[0x2002](0x2002,1,0x80)
+read_hooks[0x2000](0x2002,1,0)
 after()
 frame=1
 for n=1,12005 do write(0x2007,n%256) end

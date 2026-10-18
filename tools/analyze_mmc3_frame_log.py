@@ -6,6 +6,7 @@ only invented bank values. Missing register writes are never guessed.
 """
 import argparse,json
 from pathlib import Path
+from verify_ppu_capture_session import verify
 
 def read_events(path):
     with Path(path).open(encoding='utf8') as f:
@@ -53,14 +54,14 @@ def analyze(events,bank_count=128):
                      'mapper_select_writes':0,'unpaired_data_writes':0}
             frames.append(current)
         previous=frame
-        if address in (0x2000,0x2001,0x2005,0x2006,0x2007):
+        if 0x2000<=address<=0x3FFF and (address-0x2000)%8 in (0,1,5,6,7):
             current['ppu_port_writes']+=1
-        if address==0x8000:
+        if 0x8000<=address<=0x9FFF and address%2==0:
             selection=value&7
             inversion=bool(value&0x80)
             prg_mode=bool(value&0x40)
             current['mapper_select_writes']+=1
-        elif address==0x8001:
+        elif 0x8000<=address<=0x9FFF and address%2==1:
             if selection is None:
                 unpaired+=1
                 current['unpaired_data_writes']+=1
@@ -85,6 +86,7 @@ def analyze(events,bank_count=128):
         'limitations':[
             'Frame-only register log has no scanline or CPU cycle positions',
             'Missing initial register writes mean unobserved state is unknown',
+            'Input with incomplete MMC3 hook coverage cannot validate CHR mapping',
             'Logs with dropped_register_writes > 0 are not timing evidence',
             'Bank values are not a reconstruction of original level geometry'
         ]}
@@ -94,8 +96,17 @@ def main():
     ap.add_argument('register_log',type=Path)
     ap.add_argument('--chr-1k-banks',type=int,default=128)
     ap.add_argument('--out',type=Path,default=Path('private/mmc3_frame_summary.json'))
+    ap.add_argument('--session-meta',type=Path,
+                    help='Finalized whole-session evidence (else diagnostics only)')
     args=ap.parse_args()
+    if args.session_meta is not None:
+        if args.register_log.resolve()!=(args.session_meta.parent/'mmc3_video_writes.tsv').resolve():
+            ap.error('Register log does not belong to selected session')
+        verified=verify(args.session_meta)
+    else:
+        verified=None
     report=analyze(read_events(args.register_log),args.chr_1k_banks)
+    report['session_verified']=verified is not None
     args.out.parent.mkdir(parents=True,exist_ok=True)
     args.out.write_text(json.dumps(report,indent=2)+'\n',encoding='utf8')
     print(json.dumps({'report':str(args.out),

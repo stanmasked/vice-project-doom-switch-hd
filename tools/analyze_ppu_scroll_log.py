@@ -9,6 +9,7 @@ import argparse
 import json
 from pathlib import Path
 from analyze_mmc3_frame_log import read_events
+from verify_ppu_capture_session import verify
 
 
 def analyze(events):
@@ -28,20 +29,22 @@ def analyze(events):
                      'unresolved_scroll_writes':0}
             frames.append(current)
         previous=frame
-        if address==0x2002:  # CPU read of PPUSTATUS resets shared write toggle
+        # CPU PPU register mirrors use the low three address bits.
+        port=0x2000+(address-0x2000)%8 if 0x2000<=address<=0x3FFF else address
+        if port==0x2002:  # CPU read of PPUSTATUS resets shared write toggle
             latch=0
             pending_x=None
             current['status_reads']+=1
-        elif address==0x2000:
+        elif port==0x2000:
             chosen_nt=value&3
-        elif address==0x2006:
+        elif port==0x2006:
             current['address_writes']+=1
             if latch is None:
                 pending_x=None
             else:
                 latch=1-latch
                 pending_x=None
-        elif address==0x2005:
+        elif port==0x2005:
             current['scroll_writes']+=1
             if latch is None:
                 current['unresolved_scroll_writes']+=1
@@ -82,7 +85,9 @@ def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('log',type=Path,help='Private FCEUX MMC3/PPU event TSV')
     p.add_argument('--metadata',type=Path,
-                   help='Capture .meta.txt to reject incomplete register logging')
+                   help='Per-frame prefix diagnostics; not whole-session proof')
+    p.add_argument('--session-meta',type=Path,
+                   help='Finalized session manifest for whole-stream verification')
     p.add_argument('--out',type=Path,default=Path('private/ppu_scroll_summary.json'))
     args=p.parse_args()
     if args.metadata is not None:
@@ -93,7 +98,21 @@ def main():
                 metadata[k]=v
         if metadata.get('register_log_complete')!='yes':
             p.error('Incomplete or unverified register log; no trustworthy scroll trace')
+        if (metadata.get('mmc3_write_coverage')!='full_8000_ffff_even_odd'
+                or metadata.get('callback_errors')!='0'):
+            p.error('Missing full MMC3 write coverage or callback integrity')
+        if (metadata.get('ppu_register_write_coverage')!='full_2000_3fff_mod8'
+                or metadata.get('ppu_status_read_coverage')!='full_2000_3fff_mod8'):
+            p.error('Incomplete PPU register mirror observation')
+    session=None
+    if args.session_meta is not None:
+        if args.log.resolve()!=(args.session_meta.parent/'mmc3_video_writes.tsv').resolve():
+            p.error('Frame event log does not belong to selected session')
+        session=verify(args.session_meta)
+    elif args.metadata is not None:
+        p.error('Per-frame metadata is not session proof; provide --session-meta')
     report=analyze(read_events(args.log))
+    report['session_verified']=session is not None
     args.out.parent.mkdir(parents=True,exist_ok=True)
     args.out.write_text(json.dumps(report,indent=2)+'\n',encoding='utf8')
     print(json.dumps({'output':str(args.out),

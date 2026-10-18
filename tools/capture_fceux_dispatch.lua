@@ -15,13 +15,25 @@ assert(type(memory.registerwrite)=='function' and type(memory.readbyte)=='functi
 local clock=type(debugger)=='table' and type(debugger.getcyclescount)=='function'
 local rom_md5=rom.gethash('md5')
 assert(type(rom_md5)=='string' and #rom_md5>0,'Missing ROM identity')
+-- Invalidate metadata from an earlier session BEFORE replacing its TSV.
+-- A crash or callback exception must never reuse an old complete=yes.
+local meta_path=DIR..'/stage38_dispatch_exec.meta.txt'
+local pending=assert(io.open(meta_path,'wb'))
+assert(pending:write('capture_in_progress=yes\n'))
+assert(pending:close())
 local file=assert(io.open(DIR..'/stage38_dispatch_exec.tsv','wb'))
 local fields={'frame','seq','cpu_cycle','kind','cpu_address','value','mmc3_mode',
               'r6','r7','mapped_bank','mapping_status','ram_07','ram_90','ram_91',
               'ram_92','ram_aa','ram_ab','ram_a8','ram_a9'}
 assert(file:write(table.concat(fields,'\t')..'\n'))
 local select_value,bank6,bank7=nil,nil,nil
-local count,dropped,seq=0,0,0
+local count,dropped,seq,callback_errors=0,0,0,0
+local function checked(ok,reason)
+  if not ok then
+    callback_errors=callback_errors+1
+    error('Unsupported FCEUX callback contract: '..reason,2)
+  end
+end
 local captured,frames={},{}
 local function hex2(x) return x==nil and 'unknown' or string.format('%02X',x) end
 local function hex4(x) return string.format('%04X',x) end
@@ -83,29 +95,33 @@ local tracked_ram={0x07,0x90,0x91,0x92,0xAA,0xAB,0xA8,0xA9}
 for _,addr in ipairs(tracked_ram) do
   local local_addr=addr
   memory.registerwrite(local_addr,function(a,size,value)
+    checked(a==local_addr and size==1 and type(value)=='number' and
+      value==math.floor(value) and value>=0 and value<=255,
+      'RAM write address/size/byte')
     record('RAM_WRITE',local_addr,value)
   end)
 end
-memory.registerwrite(0x8000,function(a,size,value)
-  assert(type(value)=='number' and value>=0 and value<=255,
-         'Mapper $8000 write value unavailable; trace cannot map banks')
-  select_value=value
-  record('MMC3_SELECT',0x8000,value)
-end)
-memory.registerwrite(0x8001,function(a,size,value)
-  assert(type(value)=='number' and value>=0 and value<=255,
-         'Mapper $8001 write value unavailable; trace cannot map banks')
-  if select_value~=nil then
-    local reg=select_value%8
-    if reg==6 then bank6=value end
-    if reg==7 then bank7=value end
+-- All $8000-$9FFF even/odd addresses mirror MMC3 select/data.
+memory.registerwrite(0x8000,0x2000,function(a,size,value)
+  checked(type(a)=='number' and a==math.floor(a) and a>=0x8000 and a<=0x9FFF
+         and size==1 and type(value)=='number' and value==math.floor(value)
+         and value>=0 and value<=255, 'mirrored MMC3 write address/size/byte')
+  if a%2==0 then
+    select_value=value
+    record('MMC3_SELECT',a,value)
+  else
+    if select_value~=nil then
+      local reg=select_value%8
+      if reg==6 then bank6=value end
+      if reg==7 then bank7=value end
+    end
+    record('MMC3_DATA',a,value)
   end
-  record('MMC3_DATA',0x8001,value)
 end)
 emu.registerexit(function()
   assert(file:flush())
   assert(file:close())
-  local meta=assert(io.open(DIR..'/stage38_dispatch_exec.meta.txt','wb'))
+  local meta=assert(io.open(meta_path,'wb'))
   local nframes=0
   for _ in pairs(frames) do nframes=nframes+1 end
   local txt={
@@ -117,10 +133,12 @@ emu.registerexit(function()
     'tracked_ram_write_hooks='..tostring(#tracked_ram),
     'events_recorded='..tostring(count),
     'events_dropped='..tostring(dropped),
-    'trace_complete='..(dropped==0 and 'yes' or 'no'),
+    'trace_complete='..(dropped==0 and callback_errors==0 and 'yes' or 'no'),
+    'callback_errors='..tostring(callback_errors),
     'frames_with_events='..tostring(nframes),
     'cycle_trace_available='..(clock and 'yes' or 'no'),
     'initial_mmc3_mode=unknown',
+    'mmc3_write_coverage=full_8000_9fff_even_odd',
     'initial_prg_r6=unknown',
     'initial_prg_r7=unknown',
     'execution_provenance=registerexec_callbacks_not_source_disassembly',

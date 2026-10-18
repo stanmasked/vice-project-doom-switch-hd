@@ -4,7 +4,94 @@ on:
   push:
   pull_request:
 
+# Keep the latest native FCEUX verification for each trigger; repeated
+# research commits must not saturate runners with obsolete ROM builds.
+concurrency:
+  group: native-core-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
+  python-regressions:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install Python test dependencies
+        run: python -m pip install 'Pillow>=10,<13'
+      - name: Stage72 local regression runner self-tests
+        run: python -m unittest discover -s tests -p 'test_research_regression_runner.py' -v
+      - name: Compile Python files
+        run: python -m compileall -q tools tests
+      - name: Stage 38-54 trace and mapper regression group
+        id: early_regressions
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          python tools/run_research_regressions.py --group stage38-54 2>&1 | tee stage38-54.log
+      - name: Stage 55-60 instruction and integration regression group
+        id: late_regressions
+        if: always()
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          python tools/run_research_regressions.py --group stage55-60 2>&1 | tee stage55-60.log
+      - name: Stage 69-71 READ provenance and unittest discovery isolation
+        id: provenance_regressions
+        if: always()
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          python tools/run_research_regressions.py --group stage70-71 2>&1 | tee stage69-71.log
+      - name: Upload Python failure diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: prg-python-regression-logs
+          path: |
+            stage38-54.log
+            stage55-60.log
+            stage69-71.log
+          if-no-files-found: warn
+          retention-days: 7
+      - name: Report Python regression failures after artifact upload
+        if: always()
+        shell: bash
+        env:
+          EARLY_OUTCOME: ${{ steps.early_regressions.outcome }}
+          LATE_OUTCOME: ${{ steps.late_regressions.outcome }}
+          PROVENANCE_OUTCOME: ${{ steps.provenance_regressions.outcome }}
+        run: |
+          echo "Earlier group: $EARLY_OUTCOME"
+          echo "Later group: $LATE_OUTCOME"
+          echo "READ provenance group: $PROVENANCE_OUTCOME"
+          test "$EARLY_OUTCOME" = success && test "$LATE_OUTCOME" = success && test "$PROVENANCE_OUTCOME" = success
+  pinned-fceux-native:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout Vice project build harness
+        uses: actions/checkout@v4
+      - name: Set up Python for pinned source audit
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install native FCEUX Qt SDL OpenGL build dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            build-essential cmake git pkg-config \
+            qtbase5-dev libqt5opengl5-dev libgl1-mesa-dev \
+            libsdl2-dev libminizip-dev zlib1g-dev libarchive-dev xvfb xauth
+      - name: Build pinned FCEUX and run synthetic newppu runtime proof
+        run: bash tools/ci_fceux_stage99_native_build.sh
+
   code-and-tests:
     runs-on: ubuntu-latest
     steps:
@@ -24,8 +111,126 @@ jobs:
         run: ctest --test-dir build/native_core --output-on-failure
       - name: Run synthetic ROM tests
         run: python -m unittest discover -s tests -p 'test_*.py' -v
+      - name: Stage86 observed event-frame transition versus PPU frame boundary checks
+        run: python -m unittest discover -s tests -p 'test_ppu_cycle_trace.py' -v
+      - name: Stage90 MMC3 CHR and PPU scroll observed register provenance
+        run: python -m unittest discover -s tests -p 'test_ppu_event_provenance.py' -v
+      - name: Stage91 background reconstruction readiness conservatism
+        run: python -m unittest discover -s tests -p 'test_ppu_background_readiness.py' -v
+      - name: Stage92 cross-snapshot screen consistency and missing-evidence gates
+        run: python -m unittest discover -s tests -p 'test_ppu_cross_snapshot_consistency.py' -v
+      - name: Stage93 ordered MMC3 PPU callback evidence versus saved screens
+        run: python -m unittest discover -s tests -p 'test_ppu_temporal_evidence.py' -v
+      - name: Stage94 timestamp bracketing versus verified snapshot sample clocks
+        run: python -m unittest discover -s tests -p 'test_ppu_cpu_clock_bracketing.py' -v
+      - name: Stage95 fail-closed raster API symbol capability report
+        run: python -m unittest discover -s tests -p 'test_fceux_raster_capability_report.py' -v
+      - name: Stage96 synthetic native PPU raster contract and provenance tests
+        run: python -m unittest discover -s tests -p 'test_native_ppu_raster_contract.py' -v
+      - name: Stage97 pinned FCEUX hook-site audit and C++ native raster prototype
+        run: python -m unittest discover -s tests -p 'test_fceux_native_ppu_adapter.py' -v
+      - name: Stage98 opt-in raw newppu hook injection and native C++11 compile gates
+        run: python -m unittest discover -s tests -p 'test_fceux_newppu_probe_patch.py' -v
+      - name: Stage100 synthetic NROM and FCEUX runtime marker acceptance
+        run: python -m unittest discover -s tests -p 'test_fceux_stage100_runtime.py' -v
+      - name: Stage101 Xvfb backend and sanitized headless process-exit regressions
+        run: python -m unittest discover -s tests -p 'test_fceux_stage101_headless_diagnostics.py' -v
+      - name: Stage102 native source-level VBlank status-window and pinned hook tests
+        run: python -m unittest discover -s tests -p 'test_fceux_stage102_status_windows.py' -v
+      - name: Stage103 guarded native PPUSTATUS CPU-read clear and synthetic polling tests
+        run: python -m unittest discover -s tests -p 'test_fceux_stage103_ppustatus_reads.py' -v
+      - name: Stage104 shared-clock native VBlank source event and $2002 read ordering
+        run: python -m unittest discover -s tests -p 'test_fceux_stage104_native_event_order.py' -v
+      - name: Stage105 native PPUSTATUS frame pre-clear versus CPU $2002 read provenance
+        run: python -m unittest discover -s tests -p 'test_fceux_stage105_frame_preclear.py' -v
+      - name: Stage106 pinned MMC3 CHR register writes and frame-window native gates
+        run: python -m unittest discover -s tests -p 'test_fceux_stage106_mmc3_chr.py' -v
+      - name: Stage107 synthetic MMC3 framebuffer causality acceptance and patch guards
+        run: python -m unittest discover -s tests -p 'test_fceux_stage107_bg_pixels.py' -v
+      - name: Stage108 native background CHR fetch pairing and fail-closed gates
+        run: python -m unittest discover -s tests -p 'test_fceux_stage108_bg_fetch.py' -v
+      - name: Stage109 synthetic MMC3-CHR-renderer native timeline regression
+        run: python -m unittest discover -s tests -p 'test_fceux_stage109_chr_timeline.py' -v
+      - name: Stage110 guarded native midframe CHR switch and framebuffer row proof
+        run: python -m unittest discover -s tests -p 'test_fceux_stage110_midframe.py' -v
+      - name: Stage111 buffered background tile-to-XBuf native proof gates
+        run: python -m unittest discover -s tests -p 'test_fceux_stage111_tile_boundary.py' -v
+      - name: Stage112 controlled MMC3 CHR subscanline phase sweep tests
+        run: python -m unittest discover -s tests -p 'test_fceux_stage112_subscanline_sweep.py' -v
+      - name: Stage113 background tile prefetch/read-to-draw native witness
+        run: python -m unittest discover -s tests -p 'test_fceux_stage113_prefetch.py' -v
+      - name: Stage114 PPU low/high CHR plane source-pair integrity regressions
+        run: python -m unittest discover -s tests -p 'test_fceux_stage114_plane_pairs.py' -v
+      - name: Stage115 scanline-edge prefetch carry provenance regressions
+        run: python -m unittest discover -s tests -p 'test_fceux_stage115_scanline_carry.py' -v
+      - name: Stage116 fine-scroll pixel-to-scanline carry proof tests
+        run: python -m unittest discover -s tests -p 'test_fceux_stage116_fine_scroll.py' -v
+      - name: Stage117 midframe $2005 scroll write and newppu pixel provenance
+        run: python -m unittest discover -s tests -p 'test_fceux_stage117_dynamic_scroll.py' -v
+      - name: Stage118 paired $2005 writes and coarse/fine provenance
+        run: python -m unittest discover -s tests -p 'test_fceux_stage118_two_scrolls.py' -v
+      - name: Stage119 distinguishable nametable IDs and coarse-source raster witness
+        run: python -m unittest discover -s tests -p 'test_fceux_stage119_nametable.py' -v
+      - name: Stage120 buffered nametable read-address stride and alias rejection
+        run: python -m unittest discover -s tests -p 'test_fceux_stage120_nt_stride.py' -v
+      - name: Stage121 native background attribute fetch and palette-index provenance
+        run: python -m unittest discover -s tests -p 'test_fceux_stage121_attributes.py' -v
+      - name: Stage122 post-carry tile window and synthetic palette initialization
+        run: python -m unittest discover -s tests -p 'test_fceux_stage122_prefetch_settle.py' -v
+      - name: Stage123 four background attribute quadrants and distinct palette indices
+        run: python -m unittest discover -s tests -p 'test_fceux_stage123_quadrants.py' -v
+      - name: Stage124 native four-palette XBuf witness, ROM and negative controls
+        run: python -m unittest discover -s tests -p 'test_fceux_stage124_quadrants.py' -v
+      - name: Stage125 causal negative-control proof, forged marker regressions
+        run: python -m unittest discover -s tests -p 'test_fceux_stage125_negative_controls.py' -v
+      - name: Stage126 paired native single-palette-entry counterfactual regressions
+        run: python -m unittest discover -s tests -p 'test_fceux_stage126_palette_delta.py' -v
+      - name: Stage127 transparent CHR universal backdrop and opaque control
+        run: python -m unittest discover -s tests -p 'test_fceux_stage127_transparent_bg.py' -v
+      - name: Stage128 source-anchored sprite transparency and priority tests
+        run: python -m unittest discover -s tests -p 'test_fceux_stage128_sprite_compositor.py' -v
+      - name: Stage129 real OAM sprite collision, XBuf and sprite0 hit regressions
+        run: python -m unittest discover -s tests -p 'test_fceux_stage129_sprite_oam.py' -v
+      - name: Stage130 overlapping two-OAM-sprite ordering and sprite0-hit model
+        run: python -m unittest discover -s tests -p 'test_fceux_stage130_two_sprite_order.py' -v
+      - name: Stage131 native overlapping two-OAM framebuffer and forged witness tests
+        run: python -m unittest discover -s tests -p 'test_fceux_stage131_dual_sprite.py' -v
+      - name: Stage132 sprite horizontal-vertical reflection and 8x16 CHR source regressions
+        run: python -m unittest discover -s tests -p 'test_fceux_stage132_sprite_flips.py' -v
+      - name: Stage133 native asymmetric CHR sprite reflection, XBuf and negative controls
+        run: python -m unittest discover -s tests -p 'test_fceux_stage133_native_sprite_flips.py' -v
+      - name: Stage134 8x16 OAM tile-pair and vertical bank-selection ROM controls
+        run: python -m unittest discover -s tests -p 'test_fceux_stage134_sprite_8x16_rom.py' -v
+      - name: Stage135 native 8x16 OAM bank, pixel and forged witness tests
+        run: python -m unittest discover -s tests -p 'test_fceux_stage135_native_sprite_8x16.py' -v
+      - name: Stage136 eight-sprite OAM selection and overflow source/model regressions
+        run: python -m unittest discover -s tests -p 'test_fceux_stage136_oam_eight_limit.py' -v
+      - name: Stage137 native ninth OAM and overflow XBuf regressions
+        run: python -m unittest discover -s tests -p 'test_fceux_stage137_nine_oam.py' -v
+      - name: Stage138 delayed ninth 8x16 OAM and overflow scanline model
+        run: python -m unittest discover -s tests -p 'test_fceux_stage138_temporal_nine_oam.py' -v
+      - name: Stage139 native temporal ninth OAM and XBuf witness regressions
+        run: python -m unittest discover -s tests -p 'test_fceux_stage139_native_temporal_nine.py' -v
+      - name: Stage140 overflow PPU status reset source/model regressions
+        run: python -m unittest discover -s tests -p 'test_fceux_stage140_frame_overflow_reset.py' -v
+      - name: Stage141 native two-frame PPU status reset and XBuf witnesses
+        run: python -m unittest discover -s tests -p 'test_fceux_stage141_native_frame_reset.py' -v
+      - name: Stage144 correct mirrored 6502 JMP relocation and ROM byte integrity
+        run: python -m unittest discover -s tests -p 'test_fceux_stage144_stable_frames.py' -v
+      - name: Stage146 causal stable and stale JMP native witness regressions
+        run: python -m unittest discover -s tests -p 'test_fceux_stage146_stale_jmp_causal.py' -v
+      - name: Stage89 validated static screen hypotheses and explicit provenance
+        run: python -m unittest discover -s tests -p 'test_ppu_capture_session.py' -v
+      - name: Stage88 audited PPU reference-frame inventory regressions
+        run: python -m unittest discover -s tests -p 'test_ppu_capture_session.py' -v
+      - name: Stage79 full-session video integrity regressions
+        run: python -m unittest discover -s tests -p 'test_ppu_capture_session.py' -v
+      - name: Validate stage39 video/dispatcher correlation without original ROM
+        run: python -m unittest discover -s tests -p 'test_video_trace_alignment.py' -v
       - name: Install Lua 5.4 for FCEUX capture mock
         run: sudo apt-get update -qq && sudo apt-get install -y lua5.4
+      - name: Stage95 FCEUX raster symbol probe has no side effects
+        run: lua5.4 tests/test_fceux_ppu_raster_capability_probe.lua
       - name: Exercise FCEUX Lua capture with and without CPU clock
         run: |
           lua5.4 tests/test_fceux_capture.lua
@@ -36,6 +241,47 @@ jobs:
           lua5.4 tests/test_fceux_dispatch.lua
           VPD_MOCK_NOCLOCK=1 lua5.4 tests/test_fceux_dispatch.lua
           VPD_MOCK_SHORT=1 lua5.4 tests/test_fceux_dispatch.lua
+          VPD_MOCK_BAD_MMC3=1 lua5.4 tests/test_fceux_dispatch.lua
+      - name: Exercise stage41 pointer-read FCEUX mock and overflow guard
+        run: lua5.4 tests/test_fceux_pointer_access.lua
+      - name: Exercise stage45 same-session PRG and MMC3 callbacks
+        run: lua5.4 tests/test_fceux_prg_reads.lua
+      - name: Exercise stage49 joint PC/read/MMC3 callback mock
+        run: lua5.4 tests/test_fceux_joint_exec_reads.lua
+      - name: Test stage52 optional CPU context capture with synthetic callbacks
+        run: lua5.4 tests/test_fceux_cpu_context.lua
+      - name: Check stage53 one-session CPU register and PRG read mock
+        run: lua5.4 tests/test_fceux_joint_cpu_context.lua
+      - name: Confirm documented FCEUX register API in stage52 and stage53 mocks
+        run: lua5.4 tests/test_fceux_register_api.lua
+      - name: Reject incompatible FCEUX hook callback shapes in synthetic stage53 capture
+        run: lua5.4 tests/test_fceux_callback_contract.lua
+      - name: Stage68 ROM header, mapper and private-hash gate mocks
+        run: |
+          lua5.4 tests/test_fceux_rom_preflight.lua
+          lua5.4 tests/test_fceux_capture_preflight.lua
+      - name: Stage76 reject stale capture metadata during all six FCEUX sessions
+        run: lua5.4 tests/test_fceux_capture_session_invalidation.lua
+      - name: Stage77-78 verify MMC3 and PPU CPU address mirrors
+        run: lua5.4 tests/test_fceux_ppu_mmc3_mirrors.lua
+      - name: Stage87 independent registerafter CPU clock stamp probes
+        run: lua5.4 tests/test_fceux_ppu_after_callback_clock.lua
+      - name: Stage85 classify CPU-cycle counter decreases and equal timestamps
+        run: lua5.4 tests/test_fceux_ppu_counter_order.lua
+      - name: Stage84 test streaming 24k-event Adler readback helpers
+        run: lua5.4 tests/test_fceux_ppu_checksum_streaming.lua
+      - name: Stage83 verify per-frame and complete PPU event-log checksums
+        run: lua5.4 tests/test_fceux_ppu_event_log_checksums.lua
+      - name: Stage82 checksum PPU RAM screenshots and reject same-size corruption
+        run: lua5.4 tests/test_fceux_ppu_snapshot_integrity.lua
+      - name: Stage81 verified PPU metadata publication and file-failure injection
+        run: lua5.4 tests/test_fceux_ppu_metadata_publication.lua
+      - name: Stage80 atomic PPU frame and CPU-cycle callback failures
+        run: lua5.4 tests/test_fceux_ppu_cycle_atomic.lua
+      - name: Stage79-85 PPU capture session and strict counter-order continuity
+        run: lua5.4 tests/test_fceux_ppu_capture_session.lua
+      - name: Stage76 invalidate stale private PPU frame metadata on failure
+        run: lua5.4 tests/test_fceux_ppu_session_invalidation.lua
       - name: Reject ROMs, PPU snapshots, original art exports and binaries
         shell: bash
         run: |

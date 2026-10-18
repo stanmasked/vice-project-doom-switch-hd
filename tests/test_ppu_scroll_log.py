@@ -17,6 +17,21 @@ class ScrollEventTests(unittest.TestCase):
         self.assertEqual(r['frames'][0]['last_complete_scroll_pair'],
                          {'x':250,'y':40,'normal_vertical_range':True})
 
+    def test_mirrored_ppustatus_scroll_ctrl_and_addr(self):
+        # $3FFA mirrors $2002; $200D mirrors $2005; $3456 mirrors $2006.
+        events=[(0,0x200D,9),(0,0x3FFA,0),(0,0x3FF8,2),
+                (0,0x200D,21),(0,0x3FFD,41),
+                (1,0x3456,0x23),(1,0x3FFA,0),(1,0x200D,90),
+                (1,0x200D,100)]
+        result=analyze(events)
+        self.assertEqual(result['frames'][0]['status_reads'],1)
+        self.assertEqual(result['frames'][0]['last_observed_nametable'],2)
+        self.assertEqual(result['frames'][0]['last_complete_scroll_pair']['x'],21)
+        self.assertEqual(result['frames'][0]['last_complete_scroll_pair']['y'],41)
+        self.assertEqual(result['frames'][1]['address_writes'],1)
+        self.assertEqual(result['frames'][1]['completed_scroll_pairs'],1)
+        self.assertEqual(result['frames'][1]['last_complete_scroll_pair']['y'],100)
+
     def test_ppuaddr_interferes_with_scroll_pair(self):
         events=[(0,0x2002,0),(0,0x2005,50),(0,0x2006,0x23),
                 (0,0x2005,70),(0,0x2005,80),(0,0x2005,90)]

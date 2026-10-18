@@ -21,7 +21,8 @@ TRACKED_RAM={0x07,0x90,0x91,0x92,0xAA,0xAB,0xA8,0xA9}
 KINDS={'EXEC','RAM_WRITE','MMC3_SELECT','MMC3_DATA'}
 REQUIRED_META={'format','rom_md5','execution_hooks_registered',
                'tracked_ram_write_hooks','events_recorded','events_dropped',
-               'trace_complete','cycle_trace_available','initial_mmc3_mode',
+               'trace_complete','cycle_trace_available','callback_errors','initial_mmc3_mode',
+               'mmc3_write_coverage',
                'initial_prg_r6','initial_prg_r7','execution_provenance'}
 
 def numeric(value,label,lo=0,hi=10**15):
@@ -45,6 +46,8 @@ def meta_parse(path):
         k,v=line.split('=',1)
         if k in d:raise ValueError('Duplicate metadata key')
         d[k]=v
+    if 'mmc3_write_coverage' not in d:
+        raise ValueError('Missing MMC3 write hook coverage')
     if not REQUIRED_META<=d.keys() or d['format']!='vice_stage38_execution_v1':
         raise ValueError('Unsupported or incomplete trace metadata')
     if not re.fullmatch(r'[a-fA-F0-9]{32}',d['rom_md5']):
@@ -52,6 +55,8 @@ def meta_parse(path):
     if any(d[k]!='unknown' for k in
            ('initial_mmc3_mode','initial_prg_r6','initial_prg_r7')):
         raise ValueError('Unverified initial mapper state')
+    if d['mmc3_write_coverage']!='full_8000_9fff_even_odd':
+        raise ValueError('Incomplete MMC3 write hook coverage')
     if d['execution_provenance']!='registerexec_callbacks_not_source_disassembly':
         raise ValueError('Unknown provenance')
     if d['cycle_trace_available'] not in ('yes','no'):
@@ -60,7 +65,8 @@ def meta_parse(path):
         raise ValueError('Unknown completeness state')
     numeric(d['events_recorded'],'events_recorded')
     numeric(d['events_dropped'],'events_dropped')
-    if (d['trace_complete']=='yes')!=(int(d['events_dropped'])==0):
+    numeric(d['callback_errors'],'callback_errors')
+    if (d['trace_complete']=='yes')!=(int(d['events_dropped'])==0 and int(d['callback_errors'])==0):
         raise ValueError('Inconsistent completeness flag')
     return d
 
@@ -117,7 +123,7 @@ def analyze(trace_path,meta_path,allow_incomplete=False):
             if kind=='RAM_WRITE' and (pc not in TRACKED_RAM or value is None):
                 raise ValueError('Unexpected RAM write')
             if kind in ('MMC3_SELECT','MMC3_DATA'):
-                if pc!=(0x8000 if kind=='MMC3_SELECT' else 0x8001) or value is None:
+                if not (0x8000<=pc<=0x9FFF) or pc%2!=(0 if kind=='MMC3_SELECT' else 1) or value is None:
                     raise ValueError('Unexpected mapper event')
             if kind=='MMC3_SELECT':select=value
             if kind=='MMC3_DATA' and select is not None:
@@ -152,6 +158,7 @@ def analyze(trace_path,meta_path,allow_incomplete=False):
       'rom_md5':meta['rom_md5'].lower(),
       'events_recorded':int(meta['events_recorded']),
       'events_dropped':int(meta['events_dropped']),
+      'callback_errors':int(meta['callback_errors']),
       'complete':meta['trace_complete']=='yes',
       'event_counts':dict(sorted(counts.items())),
       'execution_counts_by_cpu_pc':dict(sorted(pc_counts.items())),
