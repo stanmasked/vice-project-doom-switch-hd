@@ -20,8 +20,9 @@ SPRITE_TILE_TRANSPARENT = 3
 SPRITE_COLOR = 0x2A
 
 
-def sprite_initialization(*, behind=False, sprite_opaque=True):
-    if type(behind) is not bool or type(sprite_opaque) is not bool:
+def sprite_initialization(*, behind=False, sprite_opaque=True,
+                          hflip=False, vflip=False):
+    if any(type(v) is not bool for v in (behind,sprite_opaque,hflip,vflip)):
         raise ValueError("Sprite flags must be actual booleans")
     # Set sprite palette bytes at $3F11..$3F13; do not touch
     # the universal backdrop slot $3F10.
@@ -32,15 +33,26 @@ def sprite_initialization(*, behind=False, sprite_opaque=True):
     # OAM sprite 0 only: [Y, tile index, attributes, X].
     stream.extend((0xA9, 0, 0x8D, 3, 0x20))
     for value in (SPRITE_Y, SPRITE_TILE_OPAQUE if sprite_opaque
-                  else SPRITE_TILE_TRANSPARENT, 0x20 if behind else 0, SPRITE_X):
+                  else SPRITE_TILE_TRANSPARENT,
+                  (0x20 if behind else 0) | (0x40 if hflip else 0) |
+                  (0x80 if vflip else 0), SPRITE_X):
         stream.extend((0xA9, value, 0x8D, 4, 0x20))
     return bytes(stream)
 
 
+def asymmetric_pattern(row, column):
+    if (type(row) is not int or not 0 <= row < 8 or
+            type(column) is not int or not 0 <= column < 8):
+        raise ValueError("Asymmetric CHR coordinates must be 0..7")
+    return 1 + ((2 * row + column) % 3)
+
+
 def make_rom(destination, *, bg_opaque=True, sprite_opaque=True,
-             behind=False, sprite_enabled=True):
+             behind=False, sprite_enabled=True, hflip=False,
+             vflip=False, asymmetric_sprite=False):
     if any(type(v) is not bool for v in
-           (bg_opaque, sprite_opaque, behind, sprite_enabled)):
+           (bg_opaque, sprite_opaque, behind, sprite_enabled,
+            hflip, vflip, asymmetric_sprite)):
         raise ValueError("Sprite compositor controls must be booleans")
     base = program()
     if base.count(RENDER_SETUP) != 1 or base.count(MASK_SETUP) != 1:
@@ -49,7 +61,8 @@ def make_rom(destination, *, bg_opaque=True, sprite_opaque=True,
     # byte sprite priority flag or the distinct CHR tile occupancy.
     payload = base.replace(
         RENDER_SETUP, initialization() +
-        sprite_initialization(behind=behind, sprite_opaque=sprite_opaque) +
+        sprite_initialization(behind=behind, sprite_opaque=sprite_opaque,
+                              hflip=hflip, vflip=vflip) +
         bytes((0xA9, 0x18, 0x8D, 0, 0x20)), 1)
     payload = payload.replace(
         MASK_SETUP,
@@ -65,7 +78,20 @@ def make_rom(destination, *, bg_opaque=True, sprite_opaque=True,
     if bg_opaque:
         chr_data[1024 + 16:1024 + 32] = b"\xFF" * 16
     # Sprite tile2 is independently solid in both pattern planes.
-    chr_data[1024 + 32:1024 + 48] = b"\xFF" * 16
+    if asymmetric_sprite:
+        # Every sprite pixel stays nonzero, while X/Y patterns vary.
+        for row in range(8):
+            low=0
+            high=0
+            for col in range(8):
+                bit=7-col
+                pat=asymmetric_pattern(row,col)
+                low |= (pat & 1) << bit
+                high |= ((pat >> 1) & 1) << bit
+            chr_data[1024+32+row]=low
+            chr_data[1024+40+row]=high
+    else:
+        chr_data[1024 + 32:1024 + 48] = b"\xFF" * 16
     # Tile3 is always blank for the transparent-sprite negative case.
     output = b"NES\x1a" + bytes((2, 2, 0x40, 0)) + bytes(8) + prg + chr_data
     if len(output) != 49168:
