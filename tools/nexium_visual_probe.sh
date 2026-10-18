@@ -16,7 +16,9 @@ capture() {
     return 1
   fi
   xwd -root -screen -silent -out "$out/$label.xwd"
-  convert "$out/$label.xwd" -depth 8 -compress none "ppm:$out/$label.ppm"
+  # ImageMagick -compress none selects ASCII P3 (not binary P6). Explicitly
+  # require raw 8-bit P6, matching the independent strict visual auditor.
+  convert "$out/$label.xwd" -depth 8 -define ppm:format=raw "ppm:$out/$label.ppm"
   convert "$out/$label.xwd" -strip "png:$out/$label.png"
   echo "capture=$label" >> "$out/visual-probe.txt"
 }
