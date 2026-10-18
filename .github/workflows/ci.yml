@@ -189,6 +189,8 @@ jobs:
         run: python -m unittest discover -s tests -p 'test_fceux_stage127_transparent_bg.py' -v
       - name: Stage128 source-anchored sprite transparency and priority tests
         run: python -m unittest discover -s tests -p 'test_fceux_stage128_sprite_compositor.py' -v
+      - name: Stage129 real OAM sprite collision, XBuf and sprite0 hit regressions
+        run: python -m unittest discover -s tests -p 'test_fceux_stage129_sprite_oam.py' -v
       - name: Stage89 validated static screen hypotheses and explicit provenance
         run: python -m unittest discover -s tests -p 'test_ppu_capture_session.py' -v
       - name: Stage88 audited PPU reference-frame inventory regressions
