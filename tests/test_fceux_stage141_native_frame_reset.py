@@ -13,7 +13,8 @@ from make_stage137_nine_sprite_rom import make_rom as stage137_make_rom
 from make_stage141_frame_reset_rom import (
     make_rom as stage141_make_rom, BG_AND_SPRITES, SPRITES_ONLY)
 from run_stage141_native_frame_reset import (
-    MODES,PASS,REJECT,FrameResetError,verify,verify_rejection,verify_sweep)
+    MODES,PASS,REJECT,FrameResetError,verify,verify_rejection,
+    verify_stale_jump_rejection,verify_sweep)
 from inject_fceux_stage141_frame_reset import (
     patch as patch141,GUARD)
 from inject_fceux_stage119_nametable_pixels import patch as patch119
@@ -160,6 +161,7 @@ int main(int argc,char**argv){
  const bool corrupt_pixel=argc>2 && argv[2][0]=='p';
  const bool corrupt_index=argc>2 && argv[2][0]=='i';
  const bool corrupt_reset=argc>2 && argv[2][0]=='r';
+ const bool stale_jmp=argc>2 && argv[2][0]=='s';
  const bool overflow=mode==1 || false_clean;
  setenv("VPD_STAGE141_FRAME_RESET_CASE",
         mode==1?"nine_overflow":"eight_visible",1);
@@ -175,8 +177,9 @@ int main(int argc,char**argv){
   for(unsigned x=64;x<72;++x){
    unsigned color=overflow?143:170;
    if(corrupt_pixel && frame==1 && x==71)++color;
+   if(stale_jmp && frame==1)color=164;
    vpd_ppu_probe::stage141_pixel(126,x,8,status,color,false,
-       overflow?0x0fU:0x2aU,!overflow,0);
+       stale_jmp && frame==1?36U:(overflow?15U:42U),!overflow,0);
   }
   if(frame==0){
    vpd_ppu_probe::stage141_before_reset(status);
@@ -203,6 +206,13 @@ int main(int argc,char**argv){
                                capture_output=True,text=True)
             self.assertEqual(neg.returncode,0,neg.stderr)
             verify_rejection(neg.stderr)
+            old=subprocess.run([str(binary),"1","stale"],
+                               capture_output=True,text=True)
+            self.assertEqual(old.returncode,0,old.stderr)
+            self.assertTrue(verify_stale_jump_rejection(
+                old.stderr)["stale_jmp"])
+            with self.assertRaises(FrameResetError):
+                verify(old.stderr,"nine_overflow")
             # Fail closed even if only the last pixel of the second frame
             # disagrees while the reported first-pixel XBuf colors match.
             for i,mode in enumerate(MODES):
