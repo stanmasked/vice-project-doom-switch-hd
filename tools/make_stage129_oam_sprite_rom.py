@@ -40,6 +40,20 @@ def sprite_initialization(*, behind=False, sprite_opaque=True,
     return bytes(stream)
 
 
+def explicit_sprite_palette_slot2():
+    """Stage133-only direct PPUADDR/PPUDATA write to $3F12.
+
+    The native Stage133 diagnostic observed $01 from sprite slot2
+    instead of the sequentially initialized $2B. This additional
+    address-bound write is a targeted test of PPU palette state; it
+    preserves the other 15 sprite/BG slots and all original synthetic
+    stage129/131 ROMs.
+    """
+    return bytes((0xA9, 0x3F, 0x8D, 6, 0x20,
+                  0xA9, 0x12, 0x8D, 6, 0x20,
+                  0xA9, 0x2B, 0x8D, 7, 0x20))
+
+
 def asymmetric_pattern(row, column):
     if (type(row) is not int or not 0 <= row < 8 or
             type(column) is not int or not 0 <= column < 8):
@@ -63,6 +77,7 @@ def make_rom(destination, *, bg_opaque=True, sprite_opaque=True,
         RENDER_SETUP, initialization() +
         sprite_initialization(behind=behind, sprite_opaque=sprite_opaque,
                               hflip=hflip, vflip=vflip) +
+        (explicit_sprite_palette_slot2() if asymmetric_sprite else b"") +
         bytes((0xA9, 0x18, 0x8D, 0, 0x20)), 1)
     payload = payload.replace(
         MASK_SETUP,
