@@ -8,7 +8,7 @@ import tempfile
 import time
 from pathlib import Path
 
-from make_stage141_frame_reset_rom import make_rom
+from make_stage144_stable_frame_rom import make_rom
 from run_stage100_fceux_synthetic_smoke import (
     backend_settings,categorize_exit)
 
