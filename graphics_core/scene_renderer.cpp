@@ -320,12 +320,19 @@ bool drawScene(uint32_t* target,int width,int height,int stride_pixels,
     // The previous automatic-demo arrangement remains byte-for-byte intact.
     if(view.manual_controls){
         if(view.guard.enabled){
-            s.text(505,17,"GUARD",rgba(219,159,126),2);
-            for(unsigned n=0;n<3;++n)
+            s.text(505,17,view.sentry.enabled?"SENTRY":"GUARD",
+                   view.sentry.enabled?rgba(118,228,222):rgba(219,159,126),2);
+            for(unsigned n=0;n<3;++n){
+                const bool live=view.sentry.enabled?
+                    n<view.sentry.health:n<view.guard.health;
+                const bool flashed=view.sentry.enabled?
+                    view.sentry.hit_flash_ticks>0:
+                    view.guard.hit_flash_ticks>0;
                 s.rect(581+15*static_cast<int>(n),18,11,12,
-                       n<view.guard.health?
-                       (view.guard.hit_flash_ticks?rgba(255,224,147):
-                        rgba(219,106,86)):rgba(55,64,79));
+                       live?(flashed?rgba(255,224,147):
+                             (view.sentry.enabled?rgba(64,159,165):
+                              rgba(219,106,86))):rgba(55,64,79));
+            }
             s.text(697,17,"HERO",rgba(191,208,217),2);
             for(unsigned n=0;n<5;++n)
                 s.rect(761+15*static_cast<int>(n),18,11,12,
