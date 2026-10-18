@@ -219,6 +219,20 @@ bool drawScene(uint32_t* target,int width,int height,int stride_pixels,
         for(unsigned i=0;i<view.training_target_health&&i<3;++i)
             s.rect(tx+i*10,ty-7,8,4,rgba(238,183,81));
     }
+    // Optional self-authored guard: no enemy pixels in legacy autoplay.
+    if(view.guard.enabled && view.guard.health>0){
+        const int gx=(view.guard.x_px-view.camera_x_px)*2;
+        const int gy=(view.guard.y_px+80)*2;
+        s.rect(gx+3,gy+3,18,23,rgba(65,76,94));
+        s.rect(gx+6,gy+1,13,9,rgba(194,110,92));
+        s.rect(gx+5,gy+11,15,10,view.guard.alerted?
+               rgba(220,103,93):rgba(113,146,152));
+        s.rect(gx+2,gy+20,7,8,rgba(61,71,85));
+        s.rect(gx+16,gy+20,7,8,rgba(61,71,85));
+        for(unsigned n=0;n<view.guard.health && n<3;++n)
+            s.rect(gx+2+8*static_cast<int>(n),gy-7,6,3,
+                   rgba(247,175,96));
+    }
     int player_x=(view.player_x_px-view.camera_x_px)*2;
     int player_y=(view.player_y_px+80)*2;
     // Only a real active burst draws motion streaks; replay-demo frames
@@ -275,6 +289,14 @@ bool drawScene(uint32_t* target,int width,int height,int stride_pixels,
         const int capacity=45-static_cast<int>(view.dash_cooldown>45?
                                               45:view.dash_cooldown);
         s.rect(832,45,capacity*2,7,rgba(111,204,214));
+    }
+    if(view.manual_controls && view.guard.enabled){
+        s.text(374,17,"GUARD",rgba(219,159,126),2);
+        for(unsigned n=0;n<view.guard.health && n<3;++n)
+            s.rect(440+12*static_cast<int>(n),20,9,9,rgba(219,106,86));
+        s.text(374,49,"HERO HP",rgba(191,208,217),2);
+        for(unsigned n=0;n<view.player_health && n<5;++n)
+            s.rect(468+12*static_cast<int>(n),50,9,8,rgba(106,198,174));
     }
     s.rect(932,22,200,16,rgba(56,70,88));
     s.rect(932,22,125,16,rgba(171,66,75));
