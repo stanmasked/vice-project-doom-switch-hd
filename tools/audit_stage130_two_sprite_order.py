@@ -4,6 +4,8 @@
 Independent no-ROM preflight, not a native FCEUX dual-sprite proof.
 Sprite selection occurs before sprite/background priority resolution.
 """
+import argparse
+from pathlib import Path
 from dataclasses import dataclass
 
 
@@ -91,8 +93,13 @@ def compose(bg_pattern, bg_group, sprites, *, x=64, sprite_enabled=True):
 
 
 if __name__ == "__main__":
+    cli = argparse.ArgumentParser(description=__doc__)
+    cli.add_argument("pinned_ppu_cpp", type=Path)
+    args = cli.parse_args()
+    result = verify_source(args.pinned_ppu_cpp.read_bytes())
     a = compose(3, 0, [Sprite(0, 3, 0), Sprite(1, 3, 1)])
-    assert a["xbuf"] == 170
-    print("STAGE130_TWO_SPRITE_ORDER_MODEL_PASS "
-          "source_only=no independent_model=yes "
+    if a["xbuf"] != 170 or not result["two_sprite_source_order_verified"]:
+        raise OverlapError("No validated source-level dual-sprite baseline")
+    print("STAGE130_PINNED_TWO_SPRITE_SOURCE_PASS "
+          "source_only=yes independent_model=yes "
           "native_two_sprite_pixels_proven=no original_game_sprite_proven=no")
