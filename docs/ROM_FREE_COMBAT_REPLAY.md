@@ -166,3 +166,31 @@ The matrix uses self-authored terrain and training assets only.
 A valid host test emits `VPD_ROMFREE_COMBAT_MATRIX_PASS`. Any changed
 mechanics must update the golden digest intentionally, after
 independent review of the cause and new observed transcript.
+
+## Run real repository host tests without GitHub Actions
+
+After checking out the source (with no NES ROM or original game assets),
+the full current **native host** simulation, transcript-audit and
+RGBA raster test suite can be built and run using a single shell command:
+
+    bash tools/run_romfree_host_pipeline.sh
+
+To exercise **gameplay and trace checks only** on a machine without the
+graphics module dependencies:
+
+    bash tools/run_romfree_host_pipeline.sh --core-only
+
+The launcher configures a Release build below
+`build/romfree_host_validation/`, confirms the required named CTests
+have actually been registered, runs CTest with failure output, invokes
+the separate full-trace Python auditor against the compiled binary,
+then builds and runs the graphics engine suite (unless `--core-only`).
+It exits nonzero on any missing test, compiler failure, replay-audit
+mismatch or graphics regression, and emits
+`VPD_ROMFREE_HOST_PIPELINE_PASS` only after the selected checks
+actually succeed.
+
+This route is valuable when GitHub Actions runners are queued, but
+passing host tests **does not** establish a successful NRO build or a
+real Nintendo Switch/emulator launch. It never reads any original
+commercial ROM, extracted sprite or reference gameplay capture.
