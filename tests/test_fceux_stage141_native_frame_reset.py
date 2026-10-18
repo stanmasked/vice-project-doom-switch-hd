@@ -133,6 +133,7 @@ class SourceHook(unittest.TestCase):
             self.assertEqual(result.count(name),1)
         self.assertIn(b"SPRAM[32],SPRAM[35]",result)
         self.assertIn(b"vpd_ppu_probe::stage141_after_reset(PPU_status);",result)
+        self.assertIn(b"Sprite16,pixelcolor,havepixel,pixel & 3);",result)
         self.assertEqual(result.count(b"\r\n"),result.count(b"\n"))
         with self.assertRaises(ValueError):
             patch141(result)
@@ -174,7 +175,8 @@ int main(int argc,char**argv){
   for(unsigned x=64;x<72;++x){
    unsigned color=overflow?143:170;
    if(corrupt_pixel && frame==1 && x==71)++color;
-   vpd_ppu_probe::stage141_pixel(126,x,8,status,color,false);
+   vpd_ppu_probe::stage141_pixel(126,x,8,status,color,false,
+       overflow?0x0fU:0x2aU,!overflow,0);
   }
   if(frame==0){
    vpd_ppu_probe::stage141_before_reset(status);
@@ -210,6 +212,12 @@ int main(int argc,char**argv){
                                            capture_output=True,text=True)
                         self.assertEqual(bad.returncode,0,bad.stderr)
                         self.assertEqual(bad.stderr.count(REJECT),1,bad.stderr)
+                    self.assertEqual(bad.stderr.count(
+                        "VPD_STAGE143_FRAME_PIXEL_DIAGNOSTIC"),1,bad.stderr)
+                    self.assertIn("first_raw=",bad.stderr)
+                    self.assertIn("second_raw=",bad.stderr)
+                    self.assertIn("first_sprite=",bad.stderr)
+                    self.assertIn("second_sprite=",bad.stderr)
                         self.assertIn("invalid=1",bad.stderr)
                         self.assertNotIn(PASS,bad.stderr)
                         with self.assertRaises(FrameResetError):
