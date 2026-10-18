@@ -72,7 +72,7 @@ class TerminalLoopRegression(unittest.TestCase):
                             start+relative+3:start+end],
                             bytes([0xEA])*(end-relative-3))
                     self.assertEqual(actual[PRG_END-6:PRG_END],
-                                     b"\\x00\\xC0"*3)
+                                     b"\x00\xC0"*3)
 
     def test_malformed_or_prepatched_rom_fails_closed(self):
         with tempfile.TemporaryDirectory() as td:
@@ -83,9 +83,9 @@ class TerminalLoopRegression(unittest.TestCase):
             for bad in (
                 b"", original[:-1], original[:16] + b"garbage" + original[23:],
                 relocate(original),
-                original[:sites[0][0]+sites[0][1]] + b"\\xea" +
+                original[:sites[0][0]+sites[0][1]] + b"\xea" +
                     original[sites[0][0]+sites[0][1]+1:],
-                original[:sites[0][0]+sites[0][1]+3] + b"\\x00" +
+                original[:sites[0][0]+sites[0][1]+3] + b"\x00" +
                     original[sites[0][0]+sites[0][1]+4:],
             ):
                 with self.subTest(size=len(bad)):
