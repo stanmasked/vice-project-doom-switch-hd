@@ -1973,6 +1973,9 @@ struct Stage133FlipAudit {
     unsigned samples=0,invalid=0,scanline=0,source_row=0;
     unsigned pattern[8]={0,0,0,0,0,0,0,0};
     unsigned color[8]={0,0,0,0,0,0,0,0};
+    unsigned bad_meta=0,bad_fetch=0,bad_pattern=0,bad_color=0;
+    unsigned first_address=0,first_low=0,first_high=0;
+    unsigned first_expected_pattern=0,first_expected_color=0;
     bool emitted=false;
 };
 inline Stage133FlipAudit& stage133_state() {
@@ -2030,12 +2033,19 @@ inline void stage133_pixel(unsigned sl,unsigned x,unsigned renderslot,
     }
     if(tile!=2U || sprite_x!=64U || flags!=expected_flags ||
        r.flags!=expected_flags || r.row>7U ||
-       r.address!=0x1020U+r.row ||
-       r.low!=expect_low || r.high!=expect_high ||
-       !sprite_read || actual_pattern!=expected_pattern ||
-       pixelcolor!=expected_color || xbuf!=expected_xbuf ||
-       ntaddr<0x2000U || ntaddr>=0x3000U)
+       !sprite_read || ntaddr<0x2000U || ntaddr>=0x3000U)
+        ++a.bad_meta;
+    if(r.address!=0x1020U+r.row ||
+       r.low!=expect_low || r.high!=expect_high)++a.bad_fetch;
+    if(actual_pattern!=expected_pattern)++a.bad_pattern;
+    if(pixelcolor!=expected_color || xbuf!=expected_xbuf)++a.bad_color;
+    if(a.bad_meta || a.bad_fetch || a.bad_pattern || a.bad_color)
         ++a.invalid;
+    if(a.samples==0){
+        a.first_address=r.address;a.first_low=r.low;a.first_high=r.high;
+        a.first_expected_pattern=expected_pattern;
+        a.first_expected_color=expected_xbuf;
+    }
     a.pattern[a.samples]=actual_pattern;
     a.color[a.samples]=xbuf;
     ++a.samples;
@@ -2044,8 +2054,16 @@ inline void stage133_pixel(unsigned sl,unsigned x,unsigned renderslot,
         if(a.invalid){
             std::fprintf(stderr,
                 "VPD_STAGE133_REJECTED_SPRITE_FLIP mode=%s invalid=%u "
-                "row=%u source_row=%u samples=8 synthetic_only=yes\n",
-                options[mode],a.invalid,a.scanline,a.source_row);
+                "row=%u source_row=%u samples=8 "
+                "bad_meta=%u bad_fetch=%u bad_pattern=%u bad_color=%u "
+                "fetch_addr=%u fetch_low=%u fetch_high=%u "
+                "observed_pattern=%u expected_pattern=%u "
+                "observed_xbuf=%u expected_xbuf=%u synthetic_only=yes\n",
+                options[mode],a.invalid,a.scanline,a.source_row,
+                a.bad_meta,a.bad_fetch,a.bad_pattern,a.bad_color,
+                a.first_address,a.first_low,a.first_high,
+                a.pattern[0],a.first_expected_pattern,
+                a.color[0],a.first_expected_color);
         }else{
             std::fprintf(stderr,
                 "VPD_STAGE133_NATIVE_SPRITE_FLIP_PASS "
