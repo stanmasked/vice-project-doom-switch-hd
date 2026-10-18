@@ -88,7 +88,7 @@ class FrameResetModel(unittest.TestCase):
             with self.subTest(anchor=anchor),self.assertRaises(OAMLimitError):
                 verify_frame_source(text.replace(anchor,"removed"))
         for wrong in (text+"\n"+text,
-                      "\n".join(reversed(FRAME_ANCHORS)+ANCHORS),
+                      "\n".join(tuple(reversed(FRAME_ANCHORS))+ANCHORS),
                       "\n".join(ANCHORS+FRAME_ANCHORS),None):
             with self.assertRaises(OAMLimitError):
                 verify_frame_source(wrong)
