@@ -22,6 +22,10 @@ git -C "${FCEUX}" -c advice.detachedHead=false checkout -q --detach FETCH_HEAD
 test "$(git -C "${FCEUX}" rev-parse HEAD)" = "${PIN}"
 python3 "${PROJECT}/tools/audit_fceux_native_ppu_hook_sites.py" \
   "${FCEUX}/src/ppu.cpp" --require-exact-blob
+# Stage128: verify source-level sprite compositor semantics at the pinned
+# upstream revision, independent of our later synthetic PPU instrumentation.
+python3 "${PROJECT}/tools/audit_fceux_stage128_sprite_compositor.py" \
+  "${FCEUX}/src/ppu.cpp"
 
 python3 "${PROJECT}/tools/build_fceux_newppu_probe_patch.py" \
   "${FCEUX}/src/ppu.cpp" "${PATCH}"
