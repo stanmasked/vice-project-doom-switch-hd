@@ -10,7 +10,7 @@ LDFLAGS := -specs=$(DEVKITPRO)/libnx/switch.specs -Wl,--gc-sections -Wl,-Map,$(T
 LDLIBS := -L$(DEVKITPRO)/libnx/lib -lnx
 .PHONY: all clean
 all: $(TARGET).nro
-$(TARGET).elf: source/main.cpp ../game_core/simulation.cpp ../game_core/simulation.hpp
+$(TARGET).elf: source/main.cpp ../game_core/simulation.cpp ../game_core/simulation.hpp ../game_core/combat_demo.hpp
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) source/main.cpp ../game_core/simulation.cpp $(LDLIBS) -o $@
 $(TARGET).nacp:
 	nacptool --create "VPD Native Scene Test" "Homebrew Research" "0.2.0" $@
