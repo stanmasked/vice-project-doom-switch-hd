@@ -70,7 +70,7 @@ inline bool collectGuardCombatSamples(GuardCombatSamples& result) {
         shooter.tick(Input{Fire});
         if(shooter.guardEnemy().projectile_hits>before){
             if(shooter.guardEnemy().projectile_hits!=next-1 ||
-               shooter.guardEnemy().health!=5-next)return false;
+               shooter.guardEnemy().health!=4-next)return false;
             result[next]=guardCombatSnapshot(shooter);
             ++next;
         }
