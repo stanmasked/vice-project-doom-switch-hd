@@ -40,6 +40,24 @@ struct GuardEnemy {
     uint16_t projectile_hits=0;
     uint8_t hit_flash_ticks=0; // cosmetic feedback after authentic swept damage
 };
+// Separate second-wave fixed turret, activated only after the first guard is
+// defeated and the player reaches the next section of this synthetic map.
+struct SentryEnemy {
+    int32_t x=39*kTileSize*kFixed;
+    int32_t y=((kMapHeight-1)*kTileSize-kPlayerHeight)*kFixed;
+    uint8_t health=2;
+    uint8_t fire_cooldown=0;
+    uint8_t hit_flash_ticks=0;
+    uint16_t shots_fired=0;
+    uint16_t shots_hit=0;
+    uint16_t projectile_hits=0;
+};
+struct EnemyProjectile {
+    int32_t x=0,y=0,vx=0;
+    uint16_t age=0;
+    bool active=false;
+};
+constexpr std::size_t kMaxEnemyProjectiles=3;
 // Self-authored stationary training target in a synthetic arena.
 struct TrainingTarget {
     int32_t x=25*kTileSize*kFixed;
@@ -81,6 +99,11 @@ public:
     const GuardEnemy& guardEnemy() const { return guard_; }
     uint8_t playerHealth() const { return player_health_; }
     uint8_t playerHitFlashTicks() const { return player_hit_flash_ticks_; }
+    bool secondWaveActive() const { return second_wave_active_; }
+    bool stageCleared() const { return stage_cleared_; }
+    const SentryEnemy& sentry() const { return sentry_; }
+    const std::array<EnemyProjectile,kMaxEnemyProjectiles>&
+        enemyProjectiles() const { return enemy_projectiles_; }
 private:
     Scene scene_;
     Actor player_{};
@@ -101,6 +124,12 @@ private:
     GuardEnemy guard_{};
     uint8_t player_health_=5;
     uint8_t player_hit_flash_ticks_=0;
+    bool second_wave_active_=false;
+    bool stage_cleared_=false;
+    SentryEnemy sentry_{};
+    std::array<EnemyProjectile,kMaxEnemyProjectiles> enemy_projectiles_{};
+    void advanceSentry();
+    void advanceEnemyProjectiles();
     void advanceGuard();
     void advanceProjectiles();
     void fireProjectile();

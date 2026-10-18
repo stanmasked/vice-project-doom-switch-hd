@@ -11,6 +11,16 @@ struct GuardView {
     bool alerted=false;
     uint8_t hit_flash_ticks=0;
 };
+struct SentryView {
+    int32_t x_px=0,y_px=0;
+    uint8_t health=0;
+    uint8_t hit_flash_ticks=0;
+    bool enabled=false;
+};
+struct EnemyProjectileView {
+    int32_t x_px=0,y_px=0;
+    bool active=false;
+};
 struct ProjectileView {
     int32_t x_px=0,y_px=0;
     bool active=false;
@@ -54,6 +64,9 @@ struct SceneView {
     GuardView guard{};
     uint8_t player_health=5;
     uint8_t player_hit_flash_ticks=0;
+    SentryView sentry{};
+    std::array<EnemyProjectileView,3> enemy_projectiles{};
+    bool stage_cleared=false;
 };
 constexpr int kSceneWidth=1280;
 constexpr int kSceneHeight=720;
