@@ -2212,6 +2212,94 @@ inline void stage135_pixel(unsigned sl,unsigned x,unsigned slot,unsigned tile,
 }
 #endif
 
+// Stage137: pinned native nine-sprite overflow and real 8-pixel XBuf.
+#if defined(VPD_NATIVE_SYNTHETIC_NINE_OAM) && defined(VPD_NATIVE_SYNTHETIC_MIDFRAME_CHR)
+struct Stage137Eval {
+    bool seen=false;
+    unsigned row=0,count=0,status=0,ninth_y=0,ninth_x=0;
+    unsigned first[8]={0,0,0,0,0,0,0,0};
+};
+struct Stage137Audit {
+    Stage137Eval eval[2];
+    unsigned samples=0,invalid=0,row=0,first_color=0;
+    bool emitted=false;
+};
+inline Stage137Audit& stage137_state(){static Stage137Audit a;return a;}
+inline int stage137_mode(){
+    static const char* v=std::getenv("VPD_STAGE137_NINE_CASE");
+    if(!v)return -1;
+    const char* const cases[]={"eight_visible","nine_overflow",
+        "ninth_offscreen","nine_8x16"};
+    for(int i=0;i<4;++i)if(std::strcmp(v,cases[i])==0)return i;
+    return -1;
+}
+inline void stage137_eval(unsigned yp,unsigned slot,unsigned count,
+                           unsigned status,unsigned ninth_y,unsigned ninth_x,
+                           unsigned i0,unsigned i1,unsigned i2,unsigned i3,
+                           unsigned i4,unsigned i5,unsigned i6,unsigned i7){
+    if(slot>1U || stage137_mode()<0 || yp<120U || yp>140U)return;
+    Stage137Eval& e=stage137_state().eval[slot];
+    e.seen=true;e.row=yp;e.count=count;e.status=status;
+    e.ninth_y=ninth_y;e.ninth_x=ninth_x;
+    const unsigned indexes[]={i0,i1,i2,i3,i4,i5,i6,i7};
+    for(unsigned i=0;i<8;i++)e.first[i]=indexes[i];
+}
+inline void stage137_pixel(unsigned sl,unsigned x,unsigned slot,
+                            unsigned count,unsigned status,unsigned xbuf,
+                            bool sprite16){
+    static const char* enabled=std::getenv("VPD_STAGE137_NINE_PROBE");
+    if(!enabled || std::strcmp(enabled,"1")!=0)return;
+    const int mode=stage137_mode();
+    if(mode<0 || slot>1U || sl<120U || sl>140U ||
+       x<64U || x>=72U)return;
+    Stage137Audit& a=stage137_state();
+    if(a.emitted)return;
+    const MidframeChr& m=stage110_state();
+    if(!m.switched || m.writes!=2 || sl<m.switch_sl+8U)return;
+    const Stage137Eval& e=a.eval[slot];
+    if(!e.seen)return;
+    if(a.samples==0)a.row=sl;
+    if(sl!=a.row)return;
+    const bool nine=(mode==1 || mode==3);
+    const bool ninth_offscreen=mode==2;
+    const bool expect_overflow=nine;
+    const unsigned expected_xbuf=mode==0?170U:143U;
+    bool bad=(count!=8U || e.count!=8U ||
+              ((status&0x20U)!=0)!=expect_overflow ||
+              ((e.status&0x20U)!=0)!=expect_overflow ||
+              sprite16!=(mode==3) ||
+              e.ninth_x!=(mode==0?0U:64U) ||
+              (mode!=0 && e.ninth_y!=(ninth_offscreen?40U:120U)) ||
+              xbuf!=expected_xbuf ||
+              e.row<120U || e.row>141U);
+    for(unsigned i=0;i<8;i++)if(e.first[i]!=i)bad=true;
+    ++a.samples;
+    a.invalid+=bad?1U:0U;
+    if(a.samples==1)a.first_color=xbuf;
+    if(a.samples==8){
+        static const char* const cases[]={"eight_visible","nine_overflow",
+            "ninth_offscreen","nine_8x16"};
+        if(a.invalid){
+            std::fprintf(stderr,
+                "VPD_STAGE137_REJECTED_NINE_OAM case=%s invalid=%u "
+                "row=%u eval_row=%u count=%u overflow=%s xbuf=%u "
+                "samples=8 synthetic_only=yes\n",
+                cases[mode],a.invalid,a.row,e.row,e.count,
+                (e.status&0x20U)?"yes":"no",a.first_color);
+        }else{
+            std::fprintf(stderr,
+                "VPD_STAGE137_NATIVE_NINE_OAM_PASS case=%s row=%u "
+                "eval_row=%u count=8 overflow=%s xbuf=%u "
+                "samples=8 invalid=0 observed_oam_and_xbuf=yes "
+                "synthetic_only=yes original_game_overflow_proven=no\n",
+                cases[mode],a.row,e.row,expect_overflow?"yes":"no",
+                a.first_color);
+        }
+        std::fflush(stderr);a.emitted=true;
+    }
+}
+#endif
+
 // Stage109 synthetic-only MMC3 write -> BG CHR read -> framebuffer timeline.
 // Internal runppu tick units are not authoritative NTSC dots or CPU cycles.
 #ifdef VPD_NATIVE_SYNTHETIC_CHR_TIMELINE
