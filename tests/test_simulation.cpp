@@ -118,6 +118,35 @@ int main(){
         check(firing.shotsFired()==0 &&
               firing.fingerprint()==Simulation{}.fingerprint(),
               "combat state survived a full gameplay reset");
+        // The scene layout is mutable, so replay identity must include
+        // the exact solid tile map, not just player/projectile states.
+        Simulation map_a,map_b;
+        check(map_a.fingerprint()==map_b.fingerprint(),
+              "fresh maps must be replay-equivalent");
+        const uint64_t original_map_hash=map_b.fingerprint();
+        map_b.scene().setSolid(57,3,true); // far away from player
+        check(map_a.player().x==map_b.player().x &&
+              map_a.player().y==map_b.player().y,
+              "map test accidentally moved the player");
+        check(map_a.fingerprint()!=map_b.fingerprint(),
+              "changed tile geometry missing from replay fingerprint");
+        map_b.scene().setSolid(57,3,false);
+        check(map_b.fingerprint()==original_map_hash,
+              "restoring original map should restore original fingerprint");
+        map_a.scene().setSolid(57,3,true);
+        check(map_a.fingerprint()==map_b.fingerprint() || 
+              map_a.fingerprint()!=original_map_hash,
+              "modified maps should be independently serialized");
+        map_b.scene().setSolid(57,3,true);
+        check(map_a.fingerprint()==map_b.fingerprint(),
+              "identical modified maps differ across replay instances");
+        map_a.tick(Input{Fire});
+        map_b.tick(Input{Fire});
+        check(map_a.fingerprint()==map_b.fingerprint(),
+              "modified tile layouts break firing replay determinism");
+        map_b.scene().setSolid(57,4,true);
+        check(map_a.fingerprint()!=map_b.fingerprint(),
+              "map modifications after shooting must also change replay identity");
         Simulation idle;
         for(int f=0;f<600;++f)idle.tick(Input{});
         check(idle.player().grounded && idle.player().y==floor_y,
