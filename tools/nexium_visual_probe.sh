@@ -42,8 +42,11 @@ if [[ -s "$out/ne-x11-windows.txt" ]]; then
     sleep 0.9
     xdotool keyup d
     sleep 0.3
+    # A short single-shot probe avoids killing the optional guard before
+    # the later genuine right-input contact encounter. Still require guest
+    # Fire event/shot count, never the host keystroke alone.
     xdotool keydown --clearmodifiers z
-    sleep 0.5
+    sleep 0.20
     xdotool keyup z
     sleep 0.4
     xdotool keydown --clearmodifiers x
