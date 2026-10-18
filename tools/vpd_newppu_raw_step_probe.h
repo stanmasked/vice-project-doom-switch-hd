@@ -1973,6 +1973,8 @@ struct Stage133FlipAudit {
     unsigned samples=0,invalid=0,scanline=0,source_row=0;
     unsigned pattern[8]={0,0,0,0,0,0,0,0};
     unsigned color[8]={0,0,0,0,0,0,0,0};
+    unsigned raw_palette[8]={0,0,0,0,0,0,0,0};
+    unsigned expected_xbuf[8]={0,0,0,0,0,0,0,0};
     unsigned bad_meta=0,bad_fetch=0,bad_pattern=0,bad_color=0;
     unsigned first_address=0,first_low=0,first_high=0;
     unsigned first_expected_pattern=0,first_expected_color=0;
@@ -2031,16 +2033,18 @@ inline void stage133_pixel(unsigned sl,unsigned x,unsigned renderslot,
         expect_low|=(pat&1U)<<(7U-col);
         expect_high|=((pat>>1)&1U)<<(7U-col);
     }
-    if(tile!=2U || sprite_x!=64U || flags!=expected_flags ||
-       r.flags!=expected_flags || r.row>7U ||
-       !sprite_read || ntaddr<0x2000U || ntaddr>=0x3000U)
-        ++a.bad_meta;
-    if(r.address!=0x1020U+r.row ||
-       r.low!=expect_low || r.high!=expect_high)++a.bad_fetch;
-    if(actual_pattern!=expected_pattern)++a.bad_pattern;
-    if(pixelcolor!=expected_color || xbuf!=expected_xbuf)++a.bad_color;
-    if(a.bad_meta || a.bad_fetch || a.bad_pattern || a.bad_color)
-        ++a.invalid;
+    const bool meta_bad=(tile!=2U || sprite_x!=64U ||
+       flags!=expected_flags || r.flags!=expected_flags || r.row>7U ||
+       !sprite_read || ntaddr<0x2000U || ntaddr>=0x3000U);
+    const bool fetch_bad=(r.address!=0x1020U+r.row ||
+       r.low!=expect_low || r.high!=expect_high);
+    const bool pattern_bad=(actual_pattern!=expected_pattern);
+    const bool color_bad=(pixelcolor!=expected_color || xbuf!=expected_xbuf);
+    a.bad_meta+=meta_bad ? 1U : 0U;
+    a.bad_fetch+=fetch_bad ? 1U : 0U;
+    a.bad_pattern+=pattern_bad ? 1U : 0U;
+    a.bad_color+=color_bad ? 1U : 0U;
+    a.invalid+=(meta_bad || fetch_bad || pattern_bad || color_bad) ? 1U : 0U;
     if(a.samples==0){
         a.first_address=r.address;a.first_low=r.low;a.first_high=r.high;
         a.first_expected_pattern=expected_pattern;
@@ -2048,10 +2052,27 @@ inline void stage133_pixel(unsigned sl,unsigned x,unsigned renderslot,
     }
     a.pattern[a.samples]=actual_pattern;
     a.color[a.samples]=xbuf;
+    a.raw_palette[a.samples]=pixelcolor;
+    a.expected_xbuf[a.samples]=expected_xbuf;
     ++a.samples;
     if(a.samples==8){
         static const char* const options[]={"none","horizontal","vertical","both"};
         if(a.invalid){
+            std::fprintf(stderr,
+                "VPD_STAGE133_COLOR_DIAGNOSTIC "
+                "mode=%s patterns=%u,%u,%u,%u,%u,%u,%u,%u "
+                "raw_palette=%u,%u,%u,%u,%u,%u,%u,%u "
+                "xbuf=%u,%u,%u,%u,%u,%u,%u,%u "
+                "expected_xbuf=%u,%u,%u,%u,%u,%u,%u,%u\n",
+                options[mode],
+                a.pattern[0],a.pattern[1],a.pattern[2],a.pattern[3],
+                a.pattern[4],a.pattern[5],a.pattern[6],a.pattern[7],
+                a.raw_palette[0],a.raw_palette[1],a.raw_palette[2],a.raw_palette[3],
+                a.raw_palette[4],a.raw_palette[5],a.raw_palette[6],a.raw_palette[7],
+                a.color[0],a.color[1],a.color[2],a.color[3],
+                a.color[4],a.color[5],a.color[6],a.color[7],
+                a.expected_xbuf[0],a.expected_xbuf[1],a.expected_xbuf[2],a.expected_xbuf[3],
+                a.expected_xbuf[4],a.expected_xbuf[5],a.expected_xbuf[6],a.expected_xbuf[7]);
             std::fprintf(stderr,
                 "VPD_STAGE133_REJECTED_SPRITE_FLIP mode=%s invalid=%u "
                 "row=%u source_row=%u samples=8 "
