@@ -160,6 +160,10 @@ int main(int,char**) {
         view.external_animation_source=assets.externalAnimation();
         view.asset_reload_failed=reload_failed;
         view.moving=actor.vx!=0;
+        const auto& target=game.trainingTarget();
+        view.training_target_x_px=target.x/vpd::kFixed;
+        view.training_target_y_px=target.y/vpd::kFixed;
+        view.training_target_health=target.health;
         const auto& shots=game.projectiles();
         for(std::size_t i=0;i<shots.size();++i){
             view.projectiles[i]={
