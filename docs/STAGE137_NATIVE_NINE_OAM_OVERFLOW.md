@@ -8,6 +8,19 @@ Stage137 instruments the same pinned native FCEUX `newppu` binary to
 link that evaluation to **actual framebuffer XBuf pixels**, not merely
 a source-level or C++-mock prediction.
 
+A first native run 39123374368 rejected the eight-visible control:
+`VPD_STAGE137_REJECTED_NINE_OAM case=eight_visible invalid=8
+row=122 eval_row=120 count=8 overflow=yes xbuf=170`.
+The visible sprite and selected OAM count were correct, but status bit
+`$20` was set unexpectedly. In that version only the intended eight
+OAM records had been initialized; all remaining entries depended on
+emulator power-on contents. The generator now deterministically fills
+**all 256 OAM bytes** with `$FF` using a 6502 indexed `$2004`
+write loop, resets `$2003` to zero and only then installs the chosen
+eight or nine entries. In the eight-visible control the unused ninth
+record must be observed as Y=`$FF` and X=`$FF`. This is a
+hypothesis-driven repair, not accepted until native CI succeeds.
+
 Four temporary, wholly synthetic NES Mapper-4 ROM variants use sprite
 CHR tile2 (opaque two-bit pattern3, palette `$2A`) and a transparent
 background tile1 (universal backdrop `$0F`):
