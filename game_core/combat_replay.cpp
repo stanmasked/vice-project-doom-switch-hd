@@ -48,6 +48,18 @@ void verify(){
     if(a.trainingTarget().health!=0U || a.trainingTarget().hits!=3U ||
        a.shotsFired()!=11U || a.frame()!=200U)
         throw std::runtime_error("Shooting practice did not reach expected state");
+    // Independent stable host snapshot of the complete original synthetic
+    // input sequence (including world tiles, facing, target and projectiles).
+    if(a.fingerprint()!=5947277116621119566ULL)
+        throw std::runtime_error("Golden 200-frame combat replay changed");
+    Simulation wrong_input;
+    for(unsigned frame=0;frame<200U;++frame){
+        vpd::Input buttons=inputAt(frame);
+        if(frame==120U)buttons=vpd::Input{}; // omit one Right tick
+        wrong_input.tick(buttons);
+    }
+    if(wrong_input.fingerprint()==a.fingerprint())
+        throw std::runtime_error("Mutated input produced forged golden replay");
     // Negative control: world geometry is gameplay state even if player and
     // active projectiles have otherwise identical coordinates.
     Simulation altered=a;
@@ -64,6 +76,7 @@ void verify(){
              <<" active_shots="<<activeShots(a)
              <<" final_fingerprint="<<a.fingerprint()
              <<" identical_independent_runs=yes"
+             <<" altered_input_control=rejected"
              <<" modified_map_control=rejected"
              <<" restored_map_control=clean"
              <<" synthetic_only=yes original_game_proven=no"
