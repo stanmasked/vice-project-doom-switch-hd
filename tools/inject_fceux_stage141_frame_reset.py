@@ -39,8 +39,8 @@ def patch(source):
           b"PPU_status,*ptr,Sprite16);"+nl+b"#endif")
     output=source.replace(RESET,reset,1).replace(EVAL,evaluation,1)
     output=output.replace(DRAW,draw,1)
-    if output.count(GUARD)!=6:
-        # pre and post reset use two independent preprocessor sections.
+    if output.count(GUARD)!=4:
+        # before/after reset + OAM evaluation + final raster XBuf.
         raise ValueError("Stage141 reset/selection/XBuf hooks incomplete")
     for marker in (b"vpd_ppu_probe::stage141_before_reset(",
                    b"vpd_ppu_probe::stage141_after_reset(",
