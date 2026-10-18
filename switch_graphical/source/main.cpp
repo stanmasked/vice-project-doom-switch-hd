@@ -7,6 +7,7 @@
 #include "dash_guest_witness.hpp"
 #include "guard_guest_witness.hpp"
 #include "guard_combat_probe.hpp"
+#include "second_wave_guest_probe.hpp"
 #include "guard_live_witness.hpp"
 #include "guard_live_defeat_witness.hpp"
 #include "scene_renderer.hpp"
@@ -58,6 +59,7 @@ int main(int,char**) {
     (void)vpd::dashGuestProofReset(has_sd);
     (void)vpd::guardProofReset(has_sd);
     (void)vpd::guardCombatProofReset(has_sd);
+    (void)vpd::resetSentryProof(has_sd);
     (void)vpd::liveGuardProofReset(has_sd);
     (void)vpd::liveGuardDefeatReset(has_sd);
     if(has_sd)assets.reload(kExternalAtlasPath,kExternalAnimationPath);
@@ -278,6 +280,9 @@ int main(int,char**) {
                 // Separate scripted guard combat test executed by this very
                 // guest NRO. Does not modify the visible/manual simulation.
                 (void)vpd::persistGuardCombatProof(has_sd);
+                // Native-only scripted wave-two test; never mutates the
+                // manual encounter or inherited guest-input witness.
+                (void)vpd::persistSentryProof(has_sd);
             }
             // Independent dash proof: record only after the live Switch
             // gameplay core has consumed ZR + Right and moved six pixels.
