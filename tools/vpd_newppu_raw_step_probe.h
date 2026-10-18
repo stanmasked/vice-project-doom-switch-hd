@@ -1961,6 +1961,111 @@ inline void stage131_pixel(unsigned sl,unsigned x,unsigned count,
 }
 #endif
 
+// Stage133: actual fetched sprite CHR row, H/V reflection and final XBuf.
+// Independent generated 8x8 pattern: 1+((2*row+column)%3), never zero.
+#if defined(VPD_NATIVE_SYNTHETIC_SPRITE_FLIPS) && defined(VPD_NATIVE_SYNTHETIC_MIDFRAME_CHR)
+struct Stage133Fetch {
+    bool seen=false;
+    unsigned row=0,address=0,low=0,high=0,flags=0;
+};
+struct Stage133FlipAudit {
+    Stage133Fetch fetched[2];
+    unsigned samples=0,invalid=0,scanline=0,source_row=0;
+    unsigned pattern[8]={0,0,0,0,0,0,0,0};
+    unsigned color[8]={0,0,0,0,0,0,0,0};
+    bool emitted=false;
+};
+inline Stage133FlipAudit& stage133_state() {
+    static Stage133FlipAudit a;
+    return a;
+}
+inline int stage133_mode() {
+    static const char* value=std::getenv("VPD_STAGE133_FLIP_MODE");
+    if(!value)return -1;
+    const char* const options[]={"none","horizontal","vertical","both"};
+    for(int i=0;i<4;++i)if(std::strcmp(value,options[i])==0)return i;
+    return -1;
+}
+inline unsigned stage133_pattern(unsigned row,unsigned column) {
+    return 1U+((2U*row+column)%3U);
+}
+inline void stage133_fetch(unsigned scanslot,unsigned oamindex,
+                           unsigned row,unsigned address,unsigned low,
+                           unsigned high,unsigned flags) {
+    if(scanslot>1U || oamindex!=0U || stage133_mode()<0)return;
+    Stage133Fetch& r=stage133_state().fetched[scanslot];
+    r.seen=true;r.row=row;r.address=address;
+    r.low=low;r.high=high;r.flags=flags;
+}
+inline void stage133_pixel(unsigned sl,unsigned x,unsigned renderslot,
+                            unsigned tile,unsigned flags,unsigned sprite_x,
+                            bool sprite_read,unsigned actual_pattern,
+                            unsigned pixelcolor,unsigned xbuf,unsigned ntaddr) {
+    static const char* enabled=std::getenv("VPD_STAGE133_FLIP_PROBE");
+    if(!enabled || std::strcmp(enabled,"1")!=0)return;
+    const int mode=stage133_mode();
+    if(mode<0 || renderslot>1U)return;
+    Stage133FlipAudit& a=stage133_state();
+    if(a.emitted || x<64U || x>=72U || sl<120U || sl>140U)return;
+    const MidframeChr& m=stage110_state();
+    if(!m.switched || m.writes!=2 || sl<m.switch_sl+8U)return;
+    const Stage133Fetch& r=a.fetched[renderslot];
+    if(!r.seen)return;
+    if(a.samples==0){a.scanline=sl;a.source_row=r.row;}
+    if(sl!=a.scanline)return;
+    const bool hflip=(mode&1)!=0;
+    const bool vflip=(mode&2)!=0;
+    const unsigned expected_flags=(hflip?0x40U:0U)|(vflip?0x80U:0U);
+    const unsigned local_x=x-64U;
+    const unsigned source_x=hflip?(7U-local_x):local_x;
+    const unsigned expected_pattern=stage133_pattern(r.row,source_x);
+    const unsigned expected_color=(expected_pattern==1U)?0x1AU:
+                                   (expected_pattern==2U)?0x2BU:0x2AU;
+    const unsigned expected_xbuf=0x80U|expected_color;
+    unsigned expect_low=0U,expect_high=0U;
+    for(unsigned col=0;col<8;++col) {
+        const unsigned pat=stage133_pattern(r.row,col);
+        expect_low|=(pat&1U)<<(7U-col);
+        expect_high|=((pat>>1)&1U)<<(7U-col);
+    }
+    if(tile!=2U || sprite_x!=64U || flags!=expected_flags ||
+       r.flags!=expected_flags || r.row>7U ||
+       r.address!=0x1020U+r.row ||
+       r.low!=expect_low || r.high!=expect_high ||
+       !sprite_read || actual_pattern!=expected_pattern ||
+       pixelcolor!=expected_color || xbuf!=expected_xbuf ||
+       ntaddr<0x2000U || ntaddr>=0x3000U)
+        ++a.invalid;
+    a.pattern[a.samples]=actual_pattern;
+    a.color[a.samples]=xbuf;
+    ++a.samples;
+    if(a.samples==8){
+        static const char* const options[]={"none","horizontal","vertical","both"};
+        if(a.invalid){
+            std::fprintf(stderr,
+                "VPD_STAGE133_REJECTED_SPRITE_FLIP mode=%s invalid=%u "
+                "row=%u source_row=%u samples=8 synthetic_only=yes\n",
+                options[mode],a.invalid,a.scanline,a.source_row);
+        }else{
+            std::fprintf(stderr,
+                "VPD_STAGE133_NATIVE_SPRITE_FLIP_PASS "
+                "mode=%s row=%u source_row=%u samples=8 "
+                "patterns=%u,%u,%u,%u,%u,%u,%u,%u "
+                "xbuf=%u,%u,%u,%u,%u,%u,%u,%u "
+                "invalid=0 actual_fceux_sprite_flips=yes synthetic_only=yes "
+                "original_game_flips_proven=no\n",
+                options[mode],a.scanline,a.source_row,
+                a.pattern[0],a.pattern[1],a.pattern[2],a.pattern[3],
+                a.pattern[4],a.pattern[5],a.pattern[6],a.pattern[7],
+                a.color[0],a.color[1],a.color[2],a.color[3],
+                a.color[4],a.color[5],a.color[6],a.color[7]);
+        }
+        std::fflush(stderr);
+        a.emitted=true;
+    }
+}
+#endif
+
 // Stage109 synthetic-only MMC3 write -> BG CHR read -> framebuffer timeline.
 // Internal runppu tick units are not authoritative NTSC dots or CPU cycles.
 #ifdef VPD_NATIVE_SYNTHETIC_CHR_TIMELINE
