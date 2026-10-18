@@ -26,3 +26,10 @@ set_tests_properties(romfree_combat_replay_csv PROPERTIES
 add_test(NAME romfree_combat_replay_invalid
          COMMAND vpd_combat_replay --frames 3601)
 set_tests_properties(romfree_combat_replay_invalid PROPERTIES WILL_FAIL TRUE)
+# Independent Python auditor checks each frame and whole-trace SHA256,
+# rather than trusting the replay binary's own PASS marker.
+find_package(Python3 REQUIRED COMPONENTS Interpreter)
+add_test(NAME romfree_combat_full_trace
+         COMMAND ${Python3_EXECUTABLE}
+                 ${CMAKE_CURRENT_SOURCE_DIR}/../tools/audit_romfree_combat_trace.py
+                 --binary $<TARGET_FILE:vpd_combat_replay>)
