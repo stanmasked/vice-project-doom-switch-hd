@@ -134,6 +134,14 @@ add_subdirectory(../game_core "${CMAKE_CURRENT_BINARY_DIR}/native_game_core")
 add_executable(vpd_graphics_integration_test ../tests/test_graphics_integration.cpp)
 target_link_libraries(vpd_graphics_integration_test PRIVATE vpd_scene_renderer vpd_simulation)
 add_test(NAME game_to_graphics_integration COMMAND vpd_graphics_integration_test)
+# End-to-end source-derived Fire / target hit state -> actual RGBA pixels.
+# This native host test never requires the NES ROM or Nintendo Switch SDK.
+add_executable(vpd_graphics_combat_integration_test
+               ../tests/test_graphics_combat_integration.cpp)
+target_link_libraries(vpd_graphics_combat_integration_test
+                      PRIVATE vpd_scene_renderer vpd_simulation)
+add_test(NAME romfree_combat_to_raster_integration
+         COMMAND vpd_graphics_combat_integration_test)
 add_executable(vpd_graphics_animation_test ../tests/test_graphics_animation_integration.cpp)
 target_include_directories(vpd_graphics_animation_test PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/generated)
 add_dependencies(vpd_graphics_animation_test vpd_demo_atlas vpd_demo_animation)

@@ -2,6 +2,7 @@
 #include <switch.h>
 #include "simulation.hpp"
 #include "scene_renderer.hpp"
+#include "combat_scene_bridge.hpp"
 #include "asset_atlas.hpp"
 #include "asset_bundle.hpp"
 #include "animation.hpp"
@@ -160,17 +161,8 @@ int main(int,char**) {
         view.external_animation_source=assets.externalAnimation();
         view.asset_reload_failed=reload_failed;
         view.moving=actor.vx!=0;
-        const auto& target=game.trainingTarget();
-        view.training_target_x_px=target.x/vpd::kFixed;
-        view.training_target_y_px=target.y/vpd::kFixed;
-        view.training_target_health=target.health;
-        const auto& shots=game.projectiles();
-        for(std::size_t i=0;i<shots.size();++i){
-            view.projectiles[i]={
-                shots[i].x/vpd::kFixed,
-                shots[i].y/vpd::kFixed,shots[i].active
-            };
-        }
+        // Same adapter is exercised by native host combat/raster CTest.
+        vpd::applyCombatOverlay(view,game);
         if(!animation.tick(assets.animation(),
                 vpd::MotionSample{actor.grounded,actor.vx!=0,actor.vy,actor.vx}))break;
         view.sprite_frame=animation.frame(assets.animation());
