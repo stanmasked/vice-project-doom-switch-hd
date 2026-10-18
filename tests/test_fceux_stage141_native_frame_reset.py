@@ -65,16 +65,16 @@ class NativeEvidence(unittest.TestCase):
 
     def test_false_eight_sprite_negative_requires_native_overflow(self):
         wrong=("VPD_STAGE141_REJECTED_FRAME_RESET "
-            "case=eight_visible invalid=18 first_overflow=yes "
+            "case=eight_visible invalid=19 first_overflow=yes "
             "reset_before=yes reset_after=no second_overflow=yes "
             "first_xbuf=143 second_xbuf=143 samples=16 synthetic_only=yes")
         self.assertTrue(verify_rejection(wrong)["false_no_overflow"])
         for malformed in ("",wrong+"\n"+wrong,
-            wrong.replace("invalid=18","invalid=0"),
+            wrong.replace("invalid=19","invalid=0"),
             wrong.replace("first_overflow=yes","first_overflow=no"),
             wrong.replace("reset_after=no","reset_after=yes"),
             wrong.replace("second_xbuf=143","second_xbuf=170"),
-            wrong.replace("invalid=18","invalid=018"),
+            wrong.replace("invalid=19","invalid=018"),
             wrong+"\n"+positive("eight_visible")):
             with self.subTest(bad=malformed[-60:]),self.assertRaises(FrameResetError):
                 verify_rejection(malformed)
