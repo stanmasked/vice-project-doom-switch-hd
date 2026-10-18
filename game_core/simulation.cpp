@@ -11,6 +11,12 @@ constexpr int32_t kGuardStrike=20*kFixed;
 constexpr int32_t kGuardPatrolMin=14*kTileSize*kFixed;
 constexpr int32_t kGuardPatrolMax=20*kTileSize*kFixed;
 constexpr uint8_t kGuardAttackDelay=32;
+constexpr int32_t kSentryActivation=26*kTileSize*kFixed;
+constexpr int32_t kSentryDetection=160*kFixed;
+constexpr int32_t kSentryShotSpeed=3*kFixed;
+constexpr uint8_t kSentryFireDelay=42;
+constexpr uint16_t kSentryShotLife=90;
+constexpr int32_t kStageExit=55*kTileSize*kFixed;
 // Original, ROM-free prototype only: short grounded directional dash.
 constexpr int32_t kDashSpeed=6*kFixed;
 constexpr uint8_t kDashFrames=6;
@@ -69,6 +75,10 @@ void Simulation::reset(){
     guard_=GuardEnemy{};
     player_health_=5;
     player_hit_flash_ticks_=0;
+    second_wave_active_=false;
+    stage_cleared_=false;
+    sentry_=SentryEnemy{};
+    enemy_projectiles_.fill(EnemyProjectile{});
 }
 void Simulation::enableEnemyEncounter(){
     if(encounter_enabled_)return;
@@ -76,6 +86,10 @@ void Simulation::enableEnemyEncounter(){
     guard_=GuardEnemy{};
     player_health_=5;
     player_hit_flash_ticks_=0;
+    second_wave_active_=false;
+    stage_cleared_=false;
+    sentry_=SentryEnemy{};
+    enemy_projectiles_.fill(EnemyProjectile{});
 }
 bool Simulation::collideAt(int32_t x,int32_t y) const{
     constexpr int tile=kTileSize*kFixed;
@@ -160,6 +174,15 @@ void Simulation::advanceProjectiles(){
                 shot.active=false;
                 break;
             }
+            if(second_wave_active_ && sentry_.health>0 &&
+               next>=sentry_.x && next<sentry_.x+kPlayerWidth*kFixed &&
+               shot.y>=sentry_.y && shot.y<sentry_.y+kPlayerHeight*kFixed){
+                --sentry_.health;
+                ++sentry_.projectile_hits;
+                sentry_.hit_flash_ticks=12;
+                shot.active=false;
+                break;
+            }
             // Hit test uses the very same one-pixel swept positions as
             // solid-tile collision, so a shot cannot skip a thin target.
             if(target_.health>0 &&
@@ -223,6 +246,71 @@ void Simulation::advanceGuard(){
         guard_.attack_cooldown=kGuardAttackDelay;
     }
 }
+void Simulation::advanceEnemyProjectiles(){
+    constexpr int32_t tile=kTileSize*kFixed;
+    for(auto& bullet:enemy_projectiles_){
+        if(!bullet.active)continue;
+        if(++bullet.age>=kSentryShotLife){
+            bullet.active=false;
+            continue;
+        }
+        const int dir=bullet.vx<0?-1:1;
+        int32_t left=bullet.vx<0?-bullet.vx:bullet.vx;
+        while(left>0){
+            const int32_t step=std::min<int32_t>(left,kFixed);
+            const int32_t next=bullet.x+dir*step;
+            if(scene_.solid(floorDiv(next,tile),floorDiv(bullet.y,tile))){
+                bullet.active=false;
+                break;
+            }
+            if(player_health_>0 &&
+               next>=player_.x && next<player_.x+kPlayerWidth*kFixed &&
+               bullet.y>=player_.y && bullet.y<player_.y+kPlayerHeight*kFixed){
+                --player_health_;
+                player_hit_flash_ticks_=16;
+                ++sentry_.shots_hit;
+                bullet.active=false;
+                break;
+            }
+            bullet.x=next;
+            left-=step;
+        }
+    }
+}
+void Simulation::advanceSentry(){
+    if(!encounter_enabled_)return;
+    if(!second_wave_active_ && guard_.health==0 &&
+       player_.x>=kSentryActivation && player_health_>0){
+        second_wave_active_=true;
+    }
+    if(!second_wave_active_)return;
+    if(sentry_.hit_flash_ticks>0)--sentry_.hit_flash_ticks;
+    // Existing fired projectiles are still simulated if the sentry dies.
+    advanceEnemyProjectiles();
+    if(sentry_.health==0){
+        if(player_.x>=kStageExit && player_health_>0)stage_cleared_=true;
+        return;
+    }
+    if(sentry_.fire_cooldown>0)--sentry_.fire_cooldown;
+    const int32_t diff=player_.x-sentry_.x;
+    const int32_t distance=diff<0?-diff:diff;
+    const int32_t height=player_.y-sentry_.y;
+    const int32_t vertical=height<0?-height:height;
+    if(player_health_==0 || distance>kSentryDetection ||
+       vertical>kPlayerHeight*kFixed || sentry_.fire_cooldown!=0)return;
+    for(auto& bullet:enemy_projectiles_){
+        if(bullet.active)continue;
+        const int dir=diff<0?-1:1;
+        const int32_t bx=sentry_.x+(dir<0?-kFixed:kPlayerWidth*kFixed);
+        const int32_t by=sentry_.y+(kPlayerHeight/2)*kFixed;
+        if(scene_.solid(floorDiv(bx,kTileSize*kFixed),
+                        floorDiv(by,kTileSize*kFixed)))return;
+        bullet={bx,by,dir*kSentryShotSpeed,0,true};
+        ++sentry_.shots_fired;
+        sentry_.fire_cooldown=kSentryFireDelay;
+        break;
+    }
+}
 void Simulation::tick(Input input){
     if(encounter_enabled_){
         if(guard_.hit_flash_ticks>0)--guard_.hit_flash_ticks;
@@ -262,6 +350,7 @@ void Simulation::tick(Input input){
     if((input.buttons&Fire)!=0 && fire_cooldown_==0)
         fireProjectile();
     advanceGuard();
+    advanceSentry();
     camera_x_=std::clamp(player_.x/kFixed-10*kTileSize,0,(kMapWidth-40)*kTileSize);
     ++frame_;
 }
@@ -347,6 +436,27 @@ uint64_t Simulation::fingerprint() const{
         append(static_cast<uint32_t>(guard_.hit_flash_ticks));
         append(static_cast<uint32_t>(player_health_));
         append(static_cast<uint32_t>(player_hit_flash_ticks_));
+        // Preserve all existing single-guard guest witnesses/replay hashes:
+        // the new wave enters the state identity only after activation.
+        if(second_wave_active_){
+            append(0x53454e54u); // "SENT" - wave two
+            append(static_cast<uint32_t>(sentry_.x));
+            append(static_cast<uint32_t>(sentry_.y));
+            append(static_cast<uint32_t>(sentry_.health));
+            append(static_cast<uint32_t>(sentry_.fire_cooldown));
+            append(static_cast<uint32_t>(sentry_.hit_flash_ticks));
+            append(static_cast<uint32_t>(sentry_.shots_fired));
+            append(static_cast<uint32_t>(sentry_.shots_hit));
+            append(static_cast<uint32_t>(sentry_.projectile_hits));
+            append(static_cast<uint32_t>(stage_cleared_?1:0));
+            for(const auto& bullet:enemy_projectiles_){
+                append(static_cast<uint32_t>(bullet.active?1:0));
+                append(static_cast<uint32_t>(bullet.x));
+                append(static_cast<uint32_t>(bullet.y));
+                append(static_cast<uint32_t>(bullet.vx));
+                append(static_cast<uint32_t>(bullet.age));
+            }
+        }
     }
     return hash;
 }
