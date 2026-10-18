@@ -68,3 +68,35 @@ retains `emulator_gui_exit_caused_by_plus_proven=no`.
 This new test provides a reproducible explanation for the previous unknown
 host lifecycle, not a claim of original NES-game fidelity or a release-ready
 Switch port.
+
+## Native kernel/runner exit proof (subsequent stage)
+
+The previous run [NeXium Actions #39165261054](https://github.com/stanmasked/vice-project-doom-switch-hd/actions/runs/39165261054)
+saved its actual native log under `xdg-config/NeXium/logs/`. The log
+confirms an additional, *independent* level of completion after the SD
+witness's seven manual events:
+
+```text
+[20:54:32.561] [ INFO] [nexium_kernel::kernel::svc] svcExitProcess - terminating process (x0=0x0 lr=0x1000162cc)
+[20:54:32.561] [ INFO] [nexium_runner::boot] Process exited
+[20:54:32.561] [ INFO] [nexium_runner::boot] Emulation complete: 19267000000 cycles, 3166 SVCs
+[20:54:32.563] [ INFO] [nexium_runner::boot] [core2] stopped
+[20:54:32.563] [ INFO] [nexium_runner::boot] [core1] stopped
+[20:54:32.563] [ INFO] [nexium_runner::boot] [core3] stopped
+```
+
+The new `tools/audit_nexium_guest_process_exit.py` examines the original
+NeXium log, not the guest-created report, and requires exactly one
+run-local log, the expected NRO launch, guest CPU start, kernel-level
+`svcExitProcess` **with zero status**, runner process-exited/complete
+markers, and all three CPU stop records in causal log order. It also
+requires both prior independent host and manual guest auditors to pass.
+The mutation tests reject dropped, duplicated, reordered, altered-status
+and wrong-NRO records. The CI result is saved in `native-exit-result.txt`.
+
+This establishes **normal termination of the homebrew guest process
+inside NeXium** and successful runner teardown for the pinned emulator
+binary. It does not prove that the NeXium GUI application closes,
+that Plus alone was the cause, or that the game matches the original NES
+title. A still-visible GUI window after guest process termination is
+not, by itself, a homebrew failure.
