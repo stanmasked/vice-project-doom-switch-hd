@@ -10,6 +10,8 @@ on:
       - "tools/audit_nexium_vice_manual.py"
       - "tools/audit_nexium_gui_lifecycle.py"
       - "tests/test_nexium_gui_lifecycle.py"
+      - "tools/audit_nexium_guest_process_exit.py"
+      - "tests/test_nexium_guest_process_exit.py"
       - "tools/nexium_visual_probe.sh"
       - "game_core/**"
       - "switch_graphical/**"
