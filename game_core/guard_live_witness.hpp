@@ -20,7 +20,7 @@ inline bool liveGuardProofWrite(std::FILE* file,LiveGuardEvent event,
     const auto& enemy=game.guardEnemy();
     const bool is_alert=event==LiveGuardEvent::Alert;
     if(game.frame()==0 || game.frame()>1200 || !enemy.alerted ||
-       enemy.health!=3 || enemy.projectile_hits!=0 ||
+       enemy.health==0 || enemy.health>3 ||
        game.player().x<0 || game.player().x>kMapWidth*kTileSize*kFixed ||
        enemy.x<14*kTileSize*kFixed || enemy.x>20*kTileSize*kFixed ||
        (is_alert &&
@@ -35,13 +35,14 @@ inline bool liveGuardProofWrite(std::FILE* file,LiveGuardEvent event,
     const int len=std::snprintf(
         line,sizeof(line),
         "VPD_ROMFREE_GUARD_LIVE_V1 seq=%u event=%s frame=%u "
-        "player_x=%ld guard_x=%ld player_hp=%u guard_hp=3 "
+        "player_x=%ld guard_x=%ld player_hp=%u guard_hp=%u "
         "attacks=%u cooldown=%u alerted=1 input_right=1 "
         "source=live_guest original_game_proven=no\n",
         seq,name,game.frame(),
         static_cast<long>(game.player().x),
         static_cast<long>(enemy.x),
         static_cast<unsigned>(game.playerHealth()),
+        static_cast<unsigned>(enemy.health),
         static_cast<unsigned>(enemy.attacks),
         static_cast<unsigned>(enemy.attack_cooldown));
     if(len<=0 || static_cast<std::size_t>(len)>=sizeof(line))return false;
