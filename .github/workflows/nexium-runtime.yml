@@ -6,6 +6,9 @@ on:
       - "tools/run_nexium_vice_ci.sh"
       - "tools/audit_nexium_vice_witness.py"
       - "tests/test_nexium_witness_audit.py"
+      - "tests/test_nexium_vice_manual.py"
+      - "tools/audit_nexium_vice_manual.py"
+      - "tools/nexium_visual_probe.sh"
       - "game_core/**"
       - "switch_graphical/**"
       - "graphics_core/**"
@@ -78,6 +81,9 @@ jobs:
             emulator-evidence/visual-result.txt
             emulator-evidence/visual-probe.txt
             emulator-evidence/input-probe.txt
+            emulator-evidence/manual-result.txt
+            emulator-evidence/manual-trace-paths.txt
+            emulator-evidence/guest-manual-witness.txt
             emulator-evidence/ne-x11-windows.txt
             emulator-evidence/screen-before.png
             emulator-evidence/screen-after.png
