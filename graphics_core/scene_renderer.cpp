@@ -219,6 +219,15 @@ bool drawScene(uint32_t* target,int width,int height,int stride_pixels,
                            sprite_frame,player_x-4,player_y-12,2,view.facing_left))
             drawHero(s,player_x,player_y,view.frame,view.grounded);
     } else drawHero(s,player_x,player_y,view.frame,view.grounded);
+    // Original, asset-free muzzle/projectile visual; simulation owns movement.
+    // Inactive slots are completely invisible, preserving old golden frames.
+    for(const auto& shot:view.projectiles){
+        if(!shot.active)continue;
+        const int sx=(shot.x_px-view.camera_x_px)*2;
+        const int sy=(shot.y_px+80)*2;
+        s.rect(sx-4,sy-2,16,7,rgba(244,186,76));
+        s.rect(sx,sy-1,12,4,rgba(255,235,164));
+    }
     // Foreground objects are visual only: no hitbox/collision changes.
     if(view.decor_atlas){
         if(view.decor_layout.placements)
