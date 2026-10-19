@@ -2,8 +2,15 @@
 """Fail-closed fourth manual replay after a third genuine earned victory."""
 import argparse
 import hashlib
+import importlib.util
 from pathlib import Path
 import re
+
+ROOT=Path(__file__).resolve().parents[1]
+_spec=importlib.util.spec_from_file_location(
+    "prior_third_stage",ROOT/"tools/audit_nexium_third_stage.py")
+third_stage=importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(third_stage)
 
 PREFIX="VPD_ROMFREE_FOURTH_RETRY_V1"
 RESTART=("seq","event","old_frame","old_hp","old_guard_hp",
@@ -94,6 +101,16 @@ def audit(evidence):
     if not third.is_file() or not third.read_text(encoding="ascii").startswith(
             "VPD_NEXIUM_THIRD_STAGE_PASS "):
         raise ValueError("earlier real third-stage victory and X11 PASS absent")
+    third_source=base/"guest-third-stage-witness.txt"
+    if not third_source.is_file():
+        raise ValueError("independent third-stage guest trace missing")
+    preceding=third_stage.verify(third_source.read_bytes())
+    # Stage-clear gameplay freezes at victory, but its frame keeps ticking.
+    # Account for the post-exit X11 capture and physical Minus delay.
+    # The fourth reset may NOT claim an older, unrelated victory.
+    if not (preceding["exit_frame"]<=state["old_frame"]<=
+            preceding["exit_frame"]+150):
+        raise ValueError("fourth Minus not linked to immediately prior third victory")
     host=base/"input-probe.txt"
     if not host.is_file():
         raise ValueError("native fourth-run host key log absent")
