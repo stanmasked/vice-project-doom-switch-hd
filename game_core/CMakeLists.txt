@@ -31,6 +31,16 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
 endif()
 add_test(NAME romfree_hd_footstep_source_witness
          COMMAND vpd_native_footstep_witness_test)
+# Real second-wave active-turret-bullet pixel halo source proof.
+add_executable(vpd_native_hostile_halo_witness_test
+               ../tests/test_hd_hostile_halo_witness.cpp)
+target_link_libraries(vpd_native_hostile_halo_witness_test PRIVATE vpd_simulation)
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+  target_compile_options(vpd_native_hostile_halo_witness_test PRIVATE
+                         -Wall -Wextra -Wpedantic -Werror)
+endif()
+add_test(NAME romfree_hd_hostile_halo_source_witness
+         COMMAND vpd_native_hostile_halo_witness_test)
 # Manual-only ROM-free burst movement; must not change pinned autoplay hashes.
 add_executable(vpd_manual_dash_test ../tests/test_manual_dash.cpp)
 target_link_libraries(vpd_manual_dash_test PRIVATE vpd_simulation)
