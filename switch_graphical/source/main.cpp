@@ -2,6 +2,7 @@
 #include <switch.h>
 #include "simulation.hpp"
 #include "manual_retry.hpp"
+#include "manual_retry_guest_witness.hpp"
 #include "combat_demo.hpp"
 #include "demo_witness_sd.hpp"
 #include "manual_input_witness.hpp"
@@ -67,6 +68,7 @@ int main(int,char**) {
     (void)vpd::liveGuardProofReset(has_sd);
     (void)vpd::liveGuardDefeatReset(has_sd);
     (void)vpd::liveWaveReset(has_sd);
+    vpd::resetManualRetryGuest(has_sd);
     if(has_sd)assets.reload(kExternalAtlasPath,kExternalAnimationPath);
     bool reload_failed=false;
     constexpr const char* kExternalTerrainPath=
@@ -126,6 +128,7 @@ int main(int,char**) {
     unsigned live_guard_defeat_seq=0;
     unsigned live_wave_seq=0;
     bool manual_retry_has_occurred=false;
+    bool retry_native_logged=false;
     uint32_t dash_probe_start_frame=0;
     int32_t dash_probe_start_x=0;
     while(appletMainLoop()){
@@ -213,13 +216,18 @@ int main(int,char**) {
         }
         // Minus means RETRY only on a completed or defeated manual
         // encounter. Else retain its existing decorative-layout reload.
-        const auto retry=vpd::retryTerminalEncounter(
-            game,!demo.enabled() && (pressed&HidNpadButton_Minus));
+        const auto retry_old=vpd::retryBefore(game);
+        const bool retry_input=(!demo.enabled() &&
+                                (pressed&HidNpadButton_Minus));
+        const auto retry=vpd::retryTerminalEncounter(game,retry_input);
         const bool restarted=retry!=vpd::ManualRetryOutcome::Ignored;
         if(restarted){
             manual_retry_has_occurred=true;
             animation.reset();
             checkpoint_ok=false;
+            if(!retry_native_logged)
+                retry_native_logged=vpd::appendManualRetryGuest(
+                    has_sd,retry,retry_old,game,retry_input);
         }
         if((pressed&HidNpadButton_Minus) && !restarted){
             decor_layout_reload_failed= !has_sd ||
