@@ -11,7 +11,7 @@
 namespace vpd {
 constexpr int kDustProofWidth=48;
 constexpr int kDustProofHeight=22;
-constexpr int kDustProofPixels=kDustProofWidth*kDustProofHeight;
+constexpr unsigned kDustProofPixels=kDustProofWidth*kDustProofHeight;
 constexpr const char* kDustProofPath=
     "sdmc:/switch/vice_project_doom/hd_footstep_evidence.txt";
 struct DustFrameSample {
@@ -47,7 +47,7 @@ inline unsigned changedFootstepPixels(
     if(before.count!=kDustProofPixels||
        after.count!=kDustProofPixels)return 0;
     unsigned changed=0;
-    for(int i=0;i<kDustProofPixels;++i)
+    for(unsigned i=0;i<kDustProofPixels;++i)
         if(before.rgba[i]!=after.rgba[i])++changed;
     return changed;
 }
