@@ -84,8 +84,17 @@ void requireTerminalFreeze(vpd::Simulation& game){
     const auto dash_cooldown=game.dashCooldown();
     const auto player_shots=game.projectiles();
     const auto enemy_shots=game.enemyProjectiles();
+    const auto map_before=game.scene().cells();
+    // Independent no-input oracle: both copies begin in precisely the
+    // same earned terminal state. Input may not create replay divergence.
+    Simulation idle_terminal=game;
     for(int n=0;n<6;++n){
+        idle_terminal.tick(Input{});
         game.tick(Input{static_cast<uint8_t>(Right|Jump|Fire|Dash)});
+        require(game.fingerprint()==idle_terminal.fingerprint(),
+                "Aggressive terminal input diverged from passive terminal clone");
+        require(game.scene().cells()==map_before,
+                "Terminal input unexpectedly edited terrain bytes");
         require(game.frame()==before_frame+static_cast<uint32_t>(n+1),
                 "Terminal frame counter failed to advance once per tick");
         require(game.player().x==before_x && game.player().y==before_y &&
