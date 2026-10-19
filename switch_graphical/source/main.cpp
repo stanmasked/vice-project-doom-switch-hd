@@ -9,6 +9,7 @@
 #include "third_guard_clear_witness.hpp"
 #include "third_stage_witness.hpp"
 #include "fourth_retry_witness.hpp"
+#include "hd_footstep_witness.hpp"
 #include "fourth_combat_witness.hpp"
 #include "hd_hit_light_witness.hpp"
 #include "fourth_guard_clear_witness.hpp"
@@ -92,6 +93,7 @@ int main(int,char**) {
     vpd::resetThirdGuardClear(has_sd);
     vpd::resetThirdStage(has_sd);
     vpd::resetFourthRetry(has_sd);
+    vpd::resetFootstepProof(has_sd);
     vpd::resetFourthCombat(has_sd);
     vpd::resetHitLightEvidence(has_sd);
     vpd::resetFourthGuardClear(has_sd);
@@ -167,6 +169,7 @@ int main(int,char**) {
     unsigned third_stage_seq=0;
     bool fourth_restart_logged=false;
     bool fourth_move_logged=false;
+    bool native_hd_dust_logged=false;
     bool fourth_fire_logged=false;
     bool fourth_hit_logged=false;
     bool native_hd_hit_logged=false;
@@ -633,6 +636,28 @@ int main(int,char**) {
         view.decor_layout=layout.layout();
         view.external_decor_layout=layout.external();
         view.decor_layout_reload_failed=decor_layout_reload_failed;
+        // Fourth physically injected Right input already earned its native
+        // source movement record. Measure one same-frame native framebuffer
+        // pair around the hero's grounded trailing heel, no extra game tick.
+        const bool dust_sample_frame=!native_hd_dust_logged &&
+            fourth_move_logged && view.manual_controls &&
+            view.hd_footstep_dust && actor.grounded &&
+            actor.vx==2*vpd::kFixed && game.shotsFired()==0 &&
+            vpd::fourthFresh(game);
+        vpd::DustFrameSample no_dust{},with_dust{};
+        const int dust_stride=static_cast<int>(stride/sizeof(uint32_t));
+        const int heel=(actor.x/vpd::kFixed-game.cameraX())*2+3;
+        const int ground=(actor.y/vpd::kFixed+80)*2+30;
+        if(dust_sample_frame){
+            view.hd_footstep_dust=false;
+            const bool plain=vpd::drawScene(
+                pixels,vpd::kSceneWidth,vpd::kSceneHeight,dust_stride,view);
+            if(!plain){framebufferEnd(&fb);break;}
+            no_dust=vpd::sampleFootstep(
+                pixels,vpd::kSceneWidth,vpd::kSceneHeight,
+                dust_stride,heel,ground);
+            view.hd_footstep_dust=true;
+        }
         // Differential proof in a single *actual* guard-impact frame.
         // The first pass is unlit and sampled only; the second pass is
         // the real illuminated framebuffer that goes to NeXium.
@@ -664,8 +689,18 @@ int main(int,char**) {
             lit=vpd::sampleGuardImpact(
                 pixels,vpd::kSceneWidth,vpd::kSceneHeight,pixels_per_row,
                 center_x,center_y);
+        if(drawn && dust_sample_frame)
+            with_dust=vpd::sampleFootstep(
+                pixels,vpd::kSceneWidth,vpd::kSceneHeight,
+                pixels_per_row,heel,ground);
         framebufferEnd(&fb);
         if(!drawn)break;
+        if(dust_sample_frame){
+            const unsigned difference=vpd::changedFootstepPixels(
+                no_dust,with_dust);
+            native_hd_dust_logged=vpd::appendFootstepProof(
+                has_sd,game,no_dust,with_dust,difference);
+        }
         if(hd_sample_frame){
             const unsigned diff=vpd::diffGuardImpactSamples(unlit,lit);
             native_hd_hit_logged=vpd::appendHitLightEvidence(
