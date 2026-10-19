@@ -5,7 +5,7 @@ if [[ $# -ne 3 ]]; then echo "Usage: visual_probe.sh emulator nro evidence-dir" 
 emulator="$1"; nro="$2"; out="$3"
 mkdir -p "$out"
 echo "visual_probe=started" > "$out/visual-probe.txt"
-timeout --signal=TERM --kill-after=5s 150s \
+timeout --signal=TERM --kill-after=5s 225s \
  "$emulator" "$nro" > "$out/emulator-stdout.txt" 2>&1 &
 emu_pid=$!
 # Root screenshots include the real native X11/Vulkan presentation child.
@@ -293,6 +293,40 @@ if [[ -s "$out/ne-x11-windows.txt" ]]; then
                           sleep 0.12
                           capture screen-live-third-guard-clear
                           echo "live_third_guard_clear_raster_after_guest_event=yes" >> "$out/visual-probe.txt"
+                          # New playable third attempt must actually beat
+                          # the second wave, not merely kill the first guard.
+                          third_stage_path="$XDG_CONFIG_HOME/NeXium/sdmc/switch/vice_project_doom/third_stage_witness.txt"
+                          third_wave=no
+                          third_exit=no
+                          xdotool keydown --clearmodifiers d
+                          for (( attempt=0; attempt<260; ++attempt )); do
+                            if [[ -f "$third_stage_path" ]] &&
+                               grep -q '^VPD_ROMFREE_THIRD_STAGE_V1 seq=1 event=wave ' "$third_stage_path"; then
+                              third_wave=yes
+                              break
+                            fi
+                            sleep 0.05
+                          done
+                          echo "host_third_stage_gate_sent=yes key=D observed=$third_wave" >> "$out/input-probe.txt"
+                          if [[ "$third_wave" == yes ]]; then
+                            xdotool keydown --clearmodifiers z
+                            for (( attempt=0; attempt<650; ++attempt )); do
+                              if [[ -f "$third_stage_path" ]] &&
+                                 grep -q '^VPD_ROMFREE_THIRD_STAGE_V1 seq=2 event=exit ' "$third_stage_path"; then
+                                third_exit=yes
+                                break
+                              fi
+                              sleep 0.05
+                            done
+                            xdotool keyup z
+                          fi
+                          xdotool keyup d
+                          echo "host_third_stage_exit_sent=yes keys=D+Z observed=$third_exit" >> "$out/input-probe.txt"
+                          if [[ "$third_exit" == yes ]]; then
+                            sleep 0.14
+                            capture screen-live-third-stage-clear
+                            echo "live_third_stage_clear_raster_after_guest_event=yes" >> "$out/visual-probe.txt"
+                          fi
                         fi
                       fi
                     fi

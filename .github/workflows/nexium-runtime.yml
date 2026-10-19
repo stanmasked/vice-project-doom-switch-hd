@@ -38,6 +38,8 @@ on:
       - "tests/test_nexium_third_run_fire.py"
       - "tools/audit_nexium_third_guard_clear.py"
       - "tests/test_nexium_third_guard_clear.py"
+      - "tools/audit_nexium_third_stage.py"
+      - "tests/test_nexium_third_stage.py"
       - "tools/nexium_visual_probe.sh"
       - "game_core/**"
       - "switch_graphical/**"
@@ -144,6 +146,11 @@ jobs:
             emulator-evidence/third-guard-clear-result.txt
             emulator-evidence/third-guard-clear-paths.txt
             emulator-evidence/guest-third-guard-clear-witness.txt
+            emulator-evidence/third-stage-result.txt
+            emulator-evidence/third-stage-paths.txt
+            emulator-evidence/guest-third-stage-witness.txt
+            emulator-evidence/screen-live-third-stage-clear.png
+            emulator-evidence/screen-live-third-stage-clear.ppm
             emulator-evidence/screen-live-third-guard-clear.png
             emulator-evidence/screen-live-third-guard-clear.ppm
             emulator-evidence/screen-live-third-run-impact.png

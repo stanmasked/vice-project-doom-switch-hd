@@ -75,6 +75,31 @@ int main(){
           std::strstr(buffer,"frame=117 metric=1")!=nullptr,
           "Plus/Exit failed to serialize monotone session time");
   }
+  // Long NeXium sessions include victory, death, then a full third
+  // attempt. They must still prove genuine terminal input after frame 1200.
+  check(vpd::kMaxManualSessionTicks==3600,
+        "Long manual-session bound unexpectedly changed");
+  std::FILE* third=std::tmpfile();
+  check(third!=nullptr,"long-session witness tempfile missing");
+  check(!vpd::manualProofWriteSession(
+            third,ManualProofEvent::Plus,6,replayed,1,3601),
+        "Unbounded terminal Plus event was accepted");
+  check(!vpd::manualProofWriteSession(
+            third,ManualProofEvent::Exit,7,replayed,1,3601),
+        "Unbounded terminal Exit event was accepted");
+  check(vpd::manualProofWriteSession(
+            third,ManualProofEvent::Plus,6,replayed,1,1800) &&
+        vpd::manualProofWriteSession(
+            third,ManualProofEvent::Exit,7,replayed,1,1800),
+        "Three-playthrough terminal session was rejected");
+  std::rewind(third);
+  for(unsigned i=6;i<=7;++i)
+    check(std::fgets(buffer,sizeof(buffer),third)!=nullptr &&
+          std::strstr(buffer,"frame=1800 metric=1")!=nullptr,
+          "Long manual session did not retain monotonic final tick");
+  check(std::fgets(buffer,sizeof(buffer),third)==nullptr,
+        "Unexpected rows after long session");
+  std::fclose(third);
   std::fclose(continued);
   game.reset();
   check(!vpd::manualProofValid(ManualProofEvent::Plus,game,1),

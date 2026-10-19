@@ -14,7 +14,7 @@ EVENTS=mod.EVENTS
 def data():
     lines=[]
     for seq,name in enumerate(EVENTS,1):
-        frame=0 if seq==1 else seq*15
+        frame=0 if seq==1 else min(seq,6)*15
         lines.append(
             f"VPD_ROMFREE_MANUAL_V1 seq={seq} event={name} "
             f"frame={frame} metric=1 mode=manual original_game_proven=no"
@@ -24,6 +24,29 @@ def data():
 class GuestManualWitnessTests(unittest.TestCase):
     def test_bounded_valid_sequence(self):
         self.assertEqual(mod.verify(data())["events"],7)
+
+    def test_long_third_playthrough_terminal_events_are_bounded(self):
+        source=data()
+        # Only terminal Plus/Exit may exceed the per-level 1200 limit;
+        # both have to carry exactly the same real manual-session tick.
+        long_session=(source.replace(b"seq=6 event=plus frame=90",
+                                     b"seq=6 event=plus frame=1800")
+                            .replace(b"seq=7 event=exit frame=90",
+                                     b"seq=7 event=exit frame=1800"))
+        self.assertEqual(mod.verify(long_session)["last_frame"],1800)
+        bad_cases=(
+            long_session.replace(b"seq=6 event=plus frame=1800",
+                                 b"seq=6 event=plus frame=3601"),
+            long_session.replace(b"seq=7 event=exit frame=1800",
+                                 b"seq=7 event=exit frame=3601"),
+            long_session.replace(b"seq=7 event=exit frame=1800",
+                                 b"seq=7 event=exit frame=1801"),
+            source.replace(b"seq=5 event=left frame=75",
+                           b"seq=5 event=left frame=1201"),
+        )
+        for i,mutant in enumerate(bad_cases):
+            with self.subTest(i=i), self.assertRaises(ValueError):
+                mod.verify(mutant)
 
     def test_wrong_events_cannot_be_certified(self):
         fixture=data()

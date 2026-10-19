@@ -7,6 +7,11 @@ import re
 MARKER = "VPD_ROMFREE_MANUAL_V1"
 EVENTS = ("enter","right","fire","jump","left","plus","exit")
 FIELDS = ("seq","event","frame","metric","mode","original_game_proven")
+# First five source actions are one level's short control probe. A complete
+# victory -> death -> third victory includes three manual attempts, so only
+# Plus and Exit use a longer, still bounded, monotone session clock.
+MAX_EARLY_FRAME=1200
+MAX_SESSION_FRAME=3600
 
 
 def verify(raw):
@@ -31,8 +36,15 @@ def verify(raw):
         if not re.fullmatch(r"[0-9]+",rec["frame"]) or            not re.fullmatch(r"[0-9]+",rec["metric"]):
             raise ValueError("noncanonical numeric fields")
         frame=int(rec["frame"]);metric=int(rec["metric"])
-        if metric<=0 or (seq==1 and frame!=0) or            (seq>1 and (frame<last_frame or frame<=0 or frame>1200)):
+        max_frame=MAX_EARLY_FRAME if seq<=5 else MAX_SESSION_FRAME
+        if (metric<=0 or (seq==1 and frame!=0) or
+            (seq>1 and (frame<last_frame or frame<=0 or
+                        frame>max_frame))):
             raise ValueError("invalid frame or missing observable effect")
+        if seq==7 and frame!=last_frame:
+            # Exit is recorded after framebuffer shutdown without advancing
+            # the game loop, so both terminal events use the same source tick.
+            raise ValueError("Plus and Exit must share terminal session tick")
         if name in ("enter","plus","exit") and metric!=1:
             raise ValueError("unbounded event value")
         if name=="fire" and metric>8:
