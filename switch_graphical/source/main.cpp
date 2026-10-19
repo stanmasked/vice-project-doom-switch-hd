@@ -3,6 +3,7 @@
 #include "simulation.hpp"
 #include "manual_retry.hpp"
 #include "manual_retry_guest_witness.hpp"
+#include "live_defeat_retry_witness.hpp"
 #include "combat_demo.hpp"
 #include "demo_witness_sd.hpp"
 #include "manual_input_witness.hpp"
@@ -69,6 +70,7 @@ int main(int,char**) {
     (void)vpd::liveGuardDefeatReset(has_sd);
     (void)vpd::liveWaveReset(has_sd);
     vpd::resetManualRetryGuest(has_sd);
+    vpd::resetLiveDefeatRetry(has_sd);
     if(has_sd)assets.reload(kExternalAtlasPath,kExternalAnimationPath);
     bool reload_failed=false;
     constexpr const char* kExternalTerrainPath=
@@ -130,6 +132,9 @@ int main(int,char**) {
     unsigned live_wave_seq=0;
     bool manual_retry_has_occurred=false;
     bool retry_native_logged=false;
+    bool replay_guard_contact_logged=false;
+    bool replay_guard_death_logged=false;
+    bool replay_guard_restart_logged=false;
     uint32_t dash_probe_start_frame=0;
     int32_t dash_probe_start_x=0;
     while(appletMainLoop()){
@@ -235,6 +240,14 @@ int main(int,char**) {
             if(!retry_native_logged)
                 retry_native_logged=vpd::appendManualRetryGuest(
                     has_sd,retry,retry_old,game,retry_input);
+            // Independent, second terminal replay: only after the actual
+            // same-session victory retry AND source-detected melee death.
+            if(retry_native_logged && replay_guard_death_logged &&
+               !replay_guard_restart_logged &&
+               retry==vpd::ManualRetryOutcome::AfterDefeat)
+                replay_guard_restart_logged=vpd::appendLiveDefeatRetry(
+                    has_sd,vpd::DefeatRetryEvent::Restart,
+                    game,0,retry_input,retry_old,retry);
         }
         if((pressed&HidNpadButton_Minus) && !restarted){
             decor_layout_reload_failed= !has_sd ||
@@ -269,6 +282,21 @@ int main(int,char**) {
             const auto prior_turret_hits=game.sentry().projectile_hits;
             if(toggle_manual)input=0; // R+A is a mode switch, not a jump
             if(!restarted)game.tick(vpd::Input{input});
+            // Following the *already witnessed* victory Minus, the newly
+            // reset visible simulation is played again with actual Right
+            // input. The first guard must strike and eventually defeat this
+            // hero before a second Minus can be attested.
+            if(retry_native_logged && !replay_guard_contact_logged &&
+               (input&vpd::Right) && prior_attacks==0 &&
+               game.guardEnemy().attacks==1 &&
+               prior_hp==5 && game.playerHealth()==4)
+                replay_guard_contact_logged=vpd::appendLiveDefeatRetry(
+                    has_sd,vpd::DefeatRetryEvent::Contact,game,input);
+            if(replay_guard_contact_logged && !replay_guard_death_logged &&
+               prior_hp==1 && game.playerHealth()==0 &&
+               game.guardEnemy().attacks>=5)
+                replay_guard_death_logged=vpd::appendLiveDefeatRetry(
+                    has_sd,vpd::DefeatRetryEvent::Death,game,input);
             // These events are from the *visible*, pad-driven gameplay
             // instance, unlike the isolated guard-combat script. A host
             // keystroke by itself cannot satisfy the observed transitions.
