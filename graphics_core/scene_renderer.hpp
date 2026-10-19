@@ -67,6 +67,7 @@ struct SceneView {
     SentryView sentry{};
     std::array<EnemyProjectileView,3> enemy_projectiles{};
     bool stage_cleared=false;
+    bool hd_hit_lighting=false; // opt-in localized combat impact light
     // ROM-free stage-two completion gate; explicit source-derived visibility.
     bool exit_visible=false;
     bool exit_open=false;
