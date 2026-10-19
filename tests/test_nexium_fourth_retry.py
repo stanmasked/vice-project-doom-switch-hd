@@ -73,7 +73,25 @@ class FourthRetryProofTests(unittest.TestCase):
                 m.audit(base)
             (base/"third-stage-result.txt").write_text(
                 "VPD_NEXIUM_THIRD_STAGE_PASS guest=yes\n")
+            # A prior PASS label alone cannot prove the fourth reset.
+            with self.assertRaisesRegex(ValueError,"third-stage guest"):
+                m.audit(base)
+            (base/"guest-third-stage-witness.txt").write_bytes(
+                b"VPD_ROMFREE_THIRD_STAGE_V1 seq=1 event=wave frame=250 "
+                b"hero_x=107008 hero_hp=5 guard_hp=0 guard_hits=3 "
+                b"sentry_hp=2 sentry_hits=0 wave=1 clear=0 "
+                b"input_right=1 input_fire=0 source=live_guest "
+                b"original_game_proven=no\n"
+                b"VPD_ROMFREE_THIRD_STAGE_V1 seq=2 event=exit frame=470 "
+                b"hero_x=225280 hero_hp=3 guard_hp=0 guard_hits=3 "
+                b"sentry_hp=0 sentry_hits=2 wave=1 clear=1 "
+                b"input_right=1 input_fire=1 source=live_guest "
+                b"original_game_proven=no\n")
             with self.assertRaisesRegex(ValueError,"host key"):
+                m.audit(base)
+            (base/"guest-fourth-retry-witness.txt").write_bytes(
+                fixture().replace(b"old_frame=480",b"old_frame=200"))
+            with self.assertRaisesRegex(ValueError,"not linked"):
                 m.audit(base)
 
 if __name__=="__main__":
