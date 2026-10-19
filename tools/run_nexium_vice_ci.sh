@@ -162,6 +162,14 @@ if [[ -s "$out/second-wave-live-trace-paths.txt" ]]; then
   IFS= read -r guest < "$out/second-wave-live-trace-paths.txt"
   cp "$guest" "$out/guest-second-wave-live-witness.txt"
 fi
+# Diagnostic-only native position snapshots; available in failure artifacts
+# even if the strict wave-two control audit subsequently fails.
+find "$HOME" "$XDG_DATA_HOME" "$XDG_CONFIG_HOME" "$XDG_CACHE_HOME" \
+  -type f -name wave_exit_progress.txt -print > "$out/wave-exit-progress-paths.txt"
+if [[ -s "$out/wave-exit-progress-paths.txt" ]]; then
+  IFS= read -r guest < "$out/wave-exit-progress-paths.txt"
+  cp "$guest" "$out/guest-wave-exit-progress.txt"
+fi
 python3 tools/audit_nexium_second_wave_live.py --evidence "$out"
 # Separate positive proof that the *same pad-driven live NRO* accepts
 # Minus after earned stage completion and resets to a clean first wave.
