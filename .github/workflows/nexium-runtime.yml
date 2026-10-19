@@ -178,6 +178,9 @@ jobs:
             emulator-evidence/hd-footstep-result.txt
             emulator-evidence/hd-footstep-paths.txt
             emulator-evidence/guest-hd-footstep-witness.txt
+            emulator-evidence/guest-hd-hostile-halo-witness.txt
+            emulator-evidence/hd-hostile-halo-paths.txt
+            emulator-evidence/hd-hostile-halo-result.txt
             emulator-evidence/fourth-guard-clear-result.txt
             emulator-evidence/fourth-guard-clear-paths.txt
             emulator-evidence/guest-fourth-guard-clear-witness.txt
