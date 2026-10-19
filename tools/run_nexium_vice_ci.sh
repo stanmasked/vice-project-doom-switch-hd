@@ -116,6 +116,13 @@ if [[ -s "$out/guard-combat-trace-paths.txt" ]]; then
   cp "$guest" "$out/guest-guard-combat-witness.txt"
 fi
 python3 tools/audit_nexium_guard_combat.py --evidence "$out"
+# Forensics only; optional file MUST NOT be used as native PASS evidence.
+find "$HOME" "$XDG_DATA_HOME" "$XDG_CONFIG_HOME" "$XDG_CACHE_HOME" \
+  -type f -name guard_live_debug.txt -print > "$out/guard-live-debug-paths.txt"
+if [[ -s "$out/guard-live-debug-paths.txt" ]]; then
+  IFS= read -r guest < "$out/guard-live-debug-paths.txt"
+  cp "$guest" "$out/guest-guard-live-debug.txt"
+fi
 # Unlike the previous offscreen diagnostic, these two events arise from
 # the visible manual game.tick(Input{pad}) instance after real X11 controls.
 find "$HOME" "$XDG_DATA_HOME" "$XDG_CONFIG_HOME" "$XDG_CACHE_HOME" \
@@ -138,3 +145,12 @@ python3 tools/audit_nexium_guard_live_defeat.py --evidence "$out"
 # records, must show disappearance of the guard's alert-colored torso.
 # Real screenshots complement but cannot replace guest state/exit audits.
 python3 tools/audit_nexium_guard_live_raster.py --evidence "$out"
+# Independent AArch64 guest script for guard gate + sentry hostile projectile
+# + real player swept hits + level exit. Not keyboard-driven wave-two play.
+find "$HOME" "$XDG_DATA_HOME" "$XDG_CONFIG_HOME" "$XDG_CACHE_HOME" \
+  -type f -name second_wave_witness.txt -print > "$out/second-wave-trace-paths.txt"
+if [[ -s "$out/second-wave-trace-paths.txt" ]]; then
+  IFS= read -r guest < "$out/second-wave-trace-paths.txt"
+  cp "$guest" "$out/guest-second-wave-witness.txt"
+fi
+python3 tools/audit_nexium_second_wave.py --evidence "$out"
