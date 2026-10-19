@@ -10,6 +10,7 @@
 #include "third_stage_witness.hpp"
 #include "fourth_retry_witness.hpp"
 #include "fourth_combat_witness.hpp"
+#include "hd_hit_light_witness.hpp"
 #include "fourth_guard_clear_witness.hpp"
 #include "fourth_stage_witness.hpp"
 #include "combat_demo.hpp"
@@ -92,6 +93,7 @@ int main(int,char**) {
     vpd::resetThirdStage(has_sd);
     vpd::resetFourthRetry(has_sd);
     vpd::resetFourthCombat(has_sd);
+    vpd::resetHitLightEvidence(has_sd);
     vpd::resetFourthGuardClear(has_sd);
     vpd::resetFourthStage(has_sd);
     if(has_sd)assets.reload(kExternalAtlasPath,kExternalAnimationPath);
@@ -167,6 +169,7 @@ int main(int,char**) {
     bool fourth_move_logged=false;
     bool fourth_fire_logged=false;
     bool fourth_hit_logged=false;
+    bool native_hd_hit_logged=false;
     bool fourth_guard_clear_logged=false;
     unsigned fourth_stage_seq=0;
     uint32_t dash_probe_start_frame=0;
@@ -628,10 +631,44 @@ int main(int,char**) {
         view.decor_layout=layout.layout();
         view.external_decor_layout=layout.external();
         view.decor_layout_reload_failed=decor_layout_reload_failed;
-        const bool drawn=vpd::drawScene(pixels,vpd::kSceneWidth,
-                vpd::kSceneHeight,static_cast<int>(stride/sizeof(uint32_t)),view);
+        // Differential proof in a single *actual* guard-impact frame.
+        // The first pass is unlit and sampled only; the second pass is
+        // the real illuminated framebuffer that goes to NeXium.
+        // Neither pass ticks the game, alters the camera, nor replays inputs.
+        const bool hd_sample_frame=!native_hd_hit_logged &&
+            fourth_hit_logged && view.manual_controls &&
+            view.hd_hit_lighting && game.enemyEncounterEnabled() &&
+            game.guardEnemy().health==2 &&
+            game.guardEnemy().projectile_hits==1 &&
+            game.guardEnemy().hit_flash_ticks>0 &&
+            game.shotsFired()==1;
+        vpd::ImpactSample unlit{},lit{};
+        const int pixels_per_row=static_cast<int>(stride/sizeof(uint32_t));
+        const int center_x=(game.guardEnemy().x/vpd::kFixed-game.cameraX())*2+13;
+        const int center_y=(game.guardEnemy().y/vpd::kFixed+80)*2+13;
+        if(hd_sample_frame){
+            view.hd_hit_lighting=false;
+            const bool without=vpd::drawScene(
+                pixels,vpd::kSceneWidth,vpd::kSceneHeight,pixels_per_row,view);
+            if(!without){framebufferEnd(&fb);break;}
+            unlit=vpd::sampleGuardImpact(
+                pixels,vpd::kSceneWidth,vpd::kSceneHeight,pixels_per_row,
+                center_x,center_y);
+            view.hd_hit_lighting=true;
+        }
+        const bool drawn=vpd::drawScene(
+            pixels,vpd::kSceneWidth,vpd::kSceneHeight,pixels_per_row,view);
+        if(drawn && hd_sample_frame)
+            lit=vpd::sampleGuardImpact(
+                pixels,vpd::kSceneWidth,vpd::kSceneHeight,pixels_per_row,
+                center_x,center_y);
         framebufferEnd(&fb);
         if(!drawn)break;
+        if(hd_sample_frame){
+            const unsigned diff=vpd::diffGuardImpactSamples(unlit,lit);
+            native_hd_hit_logged=vpd::appendHitLightEvidence(
+                has_sd,game,unlit,lit,diff);
+        }
         // The checkpoint is written only after a successful framebuffer
         // submission, not merely because a host test compiled this binary.
         if(vpd::demoCheckpointReached(demo,game)){

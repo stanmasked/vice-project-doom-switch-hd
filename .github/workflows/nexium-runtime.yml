@@ -44,6 +44,9 @@ on:
       - "tests/test_nexium_fourth_retry.py"
       - "tools/audit_nexium_fourth_combat.py"
       - "tests/test_nexium_fourth_combat.py"
+      - "tools/audit_nexium_hd_impact.py"
+      - "tests/test_nexium_hd_impact.py"
+      - "game_core/hd_hit_light_witness.hpp"
       - "tools/audit_nexium_fourth_guard_clear.py"
       - "tests/test_nexium_fourth_guard_clear.py"
       - "tools/audit_nexium_fourth_stage.py"
@@ -163,6 +166,9 @@ jobs:
             emulator-evidence/fourth-combat-result.txt
             emulator-evidence/fourth-combat-paths.txt
             emulator-evidence/guest-fourth-combat-witness.txt
+            emulator-evidence/hd-hit-light-result.txt
+            emulator-evidence/hd-hit-light-paths.txt
+            emulator-evidence/guest-hd-hit-light-witness.txt
             emulator-evidence/fourth-guard-clear-result.txt
             emulator-evidence/fourth-guard-clear-paths.txt
             emulator-evidence/guest-fourth-guard-clear-witness.txt

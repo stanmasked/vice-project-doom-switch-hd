@@ -243,6 +243,15 @@ if [[ -s "$out/fourth-combat-paths.txt" ]]; then
   cp "$guest" "$out/guest-fourth-combat-witness.txt"
 fi
 python3 tools/audit_nexium_fourth_combat.py --evidence "$out"
+# Same exact real fourth guard hit, rendered twice on the live guest.
+# This proves optional HD lighting changes real framebuffer pixels.
+find "$HOME" "$XDG_DATA_HOME" "$XDG_CONFIG_HOME" "$XDG_CACHE_HOME" \
+  -type f -name hd_hit_light_evidence.txt -print > "$out/hd-hit-light-paths.txt"
+if [[ -s "$out/hd-hit-light-paths.txt" ]]; then
+  IFS= read -r guest < "$out/hd-hit-light-paths.txt"
+  cp "$guest" "$out/guest-hd-hit-light-witness.txt"
+fi
+python3 tools/audit_nexium_hd_impact.py --evidence "$out"
 # Require two more real swept hits in the same restored fourth run.
 find "$HOME" "$XDG_DATA_HOME" "$XDG_CONFIG_HOME" "$XDG_CACHE_HOME" \
   -type f -name fourth_guard_clear_witness.txt -print > "$out/fourth-guard-clear-paths.txt"
