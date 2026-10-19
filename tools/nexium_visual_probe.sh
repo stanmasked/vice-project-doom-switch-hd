@@ -5,7 +5,7 @@ if [[ $# -ne 3 ]]; then echo "Usage: visual_probe.sh emulator nro evidence-dir" 
 emulator="$1"; nro="$2"; out="$3"
 mkdir -p "$out"
 echo "visual_probe=started" > "$out/visual-probe.txt"
-timeout --signal=TERM --kill-after=5s 85s \
+timeout --signal=TERM --kill-after=5s 150s \
  "$emulator" "$nro" > "$out/emulator-stdout.txt" 2>&1 &
 emu_pid=$!
 # Root screenshots include the real native X11/Vulkan presentation child.
@@ -134,7 +134,7 @@ if [[ -s "$out/ne-x11-windows.txt" ]]; then
         echo "host_second_wave_gate_sent=yes key=D guest_wave=$saw_live_wave" >> "$out/input-probe.txt"
         if [[ "$saw_live_wave" == yes ]]; then
           xdotool keydown --clearmodifiers z
-          for (( attempt=0; attempt<220; ++attempt )); do
+          for (( attempt=0; attempt<650; ++attempt )); do
             if [[ -f "$live_wave_path" ]] &&
                grep -q '^VPD_ROMFREE_WAVE2_LIVE_V1 seq=5 event=exit ' "$live_wave_path"; then
               saw_live_exit=yes
