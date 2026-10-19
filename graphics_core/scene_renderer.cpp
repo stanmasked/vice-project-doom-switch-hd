@@ -4,6 +4,7 @@
 #include "backdrop_source.hpp"
 #include "decor_source.hpp"
 #include "impact_lighting.hpp"
+#include "terrain_surface_detail.hpp"
 #include <cstdint>
 #include <algorithm>
 
@@ -209,6 +210,14 @@ bool drawScene(uint32_t* target,int width,int height,int stride_pixels,
             }
         }
     }
+    // Synthetic ROM-free material edge treatment, strictly world-anchored.
+    // The default autoplay renderer and user-provided original-style
+    // replacement terrain atlas are never modified by this effect.
+    if(view.manual_controls && view.hd_terrain_detail &&
+       !view.external_terrain_asset && view.solid_at)
+        (void)applyTerrainSurfaceDetail(
+            target,width,height,stride_pixels,view.camera_x_px,
+            view.map_context,view.solid_at);
     // A concrete world-space exit gate replaces the invisible tile-55 goal.
     // It is only shown after the actual first-guard/wave-two progression.
     // Distinct locked/open colors come from authoritative sentry health.
