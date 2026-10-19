@@ -176,6 +176,27 @@ bool drawScene(uint32_t* target,int width,int height,int stride_pixels,
        !drawBackdropLayers(target,width,height,stride_pixels,
                            *view.backdrop_atlas,view.camera_x_px))
         skyline(s,view.camera_x_px);
+    // Low-contrast procedural night mist: world-anchored, camera-parallax
+    // detail only in the distant sky. Disabled for old replay/golden shots.
+    // No random state, allocation, sprite edits or collision effects.
+    if(view.manual_controls && view.hd_atmospheric_haze){
+        const int drift=floorDiv(view.camera_x_px,9);
+        for(int lane=0;lane<5;++lane){
+            const int y=210+lane*24;
+            for(int k=-2;k<12;++k){
+                const int world=k*166+lane*43;
+                const int x=world-drift;
+                const uint32_t h=randomHash(
+                    static_cast<uint32_t>(k+4096)*101u+
+                    static_cast<uint32_t>(lane)*733u);
+                const int length=35+static_cast<int>(h%64u);
+                s.rect(x,y+static_cast<int>((h>>8)%7u),length,2,
+                       rgba(62+(lane*5),75+(lane*3),112+(lane*3)));
+                s.rect(x+9,y+5,length/2,1,
+                       rgba(50+(lane*3),66+(lane*3),100+(lane*2)));
+            }
+        }
+    }
     // Decorative background props sit behind solid tiles and player.
     if(view.decor_atlas){
         if(view.decor_layout.placements)
