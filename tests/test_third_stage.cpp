@@ -6,6 +6,7 @@
 #include "fourth_retry_witness.hpp"
 #include "fourth_combat_witness.hpp"
 #include "fourth_guard_clear_witness.hpp"
+#include "fourth_stage_witness.hpp"
 #include <cstdio>
 #include <cstring>
 #include <stdexcept>
@@ -43,15 +44,18 @@ int main(){
     check(game.player().x==(3*16+16)*kFixed,"Third movement missing");
     game.tick(Input{Fire});
     check(game.shotsFired()==1,"Third shot not fired");
+    const auto third_fire_fingerprint=game.fingerprint();
     for(int n=0;n<120 && game.guardEnemy().projectile_hits==0;++n)
         game.tick(Input{});
     check(game.guardEnemy().projectile_hits==1 &&
           game.guardEnemy().health==2,"Third first collision absent");
+    const auto third_impact_fingerprint=game.fingerprint();
     for(int n=0;n<160 && game.guardEnemy().health;++n)
         game.tick(Input{Fire});
     check(game.guardEnemy().projectile_hits==3 &&
           game.guardEnemy().health==0 && game.playerHealth()==5,
           "Third source guard was not defeated with true bullets");
+    const auto third_guard_fingerprint=game.fingerprint();
     std::FILE* f=std::tmpfile();
     check(f!=nullptr,"Native third stage witness tempfile unavailable");
     check(!writeThirdStage(f,ThirdStageEvent::Wave,game,Right),
@@ -60,6 +64,7 @@ int main(){
         game.tick(Input{Right});
     check(game.secondWaveActive() && !game.stageCleared() &&
           game.sentry().health==2,"Third-run wave gate unavailable");
+    const auto third_wave_fingerprint=game.fingerprint();
     check(!writeThirdStage(f,ThirdStageEvent::Wave,game,0),
           "Guest wave accepted absent Right");
     check(writeThirdStage(f,ThirdStageEvent::Wave,game,Right),
@@ -69,6 +74,7 @@ int main(){
     check(game.stageCleared() && game.sentry().health==0 &&
           game.sentry().projectile_hits==2 && game.playerHealth()>0,
           "Third-run stage-two combat did not actually clear exit");
+    const auto third_exit_fingerprint=game.fingerprint();
     check(!writeThirdStage(f,ThirdStageEvent::Exit,game,Right),
           "Third exit accepted without actual Fire");
     check(writeThirdStage(f,ThirdStageEvent::Exit,game,
@@ -149,6 +155,8 @@ int main(){
     game.tick(Input{Fire});
     check(game.shotsFired()==1 && game.guardEnemy().health==3,
           "Fourth run failed to spawn original source projectile");
+    check(game.fingerprint()==third_fire_fingerprint,
+          "Fourth replay leaked state before its first shot");
     check(!writeFourthCombat(combat,FourthCombatEvent::Fire,
                              game,0,shots_before,hits_before,hp_before),
           "Fourth Fire witness accepted absent physical Y/Fire");
@@ -176,6 +184,8 @@ int main(){
     check(fourth_hit && game.playerHealth()==5 &&
           game.guardEnemy().health==2 && game.guardEnemy().attacks==0,
           "Fourth run failed to hurt the new guard with genuine projectile");
+    check(game.fingerprint()==third_impact_fingerprint,
+          "Fourth replay diverged during identical first swept impact");
     std::rewind(combat);
     check(std::fgets(line,sizeof(line),combat)!=nullptr &&
           std::strstr(line,"seq=1 event=fire") &&
@@ -215,6 +225,8 @@ int main(){
           game.guardEnemy().attacks==0 && !game.secondWaveActive() &&
           game.sentry().health==2,
           "Fourth hero failed to eliminate restored guard without melee");
+    check(game.fingerprint()==third_guard_fingerprint,
+          "Fourth replay diverged during identical third guard collision");
     std::rewind(final_hit);
     check(std::fgets(line,sizeof(line),final_hit)!=nullptr &&
           std::strstr(line,"event=guard_clear") &&
@@ -225,9 +237,52 @@ int main(){
     check(std::fgets(line,sizeof(line),final_hit)==nullptr,
           "Fourth guard kill emitted unexpected extra records");
     std::fclose(final_hit);
+    // Fourth run must ALSO beat the actual stage-two sentry and reach exit.
+    auto* stage_four=std::tmpfile();
+    check(stage_four!=nullptr,"Fourth stage witness stream unavailable");
+    check(!writeFourthStage(stage_four,FourthStageEvent::Wave,game,Right),
+          "Fourth stage gate accepted before encounter activation");
+    for(int n=0;n<280 && !game.secondWaveActive();++n)
+        game.tick(Input{Right});
+    check(game.secondWaveActive() && !game.stageCleared() &&
+          game.guardEnemy().health==0 && game.sentry().health==2,
+          "Fourth run never activated its own second wave");
+    check(game.fingerprint()==third_wave_fingerprint,
+          "Fourth replay leaked state when the second wave activated");
+    check(!writeFourthStage(stage_four,FourthStageEvent::Wave,game,0),
+          "Fourth wave writer accepted missing Right input");
+    check(writeFourthStage(stage_four,FourthStageEvent::Wave,game,Right),
+          "Fourth wave source event not accepted");
+    for(int n=0;n<470 && !game.stageCleared();++n)
+        game.tick(Input{static_cast<uint8_t>(Right|Fire)});
+    check(game.stageCleared() && game.sentry().health==0 &&
+          game.sentry().projectile_hits==2 && game.playerHealth()>0,
+          "Fourth attempt never completed its real second wave");
+    check(game.fingerprint()==third_exit_fingerprint,
+          "Fourth replay stage exit differs from identical third input route");
+    check(!writeFourthStage(stage_four,FourthStageEvent::Exit,game,Right),
+          "Fourth stage exit erroneously accepted missing Fire");
+    check(writeFourthStage(stage_four,FourthStageEvent::Exit,
+                           game,static_cast<uint8_t>(Right|Fire)),
+          "Fourth stage source exit rejected earned victory");
+    std::rewind(stage_four);
+    check(std::fgets(line,sizeof(line),stage_four)!=nullptr &&
+          std::strstr(line,"VPD_ROMFREE_FOURTH_STAGE_V1") &&
+          std::strstr(line,"seq=1 event=wave") &&
+          std::strstr(line,"sentry_hp=2 sentry_hits=0 wave=1 clear=0"),
+          "Fourth stage new wave event malformed");
+    check(std::fgets(line,sizeof(line),stage_four)!=nullptr &&
+          std::strstr(line,"seq=2 event=exit") &&
+          std::strstr(line,"sentry_hp=0 sentry_hits=2 wave=1 clear=1"),
+          "Fourth stage native earned victory record malformed");
+    check(std::fgets(line,sizeof(line),stage_four)==nullptr,
+          "Fourth stage witness emitted additional records");
+    std::fclose(stage_four);
     std::puts("VPD_THIRD_STAGE_HOST_PASS initial_victory=yes "
               "second_loss=yes third_guard_kill=yes "
-              "third_wave=yes third_stage_clear=yes fourth_retry_and_move=yes fourth_fire_hit=yes fourth_guard_kill=yes "
+              "third_wave=yes third_stage_clear=yes "
+              "fourth_retry_and_move=yes fourth_fire_hit=yes "
+              "fourth_guard_kill=yes fourth_stage_clear=yes "
               "live_nexium_proven=no original_game_proven=no");
     return 0;
  }catch(const std::exception& e){

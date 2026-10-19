@@ -11,6 +11,7 @@
 #include "fourth_retry_witness.hpp"
 #include "fourth_combat_witness.hpp"
 #include "fourth_guard_clear_witness.hpp"
+#include "fourth_stage_witness.hpp"
 #include "combat_demo.hpp"
 #include "demo_witness_sd.hpp"
 #include "manual_input_witness.hpp"
@@ -92,6 +93,7 @@ int main(int,char**) {
     vpd::resetFourthRetry(has_sd);
     vpd::resetFourthCombat(has_sd);
     vpd::resetFourthGuardClear(has_sd);
+    vpd::resetFourthStage(has_sd);
     if(has_sd)assets.reload(kExternalAtlasPath,kExternalAnimationPath);
     bool reload_failed=false;
     constexpr const char* kExternalTerrainPath=
@@ -166,6 +168,7 @@ int main(int,char**) {
     bool fourth_fire_logged=false;
     bool fourth_hit_logged=false;
     bool fourth_guard_clear_logged=false;
+    unsigned fourth_stage_seq=0;
     uint32_t dash_probe_start_frame=0;
     int32_t dash_probe_start_x=0;
     while(appletMainLoop()){
@@ -420,6 +423,22 @@ int main(int,char**) {
                game.guardEnemy().projectile_hits==3)
                 fourth_guard_clear_logged=vpd::appendFourthGuardClear(
                     has_sd,game,input,prior_guard_hp,prior_guard_hits);
+            // The actual fourth-run first guard must die before a
+            // fresh second-wave gate can be opened by real Right.
+            if(fourth_guard_clear_logged && fourth_stage_seq==0 &&
+               !prior_wave_active && game.secondWaveActive() &&
+               (input&vpd::Right) &&
+               vpd::appendFourthStage(
+                   has_sd,vpd::FourthStageEvent::Wave,game,input))
+                fourth_stage_seq=1;
+            // The same rendered fourth simulation must defeat the second
+            // sentry and earn stage exit with held manual Right+Fire.
+            if(fourth_stage_seq==1 && game.stageCleared() &&
+               (input&(vpd::Right|vpd::Fire))==
+                   (vpd::Right|vpd::Fire) &&
+               vpd::appendFourthStage(
+                   has_sd,vpd::FourthStageEvent::Exit,game,input))
+                fourth_stage_seq=2;
             // These events are from the *visible*, pad-driven gameplay
             // instance, unlike the isolated guard-combat script. A host
             // keystroke by itself cannot satisfy the observed transitions.

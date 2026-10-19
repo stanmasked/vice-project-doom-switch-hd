@@ -411,6 +411,41 @@ if [[ -s "$out/ne-x11-windows.txt" ]]; then
                                       sleep 0.12
                                       capture screen-live-fourth-guard-clear
                                       echo "live_fourth_guard_clear_raster_after_guest_event=yes" >> "$out/visual-probe.txt"
+                                      # Fourth genuine run: walk through the
+                                      # re-armed wave gate, then hold Right
+                                      # and Fire until source detects exit.
+                                      fourth_stage_path="$XDG_CONFIG_HOME/NeXium/sdmc/switch/vice_project_doom/fourth_stage_witness.txt"
+                                      fourth_wave=no
+                                      fourth_exit=no
+                                      xdotool keydown --clearmodifiers d
+                                      for (( attempt=0; attempt<260; ++attempt )); do
+                                        if [[ -f "$fourth_stage_path" ]] &&
+                                           grep -q '^VPD_ROMFREE_FOURTH_STAGE_V1 seq=1 event=wave ' "$fourth_stage_path"; then
+                                          fourth_wave=yes
+                                          break
+                                        fi
+                                        sleep 0.05
+                                      done
+                                      echo "host_fourth_stage_gate_sent=yes key=D observed=$fourth_wave" >> "$out/input-probe.txt"
+                                      if [[ "$fourth_wave" == yes ]]; then
+                                        xdotool keydown --clearmodifiers z
+                                        for (( attempt=0; attempt<650; ++attempt )); do
+                                          if [[ -f "$fourth_stage_path" ]] &&
+                                             grep -q '^VPD_ROMFREE_FOURTH_STAGE_V1 seq=2 event=exit ' "$fourth_stage_path"; then
+                                            fourth_exit=yes
+                                            break
+                                          fi
+                                          sleep 0.05
+                                        done
+                                        xdotool keyup z
+                                      fi
+                                      xdotool keyup d
+                                      echo "host_fourth_stage_exit_sent=yes keys=D+Z observed=$fourth_exit" >> "$out/input-probe.txt"
+                                      if [[ "$fourth_exit" == yes ]]; then
+                                        sleep 0.14
+                                        capture screen-live-fourth-stage-clear
+                                        echo "live_fourth_stage_clear_raster_after_guest_event=yes" >> "$out/visual-probe.txt"
+                                      fi
                                     fi
                                   fi
                                 fi

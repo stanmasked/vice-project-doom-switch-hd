@@ -46,6 +46,8 @@ on:
       - "tests/test_nexium_fourth_combat.py"
       - "tools/audit_nexium_fourth_guard_clear.py"
       - "tests/test_nexium_fourth_guard_clear.py"
+      - "tools/audit_nexium_fourth_stage.py"
+      - "tests/test_nexium_fourth_stage.py"
       - "tools/nexium_visual_probe.sh"
       - "game_core/**"
       - "switch_graphical/**"
@@ -164,6 +166,11 @@ jobs:
             emulator-evidence/fourth-guard-clear-result.txt
             emulator-evidence/fourth-guard-clear-paths.txt
             emulator-evidence/guest-fourth-guard-clear-witness.txt
+            emulator-evidence/fourth-stage-result.txt
+            emulator-evidence/fourth-stage-paths.txt
+            emulator-evidence/guest-fourth-stage-witness.txt
+            emulator-evidence/screen-live-fourth-stage-clear.png
+            emulator-evidence/screen-live-fourth-stage-clear.ppm
             emulator-evidence/screen-live-fourth-guard-clear.png
             emulator-evidence/screen-live-fourth-guard-clear.ppm
             emulator-evidence/screen-live-fourth-impact.png
