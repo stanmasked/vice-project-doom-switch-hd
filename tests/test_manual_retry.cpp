@@ -2,8 +2,10 @@
 // No ROM or controller framework: this is the portable core used by libnx.
 #include "simulation.hpp"
 #include "manual_retry.hpp"
+#include "manual_retry_guest_witness.hpp"
 #include "combat_demo.hpp"
 #include <cstdio>
+#include <cstring>
 #include <stdexcept>
 namespace {
 void require(bool good,const char* why){if(!good)throw std::runtime_error(why);}
@@ -72,8 +74,19 @@ int main(){
         require(retryTerminalEncounter(lost,false)==ManualRetryOutcome::Ignored &&
                 lost.playerHealth()==0,
                 "Dead hero auto-restarted without a retry button");
-        require(retryTerminalEncounter(lost,true)==ManualRetryOutcome::AfterDefeat,
+        const auto death_before=retryBefore(lost);
+        const auto death_result=retryTerminalEncounter(lost,true);
+        require(death_result==ManualRetryOutcome::AfterDefeat,
                 "Minus did not restart terminal loss");
+        std::FILE* dead_record=std::tmpfile();
+        require(dead_record!=nullptr,"Guest log simulation tempfile unavailable");
+        require(!writeManualRetryGuest(dead_record,death_result,death_before,
+                                       lost,false),
+                "False native Minus input was accepted by guest writer");
+        require(writeManualRetryGuest(dead_record,death_result,death_before,
+                                      lost,true),
+                "Genuine source death replay rejected by guest serializer");
+        std::fclose(dead_record);
         pristine(lost,fresh_fingerprint);
         require(retryTerminalEncounter(lost,true)==ManualRetryOutcome::Ignored,
                 "Held or repeated Minus retriggered a healthy run");
@@ -95,8 +108,25 @@ int main(){
                 "Won level kept advancing gameplay before explicit replay");
         require(retryTerminalEncounter(won,false)==ManualRetryOutcome::Ignored,
                 "Victory auto-replayed without Minus");
-        require(retryTerminalEncounter(won,true)==ManualRetryOutcome::AfterVictory,
+        const auto victory_before=retryBefore(won);
+        const auto victory_result=retryTerminalEncounter(won,true);
+        require(victory_result==ManualRetryOutcome::AfterVictory,
                 "Minus failed to restart legitimately completed stage");
+        std::FILE* winner=std::tmpfile();
+        require(winner!=nullptr,"No native victory proof stream");
+        require(!writeManualRetryGuest(winner,victory_result,victory_before,
+                                       won,false),
+                "Guest claimed Minus without real pressed key");
+        require(writeManualRetryGuest(winner,victory_result,victory_before,
+                                      won,true),
+                "Real source victory/reset state failed guest writer");
+        std::rewind(winner);
+        char guest_line[360]{};
+        require(std::fgets(guest_line,sizeof(guest_line),winner)!=nullptr &&
+                std::strstr(guest_line,"event=restart reason=victory")!=nullptr &&
+                std::strstr(guest_line,"new_guard_hp=3 new_sentry_hp=2")!=nullptr,
+                "Native serializer did not preserve legitimate retry state");
+        std::fclose(winner);
         pristine(won,fresh_fingerprint);
         require(!won.stageCleared(),"Level clear leaked across retries");
 
