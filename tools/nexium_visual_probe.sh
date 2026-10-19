@@ -361,6 +361,39 @@ if [[ -s "$out/ne-x11-windows.txt" ]]; then
                                 sleep 0.12
                                 capture screen-live-fourth-move
                                 echo "live_fourth_movement_raster_after_guest_event=yes" >> "$out/visual-probe.txt"
+                                # Fourth attempt: physical Fire, release on
+                                # genuine source spawn, then await first swept
+                                # guard collision and capture real X11 pixels.
+                                fourth_combat_path="$XDG_CONFIG_HOME/NeXium/sdmc/switch/vice_project_doom/fourth_combat_witness.txt"
+                                fourth_fire_seen=no
+                                fourth_hit_seen=no
+                                xdotool keydown --clearmodifiers z
+                                for (( attempt=0; attempt<100; ++attempt )); do
+                                  if [[ -f "$fourth_combat_path" ]] &&
+                                     grep -q '^VPD_ROMFREE_FOURTH_COMBAT_V1 seq=1 event=fire ' "$fourth_combat_path"; then
+                                    fourth_fire_seen=yes
+                                    break
+                                  fi
+                                  sleep 0.05
+                                done
+                                xdotool keyup z
+                                echo "host_fourth_run_fire_sent=yes key=Z guest_fire=$fourth_fire_seen" >> "$out/input-probe.txt"
+                                if [[ "$fourth_fire_seen" == yes ]]; then
+                                  for (( attempt=0; attempt<120; ++attempt )); do
+                                    if [[ -f "$fourth_combat_path" ]] &&
+                                       grep -q '^VPD_ROMFREE_FOURTH_COMBAT_V1 seq=2 event=impact ' "$fourth_combat_path"; then
+                                      fourth_hit_seen=yes
+                                      break
+                                    fi
+                                    sleep 0.05
+                                  done
+                                  echo "host_fourth_run_hit_observed=$fourth_hit_seen" >> "$out/input-probe.txt"
+                                  if [[ "$fourth_hit_seen" == yes ]]; then
+                                    sleep 0.10
+                                    capture screen-live-fourth-impact
+                                    echo "live_fourth_impact_raster_after_guest_event=yes" >> "$out/visual-probe.txt"
+                                  fi
+                                fi
                               fi
                             fi
                           fi
