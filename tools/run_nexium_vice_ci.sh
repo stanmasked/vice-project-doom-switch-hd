@@ -172,3 +172,12 @@ if [[ -s "$out/manual-retry-trace-paths.txt" ]]; then
   cp "$guest" "$out/guest-manual-retry-witness.txt"
 fi
 python3 tools/audit_nexium_manual_retry.py --evidence "$out"
+# Independent real pad-controlled *second* playthrough: guard kills the
+# hero after the first victory restart, and real Minus starts a third run.
+find "$HOME" "$XDG_DATA_HOME" "$XDG_CONFIG_HOME" "$XDG_CACHE_HOME" \
+  -type f -name live_defeat_retry_witness.txt -print > "$out/live-defeat-retry-paths.txt"
+if [[ -s "$out/live-defeat-retry-paths.txt" ]]; then
+  IFS= read -r guest < "$out/live-defeat-retry-paths.txt"
+  cp "$guest" "$out/guest-live-defeat-retry-witness.txt"
+fi
+python3 tools/audit_nexium_defeat_retry.py --evidence "$out"

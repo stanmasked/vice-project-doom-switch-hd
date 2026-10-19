@@ -30,6 +30,8 @@ on:
       - "tests/test_nexium_second_wave_live.py"
       - "tools/audit_nexium_manual_retry.py"
       - "tests/test_nexium_manual_retry.py"
+      - "tools/audit_nexium_defeat_retry.py"
+      - "tests/test_nexium_defeat_retry.py"
       - "tools/nexium_visual_probe.sh"
       - "game_core/**"
       - "switch_graphical/**"
@@ -122,6 +124,13 @@ jobs:
             emulator-evidence/manual-retry-result.txt
             emulator-evidence/manual-retry-trace-paths.txt
             emulator-evidence/guest-manual-retry-witness.txt
+            emulator-evidence/defeat-retry-result.txt
+            emulator-evidence/live-defeat-retry-paths.txt
+            emulator-evidence/guest-live-defeat-retry-witness.txt
+            emulator-evidence/screen-live-game-over.png
+            emulator-evidence/screen-live-game-over.ppm
+            emulator-evidence/screen-live-defeat-restart.png
+            emulator-evidence/screen-live-defeat-restart.ppm
             emulator-evidence/screen-live-restart.png
             emulator-evidence/screen-live-restart.ppm
             emulator-evidence/screen-live-stage-clear.png

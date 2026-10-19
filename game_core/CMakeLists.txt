@@ -59,6 +59,15 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
                          -Wall -Wextra -Wpedantic -Werror)
 endif()
 add_test(NAME romfree_manual_terminal_retry COMMAND vpd_manual_retry_test)
+# Same post-victory live loss/second-Minus witness compiled by libnx.
+add_executable(vpd_live_defeat_retry_test
+               ../tests/test_live_defeat_retry.cpp)
+target_link_libraries(vpd_live_defeat_retry_test PRIVATE vpd_simulation)
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+  target_compile_options(vpd_live_defeat_retry_test PRIVATE
+                         -Wall -Wextra -Wpedantic -Werror)
+endif()
+add_test(NAME romfree_live_defeat_retry COMMAND vpd_live_defeat_retry_test)
 # The native guard first-step proof is emitted only by authoritative gameplay.
 add_executable(vpd_guard_guest_witness_test ../tests/test_guard_guest_witness.cpp)
 target_link_libraries(vpd_guard_guest_witness_test PRIVATE vpd_simulation)
