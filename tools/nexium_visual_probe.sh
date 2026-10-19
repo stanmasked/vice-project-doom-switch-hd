@@ -326,6 +326,43 @@ if [[ -s "$out/ne-x11-windows.txt" ]]; then
                             sleep 0.14
                             capture screen-live-third-stage-clear
                             echo "live_third_stage_clear_raster_after_guest_event=yes" >> "$out/visual-probe.txt"
+                            # Fourth independent native attempt: actual Minus
+                            # after the THIRD earned stage victory, then Right.
+                            fourth_path="$XDG_CONFIG_HOME/NeXium/sdmc/switch/vice_project_doom/fourth_retry_witness.txt"
+                            fourth_restarted=no
+                            fourth_moved=no
+                            xdotool keydown --clearmodifiers n
+                            sleep 0.22
+                            xdotool keyup n
+                            for (( attempt=0; attempt<70; ++attempt )); do
+                              if [[ -f "$fourth_path" ]] &&
+                                 grep -q '^VPD_ROMFREE_FOURTH_RETRY_V1 seq=1 event=restart ' "$fourth_path"; then
+                                fourth_restarted=yes
+                                break
+                              fi
+                              sleep 0.05
+                            done
+                            echo "host_fourth_retry_minus_sent=yes key=N guest_restart=$fourth_restarted" >> "$out/input-probe.txt"
+                            if [[ "$fourth_restarted" == yes ]]; then
+                              sleep 0.14
+                              capture screen-live-fourth-restart
+                              xdotool keydown --clearmodifiers d
+                              for (( attempt=0; attempt<110; ++attempt )); do
+                                if [[ -f "$fourth_path" ]] &&
+                                   grep -q '^VPD_ROMFREE_FOURTH_RETRY_V1 seq=2 event=move ' "$fourth_path"; then
+                                  fourth_moved=yes
+                                  break
+                                fi
+                                sleep 0.05
+                              done
+                              xdotool keyup d
+                              echo "host_fourth_retry_right_sent=yes key=D guest_move=$fourth_moved" >> "$out/input-probe.txt"
+                              if [[ "$fourth_moved" == yes ]]; then
+                                sleep 0.12
+                                capture screen-live-fourth-move
+                                echo "live_fourth_movement_raster_after_guest_event=yes" >> "$out/visual-probe.txt"
+                              fi
+                            fi
                           fi
                         fi
                       fi
