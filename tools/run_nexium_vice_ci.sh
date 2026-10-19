@@ -251,3 +251,12 @@ if [[ -s "$out/fourth-guard-clear-paths.txt" ]]; then
   cp "$guest" "$out/guest-fourth-guard-clear-witness.txt"
 fi
 python3 tools/audit_nexium_fourth_guard_clear.py --evidence "$out"
+# Fourth earned victory is separate from the preceding third run.
+# Require both native new source events and real X11 key/screen evidence.
+find "$HOME" "$XDG_DATA_HOME" "$XDG_CONFIG_HOME" "$XDG_CACHE_HOME" \
+  -type f -name fourth_stage_witness.txt -print > "$out/fourth-stage-paths.txt"
+if [[ -s "$out/fourth-stage-paths.txt" ]]; then
+  IFS= read -r guest < "$out/fourth-stage-paths.txt"
+  cp "$guest" "$out/guest-fourth-stage-witness.txt"
+fi
+python3 tools/audit_nexium_fourth_stage.py --evidence "$out"
