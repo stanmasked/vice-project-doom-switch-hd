@@ -621,6 +621,7 @@ int main(int,char**) {
         view.facing_left=animation.facingLeft();
         view.terrain_atlas=&terrain.atlas();
         view.external_terrain_asset=terrain.external();
+        view.hd_terrain_detail=view.manual_controls && !terrain.external();
         view.terrain_reload_failed=terrain_reload_failed;
         view.backdrop_atlas=&backdrop.atlas();
         view.external_backdrop_asset=backdrop.external();
