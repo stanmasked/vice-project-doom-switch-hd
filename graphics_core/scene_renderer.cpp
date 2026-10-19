@@ -417,6 +417,17 @@ bool drawScene(uint32_t* target,int width,int height,int stride_pixels,
                view.decor_layout_reload_failed?rgba(243,121,104):
                rgba(153,218,195),2);
     }
+    // Defeat must be visible and actionable without leaving the running
+    // homebrew NRO; source HP alone determines the terminal overlay.
+    if(view.manual_controls && view.player_health==0){
+        s.rect(355,227,570,168,rgba(41,28,49));
+        s.rect(363,235,554,152,rgba(72,37,59));
+        s.rect(373,244,534,5,rgba(227,116,114));
+        s.text(400,266,"MISSION FAILED",rgba(255,195,164),3);
+        s.text(417,331,"MINUS: RETRY  PLUS: EXIT",
+               rgba(236,217,207),2);
+        s.text(455,360,"ROM-FREE PROTOTYPE",rgba(177,164,185),2);
+    }
     // Dedicated earned stage-completion panel, absent from all auto-demo
     // frames and from manual play until both real enemies were defeated
     // and the living hero reached the exit.
@@ -428,10 +439,11 @@ bool drawScene(uint32_t* target,int width,int height,int stride_pixels,
         s.text(442,267,"STAGE CLEAR",rgba(226,243,180),3);
         s.text(427,323,"GUARD + SENTRY DEFEATED",rgba(195,222,221),2);
         s.text(477,351,"ROM-FREE PROTOTYPE",rgba(170,192,210),2);
+        s.text(415,409,"MINUS: REPLAY   PLUS: EXIT",rgba(189,239,209),2);
     }
     s.rect(0,689,1280,31,rgba(13,19,33));
     s.text(25,697,view.manual_controls?
-           "MOVE:D PAD  JUMP:A/B  FIRE:Y  DASH:ZR  EXIT:PLUS":
+           "MOVE:D PAD  JUMP:A/B  FIRE:Y  DASH:ZR  RETRY:-  EXIT:+":
            "MOVE : D PAD  /  JUMP : A OR B  /  EXIT : PLUS",
            rgba(173,184,207),2);
     s.text(760,697,view.asset_reload_failed?"RELOAD FAILED":
