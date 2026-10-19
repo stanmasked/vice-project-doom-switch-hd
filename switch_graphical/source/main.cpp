@@ -1,6 +1,7 @@
 // Independent libnx native raster scene; no NES emulator or proprietary art.
 #include <switch.h>
 #include "simulation.hpp"
+#include "manual_retry.hpp"
 #include "combat_demo.hpp"
 #include "demo_witness_sd.hpp"
 #include "manual_input_witness.hpp"
@@ -124,6 +125,7 @@ int main(int,char**) {
     bool live_guard_defeated=false;
     unsigned live_guard_defeat_seq=0;
     unsigned live_wave_seq=0;
+    bool manual_retry_has_occurred=false;
     uint32_t dash_probe_start_frame=0;
     int32_t dash_probe_start_x=0;
     while(appletMainLoop()){
@@ -209,7 +211,17 @@ int main(int,char**) {
             decor.reset();
             decor_reload_failed=false;
         }
-        if(pressed&HidNpadButton_Minus){
+        // Minus means RETRY only on a completed or defeated manual
+        // encounter. Else retain its existing decorative-layout reload.
+        const auto retry=vpd::retryTerminalEncounter(
+            game,!demo.enabled() && (pressed&HidNpadButton_Minus));
+        const bool restarted=retry!=vpd::ManualRetryOutcome::Ignored;
+        if(restarted){
+            manual_retry_has_occurred=true;
+            animation.reset();
+            checkpoint_ok=false;
+        }
+        if((pressed&HidNpadButton_Minus) && !restarted){
             decor_layout_reload_failed= !has_sd ||
                 layout.reload(kExternalDecorLayoutPath)!=vpd::LayoutLoadResult::Loaded;
         }
@@ -240,7 +252,7 @@ int main(int,char**) {
             const bool prior_wave_active=game.secondWaveActive();
             const auto prior_turret_hits=game.sentry().projectile_hits;
             if(toggle_manual)input=0; // R+A is a mode switch, not a jump
-            game.tick(vpd::Input{input});
+            if(!restarted)game.tick(vpd::Input{input});
             // These events are from the *visible*, pad-driven gameplay
             // instance, unlike the isolated guard-combat script. A host
             // keystroke by itself cannot satisfy the observed transitions.
@@ -311,10 +323,10 @@ int main(int,char**) {
                 live_wave_seq=5;
             // Two guest-written milestones require a real first and
             // eighth tick from the opt-in enemy AI, not a host fixture.
-            if(game.frame()==1)
+            if(!manual_retry_has_occurred && game.frame()==1)
                 (void)vpd::guardProofAppend(
                     has_sd,vpd::GuardProofEvent::FirstStep,game);
-            if(game.frame()==8){
+            if(!manual_retry_has_occurred && game.frame()==8){
                 (void)vpd::guardProofAppend(
                     has_sd,vpd::GuardProofEvent::Patrol,game);
                 // Separate scripted guard combat test executed by this very
