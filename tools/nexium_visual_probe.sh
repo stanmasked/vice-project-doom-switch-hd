@@ -150,6 +150,29 @@ if [[ -s "$out/ne-x11-windows.txt" ]]; then
           sleep 0.12
           capture screen-live-stage-clear
           echo "live_second_wave_exit_raster_after_guest_event=yes" >> "$out/visual-probe.txt"
+          # NeXium controller_config.rs defaults N=Minus (retry).
+          # Press only after the actual visible native guest-stage exit,
+          # then independently wait for the guest-created state-reset record.
+          xdotool keydown --clearmodifiers n
+          sleep 0.22
+          xdotool keyup n
+          echo "host_manual_retry_key_sent=yes key=N expected=Minus" >> "$out/input-probe.txt"
+          retry_guest_path="$XDG_CONFIG_HOME/NeXium/sdmc/switch/vice_project_doom/manual_retry_witness.txt"
+          saw_retry=no
+          for (( attempt=0; attempt<30; ++attempt )); do
+            if [[ -f "$retry_guest_path" ]] &&
+               grep -q '^VPD_ROMFREE_MANUAL_RETRY_V1 event=restart reason=victory ' "$retry_guest_path"; then
+              saw_retry=yes
+              break
+            fi
+            sleep 0.05
+          done
+          echo "host_manual_retry_guest_observed=$saw_retry" >> "$out/input-probe.txt"
+          if [[ "$saw_retry" == yes ]]; then
+            sleep 0.18
+            capture screen-live-restart
+            echo "live_manual_restart_raster_after_guest_event=yes" >> "$out/visual-probe.txt"
+          fi
         fi
       fi
     fi
