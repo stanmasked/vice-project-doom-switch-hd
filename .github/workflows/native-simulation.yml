@@ -3,12 +3,12 @@ on:
   push:
     paths:
       - 'game_core/**'
-      - 'tests/test_simulation.cpp'
+      - 'tests/**'
       - '.github/workflows/native-simulation.yml'
   pull_request:
     paths:
       - 'game_core/**'
-      - 'tests/test_simulation.cpp'
+      - 'tests/**'
       - '.github/workflows/native-simulation.yml'
   workflow_dispatch:
 permissions:
