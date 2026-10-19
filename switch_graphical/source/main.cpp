@@ -9,6 +9,7 @@
 #include "guard_combat_probe.hpp"
 #include "second_wave_guest_probe.hpp"
 #include "guard_live_debug.hpp"
+#include "second_wave_live_witness.hpp"
 #include "guard_live_witness.hpp"
 #include "guard_live_defeat_witness.hpp"
 #include "scene_renderer.hpp"
@@ -64,6 +65,7 @@ int main(int,char**) {
     vpd::guardLiveDebugReset(has_sd);
     (void)vpd::liveGuardProofReset(has_sd);
     (void)vpd::liveGuardDefeatReset(has_sd);
+    (void)vpd::liveWaveReset(has_sd);
     if(has_sd)assets.reload(kExternalAtlasPath,kExternalAnimationPath);
     bool reload_failed=false;
     constexpr const char* kExternalTerrainPath=
@@ -121,6 +123,7 @@ int main(int,char**) {
     bool live_guard_fire_logged=false;
     bool live_guard_defeated=false;
     unsigned live_guard_defeat_seq=0;
+    unsigned live_wave_seq=0;
     uint32_t dash_probe_start_frame=0;
     int32_t dash_probe_start_x=0;
     while(appletMainLoop()){
@@ -155,6 +158,7 @@ int main(int,char**) {
             live_guard_fire_logged=false;
             live_guard_defeated=false;
             live_guard_defeat_seq=0;
+            live_wave_seq=0;
             if(!demo.enabled()){
                 // Preserve ROM-free autoplay hashes: enable encounter only on
                 // entry into explicit manual gameplay, never in attract mode.
@@ -233,6 +237,8 @@ int main(int,char**) {
             const auto prior_attacks=game.guardEnemy().attacks;
             const auto prior_guard_hp=game.guardEnemy().health;
             const auto prior_guard_hits=game.guardEnemy().projectile_hits;
+            const bool prior_wave_active=game.secondWaveActive();
+            const auto prior_turret_hits=game.sentry().projectile_hits;
             if(toggle_manual)input=0; // R+A is a mode switch, not a jump
             game.tick(vpd::Input{input});
             // These events are from the *visible*, pad-driven gameplay
@@ -275,6 +281,34 @@ int main(int,char**) {
                     if(game.guardEnemy().health==0)live_guard_defeated=true;
                 }
             }
+            // Five new milestones from THIS visible manual gameplay, never
+            // from the separate native guest-scripted stage-two experiment.
+            if(live_guard_defeated && live_wave_seq==0 &&
+               !prior_wave_active && game.secondWaveActive() &&
+               (input&vpd::Right) &&
+               vpd::liveWaveAppend(has_sd,vpd::LiveWaveEvent::Activated,
+                                   game,input))
+                live_wave_seq=1;
+            if(live_wave_seq==1 &&
+               (input&(vpd::Right|vpd::Fire))==(vpd::Right|vpd::Fire) &&
+               game.shotsFired()>before_shots &&
+               vpd::liveWaveAppend(has_sd,vpd::LiveWaveEvent::Fire,
+                                   game,input))
+                live_wave_seq=2;
+            if(live_wave_seq==2 && prior_turret_hits==0 &&
+               game.sentry().projectile_hits==1 &&
+               vpd::liveWaveAppend(has_sd,vpd::LiveWaveEvent::FirstImpact,
+                                   game,input))
+                live_wave_seq=3;
+            if(live_wave_seq==3 && prior_turret_hits==1 &&
+               game.sentry().projectile_hits==2 &&
+               vpd::liveWaveAppend(has_sd,vpd::LiveWaveEvent::Defeat,
+                                   game,input))
+                live_wave_seq=4;
+            if(live_wave_seq==4 && game.stageCleared() &&
+               vpd::liveWaveAppend(has_sd,vpd::LiveWaveEvent::Exit,
+                                   game,input))
+                live_wave_seq=5;
             // Two guest-written milestones require a real first and
             // eighth tick from the opt-in enemy AI, not a host fixture.
             if(game.frame()==1)
