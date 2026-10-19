@@ -608,6 +608,7 @@ int main(int,char**) {
         view.moving=actor.vx!=0;
         view.replay_demo=demo.enabled();
         view.manual_controls=!demo.enabled();
+        view.hd_hit_lighting=view.manual_controls;
         view.demo_checkpoint_ok=checkpoint_ok && demo.enabled();
         // Same adapter is exercised by native host combat/raster CTest.
         vpd::applyCombatOverlay(view,game);
