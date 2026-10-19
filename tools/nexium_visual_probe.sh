@@ -221,6 +221,27 @@ if [[ -s "$out/ne-x11-windows.txt" ]]; then
                   sleep 0.16
                   capture screen-live-defeat-restart
                   echo "live_defeat_replay_raster_after_guest_event=yes" >> "$out/visual-probe.txt"
+                  # Test the *third* playthrough using actual Right input;
+                  # a reset frame or an isolated source script is insufficient.
+                  # The NRO must witness positive world-space displacement.
+                  third_path="$XDG_CONFIG_HOME/NeXium/sdmc/switch/vice_project_doom/post_defeat_control_witness.txt"
+                  third_seen=no
+                  xdotool keydown --clearmodifiers d
+                  for (( attempt=0; attempt<80; ++attempt )); do
+                    if [[ -f "$third_path" ]] &&
+                       grep -q '^VPD_ROMFREE_THIRD_RUN_V1 event=move ' "$third_path"; then
+                      third_seen=yes
+                      break
+                    fi
+                    sleep 0.05
+                  done
+                  xdotool keyup d
+                  echo "host_third_run_control_sent=yes key=D guest_observed=$third_seen" >> "$out/input-probe.txt"
+                  if [[ "$third_seen" == yes ]]; then
+                    sleep 0.12
+                    capture screen-live-third-run-move
+                    echo "live_third_run_movement_raster_after_guest_event=yes" >> "$out/visual-probe.txt"
+                  fi
                 fi
               fi
             fi

@@ -4,6 +4,7 @@
 #include "manual_retry.hpp"
 #include "manual_retry_guest_witness.hpp"
 #include "live_defeat_retry_witness.hpp"
+#include "post_defeat_control_witness.hpp"
 #include "combat_demo.hpp"
 #include "demo_witness_sd.hpp"
 #include "manual_input_witness.hpp"
@@ -71,6 +72,7 @@ int main(int,char**) {
     (void)vpd::liveWaveReset(has_sd);
     vpd::resetManualRetryGuest(has_sd);
     vpd::resetLiveDefeatRetry(has_sd);
+    vpd::resetPostDefeatControl(has_sd);
     if(has_sd)assets.reload(kExternalAtlasPath,kExternalAnimationPath);
     bool reload_failed=false;
     constexpr const char* kExternalTerrainPath=
@@ -135,6 +137,7 @@ int main(int,char**) {
     bool replay_guard_contact_logged=false;
     bool replay_guard_death_logged=false;
     bool replay_guard_restart_logged=false;
+    bool third_run_move_logged=false;
     uint32_t dash_probe_start_frame=0;
     int32_t dash_probe_start_x=0;
     while(appletMainLoop()){
@@ -272,6 +275,7 @@ int main(int,char**) {
             ++manual_session_ticks; // independent monotone real pad-loop time
             // Measure actual simulation effects, not merely keyboard events.
             const auto before_x=game.player().x;
+            const auto before_frame=game.frame();
             const auto before_shots=game.shotsFired();
             const auto was_alerted=game.guardEnemy().alerted;
             const auto prior_hp=game.playerHealth();
@@ -297,6 +301,17 @@ int main(int,char**) {
                game.guardEnemy().attacks>=5)
                 replay_guard_death_logged=vpd::appendLiveDefeatRetry(
                     has_sd,vpd::DefeatRetryEvent::Death,game,input);
+            // A new third playthrough only becomes attestable after
+            // the SAME visible NRO recorded actual defeat and second Minus.
+            // Require a fresh Right tick that physically moves a healthy
+            // actor. Neither the retry event nor injected host key alone
+            // constitutes evidence of resumed playable control.
+            if(replay_guard_restart_logged && !third_run_move_logged &&
+               !restarted && input==vpd::Right &&
+               game.player().x-before_x==2*vpd::kFixed &&
+               game.playerHealth()==5)
+                third_run_move_logged=vpd::appendPostDefeatControl(
+                    has_sd,game,input,before_x,before_frame);
             // These events are from the *visible*, pad-driven gameplay
             // instance, unlike the isolated guard-combat script. A host
             // keystroke by itself cannot satisfy the observed transitions.

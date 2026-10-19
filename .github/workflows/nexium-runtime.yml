@@ -32,6 +32,8 @@ on:
       - "tests/test_nexium_manual_retry.py"
       - "tools/audit_nexium_defeat_retry.py"
       - "tests/test_nexium_defeat_retry.py"
+      - "tools/audit_nexium_third_run_control.py"
+      - "tests/test_nexium_third_run_control.py"
       - "tools/nexium_visual_probe.sh"
       - "game_core/**"
       - "switch_graphical/**"
@@ -127,6 +129,11 @@ jobs:
             emulator-evidence/defeat-retry-result.txt
             emulator-evidence/live-defeat-retry-paths.txt
             emulator-evidence/guest-live-defeat-retry-witness.txt
+            emulator-evidence/third-run-control-result.txt
+            emulator-evidence/post-defeat-control-paths.txt
+            emulator-evidence/guest-post-defeat-control-witness.txt
+            emulator-evidence/screen-live-third-run-move.png
+            emulator-evidence/screen-live-third-run-move.ppm
             emulator-evidence/screen-live-game-over.png
             emulator-evidence/screen-live-game-over.ppm
             emulator-evidence/screen-live-defeat-restart.png

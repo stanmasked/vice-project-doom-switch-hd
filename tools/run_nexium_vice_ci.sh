@@ -181,3 +181,12 @@ if [[ -s "$out/live-defeat-retry-paths.txt" ]]; then
   cp "$guest" "$out/guest-live-defeat-retry-witness.txt"
 fi
 python3 tools/audit_nexium_defeat_retry.py --evidence "$out"
+# After the two genuinely completed terminal retries, confirm that a third
+# attempt is still pad-controlled in the SAME visible NRO process.
+find "$HOME" "$XDG_DATA_HOME" "$XDG_CONFIG_HOME" "$XDG_CACHE_HOME" \
+  -type f -name post_defeat_control_witness.txt -print > "$out/post-defeat-control-paths.txt"
+if [[ -s "$out/post-defeat-control-paths.txt" ]]; then
+  IFS= read -r guest < "$out/post-defeat-control-paths.txt"
+  cp "$guest" "$out/guest-post-defeat-control-witness.txt"
+fi
+python3 tools/audit_nexium_third_run_control.py --evidence "$out"

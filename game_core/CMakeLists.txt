@@ -59,6 +59,16 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
                          -Wall -Wextra -Wpedantic -Werror)
 endif()
 add_test(NAME romfree_manual_terminal_retry COMMAND vpd_manual_retry_test)
+# Full third manual attempt after victory -> loss -> two native retries.
+add_executable(vpd_post_defeat_control_test
+               ../tests/test_post_defeat_control.cpp)
+target_link_libraries(vpd_post_defeat_control_test PRIVATE vpd_simulation)
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+  target_compile_options(vpd_post_defeat_control_test PRIVATE
+                         -Wall -Wextra -Wpedantic -Werror)
+endif()
+add_test(NAME romfree_post_defeat_control
+         COMMAND vpd_post_defeat_control_test)
 # Same post-victory live loss/second-Minus witness compiled by libnx.
 add_executable(vpd_live_defeat_retry_test
                ../tests/test_live_defeat_retry.cpp)
