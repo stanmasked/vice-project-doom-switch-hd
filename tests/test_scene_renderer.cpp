@@ -104,6 +104,7 @@ int main(int argc,char** argv) {
         view.sentry={420,210,2,9,true};
         view.player_hit_flash_ticks=9;
         view.hd_hit_lighting=false;
+        std::vector<uint32_t> manual_repeat(image.size(),guard);
         check(vpd::drawScene(repeat.data(),vpd::kSceneWidth,
                              vpd::kSceneHeight,stride,view),
               "manual impact baseline render failed");
@@ -115,25 +116,25 @@ int main(int argc,char** argv) {
         const auto lit_manual=checksum(repeat,stride);
         check(lit_manual!=unlit_manual,
               "real manual combat hits did not illuminate scene");
-        check(vpd::drawScene(image.data(),vpd::kSceneWidth,
+        check(vpd::drawScene(manual_repeat.data(),vpd::kSceneWidth,
                              vpd::kSceneHeight,stride,view) &&
-              checksum(image,stride)==lit_manual,
+              checksum(manual_repeat,stride)==lit_manual,
               "opt-in HD hit lighting was not pixel deterministic");
         view.guard.hit_flash_ticks=0;
         view.sentry.hit_flash_ticks=0;
         view.player_hit_flash_ticks=0;
-        check(vpd::drawScene(image.data(),vpd::kSceneWidth,
+        check(vpd::drawScene(manual_repeat.data(),vpd::kSceneWidth,
                              vpd::kSceneHeight,stride,view),
               "no-hit opt-in rendering failed");
-        const auto no_hit=checksum(image,stride);
+        const auto no_hit=checksum(manual_repeat,stride);
         view.hd_hit_lighting=false;
-        check(vpd::drawScene(image.data(),vpd::kSceneWidth,
+        check(vpd::drawScene(manual_repeat.data(),vpd::kSceneWidth,
                              vpd::kSceneHeight,stride,view) &&
-              checksum(image,stride)==no_hit,
+              checksum(manual_repeat,stride)==no_hit,
               "opt-in setting modified a scene without real impact ticks");
         for(int y=0;y<vpd::kSceneHeight;++y)
             for(int x=vpd::kSceneWidth;x<stride;++x)
-                check(image[static_cast<size_t>(y)*stride+x]==guard,
+                check(manual_repeat[static_cast<size_t>(y)*stride+x]==guard,
                       "manual impact glow touched framebuffer padding");
         check(!vpd::drawScene(nullptr,vpd::kSceneWidth,vpd::kSceneHeight,stride,view),"null pointer allowed");
         check(!vpd::drawScene(image.data(),100,200,stride,view),"invalid dimensions allowed");
