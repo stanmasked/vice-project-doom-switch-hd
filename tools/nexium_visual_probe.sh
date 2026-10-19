@@ -5,7 +5,7 @@ if [[ $# -ne 3 ]]; then echo "Usage: visual_probe.sh emulator nro evidence-dir" 
 emulator="$1"; nro="$2"; out="$3"
 mkdir -p "$out"
 echo "visual_probe=started" > "$out/visual-probe.txt"
-timeout --signal=TERM --kill-after=5s 55s \
+timeout --signal=TERM --kill-after=5s 85s \
  "$emulator" "$nro" > "$out/emulator-stdout.txt" 2>&1 &
 emu_pid=$!
 # Root screenshots include the real native X11/Vulkan presentation child.
@@ -172,6 +172,58 @@ if [[ -s "$out/ne-x11-windows.txt" ]]; then
             sleep 0.18
             capture screen-live-restart
             echo "live_manual_restart_raster_after_guest_event=yes" >> "$out/visual-probe.txt"
+            # New, entirely separate guest-visible losing scenario: use
+            # genuine Right input until its first source melee, release
+            # Right, allow 4 more real guard blows and witness hero HP=0.
+            defeat_path="$XDG_CONFIG_HOME/NeXium/sdmc/switch/vice_project_doom/live_defeat_retry_witness.txt"
+            observed_contact=no
+            observed_death=no
+            observed_defeat_retry=no
+            xdotool keydown --clearmodifiers d
+            for (( attempt=0; attempt<240; ++attempt )); do
+              if [[ -f "$defeat_path" ]] &&
+                 grep -q '^VPD_ROMFREE_DEFEAT_RETRY_V1 seq=1 event=contact ' "$defeat_path"; then
+                observed_contact=yes
+                break
+              fi
+              sleep 0.05
+            done
+            xdotool keyup d
+            echo "host_post_victory_guard_contact_sent=yes key=D observed=$observed_contact" >> "$out/input-probe.txt"
+            if [[ "$observed_contact" == yes ]]; then
+              for (( attempt=0; attempt<240; ++attempt )); do
+                if [[ -f "$defeat_path" ]] &&
+                   grep -q '^VPD_ROMFREE_DEFEAT_RETRY_V1 seq=2 event=death ' "$defeat_path"; then
+                  observed_death=yes
+                  break
+                fi
+                sleep 0.05
+              done
+              echo "host_guard_death_observed=$observed_death" >> "$out/input-probe.txt"
+              if [[ "$observed_death" == yes ]]; then
+                sleep 0.16
+                capture screen-live-game-over
+                echo "live_game_over_raster_after_guest_death=yes" >> "$out/visual-probe.txt"
+                xdotool keydown --clearmodifiers n
+                sleep 0.22
+                xdotool keyup n
+                echo "host_defeat_minus_key_sent=yes key=N expected=Minus" >> "$out/input-probe.txt"
+                for (( attempt=0; attempt<35; ++attempt )); do
+                  if [[ -f "$defeat_path" ]] &&
+                     grep -q '^VPD_ROMFREE_DEFEAT_RETRY_V1 seq=3 event=restart ' "$defeat_path"; then
+                    observed_defeat_retry=yes
+                    break
+                  fi
+                  sleep 0.05
+                done
+                echo "host_defeat_retry_guest_observed=$observed_defeat_retry" >> "$out/input-probe.txt"
+                if [[ "$observed_defeat_retry" == yes ]]; then
+                  sleep 0.16
+                  capture screen-live-defeat-restart
+                  echo "live_defeat_replay_raster_after_guest_event=yes" >> "$out/visual-probe.txt"
+                fi
+              fi
+            fi
           fi
         fi
       fi
