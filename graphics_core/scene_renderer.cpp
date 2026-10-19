@@ -296,6 +296,25 @@ bool drawScene(uint32_t* target,int width,int height,int stride_pixels,
                 58,energy,ImpactLightColor::Sentry);
         }
     }
+    // Authored dust puffs follow source-owned grounded horizontal movement.
+    // Composite beneath guard/hero sprites: never recolor authentic actor
+    // silhouette pixels used by strict NeXium damage/defeat auditing.
+    // The tiny particles alter neither motion nor collisions.
+    if(view.manual_controls && view.hd_footstep_dust &&
+       view.moving && view.grounded && view.player_health>0 &&
+       !view.stage_cleared){
+        const int heel=(view.player_x_px-view.camera_x_px)*2+
+                       (view.facing_left?27:3);
+        const int ground=(view.player_y_px+80)*2+30;
+        const int phase=static_cast<int>(view.frame%10u);
+        for(int i=0;i<4;++i){
+            const int distance=phase+i*6;
+            const int trail_x=heel+(view.facing_left?distance:-distance);
+            const int rise=2+((i*3+phase/2)%11);
+            s.rect(trail_x,ground-rise,5-i,2,
+                   i%2 ? rgba(127,132,139):rgba(177,150,132));
+        }
+    }
     // Optional self-authored guard: no enemy pixels in legacy autoplay.
     if(view.guard.enabled && view.guard.health>0){
         const int gx=(view.guard.x_px-view.camera_x_px)*2;
