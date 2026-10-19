@@ -37,6 +37,15 @@ reset code path used by the Switch NRO's physical Minus input.
 7. After the final 32nd reset, normal Right movement and single-shot
    Fire must still work.
 
+After the 32 standard alternating cycles, an additional **adversarial
+earned victory** deliberately changes a distant map tile, triggers a
+manual Dash and leaves a player shot in flight. A real source-side
+victory and terminal Minus must then restore the original map, clear
+all dash/projectile state, and reproduce the exact pristine fingerprint.
+This is an extra 33rd terminal reset, not one of the 32 identical-route
+replay samples. Its terminal fingerprint is deliberately not compared
+to the ordinary unmodified victory hash.
+
 The test emits `VPD_RESTART_STRESS_HOST_PASS` only after all
 checks pass and includes a rolling fingerprint-chain checksum for
 regression analysis. It runs under CTest alongside the existing
