@@ -3,6 +3,7 @@
 #include "terrain_source.hpp"
 #include "backdrop_source.hpp"
 #include "decor_source.hpp"
+#include "impact_lighting.hpp"
 #include <cstdint>
 #include <algorithm>
 
@@ -327,6 +328,37 @@ bool drawScene(uint32_t* target,int width,int height,int stride_pixels,
         else
             drawDecorLayer(target,width,height,stride_pixels,*view.decor_atlas,
                            view.camera_x_px,view.frame,true);
+    }
+    // The source owns hit ticks; the optional glow is visual only.
+    // Existing ROM-free autoplay frames retain their approved pixels.
+    if(view.manual_controls && view.hd_hit_lighting){
+        if(view.player_hit_flash_ticks>0){
+            const unsigned energy=std::min<unsigned>(
+                24u,static_cast<unsigned>(view.player_hit_flash_ticks)*2u);
+            (void)applyImpactLight(target,width,height,stride_pixels,
+                                   player_x+17,player_y+14,
+                                   68,energy,ImpactLightColor::Hero);
+        }
+        if(view.guard.enabled && view.guard.health>0 &&
+           view.guard.hit_flash_ticks>0){
+            const unsigned energy=std::min<unsigned>(
+                24u,static_cast<unsigned>(view.guard.hit_flash_ticks)*2u);
+            (void)applyImpactLight(
+                target,width,height,stride_pixels,
+                (view.guard.x_px-view.camera_x_px)*2+13,
+                (view.guard.y_px+80)*2+13,
+                58,energy,ImpactLightColor::Guard);
+        }
+        if(view.sentry.enabled && view.sentry.health>0 &&
+           view.sentry.hit_flash_ticks>0){
+            const unsigned energy=std::min<unsigned>(
+                24u,static_cast<unsigned>(view.sentry.hit_flash_ticks)*2u);
+            (void)applyImpactLight(
+                target,width,height,stride_pixels,
+                (view.sentry.x_px-view.camera_x_px)*2+13,
+                (view.sentry.y_px+80)*2+13,
+                58,energy,ImpactLightColor::Sentry);
+        }
     }
     s.rect(0,0,1280,76,rgba(14,23,43));
     s.rect(0,73,1280,3,rgba(170,67,85));
