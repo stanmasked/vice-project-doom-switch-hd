@@ -4,6 +4,7 @@
 #include "manual_retry.hpp"
 #include "third_stage_witness.hpp"
 #include "fourth_retry_witness.hpp"
+#include "fourth_combat_witness.hpp"
 #include <cstdio>
 #include <cstring>
 #include <stdexcept>
@@ -134,9 +135,63 @@ int main(){
     check(std::fgets(line,sizeof(line),fourth)==nullptr,
           "Fourth-run witness contained extra guest records");
     std::fclose(fourth);
+    // Actual physical Fire equivalent on the pristine fourth attempt,
+    // then exactly one first swept guard damage event.
+    std::FILE* combat=std::tmpfile();
+    check(combat!=nullptr,"Fourth-run combat witness stream unavailable");
+    check(!writeFourthCombat(combat,FourthCombatEvent::Fire,
+                             game,Fire,0,0,3),
+          "Fourth-run Fire witness accepted an unspawned shot");
+    const auto shots_before=game.shotsFired();
+    const auto hits_before=game.guardEnemy().projectile_hits;
+    const auto hp_before=game.guardEnemy().health;
+    game.tick(Input{Fire});
+    check(game.shotsFired()==1 && game.guardEnemy().health==3,
+          "Fourth run failed to spawn original source projectile");
+    check(!writeFourthCombat(combat,FourthCombatEvent::Fire,
+                             game,0,shots_before,hits_before,hp_before),
+          "Fourth Fire witness accepted absent physical Y/Fire");
+    check(writeFourthCombat(combat,FourthCombatEvent::Fire,
+                            game,Fire,shots_before,hits_before,hp_before),
+          "Fourth native source Fire event rejected");
+    bool fourth_hit=false;
+    for(int i=0;i<120 && !fourth_hit;++i){
+        const auto old_hits=game.guardEnemy().projectile_hits;
+        const auto old_hp=game.guardEnemy().health;
+        const auto old_shots=game.shotsFired();
+        game.tick(Input{});
+        if(game.guardEnemy().projectile_hits==1){
+            check(old_hits==0 && old_hp==3 &&
+                  game.guardEnemy().health==2 && old_shots==1,
+                  "Fourth projectile hit did not subtract exactly one HP");
+            check(!writeFourthCombat(combat,FourthCombatEvent::Impact,
+                                     game,Fire,old_shots,old_hits,old_hp),
+                  "Fourth hit witness accepted held Fire");
+            fourth_hit=writeFourthCombat(
+                combat,FourthCombatEvent::Impact,game,0,
+                old_shots,old_hits,old_hp);
+        }
+    }
+    check(fourth_hit && game.playerHealth()==5 &&
+          game.guardEnemy().health==2 && game.guardEnemy().attacks==0,
+          "Fourth run failed to hurt the new guard with genuine projectile");
+    std::rewind(combat);
+    check(std::fgets(line,sizeof(line),combat)!=nullptr &&
+          std::strstr(line,"seq=1 event=fire") &&
+          std::strstr(line,"guard_hp=3 guard_hits=0") &&
+          std::strstr(line,"input_fire=1 source=live_guest"),
+          "Fourth Fire native guest event malformed");
+    check(std::fgets(line,sizeof(line),combat)!=nullptr &&
+          std::strstr(line,"seq=2 event=impact") &&
+          std::strstr(line,"guard_hp=2 guard_hits=1") &&
+          std::strstr(line,"input_fire=0 source=live_guest"),
+          "Fourth impact native guest event malformed");
+    check(std::fgets(line,sizeof(line),combat)==nullptr,
+          "Fourth combat writer emitted extra events");
+    std::fclose(combat);
     std::puts("VPD_THIRD_STAGE_HOST_PASS initial_victory=yes "
               "second_loss=yes third_guard_kill=yes "
-              "third_wave=yes third_stage_clear=yes fourth_retry_and_move=yes "
+              "third_wave=yes third_stage_clear=yes fourth_retry_and_move=yes fourth_fire_hit=yes "
               "live_nexium_proven=no original_game_proven=no");
     return 0;
  }catch(const std::exception& e){

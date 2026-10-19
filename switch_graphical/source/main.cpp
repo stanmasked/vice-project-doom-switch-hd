@@ -9,6 +9,7 @@
 #include "third_guard_clear_witness.hpp"
 #include "third_stage_witness.hpp"
 #include "fourth_retry_witness.hpp"
+#include "fourth_combat_witness.hpp"
 #include "combat_demo.hpp"
 #include "demo_witness_sd.hpp"
 #include "manual_input_witness.hpp"
@@ -88,6 +89,7 @@ int main(int,char**) {
     vpd::resetThirdGuardClear(has_sd);
     vpd::resetThirdStage(has_sd);
     vpd::resetFourthRetry(has_sd);
+    vpd::resetFourthCombat(has_sd);
     if(has_sd)assets.reload(kExternalAtlasPath,kExternalAnimationPath);
     bool reload_failed=false;
     constexpr const char* kExternalTerrainPath=
@@ -159,6 +161,8 @@ int main(int,char**) {
     unsigned third_stage_seq=0;
     bool fourth_restart_logged=false;
     bool fourth_move_logged=false;
+    bool fourth_fire_logged=false;
+    bool fourth_hit_logged=false;
     uint32_t dash_probe_start_frame=0;
     int32_t dash_probe_start_x=0;
     while(appletMainLoop()){
@@ -388,6 +392,22 @@ int main(int,char**) {
                game.playerHealth()==5)
                 fourth_move_logged=vpd::appendFourthMove(
                     has_sd,game,input,before_x,before_frame);
+            // A fourth replay is not fully playable until the same
+            // guest produces one physical Y/Fire shot AND a real
+            // swept guard hit. These cannot originate from the demo.
+            if(fourth_move_logged && !fourth_fire_logged &&
+               !restarted && input==vpd::Fire &&
+               before_shots==0 && game.shotsFired()==1)
+                fourth_fire_logged=vpd::appendFourthCombat(
+                    has_sd,vpd::FourthCombatEvent::Fire,game,input,
+                    before_shots,prior_guard_hits,prior_guard_hp);
+            if(fourth_fire_logged && !fourth_hit_logged &&
+               !restarted && input==0 && prior_guard_hits==0 &&
+               game.guardEnemy().projectile_hits==1 &&
+               prior_guard_hp==3 && game.guardEnemy().health==2)
+                fourth_hit_logged=vpd::appendFourthCombat(
+                    has_sd,vpd::FourthCombatEvent::Impact,game,input,
+                    before_shots,prior_guard_hits,prior_guard_hp);
             // These events are from the *visible*, pad-driven gameplay
             // instance, unlike the isolated guard-combat script. A host
             // keystroke by itself cannot satisfy the observed transitions.

@@ -42,6 +42,8 @@ on:
       - "tests/test_nexium_third_stage.py"
       - "tools/audit_nexium_fourth_retry.py"
       - "tests/test_nexium_fourth_retry.py"
+      - "tools/audit_nexium_fourth_combat.py"
+      - "tests/test_nexium_fourth_combat.py"
       - "tools/nexium_visual_probe.sh"
       - "game_core/**"
       - "switch_graphical/**"
@@ -154,6 +156,11 @@ jobs:
             emulator-evidence/fourth-retry-result.txt
             emulator-evidence/fourth-retry-paths.txt
             emulator-evidence/guest-fourth-retry-witness.txt
+            emulator-evidence/fourth-combat-result.txt
+            emulator-evidence/fourth-combat-paths.txt
+            emulator-evidence/guest-fourth-combat-witness.txt
+            emulator-evidence/screen-live-fourth-impact.png
+            emulator-evidence/screen-live-fourth-impact.ppm
             emulator-evidence/screen-live-fourth-restart.png
             emulator-evidence/screen-live-fourth-restart.ppm
             emulator-evidence/screen-live-fourth-move.png

@@ -234,3 +234,12 @@ if [[ -s "$out/fourth-retry-paths.txt" ]]; then
   cp "$guest" "$out/guest-fourth-retry-witness.txt"
 fi
 python3 tools/audit_nexium_fourth_retry.py --evidence "$out"
+# Fourth NRO iteration must also fire one source-spawned projectile and
+# cause the first genuine 3->2 guard HP loss under actual X11 Fire input.
+find "$HOME" "$XDG_DATA_HOME" "$XDG_CONFIG_HOME" "$XDG_CACHE_HOME" \
+  -type f -name fourth_combat_witness.txt -print > "$out/fourth-combat-paths.txt"
+if [[ -s "$out/fourth-combat-paths.txt" ]]; then
+  IFS= read -r guest < "$out/fourth-combat-paths.txt"
+  cp "$guest" "$out/guest-fourth-combat-witness.txt"
+fi
+python3 tools/audit_nexium_fourth_combat.py --evidence "$out"
