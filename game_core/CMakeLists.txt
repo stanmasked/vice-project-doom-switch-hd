@@ -59,6 +59,16 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
                          -Wall -Wextra -Wpedantic -Werror)
 endif()
 add_test(NAME romfree_manual_terminal_retry COMMAND vpd_manual_retry_test)
+# Same third-run actual Fire spawn and guard swept-impact serializer as libnx.
+add_executable(vpd_post_defeat_fire_test
+               ../tests/test_post_defeat_fire.cpp)
+target_link_libraries(vpd_post_defeat_fire_test PRIVATE vpd_simulation)
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+  target_compile_options(vpd_post_defeat_fire_test PRIVATE
+                         -Wall -Wextra -Wpedantic -Werror)
+endif()
+add_test(NAME romfree_post_defeat_fire
+         COMMAND vpd_post_defeat_fire_test)
 # Full third manual attempt after victory -> loss -> two native retries.
 add_executable(vpd_post_defeat_control_test
                ../tests/test_post_defeat_control.cpp)
