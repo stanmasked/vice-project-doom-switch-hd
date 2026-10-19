@@ -58,7 +58,7 @@ def audit(directory):
         ("fourth-stage-result.txt","VPD_NEXIUM_FOURTH_STAGE_PASS "),
         ("fourth-retry-result.txt","VPD_NEXIUM_FOURTH_RETRY_PASS "),
         ("hd-footstep-result.txt","VPD_NEXIUM_HD_FOOTSTEP_PASS "),
-        ("hd-impact-result.txt","VPD_NEXIUM_HD_HIT_LIGHT_PASS "),
+        ("hd-hit-light-result.txt","VPD_NEXIUM_HD_HIT_LIGHT_PASS "),
     ):
         file=base/filename
         if not file.is_file() or not file.read_text(
