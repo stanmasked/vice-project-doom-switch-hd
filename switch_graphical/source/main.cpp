@@ -7,6 +7,7 @@
 #include "post_defeat_control_witness.hpp"
 #include "post_defeat_fire_witness.hpp"
 #include "third_guard_clear_witness.hpp"
+#include "third_stage_witness.hpp"
 #include "combat_demo.hpp"
 #include "demo_witness_sd.hpp"
 #include "manual_input_witness.hpp"
@@ -84,6 +85,7 @@ int main(int,char**) {
             std::fclose(report);
     }
     vpd::resetThirdGuardClear(has_sd);
+    vpd::resetThirdStage(has_sd);
     if(has_sd)assets.reload(kExternalAtlasPath,kExternalAnimationPath);
     bool reload_failed=false;
     constexpr const char* kExternalTerrainPath=
@@ -152,6 +154,7 @@ int main(int,char**) {
     bool third_run_fire_logged=false;
     bool third_run_hit_logged=false;
     bool third_guard_clear_logged=false;
+    unsigned third_stage_seq=0;
     uint32_t dash_probe_start_frame=0;
     int32_t dash_probe_start_x=0;
     while(appletMainLoop()){
@@ -351,6 +354,21 @@ int main(int,char**) {
                game.guardEnemy().projectile_hits==3)
                 third_guard_clear_logged=vpd::appendThirdGuardClear(
                     has_sd,game,input,prior_guard_hp,prior_guard_hits);
+            // This is the restarted third manual attempt, not the earlier
+            // first-playthrough wave witness: genuinely cross the gate
+            // after its own guard kill, then earn a fresh stage clear.
+            if(third_guard_clear_logged && third_stage_seq==0 &&
+               !prior_wave_active && game.secondWaveActive() &&
+               (input&vpd::Right) &&
+               vpd::appendThirdStage(
+                   has_sd,vpd::ThirdStageEvent::Wave,game,input))
+                third_stage_seq=1;
+            if(third_stage_seq==1 && game.stageCleared() &&
+               (input&(vpd::Right|vpd::Fire))==
+                   (vpd::Right|vpd::Fire) &&
+               vpd::appendThirdStage(
+                   has_sd,vpd::ThirdStageEvent::Exit,game,input))
+                third_stage_seq=2;
             // These events are from the *visible*, pad-driven gameplay
             // instance, unlike the isolated guard-combat script. A host
             // keystroke by itself cannot satisfy the observed transitions.
