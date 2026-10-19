@@ -154,3 +154,12 @@ if [[ -s "$out/second-wave-trace-paths.txt" ]]; then
   cp "$guest" "$out/guest-second-wave-witness.txt"
 fi
 python3 tools/audit_nexium_second_wave.py --evidence "$out"
+# Finally require *live controller-driven* wave-two progression. The separate
+# guest-scripted proof above cannot substitute for this pad-input witness.
+find "$HOME" "$XDG_DATA_HOME" "$XDG_CONFIG_HOME" "$XDG_CACHE_HOME" \
+  -type f -name second_wave_live_witness.txt -print > "$out/second-wave-live-trace-paths.txt"
+if [[ -s "$out/second-wave-live-trace-paths.txt" ]]; then
+  IFS= read -r guest < "$out/second-wave-live-trace-paths.txt"
+  cp "$guest" "$out/guest-second-wave-live-witness.txt"
+fi
+python3 tools/audit_nexium_second_wave_live.py --evidence "$out"
