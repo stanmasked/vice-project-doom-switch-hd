@@ -68,6 +68,7 @@ struct SceneView {
     std::array<EnemyProjectileView,3> enemy_projectiles{};
     bool stage_cleared=false;
     bool hd_hit_lighting=false; // opt-in localized combat impact light
+    bool hd_atmospheric_haze=false; // manual-only world-space atmospheric accents
     // ROM-free stage-two completion gate; explicit source-derived visibility.
     bool exit_visible=false;
     bool exit_open=false;
