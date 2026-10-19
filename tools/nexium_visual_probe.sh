@@ -5,7 +5,7 @@ if [[ $# -ne 3 ]]; then echo "Usage: visual_probe.sh emulator nro evidence-dir" 
 emulator="$1"; nro="$2"; out="$3"
 mkdir -p "$out"
 echo "visual_probe=started" > "$out/visual-probe.txt"
-timeout --signal=TERM --kill-after=5s 85s \
+timeout --signal=TERM --kill-after=5s 150s \
  "$emulator" "$nro" > "$out/emulator-stdout.txt" 2>&1 &
 emu_pid=$!
 # Root screenshots include the real native X11/Vulkan presentation child.
@@ -134,7 +134,7 @@ if [[ -s "$out/ne-x11-windows.txt" ]]; then
         echo "host_second_wave_gate_sent=yes key=D guest_wave=$saw_live_wave" >> "$out/input-probe.txt"
         if [[ "$saw_live_wave" == yes ]]; then
           xdotool keydown --clearmodifiers z
-          for (( attempt=0; attempt<220; ++attempt )); do
+          for (( attempt=0; attempt<650; ++attempt )); do
             if [[ -f "$live_wave_path" ]] &&
                grep -q '^VPD_ROMFREE_WAVE2_LIVE_V1 seq=5 event=exit ' "$live_wave_path"; then
               saw_live_exit=yes
@@ -241,6 +241,40 @@ if [[ -s "$out/ne-x11-windows.txt" ]]; then
                     sleep 0.12
                     capture screen-live-third-run-move
                     echo "live_third_run_movement_raster_after_guest_event=yes" >> "$out/visual-probe.txt"
+                    # Third-run combat: press actual Z=Y/Fire ONLY after
+                    # the real restored hero moved. Release immediately
+                    # upon native shot evidence so exactly one projectile
+                    # is launched. Wait for the game's swept guard collision.
+                    third_fire_path="$XDG_CONFIG_HOME/NeXium/sdmc/switch/vice_project_doom/post_defeat_fire_witness.txt"
+                    third_fire_seen=no
+                    third_hit_seen=no
+                    xdotool keydown --clearmodifiers z
+                    for (( attempt=0; attempt<100; ++attempt )); do
+                      if [[ -f "$third_fire_path" ]] &&
+                         grep -q '^VPD_ROMFREE_THIRD_FIRE_V1 seq=1 event=fire ' "$third_fire_path"; then
+                        third_fire_seen=yes
+                        break
+                      fi
+                      sleep 0.05
+                    done
+                    xdotool keyup z
+                    echo "host_third_run_fire_sent=yes key=Z guest_fire=$third_fire_seen" >> "$out/input-probe.txt"
+                    if [[ "$third_fire_seen" == yes ]]; then
+                      for (( attempt=0; attempt<120; ++attempt )); do
+                        if [[ -f "$third_fire_path" ]] &&
+                           grep -q '^VPD_ROMFREE_THIRD_FIRE_V1 seq=2 event=impact ' "$third_fire_path"; then
+                          third_hit_seen=yes
+                          break
+                        fi
+                        sleep 0.05
+                      done
+                      echo "host_third_run_hit_observed=$third_hit_seen" >> "$out/input-probe.txt"
+                      if [[ "$third_hit_seen" == yes ]]; then
+                        sleep 0.10
+                        capture screen-live-third-run-impact
+                        echo "live_third_run_impact_raster_after_guest_event=yes" >> "$out/visual-probe.txt"
+                      fi
+                    fi
                   fi
                 fi
               fi

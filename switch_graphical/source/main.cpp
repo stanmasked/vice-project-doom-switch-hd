@@ -5,6 +5,7 @@
 #include "manual_retry_guest_witness.hpp"
 #include "live_defeat_retry_witness.hpp"
 #include "post_defeat_control_witness.hpp"
+#include "post_defeat_fire_witness.hpp"
 #include "combat_demo.hpp"
 #include "demo_witness_sd.hpp"
 #include "manual_input_witness.hpp"
@@ -32,6 +33,7 @@
 #include "decor_layout.hpp"
 #include "demo_decor_layout.hpp"
 #include <cstdint>
+#include <cstdio>
 namespace {
 bool solidAt(void* context,int x,int y) {
     return static_cast<const vpd::Scene*>(context)->solid(x,y);
@@ -73,6 +75,13 @@ int main(int,char**) {
     vpd::resetManualRetryGuest(has_sd);
     vpd::resetLiveDefeatRetry(has_sd);
     vpd::resetPostDefeatControl(has_sd);
+    vpd::resetPostDefeatFire(has_sd);
+    // Forensics only: never counted as control/exit PASS evidence.
+    if(has_sd){
+        if(auto* report=std::fopen(
+            "sdmc:/switch/vice_project_doom/wave_exit_progress.txt","w"))
+            std::fclose(report);
+    }
     if(has_sd)assets.reload(kExternalAtlasPath,kExternalAnimationPath);
     bool reload_failed=false;
     constexpr const char* kExternalTerrainPath=
@@ -138,6 +147,8 @@ int main(int,char**) {
     bool replay_guard_death_logged=false;
     bool replay_guard_restart_logged=false;
     bool third_run_move_logged=false;
+    bool third_run_fire_logged=false;
+    bool third_run_hit_logged=false;
     uint32_t dash_probe_start_frame=0;
     int32_t dash_probe_start_x=0;
     while(appletMainLoop()){
@@ -312,6 +323,22 @@ int main(int,char**) {
                game.playerHealth()==5)
                 third_run_move_logged=vpd::appendPostDefeatControl(
                     has_sd,game,input,before_x,before_frame);
+            // After proven post-defeat movement, insist that the native
+            // pad-driven third run actually creates one Fire projectile,
+            // then the original swept collision subtracts one guard HP.
+            if(third_run_move_logged && !third_run_fire_logged &&
+               !restarted && input==vpd::Fire &&
+               before_shots==0 && game.shotsFired()==1)
+                third_run_fire_logged=vpd::appendPostDefeatFire(
+                    has_sd,vpd::ThirdFireEvent::Fire,game,input,
+                    before_shots,prior_guard_hits,prior_guard_hp);
+            if(third_run_fire_logged && !third_run_hit_logged &&
+               !restarted && input==0 && prior_guard_hits==0 &&
+               game.guardEnemy().projectile_hits==1 &&
+               prior_guard_hp==3 && game.guardEnemy().health==2)
+                third_run_hit_logged=vpd::appendPostDefeatFire(
+                    has_sd,vpd::ThirdFireEvent::Impact,game,input,
+                    before_shots,prior_guard_hits,prior_guard_hp);
             // These events are from the *visible*, pad-driven gameplay
             // instance, unlike the isolated guard-combat script. A host
             // keystroke by itself cannot satisfy the observed transitions.
@@ -376,6 +403,31 @@ int main(int,char**) {
                vpd::liveWaveAppend(has_sd,vpd::LiveWaveEvent::Defeat,
                                    game,input))
                 live_wave_seq=4;
+            // Sparse source-side position samples let a failed NeXium
+            // run distinguish slow guest frames from blocked movement or
+            // an unexpected terminal hero state. Never substitute for
+            // the five strict real-pad live-wave witness events.
+            if(has_sd && live_wave_seq==4 &&
+               game.frame()!=0 && game.frame()%64==0){
+                if(auto* report=std::fopen(
+                    "sdmc:/switch/vice_project_doom/wave_exit_progress.txt",
+                    "a")){
+                    (void)std::fprintf(
+                        report,
+                        "VPD_WAVE_EXIT_PROGRESS_V1 frame=%u hero_x=%ld "
+                        "hero_hp=%u sentry_hp=%u wave=%u clear=%u "
+                        "right=%u fire=%u source=live_guest "
+                        "diagnostic_only=yes\n",
+                        game.frame(),static_cast<long>(game.player().x),
+                        static_cast<unsigned>(game.playerHealth()),
+                        static_cast<unsigned>(game.sentry().health),
+                        game.secondWaveActive()?1u:0u,
+                        game.stageCleared()?1u:0u,
+                        (input&vpd::Right)?1u:0u,
+                        (input&vpd::Fire)?1u:0u);
+                    (void)std::fclose(report);
+                }
+            }
             if(live_wave_seq==4 && game.stageCleared() &&
                vpd::liveWaveAppend(has_sd,vpd::LiveWaveEvent::Exit,
                                    game,input))
