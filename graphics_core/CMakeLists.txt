@@ -163,6 +163,13 @@ target_link_libraries(vpd_stage_exit_portal_test
                       PRIVATE vpd_scene_renderer vpd_simulation)
 add_test(NAME romfree_stage_exit_portal
          COMMAND vpd_stage_exit_portal_test)
+# Actual terminal simulation outcomes drive replay prompts in shared RGBA.
+add_executable(vpd_manual_retry_raster_test
+               ../tests/test_manual_retry_raster.cpp)
+target_link_libraries(vpd_manual_retry_raster_test
+                      PRIVATE vpd_scene_renderer vpd_simulation)
+add_test(NAME romfree_manual_retry_to_raster
+         COMMAND vpd_manual_retry_raster_test)
 # Manual HUD layout must remain legible; hit pulses derive from live combat.
 add_executable(vpd_combat_hud_feedback_test ../tests/test_combat_hud_feedback.cpp)
 target_link_libraries(vpd_combat_hud_feedback_test

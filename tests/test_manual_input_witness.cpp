@@ -50,6 +50,32 @@ int main(){
   }
   check(std::fgets(buffer,sizeof(buffer),file)==nullptr,"excess rows");
   std::fclose(file);
+  // A retry may reset the level's frame to one, but Plus/Exit are
+  // physical events later in the same real manual controller session.
+  vpd::Simulation replayed;
+  replayed.enableEnemyEncounter();
+  replayed.tick(vpd::Input{vpd::Right});
+  std::FILE* continued=std::tmpfile();
+  check(continued!=nullptr,"continued manual witness tempfile missing");
+  check(!vpd::manualProofWriteSession(
+            continued,ManualProofEvent::Right,2,replayed,1,117),
+        "A nonterminal event incorrectly accepted a session override");
+  check(!vpd::manualProofWriteSession(
+            continued,ManualProofEvent::Plus,6,replayed,1,0),
+        "Unobserved prior session tick accepted");
+  check(vpd::manualProofWriteSession(
+            continued,ManualProofEvent::Plus,6,replayed,1,117),
+        "Real continuous session Plus was rejected after replay");
+  check(vpd::manualProofWriteSession(
+            continued,ManualProofEvent::Exit,7,replayed,1,117),
+        "Real continuous session Exit was rejected after replay");
+  std::rewind(continued);
+  for(unsigned i=6;i<=7;++i){
+    check(std::fgets(buffer,sizeof(buffer),continued)!=nullptr &&
+          std::strstr(buffer,"frame=117 metric=1")!=nullptr,
+          "Plus/Exit failed to serialize monotone session time");
+  }
+  std::fclose(continued);
   game.reset();
   check(!vpd::manualProofValid(ManualProofEvent::Plus,game,1),
         "plus before manual gameplay falsely accepted");

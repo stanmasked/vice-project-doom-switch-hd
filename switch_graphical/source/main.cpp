@@ -1,6 +1,8 @@
 // Independent libnx native raster scene; no NES emulator or proprietary art.
 #include <switch.h>
 #include "simulation.hpp"
+#include "manual_retry.hpp"
+#include "manual_retry_guest_witness.hpp"
 #include "combat_demo.hpp"
 #include "demo_witness_sd.hpp"
 #include "manual_input_witness.hpp"
@@ -66,6 +68,7 @@ int main(int,char**) {
     (void)vpd::liveGuardProofReset(has_sd);
     (void)vpd::liveGuardDefeatReset(has_sd);
     (void)vpd::liveWaveReset(has_sd);
+    vpd::resetManualRetryGuest(has_sd);
     if(has_sd)assets.reload(kExternalAtlasPath,kExternalAnimationPath);
     bool reload_failed=false;
     constexpr const char* kExternalTerrainPath=
@@ -115,6 +118,7 @@ int main(int,char**) {
     unsigned witness_cycles=0; // hard cap: four records per launch
     bool checkpoint_ok=false;
     unsigned manual_seq=0;
+    uint32_t manual_session_ticks=0;
     bool plus_seen=false;
     bool dash_probe_started=false;
     bool dash_probe_finished=false;
@@ -124,6 +128,8 @@ int main(int,char**) {
     bool live_guard_defeated=false;
     unsigned live_guard_defeat_seq=0;
     unsigned live_wave_seq=0;
+    bool manual_retry_has_occurred=false;
+    bool retry_native_logged=false;
     uint32_t dash_probe_start_frame=0;
     int32_t dash_probe_start_x=0;
     while(appletMainLoop()){
@@ -135,8 +141,13 @@ int main(int,char**) {
                 has_sd,"plus",game,0);
             // Must have completed the actual ordered manual control probe.
             if(!demo.enabled() && manual_seq==5){
-                (void)vpd::manualProofAppend(has_sd,vpd::ManualProofEvent::Plus,
-                                             6,game,1);
+                if(manual_retry_has_occurred)
+                    (void)vpd::manualProofAppendSession(
+                        has_sd,vpd::ManualProofEvent::Plus,
+                        6,game,1,manual_session_ticks);
+                else
+                    (void)vpd::manualProofAppend(
+                        has_sd,vpd::ManualProofEvent::Plus,6,game,1);
                 manual_seq=6;
                 plus_seen=true;
             }
@@ -164,6 +175,7 @@ int main(int,char**) {
                 // entry into explicit manual gameplay, never in attract mode.
                 game.enableEnemyEncounter();
                 manual_seq=1;
+                manual_session_ticks=0;
                 (void)vpd::manualProofAppend(has_sd,vpd::ManualProofEvent::Enter,
                                              1,game,1);
             } else manual_seq=0;
@@ -209,7 +221,22 @@ int main(int,char**) {
             decor.reset();
             decor_reload_failed=false;
         }
-        if(pressed&HidNpadButton_Minus){
+        // Minus means RETRY only on a completed or defeated manual
+        // encounter. Else retain its existing decorative-layout reload.
+        const auto retry_old=vpd::retryBefore(game);
+        const bool retry_input=(!demo.enabled() &&
+                                (pressed&HidNpadButton_Minus));
+        const auto retry=vpd::retryTerminalEncounter(game,retry_input);
+        const bool restarted=retry!=vpd::ManualRetryOutcome::Ignored;
+        if(restarted){
+            manual_retry_has_occurred=true;
+            animation.reset();
+            checkpoint_ok=false;
+            if(!retry_native_logged)
+                retry_native_logged=vpd::appendManualRetryGuest(
+                    has_sd,retry,retry_old,game,retry_input);
+        }
+        if((pressed&HidNpadButton_Minus) && !restarted){
             decor_layout_reload_failed= !has_sd ||
                 layout.reload(kExternalDecorLayoutPath)!=vpd::LayoutLoadResult::Loaded;
         }
@@ -229,6 +256,7 @@ int main(int,char**) {
         if(demo.enabled()) {
             if(demo.tick(game)) animation.reset();
         } else {
+            ++manual_session_ticks; // independent monotone real pad-loop time
             // Measure actual simulation effects, not merely keyboard events.
             const auto before_x=game.player().x;
             const auto before_shots=game.shotsFired();
@@ -240,7 +268,7 @@ int main(int,char**) {
             const bool prior_wave_active=game.secondWaveActive();
             const auto prior_turret_hits=game.sentry().projectile_hits;
             if(toggle_manual)input=0; // R+A is a mode switch, not a jump
-            game.tick(vpd::Input{input});
+            if(!restarted)game.tick(vpd::Input{input});
             // These events are from the *visible*, pad-driven gameplay
             // instance, unlike the isolated guard-combat script. A host
             // keystroke by itself cannot satisfy the observed transitions.
@@ -311,10 +339,10 @@ int main(int,char**) {
                 live_wave_seq=5;
             // Two guest-written milestones require a real first and
             // eighth tick from the opt-in enemy AI, not a host fixture.
-            if(game.frame()==1)
+            if(!manual_retry_has_occurred && game.frame()==1)
                 (void)vpd::guardProofAppend(
                     has_sd,vpd::GuardProofEvent::FirstStep,game);
-            if(game.frame()==8){
+            if(!manual_retry_has_occurred && game.frame()==8){
                 (void)vpd::guardProofAppend(
                     has_sd,vpd::GuardProofEvent::Patrol,game);
                 // Separate scripted guard combat test executed by this very
@@ -422,8 +450,13 @@ int main(int,char**) {
     }
     framebufferClose(&fb);
     if(plus_seen && manual_seq==6){
-        (void)vpd::manualProofAppend(has_sd,vpd::ManualProofEvent::Exit,
-                                     7,game,1);
+        if(manual_retry_has_occurred)
+            (void)vpd::manualProofAppendSession(
+                has_sd,vpd::ManualProofEvent::Exit,
+                7,game,1,manual_session_ticks);
+        else
+            (void)vpd::manualProofAppend(
+                has_sd,vpd::ManualProofEvent::Exit,7,game,1);
     }
     if(we_mounted_sd)fsdevUnmountDevice("sdmc");
     return 0;
