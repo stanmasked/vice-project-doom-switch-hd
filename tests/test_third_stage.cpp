@@ -265,7 +265,9 @@ int main(){
     std::fclose(stage_four);
     std::puts("VPD_THIRD_STAGE_HOST_PASS initial_victory=yes "
               "second_loss=yes third_guard_kill=yes "
-              "third_wave=yes third_stage_clear=yes fourth_retry_and_move=yes fourth_fire_hit=yes "fourth_guard_kill=yes fourth_stage_clear=yes "
+              "third_wave=yes third_stage_clear=yes "
+              "fourth_retry_and_move=yes fourth_fire_hit=yes "
+              "fourth_guard_kill=yes fourth_stage_clear=yes "
               "live_nexium_proven=no original_game_proven=no");
     return 0;
  }catch(const std::exception& e){
