@@ -8,6 +8,7 @@
 #include "post_defeat_fire_witness.hpp"
 #include "third_guard_clear_witness.hpp"
 #include "third_stage_witness.hpp"
+#include "fourth_retry_witness.hpp"
 #include "combat_demo.hpp"
 #include "demo_witness_sd.hpp"
 #include "manual_input_witness.hpp"
@@ -86,6 +87,7 @@ int main(int,char**) {
     }
     vpd::resetThirdGuardClear(has_sd);
     vpd::resetThirdStage(has_sd);
+    vpd::resetFourthRetry(has_sd);
     if(has_sd)assets.reload(kExternalAtlasPath,kExternalAnimationPath);
     bool reload_failed=false;
     constexpr const char* kExternalTerrainPath=
@@ -155,6 +157,8 @@ int main(int,char**) {
     bool third_run_hit_logged=false;
     bool third_guard_clear_logged=false;
     unsigned third_stage_seq=0;
+    bool fourth_restart_logged=false;
+    bool fourth_move_logged=false;
     uint32_t dash_probe_start_frame=0;
     int32_t dash_probe_start_x=0;
     while(appletMainLoop()){
@@ -259,6 +263,12 @@ int main(int,char**) {
             checkpoint_ok=false;
             if(!retry_native_logged)
                 retry_native_logged=vpd::appendManualRetryGuest(
+                    has_sd,retry,retry_old,game,retry_input);
+            // A third *earned* victory can start a fourth attempt, but
+            // only the actual pad-Minus and clean core reset can attest it.
+            if(third_stage_seq==2 && !fourth_restart_logged &&
+               retry==vpd::ManualRetryOutcome::AfterVictory)
+                fourth_restart_logged=vpd::appendFourthRestart(
                     has_sd,retry,retry_old,game,retry_input);
             // Independent, second terminal replay: only after the actual
             // same-session victory retry AND source-detected melee death.
@@ -369,6 +379,15 @@ int main(int,char**) {
                vpd::appendThirdStage(
                    has_sd,vpd::ThirdStageEvent::Exit,game,input))
                 third_stage_seq=2;
+            // After the source-confirmed fourth reset, require real Right
+            // to move a freshly restored hero. Merely pressing Minus does
+            // not establish that gameplay resumed.
+            if(fourth_restart_logged && !fourth_move_logged &&
+               !restarted && input==vpd::Right &&
+               game.player().x-before_x==2*vpd::kFixed &&
+               game.playerHealth()==5)
+                fourth_move_logged=vpd::appendFourthMove(
+                    has_sd,game,input,before_x,before_frame);
             // These events are from the *visible*, pad-driven gameplay
             // instance, unlike the isolated guard-combat script. A host
             // keystroke by itself cannot satisfy the observed transitions.
