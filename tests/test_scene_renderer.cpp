@@ -131,6 +131,58 @@ int main(int argc,char** argv) {
                 check(haze_again[static_cast<size_t>(y)*stride+x]==guard,
                       "manual atmosphere corrupted framebuffer padding");
         view.hd_atmospheric_haze=false;
+        // Grounded movement dust is a purely visual indicator sourced
+        // from real motion flags, never enabled on approved replay frames.
+        view.camera_x_px=0;
+        view.player_x_px=80;
+        view.player_y_px=210;
+        view.grounded=true;
+        view.moving=true;
+        view.manual_controls=true;
+        view.hd_footstep_dust=false;
+        check(vpd::drawScene(repeat.data(),vpd::kSceneWidth,
+                             vpd::kSceneHeight,stride,view),
+              "ground-motion dust baseline render failed");
+        const auto no_dust=checksum(repeat,stride);
+        view.hd_footstep_dust=true;
+        check(vpd::drawScene(repeat.data(),vpd::kSceneWidth,
+                             vpd::kSceneHeight,stride,view),
+              "source grounded motion dust render failed");
+        const auto moving_dust=checksum(repeat,stride);
+        check(moving_dust!=no_dust,"real grounded movement drew no visible dust");
+        check(vpd::drawScene(haze_again.data(),vpd::kSceneWidth,
+                             vpd::kSceneHeight,stride,view) &&
+              checksum(haze_again,stride)==moving_dust,
+              "source grounded dust was not raster deterministic");
+        // Four source-negative cases independently prove the effect never
+        // appears from stationary, airborne, defeated or autoplay states.
+        for(unsigned state=0;state<4;++state){
+            view.moving=state!=0;
+            view.grounded=state!=1;
+            view.player_health=state==2?0:5;
+            view.manual_controls=state!=3;
+            view.hd_footstep_dust=true;
+            check(vpd::drawScene(repeat.data(),vpd::kSceneWidth,
+                                 vpd::kSceneHeight,stride,view),
+                  "inactive dust source render failed");
+            const auto inactive=checksum(repeat,stride);
+            view.hd_footstep_dust=false;
+            check(vpd::drawScene(repeat.data(),vpd::kSceneWidth,
+                                 vpd::kSceneHeight,stride,view) &&
+                  checksum(repeat,stride)==inactive,
+                  "footstep dust leaked into an invalid source state");
+        }
+        for(int y=0;y<vpd::kSceneHeight;++y)
+            for(int x=vpd::kSceneWidth;x<stride;++x)
+                check(haze_again[static_cast<size_t>(y)*stride+x]==guard,
+                      "footstep dust touched padded framebuffer columns");
+        view.player_health=5;
+        view.moving=false;
+        view.grounded=false;
+        view.manual_controls=true;
+        view.hd_footstep_dust=false;
+        view.camera_x_px=160;
+        view.player_x_px=350;
         // Real source-side hit flashes, and ONLY those hit flashes,
         // trigger the opt-in authored light on manually played scenes.
         view.camera_x_px=0;
