@@ -225,3 +225,12 @@ if [[ -s "$out/third-stage-paths.txt" ]]; then
   cp "$guest" "$out/guest-third-stage-witness.txt"
 fi
 python3 tools/audit_nexium_third_stage.py --evidence "$out"
+# Four distinct manual runs. This native source record can appear only
+# after third stage completion and real fourth-try Minus then Right.
+find "$HOME" "$XDG_DATA_HOME" "$XDG_CONFIG_HOME" "$XDG_CACHE_HOME" \
+  -type f -name fourth_retry_witness.txt -print > "$out/fourth-retry-paths.txt"
+if [[ -s "$out/fourth-retry-paths.txt" ]]; then
+  IFS= read -r guest < "$out/fourth-retry-paths.txt"
+  cp "$guest" "$out/guest-fourth-retry-witness.txt"
+fi
+python3 tools/audit_nexium_fourth_retry.py --evidence "$out"
