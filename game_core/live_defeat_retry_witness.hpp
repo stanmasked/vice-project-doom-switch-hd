@@ -12,6 +12,7 @@ constexpr const char* kLiveDefeatRetryPath=
 enum class DefeatRetryEvent : unsigned { Contact=1, Death=2, Restart=3 };
 inline bool writeLiveDefeatRetry(std::FILE* f,DefeatRetryEvent event,
                                 const Simulation& game,uint8_t input,
+                                bool minus_pressed=false,
                                 const ManualRetryBefore& before={},
                                 ManualRetryOutcome outcome=
                                     ManualRetryOutcome::Ignored){
@@ -28,7 +29,7 @@ inline bool writeLiveDefeatRetry(std::FILE* f,DefeatRetryEvent event,
            game.guardEnemy().attacks<5 ||
            outcome!=ManualRetryOutcome::Ignored)return false;
     }else if(event==DefeatRetryEvent::Restart){
-        if(!(input&0x80) || outcome!=ManualRetryOutcome::AfterDefeat ||
+        if(!minus_pressed || outcome!=ManualRetryOutcome::AfterDefeat ||
            before.player_health!=0 || before.guard_health!=3 ||
            before.stage_clear || before.frame==0 ||
            game.frame()!=0 || game.playerHealth()!=5 ||
@@ -53,7 +54,7 @@ inline bool writeLiveDefeatRetry(std::FILE* f,DefeatRetryEvent event,
         static_cast<unsigned>(game.guardEnemy().health),
         static_cast<unsigned>(game.guardEnemy().attacks),
         static_cast<unsigned>(game.sentry().health),
-        (input&Right)?1u:0u,(input&0x80)?1u:0u,
+        (input&Right)?1u:0u,minus_pressed?1u:0u,
         event==DefeatRetryEvent::Restart?before.frame:0,
         event==DefeatRetryEvent::Restart?before.player_health:0);
     return n>0 && static_cast<std::size_t>(n)<sizeof(line) &&
@@ -67,13 +68,15 @@ inline void resetLiveDefeatRetry(bool sd){
 }
 inline bool appendLiveDefeatRetry(bool sd,DefeatRetryEvent event,
                                  const Simulation& game,uint8_t input,
+                                 bool minus_pressed=false,
                                  const ManualRetryBefore& before={},
                                  ManualRetryOutcome outcome=
                                      ManualRetryOutcome::Ignored){
     if(!sd)return false;
     std::FILE* f=std::fopen(kLiveDefeatRetryPath,"a");
     if(!f)return false;
-    const bool ok=writeLiveDefeatRetry(f,event,game,input,before,outcome);
+    const bool ok=writeLiveDefeatRetry(f,event,game,input,
+                                       minus_pressed,before,outcome);
     return std::fclose(f)==0 && ok;
 }
 } // namespace vpd
