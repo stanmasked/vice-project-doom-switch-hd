@@ -26,7 +26,10 @@ inline bool writeLiveDefeatRetry(std::FILE* f,DefeatRetryEvent event,
            outcome!=ManualRetryOutcome::Ignored)return false;
     }else if(event==DefeatRetryEvent::Death){
         if(game.frame()==0 || game.playerHealth()!=0 ||
-           game.guardEnemy().attacks<5 ||
+           // Exactly five melee blows exhaust the five-point HP pool.
+           // A count greater than five is not reachable after terminal
+           // freeze, and must never be accepted as native evidence.
+           game.guardEnemy().attacks!=5 ||
            outcome!=ManualRetryOutcome::Ignored)return false;
     }else if(event==DefeatRetryEvent::Restart){
         if(!minus_pressed || outcome!=ManualRetryOutcome::AfterDefeat ||
