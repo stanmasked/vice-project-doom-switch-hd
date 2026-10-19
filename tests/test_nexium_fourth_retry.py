@@ -65,6 +65,42 @@ class FourthRetryProofTests(unittest.TestCase):
             with self.subTest(case=i),self.assertRaises((ValueError,UnicodeError)):
                 m.verify(c)
 
+    def test_fourth_reset_requires_changed_native_scene_image(self):
+        # Synthetic pixels validate ONLY fail-closed parser behavior;
+        # they do NOT count as real NeXium guest/runtime evidence.
+        with tempfile.TemporaryDirectory() as temp:
+            base=Path(temp)
+            (base/"guest-fourth-retry-witness.txt").write_bytes(fixture())
+            (base/"third-stage-result.txt").write_text(
+                "VPD_NEXIUM_THIRD_STAGE_PASS fixture_only=yes\\n")
+            (base/"guest-third-stage-witness.txt").write_bytes(
+                b"VPD_ROMFREE_THIRD_STAGE_V1 seq=1 event=wave frame=250 "
+                b"hero_x=107008 hero_hp=5 guard_hp=0 guard_hits=3 "
+                b"sentry_hp=2 sentry_hits=0 wave=1 clear=0 "
+                b"input_right=1 input_fire=0 source=live_guest "
+                b"original_game_proven=no\\n"
+                b"VPD_ROMFREE_THIRD_STAGE_V1 seq=2 event=exit frame=470 "
+                b"hero_x=225280 hero_hp=3 guard_hp=0 guard_hits=3 "
+                b"sentry_hp=0 sentry_hits=2 wave=1 clear=1 "
+                b"input_right=1 input_fire=1 source=live_guest "
+                b"original_game_proven=no\\n")
+            (base/"input-probe.txt").write_text(
+                "host_fourth_retry_minus_sent=yes key=N guest_restart=yes\\n"
+                "host_fourth_retry_right_sent=yes key=D guest_move=yes\\n")
+            (base/"visual-probe.txt").write_text(
+                "capture=screen-live-fourth-restart\\n"
+                "capture=screen-live-fourth-move\\n"
+                "live_fourth_movement_raster_after_guest_event=yes\\n")
+            p6=b"P6\\n1280 720\\n255\\n"
+            raster=p6+bytes(1280*720*3)
+            for name in ("screen-live-third-stage-clear",
+                         "screen-live-fourth-restart",
+                         "screen-live-fourth-move"):
+                (base/(name+".png")).write_bytes(b"\\x89PNG\\r\\n\\x1a\\n")
+                (base/(name+".ppm")).write_bytes(raster)
+            with self.assertRaisesRegex(ValueError,"matches completed level"):
+                m.audit(base)
+
     def test_missing_prior_third_victory_and_real_x11_cannot_pass(self):
         with tempfile.TemporaryDirectory() as temp:
             base=Path(temp)
