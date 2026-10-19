@@ -392,6 +392,26 @@ if [[ -s "$out/ne-x11-windows.txt" ]]; then
                                     sleep 0.10
                                     capture screen-live-fourth-impact
                                     echo "live_fourth_impact_raster_after_guest_event=yes" >> "$out/visual-probe.txt"
+                                    # Same fourth run: keep firing until the
+                                    # third native swept hit kills the guard.
+                                    fourth_clear_path="$XDG_CONFIG_HOME/NeXium/sdmc/switch/vice_project_doom/fourth_guard_clear_witness.txt"
+                                    fourth_clear=no
+                                    xdotool keydown --clearmodifiers z
+                                    for (( attempt=0; attempt<180; ++attempt )); do
+                                      if [[ -f "$fourth_clear_path" ]] &&
+                                         grep -q '^VPD_ROMFREE_FOURTH_GUARD_CLEAR_V1 event=guard_clear ' "$fourth_clear_path"; then
+                                        fourth_clear=yes
+                                        break
+                                      fi
+                                      sleep 0.05
+                                    done
+                                    xdotool keyup z
+                                    echo "host_fourth_guard_clear_sent=yes key=Z observed=$fourth_clear" >> "$out/input-probe.txt"
+                                    if [[ "$fourth_clear" == yes ]]; then
+                                      sleep 0.12
+                                      capture screen-live-fourth-guard-clear
+                                      echo "live_fourth_guard_clear_raster_after_guest_event=yes" >> "$out/visual-probe.txt"
+                                    fi
                                   fi
                                 fi
                               fi
