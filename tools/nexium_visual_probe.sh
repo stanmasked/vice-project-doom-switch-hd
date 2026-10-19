@@ -117,18 +117,32 @@ if [[ -s "$out/ne-x11-windows.txt" ]]; then
       # No offscreen source-script evidence may satisfy this condition.
       if [[ "$saw_defeat" == yes ]]; then
         live_wave_path="$XDG_CONFIG_HOME/NeXium/sdmc/switch/vice_project_doom/second_wave_live_witness.txt"
+        saw_live_wave=no
         saw_live_exit=no
         xdotool keydown --clearmodifiers d
-        xdotool keydown --clearmodifiers z
-        for (( attempt=0; attempt<220; ++attempt )); do
+        # Advance using real Right control until the guest reports crossing
+        # the wave gate. Do not fire early into distant dummy targets.
+        for (( attempt=0; attempt<150; ++attempt )); do
           if [[ -f "$live_wave_path" ]] &&
-             grep -q '^VPD_ROMFREE_WAVE2_LIVE_V1 seq=5 event=exit ' "$live_wave_path"; then
-            saw_live_exit=yes
+             grep -q '^VPD_ROMFREE_WAVE2_LIVE_V1 seq=1 event=wave ' "$live_wave_path"; then
+            saw_live_wave=yes
             break
           fi
           sleep 0.05
         done
-        xdotool keyup z
+        echo "host_second_wave_gate_sent=yes key=D guest_wave=$saw_live_wave" >> "$out/input-probe.txt"
+        if [[ "$saw_live_wave" == yes ]]; then
+          xdotool keydown --clearmodifiers z
+          for (( attempt=0; attempt<220; ++attempt )); do
+            if [[ -f "$live_wave_path" ]] &&
+               grep -q '^VPD_ROMFREE_WAVE2_LIVE_V1 seq=5 event=exit ' "$live_wave_path"; then
+              saw_live_exit=yes
+              break
+            fi
+            sleep 0.05
+          done
+          xdotool keyup z
+        fi
         xdotool keyup d
         echo "host_second_wave_controls_sent=yes keys=D+Z guest_exit=$saw_live_exit" >> "$out/input-probe.txt"
         if [[ "$saw_live_exit" == yes ]]; then
