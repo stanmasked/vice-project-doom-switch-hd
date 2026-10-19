@@ -71,6 +71,7 @@ class NativeWave2InputAuditTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,"host did not"):
                 m.audit(root)
             (root/"input-probe.txt").write_text(
+                "host_second_wave_gate_sent=yes key=D guest_wave=yes\n"
                 "host_second_wave_controls_sent=yes keys=D+Z guest_exit=yes\n")
             with self.assertRaisesRegex(ValueError,"independent"):
                 m.audit(root)
