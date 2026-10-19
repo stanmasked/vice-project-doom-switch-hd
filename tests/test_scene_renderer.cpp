@@ -96,6 +96,41 @@ int main(int argc,char** argv) {
         view.grounded=false;
         check(vpd::drawScene(repeat.data(),vpd::kSceneWidth,vpd::kSceneHeight,stride,view),"scrolled draw failed");
         check(checksum(repeat,stride)!=original,"scroll/player must change output");
+        // Background atmosphere is manual-only, deterministic and has no
+        // influence on replay-demo's previously approved golden pixels.
+        view.manual_controls=false;
+        view.hd_atmospheric_haze=true;
+        check(vpd::drawScene(repeat.data(),vpd::kSceneWidth,
+                             vpd::kSceneHeight,stride,view),
+              "disabled replay atmosphere draw failed");
+        const auto replay_haze_disabled=checksum(repeat,stride);
+        view.hd_atmospheric_haze=false;
+        check(vpd::drawScene(repeat.data(),vpd::kSceneWidth,
+                             vpd::kSceneHeight,stride,view) &&
+              checksum(repeat,stride)==replay_haze_disabled,
+              "manual sky accents leaked into autoplay");
+        view.manual_controls=true;
+        check(vpd::drawScene(repeat.data(),vpd::kSceneWidth,
+                             vpd::kSceneHeight,stride,view),
+              "manual sky unlit draw failed");
+        const auto manual_sky=checksum(repeat,stride);
+        view.hd_atmospheric_haze=true;
+        check(vpd::drawScene(repeat.data(),vpd::kSceneWidth,
+                             vpd::kSceneHeight,stride,view),
+              "manual sky haze draw failed");
+        const auto manual_haze=checksum(repeat,stride);
+        check(manual_haze!=manual_sky,
+              "manual sky haze did not change framebuffer");
+        std::vector<uint32_t> haze_again(image.size(),guard);
+        check(vpd::drawScene(haze_again.data(),vpd::kSceneWidth,
+                             vpd::kSceneHeight,stride,view) &&
+              checksum(haze_again,stride)==manual_haze,
+              "manual atmospheric haze was not deterministic");
+        for(int y=0;y<vpd::kSceneHeight;++y)
+            for(int x=vpd::kSceneWidth;x<stride;++x)
+                check(haze_again[static_cast<size_t>(y)*stride+x]==guard,
+                      "manual atmosphere corrupted framebuffer padding");
+        view.hd_atmospheric_haze=false;
         // Real source-side hit flashes, and ONLY those hit flashes,
         // trigger the opt-in authored light on manually played scenes.
         view.camera_x_px=0;
