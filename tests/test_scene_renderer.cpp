@@ -186,6 +186,9 @@ int main(int argc,char** argv) {
         // Second-wave hostile projectiles are the ONLY source of the
         // optional red/orange warning halo. It must leave the approved
         // hero and exact red guard torso pixels unchanged.
+        // Restore the world/screen mapping after the preceding scrolling
+        // regression: the sampled guard pixel below is at camera X = 0.
+        view.camera_x_px=0;
         view.guard={160,210,3,true,true,0};
         view.sentry={420,210,2,0,true};
         // Bullet illuminates the guard but does not physically overdraw
