@@ -6,6 +6,7 @@
 #include "live_defeat_retry_witness.hpp"
 #include "post_defeat_control_witness.hpp"
 #include "post_defeat_fire_witness.hpp"
+#include "third_guard_clear_witness.hpp"
 #include "combat_demo.hpp"
 #include "demo_witness_sd.hpp"
 #include "manual_input_witness.hpp"
@@ -82,6 +83,7 @@ int main(int,char**) {
             "sdmc:/switch/vice_project_doom/wave_exit_progress.txt","w"))
             std::fclose(report);
     }
+    vpd::resetThirdGuardClear(has_sd);
     if(has_sd)assets.reload(kExternalAtlasPath,kExternalAnimationPath);
     bool reload_failed=false;
     constexpr const char* kExternalTerrainPath=
@@ -149,6 +151,7 @@ int main(int,char**) {
     bool third_run_move_logged=false;
     bool third_run_fire_logged=false;
     bool third_run_hit_logged=false;
+    bool third_guard_clear_logged=false;
     uint32_t dash_probe_start_frame=0;
     int32_t dash_probe_start_x=0;
     while(appletMainLoop()){
@@ -339,6 +342,15 @@ int main(int,char**) {
                 third_run_hit_logged=vpd::appendPostDefeatFire(
                     has_sd,vpd::ThirdFireEvent::Impact,game,input,
                     before_shots,prior_guard_hits,prior_guard_hp);
+            // The restored third run must also finish the first guard by
+            // two more actual swept impacts under a real held Y/Fire.
+            if(third_run_hit_logged && !third_guard_clear_logged &&
+               !restarted && input==vpd::Fire &&
+               prior_guard_hp==1 && prior_guard_hits==2 &&
+               game.guardEnemy().health==0 &&
+               game.guardEnemy().projectile_hits==3)
+                third_guard_clear_logged=vpd::appendThirdGuardClear(
+                    has_sd,game,input,prior_guard_hp,prior_guard_hits);
             // These events are from the *visible*, pad-driven gameplay
             // instance, unlike the isolated guard-combat script. A host
             // keystroke by itself cannot satisfy the observed transitions.

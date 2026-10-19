@@ -207,3 +207,12 @@ if [[ -s "$out/post-defeat-fire-paths.txt" ]]; then
   cp "$guest" "$out/guest-post-defeat-fire-witness.txt"
 fi
 python3 tools/audit_nexium_third_run_fire.py --evidence "$out"
+# Native pad Fire must also finish the restored first guard's HP through
+# two more actual swept projectile impacts, with an independent X11 frame.
+find "$HOME" "$XDG_DATA_HOME" "$XDG_CONFIG_HOME" "$XDG_CACHE_HOME" \
+  -type f -name third_guard_clear_witness.txt -print > "$out/third-guard-clear-paths.txt"
+if [[ -s "$out/third-guard-clear-paths.txt" ]]; then
+  IFS= read -r guest < "$out/third-guard-clear-paths.txt"
+  cp "$guest" "$out/guest-third-guard-clear-witness.txt"
+fi
+python3 tools/audit_nexium_third_guard_clear.py --evidence "$out"

@@ -273,6 +273,27 @@ if [[ -s "$out/ne-x11-windows.txt" ]]; then
                         sleep 0.10
                         capture screen-live-third-run-impact
                         echo "live_third_run_impact_raster_after_guest_event=yes" >> "$out/visual-probe.txt"
+                        # Continue only after a true third-run first impact:
+                        # hold Fire while source collision logic eliminates
+                        # the same guard on its third actual swept hit.
+                        clear_path="$XDG_CONFIG_HOME/NeXium/sdmc/switch/vice_project_doom/third_guard_clear_witness.txt"
+                        saw_clear=no
+                        xdotool keydown --clearmodifiers z
+                        for (( attempt=0; attempt<180; ++attempt )); do
+                          if [[ -f "$clear_path" ]] &&
+                             grep -q '^VPD_ROMFREE_THIRD_GUARD_CLEAR_V1 event=guard_clear ' "$clear_path"; then
+                            saw_clear=yes
+                            break
+                          fi
+                          sleep 0.05
+                        done
+                        xdotool keyup z
+                        echo "host_third_guard_clear_sent=yes key=Z observed=$saw_clear" >> "$out/input-probe.txt"
+                        if [[ "$saw_clear" == yes ]]; then
+                          sleep 0.12
+                          capture screen-live-third-guard-clear
+                          echo "live_third_guard_clear_raster_after_guest_event=yes" >> "$out/visual-probe.txt"
+                        fi
                       fi
                     fi
                   fi

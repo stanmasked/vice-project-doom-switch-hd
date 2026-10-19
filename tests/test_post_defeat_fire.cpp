@@ -4,6 +4,7 @@
 #include "simulation.hpp"
 #include "manual_retry.hpp"
 #include "post_defeat_fire_witness.hpp"
+#include "third_guard_clear_witness.hpp"
 #include <cstdio>
 #include <cstring>
 #include <stdexcept>
@@ -93,9 +94,43 @@ int main(){
     require(std::fgets(line,sizeof(line),f)==nullptr,
             "Unexpected extra third-run combat witness");
     std::fclose(f);
+    std::FILE* guard_stream=std::tmpfile();
+    require(guard_stream!=nullptr,"Third-run guard clear stream unavailable");
+    require(!writeThirdGuardClear(guard_stream,game,Fire,3,0),
+            "Guard clear accepted before the second impact");
+    bool guard_clear=false;
+    for(int n=0;n<160 && !guard_clear;++n){
+        const auto old_hp=game.guardEnemy().health;
+        const auto old_hits=game.guardEnemy().projectile_hits;
+        game.tick(Input{Fire});
+        if(game.guardEnemy().health==0){
+            require(old_hp==1 && old_hits==2 &&
+                    game.guardEnemy().projectile_hits==3,
+                    "Third-run guard final bullet was not a real swept hit");
+            require(!writeThirdGuardClear(guard_stream,game,0,
+                                         old_hp,old_hits),
+                    "Guard defeat witness accepted absent Y/Fire input");
+            guard_clear=writeThirdGuardClear(guard_stream,game,Fire,
+                                            old_hp,old_hits);
+        }
+    }
+    require(guard_clear && game.playerHealth()==5 &&
+            game.guardEnemy().attacks==0 &&
+            !game.secondWaveActive() && !game.stageCleared(),
+            "First guard not actually eliminated on third attempt");
+    std::rewind(guard_stream);
+    require(std::fgets(line,sizeof(line),guard_stream)!=nullptr &&
+            std::strstr(line,"event=guard_clear") &&
+            std::strstr(line,"guard_hp=0 previous_guard_hp=1") &&
+            std::strstr(line,"guard_hits=3 previous_guard_hits=2") &&
+            std::strstr(line,"source=live_guest"),
+            "Final native guard-kill record malformed");
+    require(std::fgets(line,sizeof(line),guard_stream)==nullptr,
+            "Extra native guard-clear source records");
+    std::fclose(guard_stream);
     std::puts("VPD_THIRD_RUN_FIRE_HOST_PASS victory=yes defeat=yes "
               "two_native_retries=yes third_movement=yes "
-              "one_real_shot=yes one_swept_impact=yes "
+              "one_real_shot=yes one_swept_impact=yes third_guard_defeated=yes "
               "live_neXium_proven=no");
     return 0;
  }catch(const std::exception& exc){
