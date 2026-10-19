@@ -192,3 +192,22 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
 endif()
 add_test(NAME hd_impact_lighting_bounds
          COMMAND vpd_hd_impact_lighting_test)
+
+# Authored ROM-free HD terrain relief: isolated pixel math and full scene.
+add_executable(vpd_hd_terrain_detail_test
+               ../tests/test_terrain_surface_detail.cpp)
+target_include_directories(vpd_hd_terrain_detail_test PRIVATE
+                           ${CMAKE_CURRENT_SOURCE_DIR})
+add_executable(vpd_hd_terrain_raster_test
+               ../tests/test_terrain_surface_raster.cpp)
+target_link_libraries(vpd_hd_terrain_raster_test PRIVATE vpd_scene_renderer)
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+  target_compile_options(vpd_hd_terrain_detail_test PRIVATE
+                         -Wall -Wextra -Wpedantic -Werror)
+  target_compile_options(vpd_hd_terrain_raster_test PRIVATE
+                         -Wall -Wextra -Wpedantic -Werror)
+endif()
+add_test(NAME hd_terrain_surface_world_lock
+         COMMAND vpd_hd_terrain_detail_test)
+add_test(NAME hd_terrain_surface_scene_integration
+         COMMAND vpd_hd_terrain_raster_test)
