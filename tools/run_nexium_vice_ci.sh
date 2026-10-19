@@ -234,6 +234,15 @@ if [[ -s "$out/fourth-retry-paths.txt" ]]; then
   cp "$guest" "$out/guest-fourth-retry-witness.txt"
 fi
 python3 tools/audit_nexium_fourth_retry.py --evidence "$out"
+# Additional unaltered fourth pad Right evidence: both un-dusted and
+# dusted native framebuffer samples must come from the SAME move frame.
+find "$HOME" "$XDG_DATA_HOME" "$XDG_CONFIG_HOME" "$XDG_CACHE_HOME" \
+  -type f -name hd_footstep_evidence.txt -print > "$out/hd-footstep-paths.txt"
+if [[ -s "$out/hd-footstep-paths.txt" ]]; then
+  IFS= read -r guest < "$out/hd-footstep-paths.txt"
+  cp "$guest" "$out/guest-hd-footstep-witness.txt"
+fi
+python3 tools/audit_nexium_hd_footstep.py --evidence "$out"
 # Fourth NRO iteration must also fire one source-spawned projectile and
 # cause the first genuine 3->2 guard HP loss under actual X11 Fire input.
 find "$HOME" "$XDG_DATA_HOME" "$XDG_CONFIG_HOME" "$XDG_CACHE_HOME" \
