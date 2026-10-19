@@ -118,6 +118,7 @@ int main(int,char**) {
     unsigned witness_cycles=0; // hard cap: four records per launch
     bool checkpoint_ok=false;
     unsigned manual_seq=0;
+    uint32_t manual_session_ticks=0;
     bool plus_seen=false;
     bool dash_probe_started=false;
     bool dash_probe_finished=false;
@@ -140,8 +141,13 @@ int main(int,char**) {
                 has_sd,"plus",game,0);
             // Must have completed the actual ordered manual control probe.
             if(!demo.enabled() && manual_seq==5){
-                (void)vpd::manualProofAppend(has_sd,vpd::ManualProofEvent::Plus,
-                                             6,game,1);
+                if(manual_retry_has_occurred)
+                    (void)vpd::manualProofAppendSession(
+                        has_sd,vpd::ManualProofEvent::Plus,
+                        6,game,1,manual_session_ticks);
+                else
+                    (void)vpd::manualProofAppend(
+                        has_sd,vpd::ManualProofEvent::Plus,6,game,1);
                 manual_seq=6;
                 plus_seen=true;
             }
@@ -169,6 +175,7 @@ int main(int,char**) {
                 // entry into explicit manual gameplay, never in attract mode.
                 game.enableEnemyEncounter();
                 manual_seq=1;
+                manual_session_ticks=0;
                 (void)vpd::manualProofAppend(has_sd,vpd::ManualProofEvent::Enter,
                                              1,game,1);
             } else manual_seq=0;
@@ -249,6 +256,7 @@ int main(int,char**) {
         if(demo.enabled()) {
             if(demo.tick(game)) animation.reset();
         } else {
+            ++manual_session_ticks; // independent monotone real pad-loop time
             // Measure actual simulation effects, not merely keyboard events.
             const auto before_x=game.player().x;
             const auto before_shots=game.shotsFired();
@@ -442,8 +450,13 @@ int main(int,char**) {
     }
     framebufferClose(&fb);
     if(plus_seen && manual_seq==6){
-        (void)vpd::manualProofAppend(has_sd,vpd::ManualProofEvent::Exit,
-                                     7,game,1);
+        if(manual_retry_has_occurred)
+            (void)vpd::manualProofAppendSession(
+                has_sd,vpd::ManualProofEvent::Exit,
+                7,game,1,manual_session_ticks);
+        else
+            (void)vpd::manualProofAppend(
+                has_sd,vpd::ManualProofEvent::Exit,7,game,1);
     }
     if(we_mounted_sd)fsdevUnmountDevice("sdmc");
     return 0;
