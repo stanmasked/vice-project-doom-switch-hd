@@ -65,15 +65,16 @@ if [[ -s "$out/ne-x11-windows.txt" ]]; then
     xdotool keydown --clearmodifiers t
     sleep 0.6
     xdotool keyup t
-    xdotool keyup d
-    sleep 0.25
+    # Keep Right continuously pressed after releasing ZR. Previous CI
+    # observed the guard first alerting at frame 133 under input=0 during
+    # the idle keyup/sleep gap, which correctly invalidated the native
+    # strict live-contact witness. Do not fake or relax the guard alert:
+    # ensure the real pad supplies Right when the guard detects the hero.
     echo "host_dash_probe_sent=yes keys=D+T expected=ZR+Right" >> "$out/input-probe.txt"
-    # Follow the *live*, pad-driven guard to the first observed strike.
-    # The host uses this guest event only to release movement before
-    # overshooting the opponent; it cannot author the guest witness.
+    # The same held Right now drives the visible, pad-controlled guard to
+    # first melee contact; do not send a duplicate keydown or idle gap.
     live_guard_path="$XDG_CONFIG_HOME/NeXium/sdmc/switch/vice_project_doom/guard_live_witness.txt"
     saw_strike=no
-    xdotool keydown --clearmodifiers d
     for (( attempt=0; attempt<165; ++attempt )); do
       if [[ -f "$live_guard_path" ]] &&
          grep -q '^VPD_ROMFREE_GUARD_LIVE_V1 seq=2 event=strike ' "$live_guard_path"; then
