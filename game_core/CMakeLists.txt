@@ -11,6 +11,17 @@ add_executable(vpd_simulation_test ../tests/test_simulation.cpp)
 target_link_libraries(vpd_simulation_test PRIVATE vpd_simulation)
 enable_testing()
 add_test(NAME deterministic_simulation COMMAND vpd_simulation_test)
+# 32 real clean-room encounter terminal cycles: 16 wins, 16 melee deaths.
+# Every explicit Minus must restore the same bitwise deterministic state.
+add_executable(vpd_terminal_replay_stress_test
+               ../tests/test_terminal_replay_stress.cpp)
+target_link_libraries(vpd_terminal_replay_stress_test PRIVATE vpd_simulation)
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+  target_compile_options(vpd_terminal_replay_stress_test PRIVATE
+                         -Wall -Wextra -Wpedantic -Werror)
+endif()
+add_test(NAME romfree_terminal_replay_32_cycles
+         COMMAND vpd_terminal_replay_stress_test)
 # Manual-only ROM-free burst movement; must not change pinned autoplay hashes.
 add_executable(vpd_manual_dash_test ../tests/test_manual_dash.cpp)
 target_link_libraries(vpd_manual_dash_test PRIVATE vpd_simulation)
