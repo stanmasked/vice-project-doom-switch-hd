@@ -92,7 +92,7 @@ def audit(directory):
         # ImageMagick's genuine xwd->P6 path emits "#xwdump" as a
         # header comment. Require exact 1280x720 payload despite comments.
         header=re.match(
-            rb"\\AP6\\n(?:\\#[ -~]{1,200}\\n){0,3}1280 720\\n255\\n",b
+            rb"\AP6\n(?:\#[ -~]{1,200}\n){0,3}1280 720\n255\n",b
         )
         if not header or len(b)!=header.end()+1280*720*3:
             raise ValueError("invalid native X11 P6 raster: "+name)
