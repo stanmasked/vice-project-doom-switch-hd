@@ -613,6 +613,7 @@ int main(int,char**) {
         view.manual_controls=!demo.enabled();
         view.hd_hit_lighting=view.manual_controls;
         view.hd_atmospheric_haze=view.manual_controls;
+        view.hd_footstep_dust=view.manual_controls;
         view.demo_checkpoint_ok=checkpoint_ok && demo.enabled();
         // Same adapter is exercised by native host combat/raster CTest.
         vpd::applyCombatOverlay(view,game);
