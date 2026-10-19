@@ -183,6 +183,68 @@ int main(int argc,char** argv) {
         view.hd_footstep_dust=false;
         view.camera_x_px=160;
         view.player_x_px=350;
+        // Second-wave hostile projectiles are the ONLY source of the
+        // optional red/orange warning halo. It must leave the approved
+        // hero and exact red guard torso pixels unchanged.
+        // Restore the world/screen mapping after the preceding scrolling
+        // regression: the sampled guard pixel below is at camera X = 0.
+        view.camera_x_px=0;
+        view.guard={160,210,3,true,true,0};
+        view.sentry={420,210,2,0,true};
+        // Bullet illuminates the guard but does not physically overdraw
+        // its sampled red torso pixel: test compositing, not overlap.
+        view.enemy_projectiles[0]={153,210,true};
+        view.manual_controls=true;
+        view.stage_cleared=false;
+        view.hd_hostile_projectile_halo=false;
+        check(vpd::drawScene(repeat.data(),vpd::kSceneWidth,
+                             vpd::kSceneHeight,stride,view),
+              "hostile bullet halo baseline draw failed");
+        const auto inactive_halo_hash=checksum(repeat,stride);
+        view.hd_hostile_projectile_halo=true;
+        check(vpd::drawScene(repeat.data(),vpd::kSceneWidth,
+                             vpd::kSceneHeight,stride,view),
+              "hostile bullet halo source draw failed");
+        const auto active_halo_hash=checksum(repeat,stride);
+        check(active_halo_hash!=inactive_halo_hash,
+              "real hostile projectile did not illuminate its surroundings");
+        constexpr int bullet_guard_x=160*2+10;
+        constexpr int bullet_guard_y=(210+80)*2+15;
+        check(repeat[static_cast<size_t>(bullet_guard_y)*stride+
+                     bullet_guard_x]==0xff5d67dcu,
+              "enemy bullet halo recolored authenticated guard red torso");
+        check(vpd::drawScene(haze_again.data(),vpd::kSceneWidth,
+                             vpd::kSceneHeight,stride,view) &&
+              checksum(haze_again,stride)==active_halo_hash,
+              "source hostile projectile halo is nondeterministic");
+        // No phantom glow without real live wave-two bullets, on a
+        // cleared stage or in a replay where the prototype is disabled.
+        for(int state=0;state<4;++state){
+            view.enemy_projectiles[0].active=state!=0;
+            view.sentry.enabled=state!=1;
+            view.stage_cleared=state==2;
+            view.manual_controls=state!=3;
+            view.hd_hostile_projectile_halo=true;
+            check(vpd::drawScene(repeat.data(),vpd::kSceneWidth,
+                                 vpd::kSceneHeight,stride,view),
+                  "inactive hostile halo draw failed");
+            const auto no_source=checksum(repeat,stride);
+            view.hd_hostile_projectile_halo=false;
+            check(vpd::drawScene(repeat.data(),vpd::kSceneWidth,
+                                 vpd::kSceneHeight,stride,view) &&
+                  checksum(repeat,stride)==no_source,
+                  "hostile halo leaked without its source or into replay");
+        }
+        for(int y=0;y<vpd::kSceneHeight;++y)
+            for(int x=vpd::kSceneWidth;x<stride;++x)
+                check(haze_again[static_cast<size_t>(y)*stride+x]==guard,
+                      "hostile projectile halo corrupted row padding");
+        view.enemy_projectiles[0].active=false;
+        view.sentry.enabled=false;
+        view.stage_cleared=false;
+        view.manual_controls=true;
+        view.hd_hostile_projectile_halo=false;
+        view.guard.enabled=false;
         // Real source-side hit flashes, and ONLY those hit flashes,
         // trigger the opt-in authored light on manually played scenes.
         view.camera_x_px=0;

@@ -296,6 +296,20 @@ bool drawScene(uint32_t* target,int width,int height,int stride_pixels,
                 58,energy,ImpactLightColor::Sentry);
         }
     }
+    // Authored low-energy warning glow is attached only to active
+    // source-owned wave-two hostile projectiles. It is composited into
+    // scenery BEFORE live hero/guard/sentry and bullet raster layers:
+    // exact alert/impact silhouette colors remain source-authentic.
+    if(view.manual_controls && view.hd_hostile_projectile_halo &&
+       view.sentry.enabled && !view.stage_cleared){
+        for(const auto& shot:view.enemy_projectiles){
+            if(!shot.active)continue;
+            (void)applyImpactLight(
+                target,width,height,stride_pixels,
+                (shot.x_px-view.camera_x_px)*2+2,
+                (shot.y_px+80)*2,30,13u,ImpactLightColor::Hero);
+        }
+    }
     // Authored dust puffs follow source-owned grounded horizontal movement.
     // Composite beneath guard/hero sprites: never recolor authentic actor
     // silhouette pixels used by strict NeXium damage/defeat auditing.
