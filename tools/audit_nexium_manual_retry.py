@@ -89,9 +89,12 @@ def audit(directory):
         if not ppm.is_file():
             raise ValueError("native X11 PPM missing: "+name)
         b=ppm.read_bytes()
-        if not b.startswith(b"P6\n1280 720\n255\n") or (
-            len(b)!=len(b"P6\n1280 720\n255\n")+1280*720*3
-        ):
+        # ImageMagick's genuine xwd->P6 path emits "#xwdump" as a
+        # header comment. Require exact 1280x720 payload despite comments.
+        header=re.match(
+            rb"\\AP6\\n(?:\\#[ -~]{1,200}\\n){0,3}1280 720\\n255\\n",b
+        )
+        if not header or len(b)!=header.end()+1280*720*3:
             raise ValueError("invalid native X11 P6 raster: "+name)
         scans.append(b)
     if scans[0]==scans[1]:
