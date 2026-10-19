@@ -67,6 +67,11 @@ struct SceneView {
     SentryView sentry{};
     std::array<EnemyProjectileView,3> enemy_projectiles{};
     bool stage_cleared=false;
+    // ROM-free stage-two completion gate; explicit source-derived visibility.
+    bool exit_visible=false;
+    bool exit_open=false;
+    int32_t exit_x_px=0;
+    int32_t exit_y_px=0;
 };
 constexpr int kSceneWidth=1280;
 constexpr int kSceneHeight=720;

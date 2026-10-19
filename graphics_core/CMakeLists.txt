@@ -157,6 +157,12 @@ add_executable(vpd_second_wave_raster_test ../tests/test_second_wave_raster.cpp)
 target_link_libraries(vpd_second_wave_raster_test
                       PRIVATE vpd_scene_renderer vpd_simulation)
 add_test(NAME romfree_second_wave_to_raster COMMAND vpd_second_wave_raster_test)
+# Source-derived world-space exit gate and earned stage-clear overlay.
+add_executable(vpd_stage_exit_portal_test ../tests/test_stage_exit_portal.cpp)
+target_link_libraries(vpd_stage_exit_portal_test
+                      PRIVATE vpd_scene_renderer vpd_simulation)
+add_test(NAME romfree_stage_exit_portal
+         COMMAND vpd_stage_exit_portal_test)
 # Manual HUD layout must remain legible; hit pulses derive from live combat.
 add_executable(vpd_combat_hud_feedback_test ../tests/test_combat_hud_feedback.cpp)
 target_link_libraries(vpd_combat_hud_feedback_test
