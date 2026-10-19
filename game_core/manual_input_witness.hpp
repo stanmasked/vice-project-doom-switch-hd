@@ -38,6 +38,10 @@ inline bool manualProofValid(ManualProofEvent event,
     }
     return false;
 }
+// Three full manual attempts can exceed the old 1200-tick diagnostic
+// window. This applies ONLY to the final Plus/Exit session clock; the
+// per-level gameplay checks retain their original independent limits.
+constexpr uint32_t kMaxManualSessionTicks=3600;
 // The caller supplies real before/after deltas observed after game.tick().
 // A line must never claim a key caused movement when no change occurred.
 inline bool manualProofWrite(std::FILE* stream,ManualProofEvent event,
@@ -80,7 +84,8 @@ inline bool manualProofWriteSession(std::FILE* stream,ManualProofEvent event,
                    event!=ManualProofEvent::Exit) ||
        seq!=static_cast<unsigned>(event) ||
        !manualProofValid(event,game,metric) ||
-       session_ticks<game.frame() || session_ticks>1200)
+       session_ticks<game.frame() ||
+       session_ticks>kMaxManualSessionTicks)
         return false;
     char line[192]{};
     const int n=std::snprintf(
