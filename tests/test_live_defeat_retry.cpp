@@ -43,10 +43,26 @@ int main(){
           "No real Right input accepted for contact event");
     check(writeLiveDefeatRetry(f,DefeatRetryEvent::Contact,game,Right),
           "Live source contact incorrectly rejected");
-    for(int n=0;n<245 && game.playerHealth();++n)
+    check(!writeLiveDefeatRetry(f,DefeatRetryEvent::Death,game,0),
+          "Guest falsely recorded death while the hero still had HP");
+    // This arena's genuine first-guard attack cycle is 32 simulation
+    // ticks. Each additional melee strike must consume one complete
+    // cooldown and exactly one health point before MISSION FAILED.
+    uint32_t last_strike_frame=game.frame();
+    unsigned observed_attacks=game.guardEnemy().attacks;
+    for(int n=0;n<245 && game.playerHealth();++n){
         game.tick(Input{});
-    check(game.playerHealth()==0 && game.guardEnemy().attacks>=5,
-          "New run guard did not genuinely kill stationary hero");
+        if(game.guardEnemy().attacks!=observed_attacks){
+            check(game.guardEnemy().attacks==observed_attacks+1 &&
+                  game.frame()==last_strike_frame+32 &&
+                  game.playerHealth()==5-game.guardEnemy().attacks,
+                  "Melee cadence or one-hit damage differs from auditor");
+            last_strike_frame=game.frame();
+            observed_attacks=game.guardEnemy().attacks;
+        }
+    }
+    check(game.playerHealth()==0 && game.guardEnemy().attacks==5,
+          "New run guard did not land exactly five lethal melee blows");
     check(writeLiveDefeatRetry(f,DefeatRetryEvent::Death,game,0),
           "Five real melee hits not accepted as death");
     // Terminal-state regression: the same source Simulation must ignore a

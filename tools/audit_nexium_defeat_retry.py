@@ -11,6 +11,12 @@ import re
 
 PREFIX="VPD_ROMFREE_DEFEAT_RETRY_V1"
 EVENTS=("contact","death","restart")
+# Guard::advanceGuard allows one real melee strike per 32 simulation
+# frames (game_core/simulation.cpp: kGuardAttackDelay). Starting at 5 HP,
+# the initial contact leaves 4 HP and exactly four cooldown cycles must
+# elapse before a fifth strike can produce terminal death.
+GUARD_MELEE_COOLDOWN_FRAMES=32
+TERMINAL_GUARD_ATTACKS=5
 KEYS=("seq","event","frame","hero_x","hero_hp","guard_hp",
       "guard_attacks","sentry_hp","wave","clear","input_right",
       "input_minus","old_frame","old_hp","source","original_game_proven")
@@ -62,8 +68,10 @@ def verify(raw):
         contact["input_right"]!=1 or contact["input_minus"]!=0 or
         contact["old_frame"] or contact["old_hp"]):
         raise ValueError("second-playthrough source melee contact missing")
-    if (death["frame"]<=contact["frame"] or death["hero_hp"]!=0 or
-        death["guard_hp"]!=3 or death["guard_attacks"]<5 or
+    if (death["frame"]-contact["frame"] <
+            (TERMINAL_GUARD_ATTACKS-1)*GUARD_MELEE_COOLDOWN_FRAMES or
+        death["hero_hp"]!=0 or death["guard_hp"]!=3 or
+        death["guard_attacks"]!=TERMINAL_GUARD_ATTACKS or
         death["sentry_hp"]!=2 or death["wave"] or death["clear"] or
         death["input_minus"]!=0 or death["old_frame"] or death["old_hp"]):
         raise ValueError("source guard did not actually kill the hero")
@@ -155,7 +163,7 @@ def audit(directory):
         f"contact_frame={values['contact_frame']} "
         f"death_frame={values['death_frame']} "
         f"old_frame={values['restart_source_frame']} "
-        "guard_attacks_at_death=at_least_5 old_hp=0 "
+        "guard_attacks_at_death=exactly_5 cooldown_frames=32 old_hp=0 "
         "real_pad_right=yes real_pad_minus=yes "
         "reset_hp=5 reset_guard_hp=3 reset_sentry_hp=2 "
         f"changed_center_pixels={count} "
