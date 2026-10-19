@@ -49,6 +49,9 @@ on:
       - "tools/audit_nexium_hd_footstep.py"
       - "tests/test_nexium_hd_footstep.py"
       - "game_core/hd_footstep_witness.hpp"
+      - "game_core/hd_hostile_halo_witness.hpp"
+      - "tools/audit_nexium_hd_hostile_halo.py"
+      - "tests/test_nexium_hd_hostile_halo.py"
       - "game_core/hd_hit_light_witness.hpp"
       - "tools/audit_nexium_fourth_guard_clear.py"
       - "tests/test_nexium_fourth_guard_clear.py"
@@ -175,6 +178,9 @@ jobs:
             emulator-evidence/hd-footstep-result.txt
             emulator-evidence/hd-footstep-paths.txt
             emulator-evidence/guest-hd-footstep-witness.txt
+            emulator-evidence/guest-hd-hostile-halo-witness.txt
+            emulator-evidence/hd-hostile-halo-paths.txt
+            emulator-evidence/hd-hostile-halo-result.txt
             emulator-evidence/fourth-guard-clear-result.txt
             emulator-evidence/fourth-guard-clear-paths.txt
             emulator-evidence/guest-fourth-guard-clear-witness.txt

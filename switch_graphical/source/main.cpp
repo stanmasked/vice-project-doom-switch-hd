@@ -10,6 +10,7 @@
 #include "third_stage_witness.hpp"
 #include "fourth_retry_witness.hpp"
 #include "hd_footstep_witness.hpp"
+#include "hd_hostile_halo_witness.hpp"
 #include "fourth_combat_witness.hpp"
 #include "hd_hit_light_witness.hpp"
 #include "fourth_guard_clear_witness.hpp"
@@ -94,6 +95,7 @@ int main(int,char**) {
     vpd::resetThirdStage(has_sd);
     vpd::resetFourthRetry(has_sd);
     vpd::resetFootstepProof(has_sd);
+    vpd::resetHostileHaloWitness(has_sd);
     vpd::resetFourthCombat(has_sd);
     vpd::resetHitLightEvidence(has_sd);
     vpd::resetFourthGuardClear(has_sd);
@@ -170,6 +172,7 @@ int main(int,char**) {
     bool fourth_restart_logged=false;
     bool fourth_move_logged=false;
     bool native_hd_dust_logged=false;
+    bool native_hostile_halo_logged=false;
     bool fourth_fire_logged=false;
     bool fourth_hit_logged=false;
     bool native_hd_hit_logged=false;
@@ -637,6 +640,41 @@ int main(int,char**) {
         view.decor_layout=layout.layout();
         view.external_decor_layout=layout.external();
         view.decor_layout_reload_failed=decor_layout_reload_failed;
+        // Proof from the actual fourth-run sentry projectile: one source
+        // frame, two native draws, zero extra physics or pad steps. Use only
+        // the first ACTIVE hostile bullet after the authenticated wave gate.
+        bool hostile_sample_frame=false;
+        unsigned hostile_slot=0;
+        int hostile_x=0,hostile_y=0;
+        if(!native_hostile_halo_logged && fourth_stage_seq==1 &&
+           view.manual_controls && view.hd_hostile_projectile_halo &&
+           game.secondWaveActive() && !game.stageCleared() &&
+           game.sentry().health>0 && game.sentry().shots_fired>0){
+            const auto& enemies=game.enemyProjectiles();
+            for(unsigned i=0;i<enemies.size();++i){
+                if(!enemies[i].active)continue;
+                const int sx=(enemies[i].x/vpd::kFixed-game.cameraX())*2+2;
+                const int sy=(enemies[i].y/vpd::kFixed+80)*2;
+                if(sx<16 || sx>vpd::kSceneWidth-16 ||
+                   sy<16 || sy>vpd::kSceneHeight-16)continue;
+                hostile_sample_frame=true;
+                hostile_slot=i;hostile_x=sx;hostile_y=sy;
+                break;
+            }
+        }
+        vpd::HostileHaloSample hostile_dark{},hostile_lit{};
+        const int hostile_stride=static_cast<int>(stride/sizeof(uint32_t));
+        if(hostile_sample_frame){
+            view.hd_hostile_projectile_halo=false;
+            const bool unlit=vpd::drawScene(
+                pixels,vpd::kSceneWidth,vpd::kSceneHeight,
+                hostile_stride,view);
+            if(!unlit){framebufferEnd(&fb);break;}
+            hostile_dark=vpd::sampleHostileHalo(
+                pixels,vpd::kSceneWidth,vpd::kSceneHeight,
+                hostile_stride,hostile_x,hostile_y);
+            view.hd_hostile_projectile_halo=true;
+        }
         // Fourth physically injected Right input already earned its native
         // source movement record. Measure one same-frame native framebuffer
         // pair around the hero's grounded trailing heel, no extra game tick.
@@ -694,8 +732,18 @@ int main(int,char**) {
             with_dust=vpd::sampleFootstep(
                 pixels,vpd::kSceneWidth,vpd::kSceneHeight,
                 pixels_per_row,heel,ground);
+        if(drawn && hostile_sample_frame)
+            hostile_lit=vpd::sampleHostileHalo(
+                pixels,vpd::kSceneWidth,vpd::kSceneHeight,
+                pixels_per_row,hostile_x,hostile_y);
         framebufferEnd(&fb);
         if(!drawn)break;
+        if(hostile_sample_frame){
+            const unsigned changed=vpd::countHostileHaloChanges(
+                hostile_dark,hostile_lit);
+            native_hostile_halo_logged=vpd::appendHostileHaloWitness(
+                has_sd,game,hostile_slot,hostile_dark,hostile_lit,changed);
+        }
         if(dust_sample_frame){
             const unsigned difference=vpd::changedFootstepPixels(
                 no_dust,with_dust);

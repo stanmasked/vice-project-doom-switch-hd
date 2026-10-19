@@ -278,3 +278,12 @@ if [[ -s "$out/fourth-stage-paths.txt" ]]; then
   cp "$guest" "$out/guest-fourth-stage-witness.txt"
 fi
 python3 tools/audit_nexium_fourth_stage.py --evidence "$out"
+# Live fourth-stage active turret shot, sampled twice without a source tick.
+# Require the independently confirmed physical pad/X11 stage before PASS.
+find "$HOME" "$XDG_DATA_HOME" "$XDG_CONFIG_HOME" "$XDG_CACHE_HOME" \
+  -type f -name hd_hostile_halo_witness.txt -print > "$out/hd-hostile-halo-paths.txt"
+if [[ -s "$out/hd-hostile-halo-paths.txt" ]]; then
+  IFS= read -r guest < "$out/hd-hostile-halo-paths.txt"
+  cp "$guest" "$out/guest-hd-hostile-halo-witness.txt"
+fi
+python3 tools/audit_nexium_hd_hostile_halo.py --evidence "$out"
