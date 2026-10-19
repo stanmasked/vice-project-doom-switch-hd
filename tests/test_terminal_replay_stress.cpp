@@ -152,8 +152,10 @@ int main(){
         game.scene().setSolid(changed_x,changed_y,!original_solid);
         require(game.scene().solid(changed_x,changed_y)!=original_solid,
                 "Synthetic terrain poison did not alter live geometry");
-        game.tick(Input{Dash});
-        require(game.dashEverUsed(),"Synthetic dash poison was not exercised");
+        game.tick(Input{static_cast<uint8_t>(Right|Dash)});
+        require(game.dashEverUsed() && game.dashing() &&
+                game.dashCooldown()>0,
+                "Synthetic directional Dash failed to start in poisoned encounter");
         require(game.fingerprint()!=baseline,
                 "Poisoned encounter unexpectedly has fresh fingerprint");
         // Still earn a legitimate victory through the existing game rules.
