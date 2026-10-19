@@ -5,6 +5,7 @@
 #include "manual_retry_guest_witness.hpp"
 #include "live_defeat_retry_witness.hpp"
 #include "post_defeat_control_witness.hpp"
+#include "post_defeat_fire_witness.hpp"
 #include "combat_demo.hpp"
 #include "demo_witness_sd.hpp"
 #include "manual_input_witness.hpp"
@@ -73,6 +74,7 @@ int main(int,char**) {
     vpd::resetManualRetryGuest(has_sd);
     vpd::resetLiveDefeatRetry(has_sd);
     vpd::resetPostDefeatControl(has_sd);
+    vpd::resetPostDefeatFire(has_sd);
     if(has_sd)assets.reload(kExternalAtlasPath,kExternalAnimationPath);
     bool reload_failed=false;
     constexpr const char* kExternalTerrainPath=
@@ -138,6 +140,8 @@ int main(int,char**) {
     bool replay_guard_death_logged=false;
     bool replay_guard_restart_logged=false;
     bool third_run_move_logged=false;
+    bool third_run_fire_logged=false;
+    bool third_run_hit_logged=false;
     uint32_t dash_probe_start_frame=0;
     int32_t dash_probe_start_x=0;
     while(appletMainLoop()){
@@ -312,6 +316,22 @@ int main(int,char**) {
                game.playerHealth()==5)
                 third_run_move_logged=vpd::appendPostDefeatControl(
                     has_sd,game,input,before_x,before_frame);
+            // After proven post-defeat movement, insist that the native
+            // pad-driven third run actually creates one Fire projectile,
+            // then the original swept collision subtracts one guard HP.
+            if(third_run_move_logged && !third_run_fire_logged &&
+               !restarted && input==vpd::Fire &&
+               before_shots==0 && game.shotsFired()==1)
+                third_run_fire_logged=vpd::appendPostDefeatFire(
+                    has_sd,vpd::ThirdFireEvent::Fire,game,input,
+                    before_shots,prior_guard_hits,prior_guard_hp);
+            if(third_run_fire_logged && !third_run_hit_logged &&
+               !restarted && input==0 && prior_guard_hits==0 &&
+               game.guardEnemy().projectile_hits==1 &&
+               prior_guard_hp==3 && game.guardEnemy().health==2)
+                third_run_hit_logged=vpd::appendPostDefeatFire(
+                    has_sd,vpd::ThirdFireEvent::Impact,game,input,
+                    before_shots,prior_guard_hits,prior_guard_hp);
             // These events are from the *visible*, pad-driven gameplay
             // instance, unlike the isolated guard-combat script. A host
             // keystroke by itself cannot satisfy the observed transitions.
