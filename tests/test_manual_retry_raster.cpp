@@ -46,8 +46,12 @@ int main(){
         using namespace vpd;
         Simulation dead;
         dead.enableEnemyEncounter();
-        for(int n=0;n<420 && dead.playerHealth();++n)
+        for(int n=0;n<260 && dead.guardEnemy().attacks==0;++n)
             dead.tick(Input{Right});
+        check(dead.guardEnemy().attacks==1,
+              "Source guard never landed the first contact hit");
+        for(int n=0;n<230 && dead.playerHealth();++n)
+            dead.tick(Input{});
         check(dead.playerHealth()==0 && !dead.stageCleared(),
               "Damage source never killed hero");
         const auto real_dead=scene(dead);
