@@ -208,6 +208,27 @@ bool drawScene(uint32_t* target,int width,int height,int stride_pixels,
             }
         }
     }
+    // A concrete world-space exit gate replaces the invisible tile-55 goal.
+    // It is only shown after the actual first-guard/wave-two progression.
+    // Distinct locked/open colors come from authoritative sentry health.
+    if(view.manual_controls && view.exit_visible){
+        const int gx=(view.exit_x_px-view.camera_x_px)*2;
+        const int gy=(view.exit_y_px+80)*2;
+        const uint32_t rim=rgba(32,50,72);
+        const uint32_t frame= view.stage_cleared?rgba(205,231,168):
+            (view.exit_open?rgba(79,194,164):rgba(162,89,104));
+        s.rect(gx-9,gy-28,54,69,rim);
+        s.rect(gx-5,gy-24,46,61,frame);
+        s.rect(gx+1,gy-18,34,54,rgba(18,40,57));
+        s.rect(gx+11,gy-7,14,32,
+               view.exit_open?rgba(123,238,185):rgba(70,82,101));
+        s.rect(gx-12,gy+37,60,5,rgba(192,173,141));
+        // Pulses signal readiness without additional gameplay state/timers.
+        if(view.exit_open && (view.frame/8)%2==0)
+            s.rect(gx+14,gy-3,8,23,rgba(227,247,173));
+        s.text(gx-7,gy-47,view.exit_open?"EXIT":"LOCK",
+               view.exit_open?rgba(151,233,182):rgba(215,135,134),2);
+    }
     // Three-hit stationary practice target, not an original game enemy.
     // This layer is absent when no target is supplied, preserving golden art.
     if(view.training_target_health>0) {
@@ -395,6 +416,18 @@ bool drawScene(uint32_t* target,int width,int height,int stride_pixels,
         s.text(951,178,label,
                view.decor_layout_reload_failed?rgba(243,121,104):
                rgba(153,218,195),2);
+    }
+    // Dedicated earned stage-completion panel, absent from all auto-demo
+    // frames and from manual play until both real enemies were defeated
+    // and the living hero reached the exit.
+    if(view.manual_controls && view.stage_cleared &&
+       view.exit_visible && view.exit_open){
+        s.rect(371,228,538,154,rgba(21,37,59));
+        s.rect(379,236,522,138,rgba(32,65,72));
+        s.rect(389,246,502,5,rgba(125,224,178));
+        s.text(442,267,"STAGE CLEAR",rgba(226,243,180),3);
+        s.text(427,323,"GUARD + SENTRY DEFEATED",rgba(195,222,221),2);
+        s.text(477,351,"ROM-FREE PROTOTYPE",rgba(170,192,210),2);
     }
     s.rect(0,689,1280,31,rgba(13,19,33));
     s.text(25,697,view.manual_controls?
