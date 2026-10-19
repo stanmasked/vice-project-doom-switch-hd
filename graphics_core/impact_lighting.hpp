@@ -4,6 +4,7 @@
 // RGBA8888 byte convention matches graphics_core/scene_renderer.cpp:
 // red in least significant byte, alpha in most significant byte.
 #include <algorithm>
+#include <cstddef>
 #include <cstdint>
 namespace vpd {
 enum class ImpactLightColor : uint32_t {
