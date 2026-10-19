@@ -31,9 +31,11 @@ reset code path used by the Switch NRO's physical Minus input.
    regardless of preceding victories.
 5. After every accepted terminal Minus, the source fingerprint must
    match an independently constructed pristine enemy encounter.
-6. Hero HP, position, flash, guard/sentry HP and counters, shot state,
-   wave/clear state, dash flag and active player/enemy projectiles
-   must all be reset.
+6. Hero HP, position, velocities, flash, guard/sentry HP, attack
+   cooldowns and counters, target state, shot/dash state and the full
+   bytewise map must all be reset. Every inactive player/enemy bullet
+   must also have **zeroed position, velocity and age**, not just
+   `active=false`.
 7. After the final 32nd reset, normal Right movement and single-shot
    Fire must still work.
 
