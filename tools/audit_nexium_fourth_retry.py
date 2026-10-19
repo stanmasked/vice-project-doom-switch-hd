@@ -132,8 +132,24 @@ def audit(evidence):
     ):
         if mark not in stamps:
             raise ValueError("fourth-run X11 image not guest-event aligned")
+    # Independently compare the same native X11 window immediately
+    # before and after the physical third Minus. A restored player state
+    # from guest SD alone does not establish a changed visible screen.
+    before_reset,sha0=raster(base,"screen-live-third-stage-clear")
     a,sha1=raster(base,"screen-live-fourth-restart")
     b,sha2=raster(base,"screen-live-fourth-move")
+    if sha0==sha1:
+        raise ValueError("fourth restart X11 image matches completed level")
+    reset_pixels=0
+    for y in range(230,395):
+        lo=(y*1280+355)*3
+        hi=(y*1280+925)*3
+        old=before_reset[lo:hi]
+        new=a[lo:hi]
+        reset_pixels+=sum(old[i:i+3]!=new[i:i+3]
+                          for i in range(0,len(old),3))
+    if reset_pixels<1000:
+        raise ValueError("fourth Minus did not visibly reset stage scene")
     # Same hero rectangle tested in the successful third-run control proof.
     changed=0
     for y in range(554,604):
@@ -150,7 +166,9 @@ def audit(evidence):
             f"fourth_move_frame={state['frame']} "
             "hero_hp=5 guard_hp=3 sentry_hp=2 "
             "real_pad_minus=yes real_pad_right=yes source=live_guest "
+            f"changed_reset_scene_pixels={reset_pixels} "
             f"changed_actor_pixels={changed} "
+            f"third_clear_ppm_sha256={sha0} "
             f"restart_ppm_sha256={sha1} move_ppm_sha256={sha2} "
             "native_x11_evidence=yes original_game_proven=no "
             "physical_switch_proven=no\n")
