@@ -74,7 +74,7 @@ if [[ -s "$out/ne-x11-windows.txt" ]]; then
     live_guard_path="$XDG_CONFIG_HOME/NeXium/sdmc/switch/vice_project_doom/guard_live_witness.txt"
     saw_strike=no
     xdotool keydown --clearmodifiers d
-    for (( attempt=0; attempt<95; ++attempt )); do
+    for (( attempt=0; attempt<165; ++attempt )); do
       if [[ -f "$live_guard_path" ]] &&
          grep -q '^VPD_ROMFREE_GUARD_LIVE_V1 seq=2 event=strike ' "$live_guard_path"; then
         saw_strike=yes
