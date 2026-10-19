@@ -312,6 +312,13 @@ void Simulation::advanceSentry(){
     }
 }
 void Simulation::tick(Input input){
+    // A terminal encounter must not keep moving its hero, consuming enemy
+    // shots or changing HP while the user reads the outcome. Retry is an
+    // explicit separate Minus input, not repeated ticks or auto-reset.
+    if(encounter_enabled_ && (player_health_==0 || stage_cleared_)){
+        ++frame_;
+        return;
+    }
     if(encounter_enabled_){
         if(guard_.hit_flash_ticks>0)--guard_.hit_flash_ticks;
         if(player_hit_flash_ticks_>0)--player_hit_flash_ticks_;
