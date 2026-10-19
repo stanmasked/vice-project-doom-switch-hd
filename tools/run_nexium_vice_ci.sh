@@ -216,3 +216,12 @@ if [[ -s "$out/third-guard-clear-paths.txt" ]]; then
   cp "$guest" "$out/guest-third-guard-clear-witness.txt"
 fi
 python3 tools/audit_nexium_third_guard_clear.py --evidence "$out"
+# Second earned stage exit on the restored third attempt, through real
+# X11 Right/Fire and native guest source. Not the first run's old proof.
+find "$HOME" "$XDG_DATA_HOME" "$XDG_CONFIG_HOME" "$XDG_CACHE_HOME" \
+  -type f -name third_stage_witness.txt -print > "$out/third-stage-paths.txt"
+if [[ -s "$out/third-stage-paths.txt" ]]; then
+  IFS= read -r guest < "$out/third-stage-paths.txt"
+  cp "$guest" "$out/guest-third-stage-witness.txt"
+fi
+python3 tools/audit_nexium_third_stage.py --evidence "$out"
