@@ -3,6 +3,7 @@
 #include "simulation.hpp"
 #include "manual_retry.hpp"
 #include "third_stage_witness.hpp"
+#include "fourth_retry_witness.hpp"
 #include <cstdio>
 #include <cstring>
 #include <stdexcept>
@@ -86,9 +87,56 @@ int main(){
     check(std::fgets(line,sizeof(line),f)==nullptr,
           "Extra third-stage guest event recorded");
     std::fclose(f);
+    // A third *earned* stage clear must support the same real terminal
+    // Minus reset path a fourth time, not an implicit auto-restart.
+    std::FILE* fourth=std::tmpfile();
+    check(fourth!=nullptr,"Fourth-run guest witness stream unavailable");
+    const auto previous=retryBefore(game);
+    check(!writeFourthRestart(fourth,ManualRetryOutcome::Ignored,
+                              previous,game,true),
+          "Fourth restart accepted absent terminal retry");
+    const auto fourth_outcome=retryTerminalEncounter(game,true);
+    check(fourth_outcome==ManualRetryOutcome::AfterVictory &&
+          fourthFresh(game) && game.frame()==0 &&
+          game.player().x==3*kTileSize*kFixed,
+          "Fourth attempt was not cleanly restored after third win");
+    Simulation freshly_constructed;
+    freshly_constructed.enableEnemyEncounter();
+    check(game.fingerprint()==freshly_constructed.fingerprint(),
+          "Fourth-run restored state differs from pristine encounter");
+    check(writeFourthRestart(fourth,fourth_outcome,previous,game,true),
+          "Fourth source restart rejected genuine prior stage victory");
+    check(!writeFourthMove(fourth,game,Right,game.player().x,0),
+          "Fourth-run movement accepted before any real input");
+    check(retryTerminalEncounter(game,true)==ManualRetryOutcome::Ignored,
+          "Healthy fourth attempt accepted another Minus");
+    for(int i=0;i<7;++i)game.tick(Input{Right});
+    const auto before_x=game.player().x;
+    const auto before_frame=game.frame();
+    game.tick(Input{Right});
+    check(!writeFourthMove(fourth,game,0,before_x,before_frame),
+          "Fourth-run movement witness accepted absent Right");
+    check(!writeFourthMove(fourth,game,Right,before_x-1,before_frame),
+          "Fourth-run movement accepted forged actor prior x");
+    check(writeFourthMove(fourth,game,Right,before_x,before_frame),
+          "Source fourth-run movement rejected actual healthy Right tick");
+    std::rewind(fourth);
+    check(std::fgets(line,sizeof(line),fourth)!=nullptr &&
+          std::strstr(line,"seq=1 event=restart") &&
+          std::strstr(line,"old_clear=1 new_frame=0") &&
+          std::strstr(line,"input_minus=1 source=live_guest"),
+          "Fourth-run genuine Minus reset witness malformed");
+    check(std::fgets(line,sizeof(line),fourth)!=nullptr &&
+          std::strstr(line,"seq=2 event=move") &&
+          std::strstr(line,"delta_fixed=512 hero_hp=5") &&
+          std::strstr(line,"input_right=1 source=live_guest"),
+          "Fourth-run genuine Right witness malformed");
+    check(std::fgets(line,sizeof(line),fourth)==nullptr,
+          "Fourth-run witness contained extra guest records");
+    std::fclose(fourth);
     std::puts("VPD_THIRD_STAGE_HOST_PASS initial_victory=yes "
               "second_loss=yes third_guard_kill=yes "
-              "third_wave=yes third_stage_clear=yes "
+              "third_wave=yes third_stage_clear=yes fourth_retry_and_move=yes "
               "live_nexium_proven=no original_game_proven=no");
     return 0;
  }catch(const std::exception& e){
