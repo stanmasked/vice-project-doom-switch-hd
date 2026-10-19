@@ -12,7 +12,10 @@ approached, hit and killed with real NeXium X11 keyboard events.
 The original seven-event manual witness, ZR dash and live first-guard
 contact/defeat remain separate prerequisites. After the original
 guard's confirmed native death and X11 screenshot, the driver keeps the
-running game open and holds NeXium's default D+Z = Right+Y/Fire.
+running game open and holds NeXium's D = Right until the *actual guest*
+reports crossing x=26 tiles. Only then does it hold D+Z =
+Right+Y/Fire, preventing earlier unverified distant gunfire from
+altering the second-wave encounter.
 
 It reads **guest-created** `second_wave_live_witness.txt` to decide when
 the scripted *host input trial* has completed and releases the keys only
