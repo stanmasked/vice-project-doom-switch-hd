@@ -8,6 +8,7 @@
 #include "guard_guest_witness.hpp"
 #include "guard_combat_probe.hpp"
 #include "second_wave_guest_probe.hpp"
+#include "guard_live_debug.hpp"
 #include "guard_live_witness.hpp"
 #include "guard_live_defeat_witness.hpp"
 #include "scene_renderer.hpp"
@@ -60,6 +61,7 @@ int main(int,char**) {
     (void)vpd::guardProofReset(has_sd);
     (void)vpd::guardCombatProofReset(has_sd);
     (void)vpd::resetSentryProof(has_sd);
+    vpd::guardLiveDebugReset(has_sd);
     (void)vpd::liveGuardProofReset(has_sd);
     (void)vpd::liveGuardDefeatReset(has_sd);
     if(has_sd)assets.reload(kExternalAtlasPath,kExternalAnimationPath);
@@ -126,6 +128,8 @@ int main(int,char**) {
         const u64 buttons=padGetButtons(&pad);
         const u64 pressed=padGetButtonsDown(&pad);
         if(buttons&HidNpadButton_Plus){
+            if(!demo.enabled())vpd::guardLiveDebugRecord(
+                has_sd,"plus",game,0);
             // Must have completed the actual ordered manual control probe.
             if(!demo.enabled() && manual_seq==5){
                 (void)vpd::manualProofAppend(has_sd,vpd::ManualProofEvent::Plus,
@@ -234,6 +238,8 @@ int main(int,char**) {
             // These events are from the *visible*, pad-driven gameplay
             // instance, unlike the isolated guard-combat script. A host
             // keystroke by itself cannot satisfy the observed transitions.
+            if(!was_alerted && game.guardEnemy().alerted)
+                vpd::guardLiveDebugRecord(has_sd,"alert_transition",game,input);
             if(!live_guard_alert_logged && !was_alerted &&
                game.guardEnemy().alerted &&
                (input&vpd::Right) && prior_hp==5)
