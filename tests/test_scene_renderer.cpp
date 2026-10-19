@@ -100,7 +100,7 @@ int main(int argc,char** argv) {
         // trigger the opt-in authored light on manually played scenes.
         view.camera_x_px=0;
         view.manual_controls=true;
-        view.guard={160,210,2,true,false,9};
+        view.guard={160,210,2,true,true,9};
         view.sentry={420,210,2,9,true};
         view.player_hit_flash_ticks=9;
         view.hd_hit_lighting=false;
@@ -109,11 +109,19 @@ int main(int argc,char** argv) {
                              vpd::kSceneHeight,stride,view),
               "manual impact baseline render failed");
         const auto unlit_manual=checksum(repeat,stride);
+        // Existing NeXium guard-raster audit requires the real alert
+        // torso exact RGB (220,103,93), even when hit light is enabled.
+        constexpr int torso_x=160*2+10, torso_y=(210+80)*2+15;
+        constexpr uint32_t torso_color=0xff5d67dcu;
+        check(repeat[static_cast<size_t>(torso_y)*stride+torso_x]==torso_color,
+              "unlit guard torso no longer has source alert color");
         view.hd_hit_lighting=true;
         check(vpd::drawScene(repeat.data(),vpd::kSceneWidth,
                              vpd::kSceneHeight,stride,view),
               "manual source-hit lighting render failed");
         const auto lit_manual=checksum(repeat,stride);
+        check(repeat[static_cast<size_t>(torso_y)*stride+torso_x]==torso_color,
+              "impact halo recolored authenticated live guard torso");
         check(lit_manual!=unlit_manual,
               "real manual combat hits did not illuminate scene");
         check(vpd::drawScene(manual_repeat.data(),vpd::kSceneWidth,
