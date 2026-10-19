@@ -25,25 +25,41 @@ void freshCheck(const vpd::Simulation& game,uint64_t baseline){
     require(game.fingerprint()==baseline,"Stale internal physics/replay state survived restart");
     require(game.playerHealth()==5 && game.playerHitFlashTicks()==0,
             "Hero health/flash not restored");
+    const Scene expected_scene;
+    require(game.scene().cells()==expected_scene.cells(),
+            "Geometry bytes differ from independently constructed pristine map");
+    require(game.player().grounded && game.player().vx==0 &&
+            game.player().vy==0,
+            "Player retained velocity or airborne state");
+    require(game.trainingTarget().health==3 &&
+            game.trainingTarget().hits==0,
+            "Practice target retained combat state");
     require(game.player().x==3*kTileSize*kFixed,
             "Hero did not return to exact original spawn");
     require(game.guardEnemy().health==3 &&
             game.guardEnemy().attacks==0 &&
-            game.guardEnemy().projectile_hits==0,
+            game.guardEnemy().projectile_hits==0 &&
+            game.guardEnemy().attack_cooldown==0 &&
+            game.guardEnemy().hit_flash_ticks==0 &&
+            !game.guardEnemy().alerted,
             "Guard retained prior combat state");
     require(game.sentry().health==2 &&
             game.sentry().projectile_hits==0 &&
             game.sentry().shots_fired==0 &&
-            game.sentry().shots_hit==0,
+            game.sentry().shots_hit==0 &&
+            game.sentry().fire_cooldown==0 &&
+            game.sentry().hit_flash_ticks==0,
             "Sentry retained prior projectile/damage state");
     require(!game.secondWaveActive() && !game.stageCleared(),
             "Old stage victory/wave survived restart");
     require(game.shotsFired()==0 && !game.dashEverUsed(),
             "Hero retained old firearm/dash state");
     for(const auto& p:game.projectiles())
-        require(!p.active,"Player projectile leaked into next game");
+        require(!p.active && p.x==0 && p.y==0 && p.vx==0 && p.age==0,
+                "Player projectile kept stale coordinates/age across restart");
     for(const auto& p:game.enemyProjectiles())
-        require(!p.active,"Enemy projectile leaked into next game");
+        require(!p.active && p.x==0 && p.y==0 && p.vx==0 && p.age==0,
+                "Enemy projectile kept stale coordinates/age across restart");
 }
 uint64_t win(vpd::Simulation& game){
     using namespace vpd;
@@ -143,6 +159,11 @@ int main(){
         game.tick(Input{Fire});
         require(game.shotsFired()==1 && game.playerHealth()==5,
                 "32nd terminal retry lost manual Fire input");
+        bool prepoison_projectile=false;
+        for(const auto& bullet:game.projectiles())
+            prepoison_projectile|=bullet.active;
+        require(prepoison_projectile,
+                "33rd poisoned replay did not begin with a live projectile");
         // Adversarial final encounter: the original source map is mutable,
         // so change one safely distant tile, activate manual Dash and keep
         // the already fired projectile. The earned terminal Minus must
