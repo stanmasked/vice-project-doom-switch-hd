@@ -5,7 +5,7 @@ if [[ $# -ne 3 ]]; then echo "Usage: visual_probe.sh emulator nro evidence-dir" 
 emulator="$1"; nro="$2"; out="$3"
 mkdir -p "$out"
 echo "visual_probe=started" > "$out/visual-probe.txt"
-timeout --signal=TERM --kill-after=5s 38s \
+timeout --signal=TERM --kill-after=5s 55s \
  "$emulator" "$nro" > "$out/emulator-stdout.txt" 2>&1 &
 emu_pid=$!
 # Root screenshots include the real native X11/Vulkan presentation child.
@@ -65,15 +65,16 @@ if [[ -s "$out/ne-x11-windows.txt" ]]; then
     xdotool keydown --clearmodifiers t
     sleep 0.6
     xdotool keyup t
-    xdotool keyup d
-    sleep 0.25
+    # Keep Right continuously pressed after releasing ZR. Previous CI
+    # observed the guard first alerting at frame 133 under input=0 during
+    # the idle keyup/sleep gap, which correctly invalidated the native
+    # strict live-contact witness. Do not fake or relax the guard alert:
+    # ensure the real pad supplies Right when the guard detects the hero.
     echo "host_dash_probe_sent=yes keys=D+T expected=ZR+Right" >> "$out/input-probe.txt"
-    # Follow the *live*, pad-driven guard to the first observed strike.
-    # The host uses this guest event only to release movement before
-    # overshooting the opponent; it cannot author the guest witness.
+    # The same held Right now drives the visible, pad-controlled guard to
+    # first melee contact; do not send a duplicate keydown or idle gap.
     live_guard_path="$XDG_CONFIG_HOME/NeXium/sdmc/switch/vice_project_doom/guard_live_witness.txt"
     saw_strike=no
-    xdotool keydown --clearmodifiers d
     for (( attempt=0; attempt<165; ++attempt )); do
       if [[ -f "$live_guard_path" ]] &&
          grep -q '^VPD_ROMFREE_GUARD_LIVE_V1 seq=2 event=strike ' "$live_guard_path"; then
@@ -112,6 +113,45 @@ if [[ -s "$out/ne-x11-windows.txt" ]]; then
         echo "live_raster_defeat_after_guest_event=yes" >> "$out/visual-probe.txt"
       fi
       echo "host_guard_live_defeat_observed=$saw_defeat" >> "$out/input-probe.txt"
+      # Next genuinely manual encounter: continue the SAME running game by
+      # pressing Right+Fire, until the native guest itself reports the exit.
+      # No offscreen source-script evidence may satisfy this condition.
+      if [[ "$saw_defeat" == yes ]]; then
+        live_wave_path="$XDG_CONFIG_HOME/NeXium/sdmc/switch/vice_project_doom/second_wave_live_witness.txt"
+        saw_live_wave=no
+        saw_live_exit=no
+        xdotool keydown --clearmodifiers d
+        # Advance using real Right control until the guest reports crossing
+        # the wave gate. Do not fire early into distant dummy targets.
+        for (( attempt=0; attempt<150; ++attempt )); do
+          if [[ -f "$live_wave_path" ]] &&
+             grep -q '^VPD_ROMFREE_WAVE2_LIVE_V1 seq=1 event=wave ' "$live_wave_path"; then
+            saw_live_wave=yes
+            break
+          fi
+          sleep 0.05
+        done
+        echo "host_second_wave_gate_sent=yes key=D guest_wave=$saw_live_wave" >> "$out/input-probe.txt"
+        if [[ "$saw_live_wave" == yes ]]; then
+          xdotool keydown --clearmodifiers z
+          for (( attempt=0; attempt<220; ++attempt )); do
+            if [[ -f "$live_wave_path" ]] &&
+               grep -q '^VPD_ROMFREE_WAVE2_LIVE_V1 seq=5 event=exit ' "$live_wave_path"; then
+              saw_live_exit=yes
+              break
+            fi
+            sleep 0.05
+          done
+          xdotool keyup z
+        fi
+        xdotool keyup d
+        echo "host_second_wave_controls_sent=yes keys=D+Z guest_exit=$saw_live_exit" >> "$out/input-probe.txt"
+        if [[ "$saw_live_exit" == yes ]]; then
+          sleep 0.12
+          capture screen-live-stage-clear
+          echo "live_second_wave_exit_raster_after_guest_event=yes" >> "$out/visual-probe.txt"
+        fi
+      fi
     fi
     xdotool key --clearmodifiers --delay 150 m >> "$out/input-probe.txt" 2>&1 &&
       echo "host_plus_key_sent=yes" >> "$out/input-probe.txt"

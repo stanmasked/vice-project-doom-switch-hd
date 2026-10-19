@@ -26,6 +26,8 @@ on:
       - "tests/test_nexium_guard_live_raster.py"
       - "tools/audit_nexium_second_wave.py"
       - "tests/test_nexium_second_wave.py"
+      - "tools/audit_nexium_second_wave_live.py"
+      - "tests/test_nexium_second_wave_live.py"
       - "tools/nexium_visual_probe.sh"
       - "game_core/**"
       - "switch_graphical/**"
@@ -112,6 +114,11 @@ jobs:
             emulator-evidence/second-wave-result.txt
             emulator-evidence/second-wave-trace-paths.txt
             emulator-evidence/guest-second-wave-witness.txt
+            emulator-evidence/second-wave-live-result.txt
+            emulator-evidence/second-wave-live-trace-paths.txt
+            emulator-evidence/guest-second-wave-live-witness.txt
+            emulator-evidence/screen-live-stage-clear.png
+            emulator-evidence/screen-live-stage-clear.ppm
             emulator-evidence/guest-guard-live-debug.txt
             emulator-evidence/guard-live-debug-paths.txt
             emulator-evidence/guard-live-defeat-trace-paths.txt
