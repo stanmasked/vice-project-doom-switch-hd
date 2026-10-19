@@ -170,10 +170,11 @@ int main(){
             "VPD_RESTART_STRESS_HOST_PASS runs=%u wins=%u deaths=%u "
             "restarted=%u manual_right_after_stress=yes "
             "manual_fire_after_stress=yes "
+            "extra_poisoned_victory=yes "
             "poisoned_terrain_dash_projectile_reset=yes "
             "initial_hash=%llu victory_hash=%llu defeat_hash=%llu "
             "chain_hash=%llu guest_nexium_proven=no original_game_proven=no\n",
-            kRuns,kRuns/2,kRuns/2,kRuns,
+            kRuns,kRuns/2,kRuns/2,kRuns+1,
             static_cast<unsigned long long>(baseline),
             static_cast<unsigned long long>(victory_hash),
             static_cast<unsigned long long>(defeat_hash),
