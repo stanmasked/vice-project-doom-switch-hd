@@ -163,3 +163,12 @@ if [[ -s "$out/second-wave-live-trace-paths.txt" ]]; then
   cp "$guest" "$out/guest-second-wave-live-witness.txt"
 fi
 python3 tools/audit_nexium_second_wave_live.py --evidence "$out"
+# Separate positive proof that the *same pad-driven live NRO* accepts
+# Minus after earned stage completion and resets to a clean first wave.
+find "$HOME" "$XDG_DATA_HOME" "$XDG_CONFIG_HOME" "$XDG_CACHE_HOME" \
+  -type f -name manual_retry_witness.txt -print > "$out/manual-retry-trace-paths.txt"
+if [[ -s "$out/manual-retry-trace-paths.txt" ]]; then
+  IFS= read -r guest < "$out/manual-retry-trace-paths.txt"
+  cp "$guest" "$out/guest-manual-retry-witness.txt"
+fi
+python3 tools/audit_nexium_manual_retry.py --evidence "$out"
