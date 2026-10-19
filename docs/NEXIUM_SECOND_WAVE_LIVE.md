@@ -10,7 +10,13 @@ approached, hit and killed with real NeXium X11 keyboard events.
 ## Actual host/controller flow
 
 The original seven-event manual witness, ZR dash and live first-guard
-contact/defeat remain separate prerequisites. After the original
+contact/defeat remain separate prerequisites. The host keeps the *actual*
+Right pad key held **continuously** between ZR release and the first
+guard strike. This prevents the observed frame-133 race where an idle
+`input=0` frame allowed the guard to alert before a later Right
+keydown; the independent guest validator still demands a real Right
+input on the alert transition. A separate negative regression test
+guards this host control continuity without fabricating guest evidence. After the original
 guard's confirmed native death and X11 screenshot, the driver keeps the
 running game open and holds NeXium's D = Right until the *actual guest*
 reports crossing x=26 tiles. Only then does it hold D+Z =
