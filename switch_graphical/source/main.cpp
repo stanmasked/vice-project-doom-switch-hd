@@ -10,6 +10,7 @@
 #include "third_stage_witness.hpp"
 #include "fourth_retry_witness.hpp"
 #include "fourth_combat_witness.hpp"
+#include "fourth_guard_clear_witness.hpp"
 #include "combat_demo.hpp"
 #include "demo_witness_sd.hpp"
 #include "manual_input_witness.hpp"
@@ -90,6 +91,7 @@ int main(int,char**) {
     vpd::resetThirdStage(has_sd);
     vpd::resetFourthRetry(has_sd);
     vpd::resetFourthCombat(has_sd);
+    vpd::resetFourthGuardClear(has_sd);
     if(has_sd)assets.reload(kExternalAtlasPath,kExternalAnimationPath);
     bool reload_failed=false;
     constexpr const char* kExternalTerrainPath=
@@ -163,6 +165,7 @@ int main(int,char**) {
     bool fourth_move_logged=false;
     bool fourth_fire_logged=false;
     bool fourth_hit_logged=false;
+    bool fourth_guard_clear_logged=false;
     uint32_t dash_probe_start_frame=0;
     int32_t dash_probe_start_x=0;
     while(appletMainLoop()){
@@ -408,6 +411,15 @@ int main(int,char**) {
                 fourth_hit_logged=vpd::appendFourthCombat(
                     has_sd,vpd::FourthCombatEvent::Impact,game,input,
                     before_shots,prior_guard_hits,prior_guard_hp);
+            // Later fourth-round shots are real manual source actions.
+            // Count guard defeat only on its exact third swept hit.
+            if(fourth_hit_logged && !fourth_guard_clear_logged &&
+               !restarted && input==vpd::Fire &&
+               prior_guard_hp==1 && prior_guard_hits==2 &&
+               game.guardEnemy().health==0 &&
+               game.guardEnemy().projectile_hits==3)
+                fourth_guard_clear_logged=vpd::appendFourthGuardClear(
+                    has_sd,game,input,prior_guard_hp,prior_guard_hits);
             // These events are from the *visible*, pad-driven gameplay
             // instance, unlike the isolated guard-combat script. A host
             // keystroke by itself cannot satisfy the observed transitions.
