@@ -61,6 +61,76 @@ void freshCheck(const vpd::Simulation& game,uint64_t baseline){
         require(!p.active && p.x==0 && p.y==0 && p.vx==0 && p.age==0,
                 "Enemy projectile kept stale coordinates/age across restart");
 }
+// Terminal screens may advance an outer frame counter for rendering,
+// but no real gameplay, bullets or health may move until an earned Minus.
+void requireTerminalFreeze(vpd::Simulation& game){
+    using namespace vpd;
+    require(game.stageCleared() || game.playerHealth()==0,
+            "Terminal freeze probe requires an earned terminal outcome");
+    const auto before_frame=game.frame();
+    const auto before_x=game.player().x;
+    const auto before_y=game.player().y;
+    const auto before_vx=game.player().vx;
+    const auto before_vy=game.player().vy;
+    const auto before_camera=game.cameraX();
+    const auto hp=game.playerHealth();
+    const auto flash=game.playerHitFlashTicks();
+    const auto guard=game.guardEnemy();
+    const auto sentry=game.sentry();
+    const auto shots=game.shotsFired();
+    const auto clear=game.stageCleared();
+    const auto wave=game.secondWaveActive();
+    const auto dash=game.dashing();
+    const auto dash_cooldown=game.dashCooldown();
+    const auto player_shots=game.projectiles();
+    const auto enemy_shots=game.enemyProjectiles();
+    for(int n=0;n<6;++n){
+        game.tick(Input{static_cast<uint8_t>(Right|Jump|Fire|Dash)});
+        require(game.frame()==before_frame+static_cast<uint32_t>(n+1),
+                "Terminal frame counter failed to advance once per tick");
+        require(game.player().x==before_x && game.player().y==before_y &&
+                game.player().vx==before_vx && game.player().vy==before_vy &&
+                game.cameraX()==before_camera,
+                "Terminal input moved a defeated/victorious hero");
+        require(game.playerHealth()==hp && game.playerHitFlashTicks()==flash &&
+                game.shotsFired()==shots && game.stageCleared()==clear &&
+                game.secondWaveActive()==wave && game.dashing()==dash &&
+                game.dashCooldown()==dash_cooldown,
+                "Terminal input modified HP, wave, Fire or Dash state");
+        const auto& g=game.guardEnemy();
+        require(g.x==guard.x && g.y==guard.y &&
+                g.health==guard.health && g.alerted==guard.alerted &&
+                g.direction==guard.direction &&
+                g.attack_cooldown==guard.attack_cooldown &&
+                g.attacks==guard.attacks &&
+                g.projectile_hits==guard.projectile_hits &&
+                g.hit_flash_ticks==guard.hit_flash_ticks,
+                "Guard continued AI or damage during terminal screen");
+        const auto& s=game.sentry();
+        require(s.x==sentry.x && s.y==sentry.y &&
+                s.health==sentry.health &&
+                s.fire_cooldown==sentry.fire_cooldown &&
+                s.hit_flash_ticks==sentry.hit_flash_ticks &&
+                s.shots_fired==sentry.shots_fired &&
+                s.shots_hit==sentry.shots_hit &&
+                s.projectile_hits==sentry.projectile_hits,
+                "Sentry continued attacking after terminal outcome");
+        for(std::size_t i=0;i<player_shots.size();++i){
+            const auto& now=game.projectiles()[i];
+            const auto& old=player_shots[i];
+            require(now.x==old.x && now.y==old.y && now.vx==old.vx &&
+                    now.age==old.age && now.active==old.active,
+                    "Player projectile moved on terminal screen");
+        }
+        for(std::size_t i=0;i<enemy_shots.size();++i){
+            const auto& now=game.enemyProjectiles()[i];
+            const auto& old=enemy_shots[i];
+            require(now.x==old.x && now.y==old.y && now.vx==old.vx &&
+                    now.age==old.age && now.active==old.active,
+                    "Enemy projectile moved on terminal screen");
+        }
+    }
+}
 uint64_t win(vpd::Simulation& game){
     using namespace vpd;
     // The first guard is defeated by the same deterministic source shots.
@@ -123,7 +193,10 @@ int main(){
             require(game.fingerprint()==prior,
                     "Ignored healthy Minus changed actual gameplay state");
 
-            const uint64_t finished=earned_win?win(game):lose(game);
+            if(earned_win)(void)win(game);
+            else (void)lose(game);
+            requireTerminalFreeze(game);
+            const uint64_t finished=game.fingerprint();
             if(earned_win){
                 if(run==0)victory_hash=finished;
                 require(victory_hash==finished,
@@ -182,6 +255,7 @@ int main(){
         // Still earn a legitimate victory through the existing game rules.
         // This must never be replaced by a direct force-reset fixture.
         (void)win(game);
+        requireTerminalFreeze(game);
         require(retryTerminalEncounter(game,true)==ManualRetryOutcome::AfterVictory,
                 "Real terminal Minus failed to clear poisoned victory");
         freshCheck(game,baseline);
@@ -193,6 +267,7 @@ int main(){
             "manual_fire_after_stress=yes "
             "extra_poisoned_victory=yes "
             "poisoned_terrain_dash_projectile_reset=yes "
+            "terminal_input_freeze_on_win_and_death=yes "
             "initial_hash=%llu victory_hash=%llu defeat_hash=%llu "
             "chain_hash=%llu guest_nexium_proven=no original_game_proven=no\n",
             kRuns,kRuns/2,kRuns/2,kRuns+1,
