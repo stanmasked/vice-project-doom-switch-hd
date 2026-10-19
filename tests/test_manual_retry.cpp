@@ -55,11 +55,15 @@ int main(){
 
         Simulation lost;
         lost.enableEnemyEncounter();
-        bool died=false;
-        for(int n=0;n<410;++n){
+        // Move until the *real first melee hit*, then remain beside the
+        // guard. Continuously running right would escape its attack radius.
+        for(int n=0;n<260 && lost.guardEnemy().attacks==0;++n)
             lost.tick(Input{Right});
-            if(lost.playerHealth()==0){died=true;break;}
-        }
+        require(lost.guardEnemy().attacks==1 && lost.playerHealth()==4,
+                "Guard never delivered the first source melee hit");
+        for(int n=0;n<230 && lost.playerHealth()>0;++n)
+            lost.tick(Input{});
+        const bool died=lost.playerHealth()==0;
         require(died && !lost.stageCleared() &&
                 lost.guardEnemy().attacks>=5,
                 "Real first-guard melee never caused terminal defeat");
