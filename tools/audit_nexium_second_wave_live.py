@@ -92,11 +92,13 @@ def audit(folder):
         raise ValueError("NeXium guest omitted real pad-controlled wave-two log")
     observed=verify(path.read_bytes())
     host=base/"input-probe.txt"
-    if not host.is_file() or (
-        "host_second_wave_controls_sent=yes keys=D+Z guest_exit=yes"
-        not in host.read_text(encoding="ascii").splitlines()
-    ):
+    if not host.is_file():
         raise ValueError("host did not confirm sending separate Right+Fire stage controls")
+    host_lines=host.read_text(encoding="ascii").splitlines()
+    if ("host_second_wave_gate_sent=yes key=D guest_wave=yes" not in host_lines or
+        "host_second_wave_controls_sent=yes keys=D+Z guest_exit=yes"
+        not in host_lines):
+        raise ValueError("host did not confirm real Right gate and post-gate Fire")
     for name,marker in (
         ("manual-result.txt","VPD_NEXIUM_GUEST_MANUAL_EXIT_PASS "),
         ("dash-result.txt","VPD_NEXIUM_GUEST_DASH_PASS "),
