@@ -20,16 +20,22 @@ int main(){
     check(world.guardEnemy().health==0 && !world.secondWaveActive(),
           "First-guard prerequisite absent");
     unsigned sequence=0;
+    // First reach the new section using actual Right input (not a scripted
+    // internal world teleport), then aim/fire only after the gate opens.
+    for(int n=0;n<260 && !world.secondWaveActive();++n){
+        const bool old=world.secondWaveActive();
+        world.tick(Input{Right});
+        if(!old && world.secondWaveActive()){
+            check(liveWaveWrite(records,LiveWaveEvent::Activated,world,Right),
+                  "Actual wave gate rejected");sequence=1;
+        }
+    }
+    check(sequence==1 && world.secondWaveActive(),"Real Right never reached sentry wave");
     for(int n=0;n<460 && !world.stageCleared();++n){
-        const bool wave_before=world.secondWaveActive();
         const auto hp_before=world.sentry().health;
         const uint32_t shots_before=world.shotsFired();
         const uint8_t keys=static_cast<uint8_t>(Right|Fire);
         world.tick(Input{keys});
-        if(sequence==0 && !wave_before && world.secondWaveActive()){
-            check(liveWaveWrite(records,LiveWaveEvent::Activated,world,keys),
-                  "Actual wave gate rejected");sequence=1;
-        }
         if(sequence==1 && world.shotsFired()>shots_before &&
            world.sentry().health==2){
             check(!liveWaveWrite(records,LiveWaveEvent::Fire,world,Right),
