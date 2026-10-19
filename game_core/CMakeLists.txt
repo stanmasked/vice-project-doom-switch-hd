@@ -11,6 +11,16 @@ add_executable(vpd_simulation_test ../tests/test_simulation.cpp)
 target_link_libraries(vpd_simulation_test PRIVATE vpd_simulation)
 enable_testing()
 add_test(NAME deterministic_simulation COMMAND vpd_simulation_test)
+# Source-locked 25-pixel native sample witness for exact live guard impact.
+add_executable(vpd_hd_hit_light_witness_test
+               ../tests/test_hd_hit_light_witness.cpp)
+target_link_libraries(vpd_hd_hit_light_witness_test PRIVATE vpd_simulation)
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+  target_compile_options(vpd_hd_hit_light_witness_test PRIVATE
+                         -Wall -Wextra -Wpedantic -Werror)
+endif()
+add_test(NAME romfree_hd_hit_light_source_witness
+         COMMAND vpd_hd_hit_light_witness_test)
 # Manual-only ROM-free burst movement; must not change pinned autoplay hashes.
 add_executable(vpd_manual_dash_test ../tests/test_manual_dash.cpp)
 target_link_libraries(vpd_manual_dash_test PRIVATE vpd_simulation)
