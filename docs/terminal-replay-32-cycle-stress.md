@@ -38,6 +38,11 @@ reset code path used by the Switch NRO's physical Minus input.
    `active=false`.
 7. After the final 32nd reset, normal Right movement and single-shot
    Fire must still work.
+8. Once a real victory or melee death occurs, six deliberately aggressive
+   ticks of Right+Jump+Fire+Dash must NOT move either actor, create shots,
+   advance guard/sentry AI, alter projectiles or modify health/physics.
+   Only the terminal screen's outer frame counter may continue advancing,
+   until the explicit Minus reset is accepted.
 
 After the 32 standard alternating cycles, an additional **adversarial
 earned victory** deliberately changes a distant map tile, triggers a
