@@ -143,10 +143,32 @@ int main(){
         game.tick(Input{Fire});
         require(game.shotsFired()==1 && game.playerHealth()==5,
                 "32nd terminal retry lost manual Fire input");
+        // Adversarial final encounter: the original source map is mutable,
+        // so change one safely distant tile, activate manual Dash and keep
+        // the already fired projectile. The earned terminal Minus must
+        // discard ALL of these changes, not just the health counters.
+        const int changed_x=10, changed_y=2;
+        const bool original_solid=game.scene().solid(changed_x,changed_y);
+        game.scene().setSolid(changed_x,changed_y,!original_solid);
+        require(game.scene().solid(changed_x,changed_y)!=original_solid,
+                "Synthetic terrain poison did not alter live geometry");
+        game.tick(Input{Dash});
+        require(game.dashEverUsed(),"Synthetic dash poison was not exercised");
+        require(game.fingerprint()!=baseline,
+                "Poisoned encounter unexpectedly has fresh fingerprint");
+        // Still earn a legitimate victory through the existing game rules.
+        // This must never be replaced by a direct force-reset fixture.
+        (void)win(game);
+        require(retryTerminalEncounter(game,true)==ManualRetryOutcome::AfterVictory,
+                "Real terminal Minus failed to clear poisoned victory");
+        freshCheck(game,baseline);
+        require(game.scene().solid(changed_x,changed_y)==original_solid,
+                "Stage geometry leaked across the terminal reset");
         std::printf(
             "VPD_RESTART_STRESS_HOST_PASS runs=%u wins=%u deaths=%u "
             "restarted=%u manual_right_after_stress=yes "
             "manual_fire_after_stress=yes "
+            "poisoned_terrain_dash_projectile_reset=yes "
             "initial_hash=%llu victory_hash=%llu defeat_hash=%llu "
             "chain_hash=%llu guest_nexium_proven=no original_game_proven=no\n",
             kRuns,kRuns/2,kRuns/2,kRuns,
