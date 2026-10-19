@@ -33,6 +33,16 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
                          -Wall -Wextra -Wpedantic -Werror)
 endif()
 add_test(NAME romfree_second_wave_sentry COMMAND vpd_second_wave_sentry_test)
+# Same five-event physics script compiled into actual libnx NRO.
+add_executable(vpd_second_wave_guest_probe_test
+               ../tests/test_second_wave_guest_probe.cpp)
+target_link_libraries(vpd_second_wave_guest_probe_test PRIVATE vpd_simulation)
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+  target_compile_options(vpd_second_wave_guest_probe_test PRIVATE
+                         -Wall -Wextra -Wpedantic -Werror)
+endif()
+add_test(NAME romfree_second_wave_guest_script
+         COMMAND vpd_second_wave_guest_probe_test)
 # The native guard first-step proof is emitted only by authoritative gameplay.
 add_executable(vpd_guard_guest_witness_test ../tests/test_guard_guest_witness.cpp)
 target_link_libraries(vpd_guard_guest_witness_test PRIVATE vpd_simulation)
