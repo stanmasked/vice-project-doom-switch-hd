@@ -188,7 +188,9 @@ int main(int argc,char** argv) {
         // hero and exact red guard torso pixels unchanged.
         view.guard={160,210,3,true,true,0};
         view.sentry={420,210,2,0,true};
-        view.enemy_projectiles[0]={160,210,true};
+        // Bullet illuminates the guard but does not physically overdraw
+        // its sampled red torso pixel: test compositing, not overlap.
+        view.enemy_projectiles[0]={153,210,true};
         view.manual_controls=true;
         view.stage_cleared=false;
         view.hd_hostile_projectile_halo=false;
