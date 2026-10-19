@@ -180,3 +180,15 @@ target_include_directories(vpd_graphics_animation_test PRIVATE ${CMAKE_CURRENT_B
 add_dependencies(vpd_graphics_animation_test vpd_demo_atlas vpd_demo_animation)
 target_link_libraries(vpd_graphics_animation_test PRIVATE vpd_scene_renderer vpd_simulation)
 add_test(NAME gameplay_sprite_animation_integration COMMAND vpd_graphics_animation_test)
+
+# Independent pixel-safe original-style combat hit-light regression.
+add_executable(vpd_hd_impact_lighting_test
+               ../tests/test_impact_lighting.cpp)
+target_include_directories(vpd_hd_impact_lighting_test PRIVATE
+                           ${CMAKE_CURRENT_SOURCE_DIR})
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+  target_compile_options(vpd_hd_impact_lighting_test PRIVATE
+                         -Wall -Wextra -Wpedantic -Werror)
+endif()
+add_test(NAME hd_impact_lighting_bounds
+         COMMAND vpd_hd_impact_lighting_test)
