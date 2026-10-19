@@ -31,6 +31,11 @@ inline void applyCombatOverlay(SceneView& view,const Simulation& game) {
     view.sentry={turret.x/kFixed,turret.y/kFixed,turret.health,
                  turret.hit_flash_ticks,game.secondWaveActive()};
     view.stage_cleared=game.stageCleared();
+    // Exit is a visible world object only after the real second-wave gate.
+    view.exit_visible=game.secondWaveActive();
+    view.exit_open=game.secondWaveActive() && turret.health==0;
+    view.exit_x_px=55*kTileSize;
+    view.exit_y_px=(kMapHeight-1)*kTileSize-kPlayerHeight;
     const auto& hostile=game.enemyProjectiles();
     for(std::size_t i=0;i<kMaxEnemyProjectiles;++i)
         view.enemy_projectiles[i]={hostile[i].x/kFixed,
