@@ -3,6 +3,7 @@
 #include "terrain_source.hpp"
 #include "backdrop_source.hpp"
 #include "decor_source.hpp"
+#include "impact_lighting.hpp"
 #include <cstdint>
 #include <algorithm>
 
@@ -239,6 +240,40 @@ bool drawScene(uint32_t* target,int width,int height,int stride_pixels,
         s.rect(tx+10,ty+10,12,12,rgba(236,191,117));
         for(unsigned i=0;i<view.training_target_health&&i<3;++i)
             s.rect(tx+i*10,ty-7,8,4,rgba(238,183,81));
+    }
+    // Source-driven light is composited into the WORLD BEFORE live actor
+    // sprites. Keep authoritative guard torso and hero silhouette RGBA
+    // untouched for native X11 hit/death identity and approved capture tests.
+    // ROM-free autoplay retains all of its old pixel hashes.
+    if(view.manual_controls && view.hd_hit_lighting){
+        if(view.player_hit_flash_ticks>0){
+            const unsigned energy=std::min<unsigned>(
+                24u,static_cast<unsigned>(view.player_hit_flash_ticks)*2u);
+            (void)applyImpactLight(target,width,height,stride_pixels,
+                                   (view.player_x_px-view.camera_x_px)*2+17,
+                                   (view.player_y_px+80)*2+14,
+                                   68,energy,ImpactLightColor::Hero);
+        }
+        if(view.guard.enabled && view.guard.health>0 &&
+           view.guard.hit_flash_ticks>0){
+            const unsigned energy=std::min<unsigned>(
+                24u,static_cast<unsigned>(view.guard.hit_flash_ticks)*2u);
+            (void)applyImpactLight(
+                target,width,height,stride_pixels,
+                (view.guard.x_px-view.camera_x_px)*2+13,
+                (view.guard.y_px+80)*2+13,
+                58,energy,ImpactLightColor::Guard);
+        }
+        if(view.sentry.enabled && view.sentry.health>0 &&
+           view.sentry.hit_flash_ticks>0){
+            const unsigned energy=std::min<unsigned>(
+                24u,static_cast<unsigned>(view.sentry.hit_flash_ticks)*2u);
+            (void)applyImpactLight(
+                target,width,height,stride_pixels,
+                (view.sentry.x_px-view.camera_x_px)*2+13,
+                (view.sentry.y_px+80)*2+13,
+                58,energy,ImpactLightColor::Sentry);
+        }
     }
     // Optional self-authored guard: no enemy pixels in legacy autoplay.
     if(view.guard.enabled && view.guard.health>0){
