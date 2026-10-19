@@ -5,6 +5,7 @@
 #include "third_stage_witness.hpp"
 #include "fourth_retry_witness.hpp"
 #include "fourth_combat_witness.hpp"
+#include "fourth_guard_clear_witness.hpp"
 #include <cstdio>
 #include <cstring>
 #include <stdexcept>
@@ -189,9 +190,44 @@ int main(){
     check(std::fgets(line,sizeof(line),combat)==nullptr,
           "Fourth combat writer emitted extra events");
     std::fclose(combat);
+    // Complete fourth-run first guard fight after witnessed first hit.
+    auto* final_hit=std::tmpfile();
+    check(final_hit!=nullptr,"Fourth guard test stream unavailable");
+    check(!writeFourthGuardClear(final_hit,game,Fire,3,0),
+          "Fourth guard clear falsely accepted prior first-hit state");
+    bool guard_dead=false;
+    for(int n=0;n<160 && !guard_dead;++n){
+        const auto old_guard_hp=game.guardEnemy().health;
+        const auto old_hits=game.guardEnemy().projectile_hits;
+        game.tick(Input{Fire});
+        if(game.guardEnemy().health==0){
+            check(old_guard_hp==1 && old_hits==2 &&
+                  game.guardEnemy().projectile_hits==3,
+                  "Fourth guard final hit was not third swept projectile collision");
+            check(!writeFourthGuardClear(final_hit,game,0,
+                                         old_guard_hp,old_hits),
+                  "Fourth guard kill accepted absent physical Y/Fire");
+            guard_dead=writeFourthGuardClear(
+                final_hit,game,Fire,old_guard_hp,old_hits);
+        }
+    }
+    check(guard_dead && game.playerHealth()==5 &&
+          game.guardEnemy().attacks==0 && !game.secondWaveActive() &&
+          game.sentry().health==2,
+          "Fourth hero failed to eliminate restored guard without melee");
+    std::rewind(final_hit);
+    check(std::fgets(line,sizeof(line),final_hit)!=nullptr &&
+          std::strstr(line,"event=guard_clear") &&
+          std::strstr(line,"guard_hp=0 previous_guard_hp=1") &&
+          std::strstr(line,"guard_hits=3 previous_guard_hits=2") &&
+          std::strstr(line,"input_fire=1 source=live_guest"),
+          "Fourth native guard clear row malformed");
+    check(std::fgets(line,sizeof(line),final_hit)==nullptr,
+          "Fourth guard kill emitted unexpected extra records");
+    std::fclose(final_hit);
     std::puts("VPD_THIRD_STAGE_HOST_PASS initial_victory=yes "
               "second_loss=yes third_guard_kill=yes "
-              "third_wave=yes third_stage_clear=yes fourth_retry_and_move=yes fourth_fire_hit=yes "
+              "third_wave=yes third_stage_clear=yes fourth_retry_and_move=yes fourth_fire_hit=yes fourth_guard_kill=yes "
               "live_nexium_proven=no original_game_proven=no");
     return 0;
  }catch(const std::exception& e){
