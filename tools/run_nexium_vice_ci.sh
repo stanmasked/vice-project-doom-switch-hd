@@ -190,3 +190,12 @@ if [[ -s "$out/post-defeat-control-paths.txt" ]]; then
   cp "$guest" "$out/guest-post-defeat-control-witness.txt"
 fi
 python3 tools/audit_nexium_third_run_control.py --evidence "$out"
+# Last check: the restored third attempt must create a genuine source
+# projectile and produce its first swept guard HP=3->2 impact under X11.
+find "$HOME" "$XDG_DATA_HOME" "$XDG_CONFIG_HOME" "$XDG_CACHE_HOME" \
+  -type f -name post_defeat_fire_witness.txt -print > "$out/post-defeat-fire-paths.txt"
+if [[ -s "$out/post-defeat-fire-paths.txt" ]]; then
+  IFS= read -r guest < "$out/post-defeat-fire-paths.txt"
+  cp "$guest" "$out/guest-post-defeat-fire-witness.txt"
+fi
+python3 tools/audit_nexium_third_run_fire.py --evidence "$out"
