@@ -241,6 +241,40 @@ if [[ -s "$out/ne-x11-windows.txt" ]]; then
                     sleep 0.12
                     capture screen-live-third-run-move
                     echo "live_third_run_movement_raster_after_guest_event=yes" >> "$out/visual-probe.txt"
+                    # Third-run combat: press actual Z=Y/Fire ONLY after
+                    # the real restored hero moved. Release immediately
+                    # upon native shot evidence so exactly one projectile
+                    # is launched. Wait for the game's swept guard collision.
+                    third_fire_path="$XDG_CONFIG_HOME/NeXium/sdmc/switch/vice_project_doom/post_defeat_fire_witness.txt"
+                    third_fire_seen=no
+                    third_hit_seen=no
+                    xdotool keydown --clearmodifiers z
+                    for (( attempt=0; attempt<100; ++attempt )); do
+                      if [[ -f "$third_fire_path" ]] &&
+                         grep -q '^VPD_ROMFREE_THIRD_FIRE_V1 seq=1 event=fire ' "$third_fire_path"; then
+                        third_fire_seen=yes
+                        break
+                      fi
+                      sleep 0.05
+                    done
+                    xdotool keyup z
+                    echo "host_third_run_fire_sent=yes key=Z guest_fire=$third_fire_seen" >> "$out/input-probe.txt"
+                    if [[ "$third_fire_seen" == yes ]]; then
+                      for (( attempt=0; attempt<120; ++attempt )); do
+                        if [[ -f "$third_fire_path" ]] &&
+                           grep -q '^VPD_ROMFREE_THIRD_FIRE_V1 seq=2 event=impact ' "$third_fire_path"; then
+                          third_hit_seen=yes
+                          break
+                        fi
+                        sleep 0.05
+                      done
+                      echo "host_third_run_hit_observed=$third_hit_seen" >> "$out/input-probe.txt"
+                      if [[ "$third_hit_seen" == yes ]]; then
+                        sleep 0.10
+                        capture screen-live-third-run-impact
+                        echo "live_third_run_impact_raster_after_guest_event=yes" >> "$out/visual-probe.txt"
+                      fi
+                    fi
                   fi
                 fi
               fi
