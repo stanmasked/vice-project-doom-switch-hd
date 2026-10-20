@@ -20,6 +20,8 @@ def capture(root,frame,*,screen=True,dropped=0,md5=ROM,interval=120,limit=24):
         (root/(prefix.name+".screen.pal.bin")).write_bytes(bytes([254])+bytes(256*240-1))
     m={
         "format":"fceux_ppu_snapshot_v4",
+        "cycle_trace_available":"no",
+        "cycle_trace_counter_epoch":"debugger_since_reset",
         "rom_md5":md5,
         "frame":str(frame),
         "capture_interval":str(interval),
