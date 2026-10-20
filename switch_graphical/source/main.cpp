@@ -793,6 +793,7 @@ int main(int,char**) {
         view.hd_atmospheric_haze=hd_effects;
         view.hd_footstep_dust=hd_effects;
         view.hd_hostile_projectile_halo=hd_effects;
+        view.hd_low_health_warning=hd_effects;
         view.hd_fx_status_visible=view.manual_controls;
         view.hd_fx_status_enabled=hd_effects;
         view.demo_checkpoint_ok=checkpoint_ok && demo.enabled();
@@ -939,6 +940,7 @@ int main(int,char**) {
             alternate.hd_atmospheric_haze=alt;
             alternate.hd_footstep_dust=alt;
             alternate.hd_hostile_projectile_halo=alt;
+            alternate.hd_low_health_warning=alt;
             alternate.hd_fx_status_enabled=alt;
             if(!vpd::drawScene(pixels,vpd::kSceneWidth,
                                vpd::kSceneHeight,pixels_per_row,alternate)){
