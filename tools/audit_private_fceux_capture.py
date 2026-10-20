@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Private FCEUX capture session preflight, never an original-stage proof.
 
-Read metadata and binary lengths only (plus palette byte validity).
-DO NOT export PPU, RAM, images, palette content or source ROM hashes.
+By default read metadata, binary lengths and palette validity only.
+With --require-logs, also parse the private FCEUX register/cycle TSV files.
+DO NOT export PPU, RAM, images, raw traces or source ROM hashes.
 Capture authenticity, scroll/camera mapping and collisions remain unknown.
 """
 import argparse
