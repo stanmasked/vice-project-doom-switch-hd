@@ -65,6 +65,8 @@ on:
       - "tests/test_nexium_hd_fx_sentry_hit.py"
       - "tools/audit_nexium_sentry_hero_impact.py"
       - "tests/test_nexium_sentry_hero_impact.py"
+      - "tools/audit_nexium_sentry_hero_recovery.py"
+      - "tests/test_nexium_sentry_hero_recovery.py"
       - "graphics_core/hd_fx_guest_proof.hpp"
       - "tests/test_nexium_hd_hostile_halo.py"
       - "game_core/hd_hit_light_witness.hpp"
@@ -134,6 +136,7 @@ jobs:
           python3 tests/test_nexium_hd_fx_sentry.py
           python3 tests/test_nexium_hd_fx_sentry_hit.py
           python3 tests/test_nexium_sentry_hero_impact.py
+          python3 tests/test_nexium_sentry_hero_recovery.py
           python3 tests/test_verify_nexium_release.py
           python3 tests/test_nexium_witness_audit.py
       - name: Install NeXium, launch graphical NRO and check real guest record
@@ -216,6 +219,11 @@ jobs:
             emulator-evidence/guest-hd-fx-sentry-hit-witness.txt
             emulator-evidence/hd-fx-sentry-hit-result.txt
             emulator-evidence/sentry-hero-impact-result.txt
+            emulator-evidence/hd-fx-sentry-recover-paths.txt
+            emulator-evidence/guest-hd-fx-sentry-recover-witness.txt
+            emulator-evidence/sentry-hero-recovery-result.txt
+            emulator-evidence/screen-live-sentry-after-recovery.png
+            emulator-evidence/screen-live-sentry-after-recovery.ppm
             emulator-evidence/screen-live-sentry-after-hit.png
             emulator-evidence/screen-live-sentry-after-hit.ppm
             emulator-evidence/screen-live-sentry-hd-fx-off.png

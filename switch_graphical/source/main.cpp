@@ -180,6 +180,9 @@ int main(int,char**) {
     unsigned hd_fx_combat_seq=0;
     unsigned hd_fx_sentry_seq=0;
     bool hd_fx_sentry_hit_logged=false;
+    bool hd_fx_sentry_recovered_logged=false;
+    uint32_t hd_fx_sentry_hit_frame=0;
+    int32_t hd_fx_sentry_hit_x=0,hd_fx_sentry_hit_y=0;
     int hd_fx_sentry_tracked_slot=-1;
     uint32_t hd_fx_sentry_on_frame=0;
     int32_t hd_fx_sentry_on_x=0,hd_fx_sentry_on_y=0;
@@ -198,6 +201,9 @@ int main(int,char**) {
             std::fclose(report);
         if(auto* report=std::fopen(
             "sdmc:/switch/vice_project_doom/hd_fx_sentry_hit_guest.txt","w"))
+            std::fclose(report);
+        if(auto* report=std::fopen(
+            "sdmc:/switch/vice_project_doom/hd_fx_sentry_recover_guest.txt","w"))
             std::fclose(report);
     }
     bool fourth_fire_logged=false;
@@ -367,6 +373,7 @@ int main(int,char**) {
             const auto before_shots=game.shotsFired();
             const auto was_alerted=game.guardEnemy().alerted;
             const auto prior_hp=game.playerHealth();
+            const auto prior_hero_flash=game.playerHitFlashTicks();
             const auto prior_attacks=game.guardEnemy().attacks;
             const auto prior_guard_hp=game.guardEnemy().health;
             const auto prior_guard_hits=game.guardEnemy().projectile_hits;
@@ -448,7 +455,50 @@ int main(int,char**) {
                         static_cast<unsigned long long>(game.fingerprint()));
                     hd_fx_sentry_hit_logged=printed>0 &&
                         std::fclose(report)==0;
+                    if(hd_fx_sentry_hit_logged){
+                        hd_fx_sentry_hit_frame=game.frame();
+                        hd_fx_sentry_hit_x=prior_hero_x;
+                        hd_fx_sentry_hit_y=prior_hero_y;
+                    }
                     if(!hd_fx_sentry_hit_logged && printed<=0)
+                        std::fclose(report);
+                }
+            }
+            // Confirm the authentic hit flash expires after exactly 16 idle
+            // source ticks. The hero must remain stationary, alive and at
+            // the same HP; no host clock or synthetic damage is accepted.
+            if(hd_fx_sentry_hit_logged && !hd_fx_sentry_recovered_logged &&
+               !restarted && input==0 && hd_fx_mode.enabled &&
+               fourth_stage_seq==1 && game.secondWaveActive() &&
+               !game.stageCleared() && game.guardEnemy().health==0 &&
+               game.sentry().health==2 &&
+               game.frame()==hd_fx_sentry_hit_frame+16 &&
+               prior_hero_flash==1 && game.playerHitFlashTicks()==0 &&
+               prior_hp==hd_fx_sentry_on_hero_hp-1 &&
+               game.playerHealth()==prior_hp &&
+               game.player().x==hd_fx_sentry_hit_x &&
+               game.player().y==hd_fx_sentry_hit_y &&
+               game.sentry().shots_hit==hd_fx_sentry_on_hits+1 &&
+               has_sd){
+                if(auto* report=std::fopen(
+                    "sdmc:/switch/vice_project_doom/hd_fx_sentry_recover_guest.txt",
+                    "a")){
+                    const int printed=std::fprintf(report,
+                        "VPD_HD_FX_SENTRY_RECOVER_V1 hit_frame=%u "
+                        "frame=%u flash_before=1 flash_after=0 "
+                        "hero_hp_before=%u hero_hp_after=%u "
+                        "hero_x=%ld hero_y=%ld shots_hit=%u "
+                        "mode=on input=idle wave=1 guard_hp=0 "
+                        "sentry_hp=2 source=libnx_tick original_game_proven=no\n",
+                        hd_fx_sentry_hit_frame,game.frame(),
+                        static_cast<unsigned>(prior_hp),
+                        static_cast<unsigned>(game.playerHealth()),
+                        static_cast<long>(game.player().x),
+                        static_cast<long>(game.player().y),
+                        static_cast<unsigned>(game.sentry().shots_hit));
+                    hd_fx_sentry_recovered_logged=printed>0 &&
+                        std::fclose(report)==0;
+                    if(!hd_fx_sentry_recovered_logged && printed<=0)
                         std::fclose(report);
                 }
             }
