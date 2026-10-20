@@ -6,14 +6,14 @@ cooldown. Prior stages independently proved the ready `!` at native X11
 (PR #67) and three dim pips immediately after the real melee (PR #66).
 Their portable renderer test also checks the exact 32→20 progression.
 This stage supplies the remaining missing independent **live guest/X11**
-evidence for *one pip refilling without any gameplay input*.
+evidence for *one pip refilling while the pad is idle at the source-observation tick*.
 
 ## Source event (passive, no injected state)
 
 The same physical right-pad first guard contact remains recorded in the
 existing guest `guard_live_witness.txt`. After that authentic strike,
 the guest stores its actual source frame. Only at **exactly twelve
-additional simulation ticks**, while the pad is physically idle and the
+additional simulation ticks**, with the pad idle at the observation tick\nand the
 same alerted living guard remains at HP2 with one attack, the hero remains
 HP4, HD FX is ON and the actual old cooldown has naturally decreased from
 32 to **20**, does it write one source-owned
@@ -43,8 +43,14 @@ The separate fail-closed `audit_nexium_guard_refill_x11.py` requires:
 5. The authored **first warm pip** (RGB 237,170,101) and **two dim pips**
    (92,101,118) in strictly limited sprite-relative regions, with no
    READY exclamation accidentally remaining above the guard.
+   Native X11 audit samples three rows within the guard-relative 6×4
+   ROIs: in archived real P6 from NeXium #39496177544 the warm pip
+   contributes **18**, and each dim pip **15** exact RGB pixels
+   at source-anchored guard `(370,559)`. Full displayed rectangles
+   extend another row; do not conflate those full sizes with the
+   verifier's bounded ROI counts.
 
-Ten ROM-free adversarial tests cover source timing, synthetic/forged health,
+Fourteen ROM-free unit tests cover source timing, synthetic/forged health,
 non-idle input, duplicate or malformed record, stale frames, detached
 cooldown bars, a too-early two-pip refill, invalid native format and a
 spurious ready exclamation.
