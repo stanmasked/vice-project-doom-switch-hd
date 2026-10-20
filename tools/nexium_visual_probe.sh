@@ -429,6 +429,40 @@ if [[ -s "$out/ne-x11-windows.txt" ]]; then
                                       echo "host_fourth_stage_gate_sent=yes key=D observed=$fourth_wave" >> "$out/input-probe.txt"
                                       if [[ "$fourth_wave" == yes ]]; then
                                         xdotool keydown --clearmodifiers z
+                                        # Keep the real D+Z controls held in
+                                        # active sentry combat while toggling
+                                        # L+R. The guest must see both edges.
+                                        hd_fx_live_path="$XDG_CONFIG_HOME/NeXium/sdmc/switch/vice_project_doom/hd_fx_live_combat.txt"
+                                        sleep 0.10
+                                        for expected in off on; do
+                                          live_seq=1
+                                          if [[ "$expected" == on ]]; then live_seq=2; fi
+                                          xdotool keydown --clearmodifiers q
+                                          sleep 0.12
+                                          xdotool keydown --clearmodifiers e
+                                          sleep 0.20
+                                          xdotool keyup e
+                                          xdotool keyup q
+                                          hd_live_seen=no
+                                          live_capture_before_exit=no
+                                          for (( attempt=0; attempt<55; ++attempt )); do
+                                            if [[ -f "$hd_fx_live_path" ]] &&
+                                               grep -q "^VPD_HD_FX_LIVE_V1 seq=$live_seq mode=$expected " "$hd_fx_live_path"; then
+                                              hd_live_seen=yes
+                                              break
+                                            fi
+                                            sleep 0.05
+                                          done
+                                          if [[ "$hd_live_seen" == yes ]]; then
+                                            sleep 0.08
+                                            if ! grep -q '^VPD_ROMFREE_FOURTH_STAGE_V1 seq=2 event=exit ' "$fourth_stage_path"; then
+                                              capture "screen-live-hd-fx-combat-$expected"
+                                              live_capture_before_exit=yes
+                                            fi
+                                          fi
+                                          echo "host_hd_fx_live_chord_sent=yes keys=D+Z+Q+E expected=$expected guest_seen=$hd_live_seen capture_before_exit=$live_capture_before_exit" >> "$out/input-probe.txt"
+                                          sleep 0.12
+                                        done
                                         for (( attempt=0; attempt<650; ++attempt )); do
                                           if [[ -f "$fourth_stage_path" ]] &&
                                              grep -q '^VPD_ROMFREE_FOURTH_STAGE_V1 seq=2 event=exit ' "$fourth_stage_path"; then
