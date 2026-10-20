@@ -20,7 +20,10 @@ deterministic fingerprints after **every** simulation tick.
 4. Isolate **only the hostile-projectile halo** on the actual same-frame
    `SceneView` bridged from the source `Simulation`. Haze, dust, hit light
    and HUD mode indicator are all disabled in both image variants.
-   Require different raster hashes in the fixed 414,000-pixel HUD-free ROI.\n   Also require at least five differing pixels within 32 raster pixels of\n   the **actual active bullet's world-to-screen center**, not somewhere else\n   in the level.
+   Require different raster hashes in the fixed 414,000-pixel HUD-free ROI.
+   Also require at least five differing pixels within 32 raster pixels of
+   the **actual active bullet's world-to-screen center**, not somewhere else
+   in the level.
 5. Drive real `HdFxRuntimeMode` L+R OFF, hold for five simulation ticks
    without retoggling, then release and drive L+R ON. The active source
    projectile must persist throughout both edges and no movement, HP,
