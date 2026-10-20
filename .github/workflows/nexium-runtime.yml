@@ -184,6 +184,11 @@ jobs:
             emulator-evidence/guard-live-raster-result.txt
             emulator-evidence/guard-cooldown-x11-result.txt
             emulator-evidence/guard-ready-x11-result.txt
+            emulator-evidence/guard-refill-trace-paths.txt
+            emulator-evidence/guest-guard-cooldown-refill-witness.txt
+            emulator-evidence/guard-cooldown-refill-x11-result.txt
+            emulator-evidence/screen-live-guard-refill.png
+            emulator-evidence/screen-live-guard-refill.ppm
             emulator-evidence/screen-live-guard-ready.png
             emulator-evidence/screen-live-guard-ready.ppm
             emulator-evidence/second-wave-result.txt
