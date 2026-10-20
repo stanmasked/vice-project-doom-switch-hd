@@ -191,6 +191,7 @@ jobs:
             emulator-evidence/hd-low-health-phase-paths.txt
             emulator-evidence/guest-hd-low-health-phase-witness.txt
             emulator-evidence/hd-low-health-result.txt
+            emulator-evidence/hd-low-health-lifecycle-result.txt
             emulator-evidence/screen-live-low-hp-0.png
             emulator-evidence/screen-live-low-hp-0.ppm
             emulator-evidence/screen-live-low-hp-1.png
