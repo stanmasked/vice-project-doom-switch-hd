@@ -87,7 +87,10 @@ class NativeRefillTest(unittest.TestCase):
 
     def test_reject_ready_exclamation_during_real_cooldown(self):
         new=sample(True)
-        box(new,GX+10,GX+15,GY-26,GY-15,(248,198,104))
+        # Put the spurious READY stem strictly ABOVE the three pips;
+        # painting through the second dim pip would trigger the separate
+        # "one pip" guard first and leave this negative test ineffective.
+        box(new,GX+10,GX+15,GY-27,GY-23,(248,198,104))
         with self.assertRaisesRegex(ValueError,"READY"):
             verify_refill_raster(ppm(sample(False)),ppm(new),SOURCE_X)
 
