@@ -83,6 +83,65 @@ class FM2AuditTests(unittest.TestCase):
             report=str(audit_movie(movie,rom))
             self.assertNotIn(hashlib.md5(rom.read_bytes()[16:]).hexdigest(),report)
 
+    def test_one_controller_port_and_implicit_power_on(self):
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d)
+            movie,rom=fixture(root,frames=['|0|........|||','|0|....T...|||'])
+            movie.write_text(movie.read_text().replace('port1 1\n','port1 0\n'))
+            report=audit_movie(movie,rom)
+            self.assertEqual(report['frames'],2)
+            self.assertTrue(report['starts_from_power_on'])
+            self.assertFalse(report['has_explicit_power_command_at_start'])
+            self.assertEqual(report['start_button_press_frames'],[1])
+
+    def test_reject_disabled_controller_with_input(self):
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d)
+            movie,rom=fixture(root,frames=['|0|........|........||'])
+            movie.write_text(movie.read_text().replace('port1 1\n','port1 0\n'))
+            with self.assertRaisesRegex(ValueError,'controller width'):
+                audit_movie(movie,rom)
+
+    def test_supported_nes2_fixed_size_header(self):
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d)
+            movie,rom=fixture(root)
+            data=bytearray(rom.read_bytes())
+            data[7]=0x08
+            rom.write_bytes(data)
+            report=audit_movie(movie,rom)
+            self.assertTrue(report['rom_identity_matched'])
+
+    def test_reject_nes2_exponent_encoding(self):
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d)
+            movie,rom=fixture(root)
+            data=bytearray(rom.read_bytes())
+            data[7]=0x08
+            data[9]=0x0f
+            rom.write_bytes(data)
+            with self.assertRaisesRegex(ValueError,'exponent-size'):
+                audit_movie(movie,rom)
+
+    def test_uniform_checkpoints_when_no_idle(self):
+        with tempfile.TemporaryDirectory() as d:
+            movie,rom=fixture(Path(d),frames=['|0|R.......|........||']*120)
+            report=audit_movie(movie,rom,threshold=10)
+            self.assertEqual(len(report['candidate_capture_windows']),1)
+            win=report['candidate_capture_windows'][0]
+            self.assertIn('uniform timeline',win['reason'])
+            self.assertIsNone(win['resume_frame'])
+            self.assertLess(win['capture_end_frame'],120)
+            self.assertTrue(report['rom_identity_matched'])
+
+    def test_uniform_checkpoint_does_not_claim_stages(self):
+        with tempfile.TemporaryDirectory() as d:
+            movie,rom=fixture(Path(d),frames=['|0|R.......|........||']*3000)
+            report=audit_movie(movie,rom,threshold=10)
+            self.assertGreaterEqual(len(report['candidate_capture_windows']),2)
+            self.assertFalse(report['original_stage_proven'])
+            self.assertEqual(report['long_idle_periods'],[])
+
     def test_reject_symlink_movie(self):
         with tempfile.TemporaryDirectory() as d:
             root=Path(d)
