@@ -35,6 +35,9 @@ pad's DOWN edges; holding L+R never toggles repeatedly.
 - manual and scripted demo modes are independent;
 - the same scene renders deterministically, and turning effects OFF
   makes a visible pixel change;
+- each of the four HD layers independently produces a pixel delta when
+  its actual source condition is present; each remains pixel-inert in autoplay,
+  with guarded row-stride padding checked for each case;
 - ON/OFF HUD labels differ only in manual mode;
 - the old automated demo renders byte-identically, and renderer row
   padding remains intact.
