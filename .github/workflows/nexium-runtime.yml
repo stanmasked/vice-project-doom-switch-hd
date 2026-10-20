@@ -70,6 +70,8 @@ on:
       - "tests/test_hd_low_health_warning.cpp"
       - "tools/audit_nexium_hd_low_health.py"
       - "tests/test_nexium_hd_low_health.py"
+      - "tools/audit_nexium_hd_low_health_lifecycle.py"
+      - "tests/test_nexium_hd_low_health_lifecycle.py"
       - "graphics_core/hd_fx_guest_proof.hpp"
       - "tests/test_nexium_hd_hostile_halo.py"
       - "game_core/hd_hit_light_witness.hpp"
