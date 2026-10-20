@@ -53,6 +53,9 @@ on:
       - "graphics_core/hd_fx_toggle.hpp"
       - "tests/test_hd_fx_toggle.cpp"
       - "tools/audit_nexium_hd_hostile_halo.py"
+      - "tools/audit_nexium_hd_fx_guest.py"
+      - "tests/test_nexium_hd_fx_guest.py"
+      - "graphics_core/hd_fx_guest_proof.hpp"
       - "tests/test_nexium_hd_hostile_halo.py"
       - "game_core/hd_hit_light_witness.hpp"
       - "tools/audit_nexium_fourth_guard_clear.py"
@@ -116,6 +119,7 @@ jobs:
         run: |
           bash -n tools/run_nexium_vice_ci.sh
           bash -n tools/nexium_visual_probe.sh
+          python3 tests/test_nexium_hd_fx_guest.py
       - name: Install NeXium, launch graphical NRO and check real guest record
         run: bash tools/run_nexium_vice_ci.sh emulator-input/vpd_native_scene.nro emulator-evidence
       - name: Save emulator logs, guest output and diagnostics even if blocked
@@ -183,6 +187,13 @@ jobs:
             emulator-evidence/guest-hd-hostile-halo-witness.txt
             emulator-evidence/hd-hostile-halo-paths.txt
             emulator-evidence/hd-hostile-halo-result.txt
+            emulator-evidence/hd-fx-guest-result.txt
+            emulator-evidence/hd-fx-guest-paths.txt
+            emulator-evidence/guest-hd-fx-toggle-witness.txt
+            emulator-evidence/screen-live-hd-fx-off.png
+            emulator-evidence/screen-live-hd-fx-off.ppm
+            emulator-evidence/screen-live-hd-fx-on.png
+            emulator-evidence/screen-live-hd-fx-on.ppm
             emulator-evidence/fourth-guard-clear-result.txt
             emulator-evidence/fourth-guard-clear-paths.txt
             emulator-evidence/guest-fourth-guard-clear-witness.txt
