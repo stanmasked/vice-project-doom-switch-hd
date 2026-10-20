@@ -64,11 +64,11 @@ def verify_prior_strike_receipts(cooldown_text,ready_text,strike_frame,strike_sh
         if (not isinstance(receipt,str) or
             not receipt.startswith(prefix) or
             receipt.count(prefix)!=1 or
-            receipt.count("\\n")>1):
+            receipt.count(chr(10))>1):
             raise ValueError("invalid/duplicate native "+tag+" prior X11 receipt")
-        frames=re.findall(r"(?:^| )strike_frame=([0-9]+)(?: |\\n|$)",receipt)
+        frames=re.findall(r"(?:^| )strike_frame=([0-9]+)(?: |$)",receipt)
         hashes=re.findall(
-            r"(?:^| )strike_ppm_sha256=([a-f0-9]{64})(?: |\\n|$)",receipt
+            r"(?:^| )strike_ppm_sha256=([a-f0-9]{64})(?: |$)",receipt
         )
         if (len(frames)!=1 or int(frames[0])!=strike_frame or
             len(hashes)!=1 or hashes[0]!=strike_sha):
