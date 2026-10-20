@@ -15,6 +15,20 @@ local function bounded_integer(global_name, fallback, limit)
 end
 local FRAME_INTERVAL = bounded_integer('VPD_CAPTURE_INTERVAL',120,1200)
 local MAX_CAPTURES = bounded_integer('VPD_CAPTURE_LIMIT',24,512)
+-- Optional FM2 checkpoints: limit both saved snapshots AND event logging
+-- to this explicit frame window, so long TAS runs do not exhaust the log.
+local function frame_bound(name, fallback)
+    local value = rawget(_G, name)
+    if value == nil then return fallback end
+    assert(type(value)=='number' and value==math.floor(value)
+           and value>=0 and value<=999999999,
+           name..' must be a frame in 0..999999999')
+    return value
+end
+local CAPTURE_START_FRAME = frame_bound('VPD_CAPTURE_START_FRAME',0)
+local CAPTURE_STOP_FRAME = frame_bound('VPD_CAPTURE_STOP_FRAME',999999999)
+assert(CAPTURE_STOP_FRAME >= CAPTURE_START_FRAME,
+       'VPD_CAPTURE_STOP_FRAME must not precede capture start')
 -- Default-on renderer reference. Disable by setting VPD_CAPTURE_SCREEN=false.
 local CAPTURE_SCREEN = rawget(_G, 'VPD_CAPTURE_SCREEN') ~= false
 local MAX_EVENTS_PER_FRAME = 12000
@@ -56,6 +70,12 @@ if clock_available then
 end
 
 local function record_event(address, value, kind)
+    -- Keep register caches updated outside the selected window, but never
+    -- count or export events from unrelated earlier/later movie frames.
+    local event_frame = emu.framecount()
+    if event_frame < CAPTURE_START_FRAME or event_frame > CAPTURE_STOP_FRAME then
+        return
+    end
     kind = kind or 'W'
     if writes_this_frame < MAX_EVENTS_PER_FRAME and total_writes < MAX_TOTAL_EVENTS then
         local frame = emu.framecount()
@@ -124,6 +144,9 @@ local function capture_metadata(frame)
         'screen_size=256x240',
         'capture_interval='..tostring(FRAME_INTERVAL),
         'capture_limit='..tostring(MAX_CAPTURES),
+        'capture_window_start='..tostring(CAPTURE_START_FRAME),
+        'capture_window_stop='..tostring(CAPTURE_STOP_FRAME),
+        'register_log_scope=selected_frame_window_only',
         'invalid_screen_palette_values='..tostring(invalid_screen_palette_values),
         'frame='..tostring(frame),
         'rom_md5='..tostring(rom.gethash('md5')),
@@ -194,6 +217,7 @@ local function capture_frame()
     last_frame = frame
     -- Flush every frame: bound memory use during graphics-heavy scenes.
     flush()
+    if frame < CAPTURE_START_FRAME or frame > CAPTURE_STOP_FRAME then return end
     if frames_captured >= MAX_CAPTURES or frame % FRAME_INTERVAL ~= 0 then return end
 
     local ppu_bytes = ppu.readbyterange(0, 0x4000)

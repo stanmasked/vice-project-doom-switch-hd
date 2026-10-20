@@ -37,6 +37,7 @@ jobs:
           lua5.4 tests/test_fceux_capture.lua
           lua5.4 tests/test_fceux_capture.lua --no-clock
           lua5.4 tests/test_fceux_capture.lua --dense
+          lua5.4 tests/test_fceux_windowed_capture.lua
       - name: Trace real FCEUX Lua execution hooks under synthetic emulator callbacks
         run: |
           lua5.4 tests/test_fceux_dispatch.lua

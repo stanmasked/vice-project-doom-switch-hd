@@ -51,3 +51,32 @@ stage boundary inference; the updated input-only planner produces 25 evenly
 spaced private candidate checkpoints. Authentic gameplay frames, stage
 identities, victory and actual playback are **not yet confirmed**. Do not
 commit the owner's ROM, FM2, hashes, capture outputs or private summaries.
+
+## Select a specific FM2 frame window in FCEUX
+
+The generic capture script now accepts optional `VPD_CAPTURE_START_FRAME` and
+`VPD_CAPTURE_STOP_FRAME` globals, inclusive, from the aggregate FM2 plan.
+When omitted, the historical full-run behavior is unchanged. Choose one
+candidate window per replay; create an empty private output folder before
+running the Lua script, then use FCEUX's Lua Script Window:
+
+```lua
+VPD_CAPTURE_DIRECTORY = "private/us_checkpoint_02"
+VPD_CAPTURE_START_FRAME = 1736
+VPD_CAPTURE_STOP_FRAME = 2496
+VPD_CAPTURE_INTERVAL = 8
+VPD_CAPTURE_LIMIT = 96
+VPD_CAPTURE_SCREEN = false
+dofile("tools/capture_fceux_ppu.lua")
+```
+
+The numbers above are a **fictional planning window derived from inputs**,
+not a proven original level. The CPU-register event trace is intentionally
+limited to this same selected frame window (to avoid exhausting the
+250,000-event cap during a long playback). Register state before the window
+is not reconstructed, so first-frame scanline scroll/CHR timing remains
+unverified; use independent raster measurements before claiming geometry.
+Do **not** reuse an output directory or combine two capture windows into
+one audit session. The metadata records both bounds and the windowed trace
+scope. A wholly fabricated Lua mock is exercised by Native Core CI, without
+commercial ROMs or actual gameplay inputs.
