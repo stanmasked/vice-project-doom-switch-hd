@@ -34,8 +34,10 @@ The separate fail-closed `audit_nexium_guard_refill_x11.py` requires:
 
 1. All original guard contact, first cooldown-pip, and pre-strike READY
    independent guest/X11 receipts still PASS.
-2. The same native strike number and frame plus exactly **12** true
-   idle source ticks to `cooldown=20` with unchanged hero HP4 and guard HP2.
+2. The same native strike number and frame plus exactly **12** elapsed
+   source frames to `cooldown=20` with unchanged hero HP4 and guard HP2.
+   Only the input at the sampled tick is attested as idle; the report
+   does not independently attest every intermediate input tick.
 3. Full real 1280×720 capture, correct event order, physical pad input
    and a non-duplicated image with original SHA256.
 4. Relocation of the real guard by two surviving native HP colors and
