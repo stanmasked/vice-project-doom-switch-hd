@@ -183,6 +183,15 @@ jobs:
             emulator-evidence/defeat-retry-result.txt
             emulator-evidence/live-defeat-retry-paths.txt
             emulator-evidence/guest-live-defeat-retry-witness.txt
+            emulator-evidence/hd-low-health-paths.txt
+            emulator-evidence/guest-hd-low-health-witness.txt
+            emulator-evidence/hd-low-health-result.txt
+            emulator-evidence/screen-live-low-hp-0.png
+            emulator-evidence/screen-live-low-hp-0.ppm
+            emulator-evidence/screen-live-low-hp-1.png
+            emulator-evidence/screen-live-low-hp-1.ppm
+            emulator-evidence/screen-live-low-hp-2.png
+            emulator-evidence/screen-live-low-hp-2.ppm
             emulator-evidence/third-run-control-result.txt
             emulator-evidence/post-defeat-control-paths.txt
             emulator-evidence/guest-post-defeat-control-witness.txt
