@@ -209,6 +209,12 @@ if [[ -s "$out/hd-low-health-paths.txt" ]]; then
   IFS= read -r guest < "$out/hd-low-health-paths.txt"
   cp "$guest" "$out/guest-hd-low-health-witness.txt"
 fi
+find "$HOME" "$XDG_DATA_HOME" "$XDG_CONFIG_HOME" "$XDG_CACHE_HOME" \
+  -type f -name hd_low_health_phase_guest.txt -print > "$out/hd-low-health-phase-paths.txt"
+if [[ -s "$out/hd-low-health-phase-paths.txt" ]]; then
+  IFS= read -r guest < "$out/hd-low-health-phase-paths.txt"
+  cp "$guest" "$out/guest-hd-low-health-phase-witness.txt"
+fi
 python3 tools/audit_nexium_hd_low_health.py --evidence "$out"
 # After the two genuinely completed terminal retries, confirm that a third
 # attempt is still pad-controlled in the SAME visible NRO process.
