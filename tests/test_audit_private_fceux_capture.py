@@ -194,6 +194,23 @@ class PrivatePreflightTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,"decreased"):
                 audit_directory(root)
 
+    def test_reject_cumulative_dropped_counter_regression(self):
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d)
+            capture(root,120,screen=False,dropped=3)
+            capture(root,240,screen=False,dropped=1)
+            with self.assertRaisesRegex(ValueError,"dropped-register counter decreased"):
+                audit_directory(root,allow_incomplete=True)
+
+    def test_reject_disabled_screen_with_nonzero_invalid_palette_count(self):
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d)
+            p=capture(root,120,screen=False)
+            replace_meta(p,"invalid_screen_palette_values=0",
+                         "invalid_screen_palette_values=1")
+            with self.assertRaisesRegex(ValueError,"screen capture disabled"):
+                audit_directory(root)
+
     def test_no_metadata_and_nonstandard_filename(self):
         with tempfile.TemporaryDirectory() as d:
             root=Path(d)
