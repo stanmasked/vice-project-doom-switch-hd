@@ -75,7 +75,7 @@ synthetic but consistent files, or inaccurate FCEUX Lua APIs. Reconstructed
 tiles must remain private alongside original gameplay recordings.
 No captures, exported sprites or commercial ROMs belong in GitHub or CI.
 
-All **26 Python tests** fabricate private captures in temporary
+All **38 Python tests** fabricate private captures in temporary
 directories. No NES images, copyright artwork or original-game ROM
 identity is stored in this repository.
 
@@ -92,3 +92,35 @@ rejected to avoid accidentally analyzing a different directory.
 Seven additional invented-data regression tests cover these rejection cases,
 v3 backwards compatibility, and the root-path guard. Neither the original
 ROM nor any extracted frame data is required in GitHub Actions.
+
+## Stage 108 — verify real register TSV evidence, not metadata alone
+
+The default command remains **metadata-only** and now explicitly returns
+`register_trace_verified=false`. For a session where register-log evidence
+will be used to reconstruct PPU scrolling, run the stricter mode:
+
+```sh
+python3 tools/audit_private_fceux_capture.py private/first_stage --require-logs
+```
+
+This checks the actual private `mmc3_video_writes.tsv` against each sampled
+frame's cumulative `logged_register_writes` counter; event frame ordering,
+register address and byte syntax; FCEUX's maximum 250,000 logged events;
+and size-bounded, regular (non-symlink) trace files. If v4 metadata declares
+`cycle_trace_available=yes`, the companion `mmc3_ppu_cycles.tsv` becomes
+mandatory, and every row must correspond to the same video-log event with a
+plausible CPU-cycle number and read/write label. Declaring no clock while
+leaving a cycle file also fails, preventing accidental stale-session mixing.
+
+The report contains only `register_trace_verified`,
+`cpu_cycle_trace_verified` and an aggregate `verified_register_events`
+count; **no register values, ROM hash, or original video content are printed**.
+A verified TSV is still neither proof of authentic source-game execution nor
+proof of exact raster timing: FCEUX counter reset behavior, scanline splits,
+and effective world camera require separate private investigation.
+
+Twelve new invented-data tests cover valid event and clock logs plus missing,
+truncated, reordered, unexpected, mismatched, or stale logs. Combined with
+the previous 26 tests, 38 synthetic regression tests are present; their
+latest GitHub Actions result must be checked independently before marking
+this PR ready for review.
