@@ -41,8 +41,10 @@ def screenshot(ready,gx=GX):
     rectangle(a,gx+3,gx+4,GY+3,GY+4,(65,76,94))
     rectangle(a,gx+10,gx+11,GY+4,GY+5,(194,110,92))
     if ready:
-        rectangle(a,gx+10,gx+16,GY-27,GY-16,(248,198,104))
-        rectangle(a,gx+10,gx+16,GY-13,GY-9,(248,198,104))
+        # Genuine guest X11 presents the six-wide authored ! as a
+        # five-by-eleven stem and a separate five-by-three dot.
+        rectangle(a,gx+10,gx+15,GY-26,GY-15,(248,198,104))
+        rectangle(a,gx+10,gx+15,GY-12,GY-9,(248,198,104))
     else:
         for n in range(3):
             rectangle(a,gx+5+n*8,gx+11+n*8,GY-22,GY-18,
@@ -59,7 +61,7 @@ class ReadyRasterTests(unittest.TestCase):
         d=verify_ready_raster(ppm(screenshot(True)),
                               ppm(screenshot(False)),SOURCE_X,SOURCE_X)
         self.assertEqual((d["stem_pixels"],d["dot_pixels"],
-                          d["strike_dim_pixels"]),(66,24,72))
+                          d["strike_dim_pixels"]),(55,15,72))
 
     def test_source_first_alert_authoritative_and_in_view(self):
         self.assertEqual(source_ready_x(SRC),482)
@@ -71,7 +73,7 @@ class ReadyRasterTests(unittest.TestCase):
         b=ppm(screenshot(False,gx=360))
         good=verify_ready_raster(a,b,482,360)
         self.assertEqual((good["stem_pixels"],good["dot_pixels"],
-                          good["strike_dim_pixels"]),(66,24,72))
+                          good["strike_dim_pixels"]),(55,15,72))
         with self.assertRaisesRegex(ValueError,"sprite"):
             verify_ready_raster(a,b,482,482)
 
