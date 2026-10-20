@@ -1,8 +1,10 @@
 """Additional fabricated, ROM-free FCEUX v4 provenance regression tests."""
 from pathlib import Path
+import sys
 import tempfile
 import unittest
 
+sys.path.insert(0,str(Path(__file__).resolve().parents[1]/"tools"))
 from audit_private_fceux_capture import audit_directory
 from test_audit_private_fceux_capture import capture, replace_meta
 
