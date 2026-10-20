@@ -28,6 +28,8 @@ on:
       - "tests/test_nexium_guard_live_raster.py"
       - "tools/audit_nexium_guard_cooldown_x11.py"
       - "tests/test_nexium_guard_cooldown_x11.py"
+      - "tools/audit_nexium_guard_ready_x11.py"
+      - "tests/test_nexium_guard_ready_x11.py"
       - "tools/audit_nexium_second_wave.py"
       - "tests/test_nexium_second_wave.py"
       - "tools/audit_nexium_second_wave_live.py"
