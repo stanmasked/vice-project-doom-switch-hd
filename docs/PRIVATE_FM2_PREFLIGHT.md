@@ -80,3 +80,15 @@ Do **not** reuse an output directory or combine two capture windows into
 one audit session. The metadata records both bounds and the windowed trace
 scope. A wholly fabricated Lua mock is exercised by Native Core CI, without
 commercial ROMs or actual gameplay inputs.
+
+## Window metadata cross-validation
+
+The private preflight also verifies the optional v4 `capture_window_start`,
+`capture_window_stop` and `register_log_scope` triplet. All three must
+appear together and stay identical across the capture session. Every saved
+frame must lie inside the declared inclusive bounds, and the only accepted
+trace scope is `selected_frame_window_only`. Legacy captures without the
+triplet remain accepted, but their report says
+`capture_window_contract_consistent=false`. This is a structural guarantee,
+not a proof of the original level or raster reconstruction. Six new
+fabricated Python tests cover this contract; no private game data in CI.
