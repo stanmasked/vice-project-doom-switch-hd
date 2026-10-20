@@ -55,17 +55,53 @@ class NeXiumWitnessAuditTests(unittest.TestCase):
                 auditor.audit_lines(mutated)
 
     def test_missing_guest_file_cannot_pass_even_if_host_has_logs(self):
+        checksum = "a" * 64
+        proof = (
+            "nexium_release_id=127800\n"
+            "nexium_asset_id=334455\n"
+            "nexium_tag=nightly\n"
+            "nexium_published_at=2026-10-20T08:00:00Z\n"
+            f"nexium_archive_sha256={checksum}\n"
+            "nexium_asset_size_bytes=98765432\n"
+            "nexium_digest_source=github_release_api\n"
+            "nexium_mutable_tag=yes\n"
+        )
+        log = ("VERIFIED: official GitHub NeXium release asset SHA-256 "
+               f"{checksum} asset_id 334455\n")
         with tempfile.TemporaryDirectory() as d:
             p = Path(d)
-            for name in ("metadata.txt", "emulator-sha256.txt",
-                         "emulator-stdout.txt", "vulkan.txt"):
+            for name in ("emulator-stdout.txt", "vulkan.txt"):
                 (p/name).write_text("OK\n")
+            (p/"metadata.txt").write_text("runner=x86_64\n" + proof)
+            (p/"emulator-release-attestation.txt").write_text(proof)
+            (p/"emulator-sha256.txt").write_text(log)
             with self.assertRaisesRegex(ValueError, "no actual NeXium guest"):
                 auditor.audit_evidence(p)
             (p/"guest-demo-witness.txt").write_bytes(line())
             self.assertEqual(auditor.audit_evidence(p), 1)
-            (p/"emulator-sha256.txt").write_text("FAILED\n")
-            with self.assertRaisesRegex(ValueError, "not verified"):
+            self.assertEqual(auditor.audit_release_evidence(p), checksum)
+            bad_log=log.replace("asset_id 334455", "asset_id 334456")
+            (p/"emulator-sha256.txt").write_text(bad_log)
+            with self.assertRaisesRegex(ValueError, "log mismatch"):
+                auditor.audit_evidence(p)
+            (p/"emulator-sha256.txt").write_text(log)
+            (p/"emulator-release-attestation.txt").write_text(
+                proof.replace("nexium_archive_sha256="+checksum,
+                              "nexium_archive_sha256="+"b"*64))
+            with self.assertRaisesRegex(ValueError, "metadata does not match"):
+                auditor.audit_evidence(p)
+            (p/"emulator-release-attestation.txt").write_text(proof)
+            (p/"metadata.txt").write_text("runner=x86_64\n")
+            with self.assertRaisesRegex(ValueError, "metadata does not match"):
+                auditor.audit_evidence(p)
+            (p/"metadata.txt").write_text("runner=x86_64\n"+proof)
+            (p/"emulator-release-attestation.txt").write_text(
+                proof.replace("nexium_digest_source=github_release_api",
+                              "nexium_digest_source=unknown"))
+            with self.assertRaisesRegex(ValueError, "metadata does not match"):
+                auditor.audit_evidence(p)
+            (p/"emulator-release-attestation.txt").unlink()
+            with self.assertRaisesRegex(ValueError, "attestation absent"):
                 auditor.audit_evidence(p)
 
 
