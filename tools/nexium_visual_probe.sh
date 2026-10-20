@@ -481,7 +481,7 @@ if [[ -s "$out/ne-x11-windows.txt" ]]; then
         if [[ "$expected" == on ]]; then seq=2; fi
         for (( attempt=0; attempt<65; ++attempt )); do
           if [[ -f "$hd_fx_guest_path" ]] &&
-             grep -q "^VPD_HD_FX_GUEST_V1 seq=$seq mode=$expected " "$hd_fx_guest_path"; then
+             grep -q "^VPD_HD_FX_GUEST_V2 seq=$seq mode=$expected " "$hd_fx_guest_path"; then
             hd_fx_seen=yes
             break
           fi

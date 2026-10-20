@@ -8,11 +8,14 @@ import unittest
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/"tools"))
 from audit_nexium_hd_fx_guest import audit, verify
 
-def line(seq,mode,frame,other,shown):
+def line(seq,mode,frame,other,shown,sim_before=0x9bd412c3e5a871f0,
+         sim_after=0x9bd412c3e5a871f0):
     return (
-        f"VPD_HD_FX_GUEST_V1 seq={seq} mode={mode} frame={frame} "
+        f"VPD_HD_FX_GUEST_V2 seq={seq} mode={mode} frame={frame} "
         f"manual=1 l=1 r=1 edge=1 scene_other={other:016x} "
         f"scene_displayed={shown:016x} roi_pixels=414000 "
+        f"simulation_before={sim_before:016x} "
+        f"simulation_after={sim_after:016x} "
         "source=libnx_pad same_frame=yes\n"
     )
 GOOD=(
@@ -24,6 +27,7 @@ class GuestAuditTests(unittest.TestCase):
     def test_real_native_shape(self):
         rows=verify(GOOD)
         self.assertEqual([540,548],[r[0] for r in rows])
+        self.assertEqual(["9bd412c3e5a871f0"]*2,[r[3] for r in rows])
 
     def test_guest_audit_requires_independent_source_and_x11_gates(self):
         # A syntactically valid guest line is never enough to pass.
@@ -69,6 +73,14 @@ class GuestAuditTests(unittest.TestCase):
             GOOD.replace(b"roi_pixels=414000",b"roi_pixels=0"),
             GOOD.replace(b"source=libnx_pad",b"source=host_fixture"),
             GOOD.replace(b"same_frame=yes",b"same_frame=no"),
+            GOOD.replace(b"simulation_before=9bd412c3e5a871f0",
+                         b"simulation_before=9bd412c3e5a871f1"),
+            GOOD.replace(b"simulation_after=9bd412c3e5a871f0",
+                         b"simulation_after=9bd412c3e5a871f2"),
+            GOOD.replace(b"simulation_before=9bd412c3e5a871f0 ",
+                         b"simulation_before=garbled           "),
+            GOOD.replace(b"simulation_after=9bd412c3e5a871f0 ",
+                         b"simulation_after=000000000000000  "),
             GOOD.replace(b"scene_displayed=124456789abcdef0",
                          b"scene_displayed=123456789abcdef0"),
             GOOD+b"\xff",

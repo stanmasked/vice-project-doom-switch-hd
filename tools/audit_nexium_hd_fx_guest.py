@@ -8,9 +8,10 @@ import re
 from audit_nexium_fourth_stage import raster
 
 RECORD=re.compile(
-    r"^VPD_HD_FX_GUEST_V1 seq=([12]) mode=(off|on) frame=([0-9]+) "
+    r"^VPD_HD_FX_GUEST_V2 seq=([12]) mode=(off|on) frame=([0-9]+) "
     r"manual=1 l=1 r=1 edge=1 scene_other=([0-9a-f]{16}) "
     r"scene_displayed=([0-9a-f]{16}) roi_pixels=414000 "
+    r"simulation_before=([0-9a-f]{16}) simulation_after=([0-9a-f]{16}) "
     r"source=libnx_pad same_frame=yes$"
 )
 
@@ -29,12 +30,14 @@ def verify(raw):
         m=RECORD.fullmatch(row)
         if not m:
             raise ValueError("malformed native shoulder edge")
-        seq,mode,frame,other,displayed=m.groups()
+        seq,mode,frame,other,displayed,simulation_before,simulation_after=m.groups()
         if int(seq)!=index+1 or mode!=("off" if index==0 else "on"):
             raise ValueError("HD FX state transition order violated")
         if int(frame)<=0 or other==displayed:
             raise ValueError("guest frame or effect-only pixels not proven")
-        parsed.append((int(frame),other,displayed))
+        if simulation_before!=simulation_after:
+            raise ValueError("HD FX guest raster modified simulation state")
+        parsed.append((int(frame),other,displayed,simulation_before))
     if parsed[1][0]<=parsed[0][0]:
         raise ValueError("second shoulder edge must follow the first")
     return parsed
@@ -81,7 +84,8 @@ def audit(base):
         "VPD_NEXIUM_HD_FX_GUEST_PASS "
         f"off_frame={rows[0][0]} on_frame={rows[1][0]} "
         "pad_chords=2 guest_edges=2 same_frame_visual_pairs=2 "
-        "scene_roi_pixels=414000 status_x11_changed_pixels="
+        "guest_simulation_unchanged=yes scene_roi_pixels=414000 "
+        "status_x11_changed_pixels="
         f"{difference} off_ppm_sha256={off_hash} on_ppm_sha256={on_hash} "
         "source=libnx_pad native_x11_evidence=yes "
         "original_game_proven=no physical_switch_proven=no\n"
