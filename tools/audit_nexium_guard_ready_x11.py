@@ -11,7 +11,7 @@ from pathlib import Path
 import re
 
 from audit_nexium_guard_live import verify as verify_guard_source
-from audit_nexium_guard_live_raster import parse_ppm, WIDTH, HEIGHT, GUARD_Y
+from audit_nexium_guard_live_raster import parse_ppm, load_anchors, WIDTH, HEIGHT, GUARD_Y
 from audit_nexium_guard_cooldown_x11 import guard_sprite_anchor
 
 READY = bytes((248,198,104))
@@ -65,7 +65,7 @@ def source_ready_x(raw):
     return result
 
 
-def verify_ready_raster(ready_ppm,strike_ppm,source_x):
+def verify_ready_raster(ready_ppm,strike_ppm,source_x,strike_source_x):
     ready=parse_ppm(ready_ppm)
     strike=parse_ppm(strike_ppm)
     if ready==strike:
@@ -96,7 +96,10 @@ def verify_ready_raster(ready_ppm,strike_ppm,source_x):
     # First source-owned melee strike removes ! and leaves dim pips. Anchor
     # independently to the real sprite in the second native screenshot,
     # never blindly trust the previous sprite's screen position/camera.
-    sx,sy=guard_sprite_anchor(strike,source_x)
+    # The camera and both actors move for ~52 actual guest frames from
+    # alert to melee. Anchor the second image independently to the real
+    # strike's guest/camera coordinates, not the earlier alert projection.
+    sx,sy=guard_sprite_anchor(strike,strike_source_x)
     leftover=sum(
         rgb(strike,x,y)==READY
         for y in range(sy-28,sy-9)
@@ -132,6 +135,10 @@ def audit(evidence):
     raw=(root/"guest-guard-live-witness.txt").read_bytes()
     frames=verify_guard_source(raw)
     x=source_ready_x(raw)
+    anchors=load_anchors(root)
+    strike_x=anchors["strike_x"]
+    if frames["strike_frame"]!=anchors["strike_frame"]:
+        raise ValueError("source strike event disagrees with independently proven X11 anchor")
     host=(root/"input-probe.txt").read_text("ascii").splitlines()
     if host.count("host_guard_live_alert_seen=yes key=D")!=1 or (
         host.count("host_guard_live_move_sent=yes key=D until_guest_strike=yes")!=1
@@ -155,7 +162,7 @@ def audit(evidence):
             raise ValueError("native ready/strike PNG screenshot missing")
     data=verify_ready_raster(
         (root/"screen-live-guard-ready.ppm").read_bytes(),
-        (root/"screen-live-strike.ppm").read_bytes(),x
+        (root/"screen-live-strike.ppm").read_bytes(),x,strike_x
     )
     output=(
         "VPD_NEXIUM_GUARD_READY_X11_PASS "
