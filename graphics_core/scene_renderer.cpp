@@ -449,6 +449,14 @@ bool drawScene(uint32_t* target,int width,int height,int stride_pixels,
                        n<view.player_health?
                        (view.player_hit_flash_ticks?rgba(255,220,153):
                         rgba(106,198,174)):rgba(55,64,79));
+            // Visual-only source-HP warning, outside all true HP cells and
+            // strictly disabled during legacy demo or normal health.
+            if(view.hd_low_health_warning &&
+               view.player_health>=1 && view.player_health<=2 &&
+               !view.stage_cleared && (view.frame/12u)%2u==0u){
+                s.rect(757,34,79,3,rgba(237,115,112));
+                s.text(846,17,"LOW HP",rgba(255,171,147),2);
+            }
         }
         s.text(611,50,view.dash_active?"DASH : ACTIVE":
                (view.dash_cooldown?"DASH : CHARGING":"DASH : READY"),
