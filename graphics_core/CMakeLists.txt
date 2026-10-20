@@ -152,6 +152,18 @@ add_executable(vpd_guard_enemy_raster_test ../tests/test_guard_enemy_raster.cpp)
 target_link_libraries(vpd_guard_enemy_raster_test
                       PRIVATE vpd_scene_renderer vpd_simulation)
 add_test(NAME romfree_guard_enemy_to_raster COMMAND vpd_guard_enemy_raster_test)
+# Source-owned guard detection and post-strike cooldown: optional HD-only
+# readiness icon, isolated from source HP, actor sprite and all old gameplay.
+add_executable(vpd_hd_guard_threat_tell_test
+               ../tests/test_hd_guard_threat_tell.cpp)
+target_link_libraries(vpd_hd_guard_threat_tell_test
+                      PRIVATE vpd_scene_renderer vpd_simulation)
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+  target_compile_options(vpd_hd_guard_threat_tell_test PRIVATE
+                         -Wall -Wextra -Wpedantic -Werror)
+endif()
+add_test(NAME romfree_hd_guard_threat_tell
+         COMMAND vpd_hd_guard_threat_tell_test)
 # Shared libnx/host proof of turret sprite, HP and hostile shot pixels.
 add_executable(vpd_second_wave_raster_test ../tests/test_second_wave_raster.cpp)
 target_link_libraries(vpd_second_wave_raster_test
