@@ -126,6 +126,7 @@ jobs:
           python3 tests/test_nexium_hd_fx_guest.py
           python3 tests/test_nexium_hd_fx_combat.py
           python3 tests/test_verify_nexium_release.py
+          python3 tests/test_nexium_witness_audit.py
       - name: Install NeXium, launch graphical NRO and check real guest record
         run: bash tools/run_nexium_vice_ci.sh emulator-input/vpd_native_scene.nro emulator-evidence
       - name: Save emulator logs, guest output and diagnostics even if blocked
