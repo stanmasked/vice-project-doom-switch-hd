@@ -15,6 +15,7 @@ ALLOWED_ADDRESSES={
 VIDEO_HEADER="frame\taddress\tvalue"
 CYCLE_HEADER="frame\tcpu_cycle\taddress\tvalue\tkind"
 MAX_EVENTS=250000
+MAX_EVENTS_PER_FRAME=12000
 MAX_VIDEO_BYTES=16*1024*1024
 MAX_CYCLE_BYTES=24*1024*1024
 DECIMAL=re.compile(r"0|[1-9][0-9]*\Z")
@@ -45,6 +46,7 @@ def decimal(value,upper):
 
 def video_events(path):
     previous=-1
+    per_frame_events=0
     for i,line in enumerate(safe_lines(path,VIDEO_HEADER,MAX_VIDEO_BYTES),start=1):
         if i>MAX_EVENTS:
             raise ValueError("register trace exceeds FCEUX capture event cap")
@@ -57,6 +59,11 @@ def video_events(path):
             raise ValueError("unexpected register address in private trace")
         if frame<previous:
             raise ValueError("register trace frame ordering regressed")
+        if frame!=previous:
+            per_frame_events=0
+        per_frame_events+=1
+        if per_frame_events>MAX_EVENTS_PER_FRAME:
+            raise ValueError("register trace exceeds FCEUX per-frame event cap")
         previous=frame
         yield (frame,columns[1],columns[2])
 
