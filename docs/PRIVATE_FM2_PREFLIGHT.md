@@ -25,7 +25,7 @@ Playback is a separate step: use FCEUX in read-only FM2 mode with the exact
 ROM and observe the game rendering. FCEUX's older PPU behavior and NTSC/PAL
 mode should match the movie header. On a system with the emulator installed:
 
-    fceux -readonly 1 -playmovie private/run.fm2 private/game.nes
+    fceux --playmov private/run.fm2 private/game.nes
 
 Only after independent replay verification use the FCEUX snapshot tooling
 described in REFERENCE_CAPTURE.md and PRIVATE_STAGE_CAPTURE_PREFLIGHT.md.
@@ -92,3 +92,9 @@ triplet remain accepted, but their report says
 `capture_window_contract_consistent=false`. This is a structural guarantee,
 not a proof of the original level or raster reconstruction. Six new
 fabricated Python tests cover this contract; no private game data in CI.
+
+On FCEUX builds exposing the older Windows-style CLI, use
+`-readonly 1 -playmovie` instead; verify available switches with the exact
+installed build's help first. In all cases select read-only movie playback
+and keep the ROM/movie private. A Linux build may offer `--loadlua` to load
+a capture script at launch; do not assume the same option exists on macOS.
