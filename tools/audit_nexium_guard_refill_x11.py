@@ -50,6 +50,32 @@ def witness(raw, guard_events):
             "guard_x":guard_x}
 
 
+def verify_prior_strike_receipts(cooldown_text,ready_text,strike_frame,strike_sha):
+    """Two independent previous X11 audits must bind to this EXACT strike.
+
+    Checking only PASS prefixes allows unrelated/forged prior receipts to
+    be mixed with a new sample. Reject duplicates, alien source frames,
+    invalid SHA-256 and any nonmatching raw P6 screenshot fingerprint.
+    """
+    for tag,receipt,prefix in (
+        ("cooldown",cooldown_text,"VPD_NEXIUM_GUARD_COOLDOWN_X11_PASS "),
+        ("ready",ready_text,"VPD_NEXIUM_GUARD_READY_X11_PASS "),
+    ):
+        if (not isinstance(receipt,str) or
+            not receipt.startswith(prefix) or
+            receipt.count(prefix)!=1 or
+            receipt.count("\\n")>1):
+            raise ValueError("invalid/duplicate native "+tag+" prior X11 receipt")
+        frames=re.findall(r"(?:^| )strike_frame=([0-9]+)(?: |\\n|$)",receipt)
+        hashes=re.findall(
+            r"(?:^| )strike_ppm_sha256=([a-f0-9]{64})(?: |\\n|$)",receipt
+        )
+        if (len(frames)!=1 or int(frames[0])!=strike_frame or
+            len(hashes)!=1 or hashes[0]!=strike_sha):
+            raise ValueError("prior "+tag+" X11 strike frame/SHA256 mismatch")
+    return True
+
+
 def pixels(frame,x,y):
     if not (0<=x<WIDTH and 0<=y<HEIGHT):
         return b""
@@ -123,6 +149,11 @@ def audit(path):
         (root/"screen-live-strike.ppm").read_bytes(),
         (root/"screen-live-guard-refill.ppm").read_bytes(),
         data["projected_x"],
+    )
+    verify_prior_strike_receipts(
+        (root/"guard-cooldown-x11-result.txt").read_text("ascii"),
+        (root/"guard-ready-x11-result.txt").read_text("ascii"),
+        data["strike_frame"],result["before_sha"],
     )
     stamp=(
         "VPD_NEXIUM_GUARD_COOLDOWN_REFILL_X11_PASS "
