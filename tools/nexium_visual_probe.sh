@@ -518,6 +518,13 @@ if [[ -s "$out/ne-x11-windows.txt" ]]; then
                                         fi
                                         echo "host_sentry_projectile_hit_observed=$sentry_hit_seen source=live_guest" >> "$out/input-probe.txt"
                                         if [[ "$sentry_hit_seen" == yes ]]; then
+                                          # Guest hit SD data is written during the
+                                          # source tick, before X11 presents that
+                                          # frame. Immediate capture occasionally
+                                          # shows five still-lit hearts/no hero flash.
+                                          # Wait about four 25-fps frames; real actor
+                                          # feedback remains visible for 16 ticks.
+                                          sleep 0.18
                                           capture "screen-live-sentry-after-hit"
                                           echo "live_sentry_damage_raster_after_guest_event=yes" >> "$out/visual-probe.txt"
                                         fi
