@@ -179,6 +179,13 @@ int main(int,char**) {
     unsigned hd_fx_guest_seq=0;
     unsigned hd_fx_combat_seq=0;
     unsigned hd_fx_sentry_seq=0;
+    bool hd_fx_sentry_hit_logged=false;
+    int hd_fx_sentry_tracked_slot=-1;
+    uint32_t hd_fx_sentry_on_frame=0;
+    int32_t hd_fx_sentry_on_x=0,hd_fx_sentry_on_y=0;
+    uint16_t hd_fx_sentry_on_age=0;
+    uint8_t hd_fx_sentry_on_hero_hp=0;
+    uint16_t hd_fx_sentry_on_hits=0;
     if(has_sd){
         if(auto* report=std::fopen(
             "sdmc:/switch/vice_project_doom/hd_fx_toggle_guest.txt","w"))
@@ -188,6 +195,9 @@ int main(int,char**) {
             std::fclose(report);
         if(auto* report=std::fopen(
             "sdmc:/switch/vice_project_doom/hd_fx_sentry_guest.txt","w"))
+            std::fclose(report);
+        if(auto* report=std::fopen(
+            "sdmc:/switch/vice_project_doom/hd_fx_sentry_hit_guest.txt","w"))
             std::fclose(report);
     }
     bool fourth_fire_logged=false;
@@ -362,8 +372,86 @@ int main(int,char**) {
             const auto prior_guard_hits=game.guardEnemy().projectile_hits;
             const bool prior_wave_active=game.secondWaveActive();
             const auto prior_turret_hits=game.sentry().projectile_hits;
+            const auto prior_shots_hit=game.sentry().shots_hit;
+            const auto prior_hero_x=game.player().x;
+            const auto prior_hero_y=game.player().y;
+            const auto tracked_bullet=(hd_fx_sentry_seq==2 &&
+                hd_fx_sentry_tracked_slot>=0)?
+                game.enemyProjectiles()[
+                    static_cast<unsigned>(hd_fx_sentry_tracked_slot)]:
+                vpd::EnemyProjectile{};
+            const uint64_t prior_sentry_fingerprint=
+                hd_fx_sentry_seq==2 && !hd_fx_sentry_hit_logged ?
+                game.fingerprint():0;
             if(toggle_manual)input=0; // R+A is a mode switch, not a jump
             if(!restarted)game.tick(vpd::Input{input});
+            // Verify the actual physics tick consumed the SAME bullet
+            // witnessed at native L+R ON, not another hostile projectile.
+            // A host keypress, synthetic HP subtraction or raster change
+            // cannot create this record. Keep all original wave proofs.
+            if(hd_fx_sentry_seq==2 && !hd_fx_sentry_hit_logged &&
+               !restarted && input==0 && hd_fx_mode.enabled &&
+               fourth_stage_seq==1 && game.guardEnemy().health==0 &&
+               game.sentry().health==2 && game.secondWaveActive() &&
+               !game.stageCleared() && prior_hp>1 &&
+               game.playerHealth()+1==prior_hp &&
+               game.sentry().shots_hit==prior_shots_hit+1 &&
+               prior_shots_hit==hd_fx_sentry_on_hits &&
+               prior_hp==hd_fx_sentry_on_hero_hp &&
+               tracked_bullet.active &&
+               !game.enemyProjectiles()[
+                   static_cast<unsigned>(hd_fx_sentry_tracked_slot)].active &&
+               tracked_bullet.vx==-3*vpd::kFixed &&
+               tracked_bullet.y==hd_fx_sentry_on_y &&
+               before_frame>hd_fx_sentry_on_frame &&
+               tracked_bullet.age==hd_fx_sentry_on_age+
+                   before_frame-hd_fx_sentry_on_frame &&
+               static_cast<int64_t>(tracked_bullet.x)==
+                   static_cast<int64_t>(hd_fx_sentry_on_x)-
+                   static_cast<int64_t>(3*vpd::kFixed)*
+                   (before_frame-hd_fx_sentry_on_frame) &&
+               tracked_bullet.x>=prior_hero_x &&
+               tracked_bullet.x-3*vpd::kFixed<
+                   prior_hero_x+vpd::kPlayerWidth*vpd::kFixed &&
+               tracked_bullet.y>=prior_hero_y &&
+               tracked_bullet.y<prior_hero_y+
+                   vpd::kPlayerHeight*vpd::kFixed &&
+               game.fingerprint()!=prior_sentry_fingerprint &&
+               has_sd){
+                if(auto* report=std::fopen(
+                    "sdmc:/switch/vice_project_doom/hd_fx_sentry_hit_guest.txt",
+                    "a")){
+                    const int printed=std::fprintf(report,
+                        "VPD_HD_FX_SENTRY_HIT_V1 frame=%u on_frame=%u "
+                        "bullet_slot=%u bullet_age_before=%u "
+                        "bullet_x_before=%ld bullet_y=%ld bullet_vx=-768 "
+                        "hero_x=%ld hero_y=%ld "
+                        "hero_hp_before=%u hero_hp_after=%u "
+                        "shots_hit_before=%u shots_hit_after=%u "
+                        "input=idle mode=on wave=1 guard_hp=0 "
+                        "sentry_hp=2 bullet_consumed=yes "
+                        "simulation_before=%016llx simulation_after=%016llx "
+                        "source=libnx_tick collision=swept "
+                        "original_game_proven=no\n",
+                        game.frame(),hd_fx_sentry_on_frame,
+                        static_cast<unsigned>(hd_fx_sentry_tracked_slot),
+                        static_cast<unsigned>(tracked_bullet.age),
+                        static_cast<long>(tracked_bullet.x),
+                        static_cast<long>(tracked_bullet.y),
+                        static_cast<long>(prior_hero_x),
+                        static_cast<long>(prior_hero_y),
+                        static_cast<unsigned>(prior_hp),
+                        static_cast<unsigned>(game.playerHealth()),
+                        static_cast<unsigned>(prior_shots_hit),
+                        static_cast<unsigned>(game.sentry().shots_hit),
+                        static_cast<unsigned long long>(prior_sentry_fingerprint),
+                        static_cast<unsigned long long>(game.fingerprint()));
+                    hd_fx_sentry_hit_logged=printed>0 &&
+                        std::fclose(report)==0;
+                    if(!hd_fx_sentry_hit_logged && printed<=0)
+                        std::fclose(report);
+                }
+            }
             // Following the *already witnessed* victory Minus, the newly
             // reset visible simulation is played again with actual Right
             // input. The first guard must strike and eventually defeat this
@@ -839,6 +927,15 @@ int main(int,char**) {
             if(auto* report=std::fopen(
                 "sdmc:/switch/vice_project_doom/hd_fx_sentry_guest.txt","a")){
                 ++hd_fx_sentry_seq;
+                if(hd_fx_sentry_seq==2){
+                    hd_fx_sentry_tracked_slot=hd_fx_sentry_slot;
+                    hd_fx_sentry_on_frame=game.frame();
+                    hd_fx_sentry_on_x=bullet.x;
+                    hd_fx_sentry_on_y=bullet.y;
+                    hd_fx_sentry_on_age=bullet.age;
+                    hd_fx_sentry_on_hero_hp=game.playerHealth();
+                    hd_fx_sentry_on_hits=game.sentry().shots_hit;
+                }
                 (void)std::fprintf(report,
                     "VPD_HD_FX_SENTRY_V1 seq=%u mode=%s frame=%u "
                     "manual=1 l=1 r=1 edge=1 "
