@@ -27,6 +27,7 @@
 #include "guard_live_witness.hpp"
 #include "guard_live_defeat_witness.hpp"
 #include "scene_renderer.hpp"
+#include "hd_fx_toggle.hpp"
 #include "combat_scene_bridge.hpp"
 #include "asset_atlas.hpp"
 #include "asset_bundle.hpp"
@@ -173,6 +174,7 @@ int main(int,char**) {
     bool fourth_move_logged=false;
     bool native_hd_dust_logged=false;
     bool native_hostile_halo_logged=false;
+    vpd::HdFxRuntimeMode hd_fx_mode{};
     bool fourth_fire_logged=false;
     bool fourth_hit_logged=false;
     bool native_hd_hit_logged=false;
@@ -201,6 +203,15 @@ int main(int,char**) {
             }
             break;
         }
+        // L+R toggles only the authored HD effects during manual play.
+        // A held chord consumes both individual asset commands, so
+        // no backdrop reload/reset is accidentally performed.
+        const bool hd_fx_chord=hd_fx_mode.acceptShoulders(
+            !demo.enabled(),
+            (buttons&HidNpadButton_L)!=0,
+            (buttons&HidNpadButton_R)!=0,
+            (pressed&HidNpadButton_L)!=0,
+            (pressed&HidNpadButton_R)!=0);
         // Left-stick click switches between 200-frame demo and manual play.
         // StickL+Y still performs the independent development-art reset.
         const bool toggle_manual=
@@ -253,11 +264,11 @@ int main(int,char**) {
             terrain.reset();
             terrain_reload_failed=false;
         }
-        if(pressed&HidNpadButton_L) {
+        if((pressed&HidNpadButton_L) && !hd_fx_chord) {
             backdrop_reload_failed= !has_sd ||
                 backdrop.reload(kExternalBackdropPath)!=vpd::BackdropReload::Loaded;
         }
-        if(pressed&HidNpadButton_R) {
+        if((pressed&HidNpadButton_R) && !hd_fx_chord) {
             backdrop.reset();
             backdrop_reload_failed=false;
         }
@@ -617,10 +628,14 @@ int main(int,char**) {
         view.moving=actor.vx!=0;
         view.replay_demo=demo.enabled();
         view.manual_controls=!demo.enabled();
-        view.hd_hit_lighting=view.manual_controls;
-        view.hd_atmospheric_haze=view.manual_controls;
-        view.hd_footstep_dust=view.manual_controls;
-        view.hd_hostile_projectile_halo=view.manual_controls;
+        const bool hd_effects=hd_fx_mode.activeForGameplay(
+            view.manual_controls);
+        view.hd_hit_lighting=hd_effects;
+        view.hd_atmospheric_haze=hd_effects;
+        view.hd_footstep_dust=hd_effects;
+        view.hd_hostile_projectile_halo=hd_effects;
+        view.hd_fx_status_visible=view.manual_controls;
+        view.hd_fx_status_enabled=hd_effects;
         view.demo_checkpoint_ok=checkpoint_ok && demo.enabled();
         // Same adapter is exercised by native host combat/raster CTest.
         vpd::applyCombatOverlay(view,game);
