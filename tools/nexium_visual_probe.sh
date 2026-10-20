@@ -527,6 +527,28 @@ if [[ -s "$out/ne-x11-windows.txt" ]]; then
                                           sleep 0.18
                                           capture "screen-live-sentry-after-hit"
                                           echo "live_sentry_damage_raster_after_guest_event=yes" >> "$out/visual-probe.txt"
+                                          # Wait for guest Simulation::tick to reduce
+                                          # the real 16-tick actor flash to zero.
+                                          # Keep host controls idle until source
+                                          # confirms recovery, then wait for X11
+                                          # presentation before taking the third
+                                          # independent native screenshot.
+                                          sentry_recover_path="$XDG_CONFIG_HOME/NeXium/sdmc/switch/vice_project_doom/hd_fx_sentry_recover_guest.txt"
+                                          sentry_recover_seen=no
+                                          for (( attempt=0; attempt<180; ++attempt )); do
+                                            if [[ -f "$sentry_recover_path" ]] &&
+                                               grep -q '^VPD_HD_FX_SENTRY_RECOVER_V1 hit_frame=' "$sentry_recover_path"; then
+                                              sentry_recover_seen=yes
+                                              break
+                                            fi
+                                            sleep 0.05
+                                          done
+                                          echo "host_sentry_hero_recovery_observed=$sentry_recover_seen source=live_guest" >> "$out/input-probe.txt"
+                                          if [[ "$sentry_recover_seen" == yes ]]; then
+                                            sleep 0.18
+                                            capture "screen-live-sentry-after-recovery"
+                                            echo "live_sentry_recovery_raster_after_guest_event=yes" >> "$out/visual-probe.txt"
+                                          fi
                                         fi
                                         # Preserve the old real-pad fourth-stage
                                         # D+Z clear and downstream HD V2 witness.
