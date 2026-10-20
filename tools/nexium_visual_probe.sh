@@ -74,15 +74,29 @@ if [[ -s "$out/ne-x11-windows.txt" ]]; then
     # The same held Right now drives the visible, pad-controlled guard to
     # first melee contact; do not send a duplicate keydown or idle gap.
     live_guard_path="$XDG_CONFIG_HOME/NeXium/sdmc/switch/vice_project_doom/guard_live_witness.txt"
+    saw_alert=no
     saw_strike=no
+    # This is an existing, actual libnx input-driven alert event. The
+    # source guard remains at attack_cooldown=0 until first melee contact.
+    # Keep the SAME Right key held; do not modify gameplay or invent an
+    # alert state to draw an exclamation mark.
     for (( attempt=0; attempt<165; ++attempt )); do
-      if [[ -f "$live_guard_path" ]] &&
-         grep -q '^VPD_ROMFREE_GUARD_LIVE_V1 seq=2 event=strike ' "$live_guard_path"; then
-        saw_strike=yes
-        break
+      if [[ -f "$live_guard_path" ]]; then
+        if [[ "$saw_alert" == no ]] &&
+           grep -q '^VPD_ROMFREE_GUARD_LIVE_V1 seq=1 event=alert ' "$live_guard_path"; then
+          saw_alert=yes
+          sleep 0.16
+          capture screen-live-guard-ready
+          echo "host_guard_ready_x11_after_source_alert=yes right_still_held=yes" >> "$out/visual-probe.txt"
+        fi
+        if grep -q '^VPD_ROMFREE_GUARD_LIVE_V1 seq=2 event=strike ' "$live_guard_path"; then
+          saw_strike=yes
+          break
+        fi
       fi
       sleep 0.05
     done
+    echo "host_guard_live_alert_seen=$saw_alert key=D" >> "$out/input-probe.txt"
     xdotool keyup d
     sleep 0.1
     echo "host_guard_live_move_sent=yes key=D until_guest_strike=$saw_strike" >> "$out/input-probe.txt"

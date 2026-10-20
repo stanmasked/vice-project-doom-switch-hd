@@ -28,6 +28,8 @@ on:
       - "tests/test_nexium_guard_live_raster.py"
       - "tools/audit_nexium_guard_cooldown_x11.py"
       - "tests/test_nexium_guard_cooldown_x11.py"
+      - "tools/audit_nexium_guard_ready_x11.py"
+      - "tests/test_nexium_guard_ready_x11.py"
       - "tools/audit_nexium_second_wave.py"
       - "tests/test_nexium_second_wave.py"
       - "tools/audit_nexium_second_wave_live.py"
@@ -148,6 +150,7 @@ jobs:
           python3 tests/test_nexium_hd_low_health.py
           python3 tests/test_nexium_hd_low_health_lifecycle.py
           python3 tests/test_nexium_guard_cooldown_x11.py
+          python3 tests/test_nexium_guard_ready_x11.py
           python3 tests/test_verify_nexium_release.py
           python3 tests/test_nexium_witness_audit.py
       - name: Install NeXium, launch graphical NRO and check real guest record
@@ -177,6 +180,9 @@ jobs:
             emulator-evidence/guard-live-defeat-result.txt
             emulator-evidence/guard-live-raster-result.txt
             emulator-evidence/guard-cooldown-x11-result.txt
+            emulator-evidence/guard-ready-x11-result.txt
+            emulator-evidence/screen-live-guard-ready.png
+            emulator-evidence/screen-live-guard-ready.ppm
             emulator-evidence/second-wave-result.txt
             emulator-evidence/second-wave-trace-paths.txt
             emulator-evidence/guest-second-wave-witness.txt
