@@ -180,8 +180,8 @@ class PrivateLogAlignmentTests(unittest.TestCase):
             root=Path(d)
             prepared(root,clock=True)
             p=root/"mmc3_ppu_cycles.tsv"
-            replace_meta(p,"240\\t104\\t2002\\t00\\tR",
-                            "240\\t104\\t2002\\t00\\tW")
+            replace_meta(p,"240\t104\t2002\t00\tR",
+                            "240\t104\t2002\t00\tW")
             with self.assertRaisesRegex(ValueError,"read/write kind"):
                 audit_directory(root,require_logs=True)
 
