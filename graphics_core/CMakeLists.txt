@@ -190,6 +190,18 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
 endif()
 add_test(NAME romfree_hd_effects_runtime_toggle
          COMMAND vpd_hd_fx_toggle_test)
+# Assert the full game_core combat/retry fingerprint is identical for
+# different HD preferences; compare real scene pixels without a HUD shortcut.
+add_executable(vpd_hd_fx_gameplay_invariance_test
+               ../tests/test_hd_fx_simulation_invariance.cpp)
+target_link_libraries(vpd_hd_fx_gameplay_invariance_test
+                      PRIVATE vpd_scene_renderer vpd_simulation)
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+  target_compile_options(vpd_hd_fx_gameplay_invariance_test PRIVATE
+                         -Wall -Wextra -Wpedantic -Werror)
+endif()
+add_test(NAME romfree_hd_fx_gameplay_invariance
+         COMMAND vpd_hd_fx_gameplay_invariance_test)
 # Independent pixel-safe original-style combat hit-light regression.
 add_executable(vpd_hd_impact_lighting_test
                ../tests/test_impact_lighting.cpp)
