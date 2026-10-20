@@ -61,7 +61,7 @@ RELEASE_KEYS = (
 )
 RELEASE_LOG = re.compile(
     r"VERIFIED: official GitHub NeXium release asset SHA-256 "
-    r"([0-9a-f]{64}) asset_id ([1-9][0-9]*)\\n?"
+    r"([0-9a-f]{64}) asset_id ([1-9][0-9]*)\n?"
 )
 
 def audit_release_evidence(folder):
@@ -74,7 +74,7 @@ def audit_release_evidence(folder):
             raise ValueError("NeXium publisher release attestation absent/oversized")
     data = proof.read_text("ascii")
     metadata = meta.read_text("ascii")
-    if not data.endswith("\\n") or not metadata.endswith("\\n"):
+    if not data.endswith("\n") or not metadata.endswith("\n"):
         raise ValueError("truncated NeXium archive identity metadata")
     expected = ["nexium_"+name for name in RELEASE_KEYS]
     rows = data.splitlines()
