@@ -281,6 +281,16 @@ if [[ -s "$out/fourth-guard-clear-paths.txt" ]]; then
   cp "$guest" "$out/guest-fourth-guard-clear-witness.txt"
 fi
 python3 tools/audit_nexium_fourth_guard_clear.py --evidence "$out"
+# A separate pair of real pad L+R edges must be sourced while this
+# fourth guard is still alive after its first genuine projectile hit.
+find "$HOME" "$XDG_DATA_HOME" "$XDG_CONFIG_HOME" "$XDG_CACHE_HOME" \
+  -type f -name hd_fx_combat_guest.txt -print > "$out/hd-fx-combat-paths.txt"
+if [[ -s "$out/hd-fx-combat-paths.txt" ]]; then
+  IFS= read -r guest < "$out/hd-fx-combat-paths.txt"
+  cp "$guest" "$out/guest-hd-fx-combat-witness.txt"
+fi
+python3 tools/audit_nexium_hd_fx_combat.py --evidence "$out"
+
 # Fourth earned victory is separate from the preceding third run.
 # Require both native new source events and real X11 key/screen evidence.
 find "$HOME" "$XDG_DATA_HOME" "$XDG_CONFIG_HOME" "$XDG_CACHE_HOME" \
