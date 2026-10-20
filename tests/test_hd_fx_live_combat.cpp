@@ -79,8 +79,11 @@ void verify(){
         sim.tick(Input{Right});
     require(sim.secondWaveActive() && sim.sentry().health==2,
             "guard defeat never unlocked authentic second wave");
+    // The wave gate is farther from the turret than its 160px detection
+    // range. Advance the real player towards the live threat rather than
+    // inventing a projectile or waiting outside its awareness radius.
     for(int i=0;i<250;++i){
-        sim.tick(Input{});
+        sim.tick(Input{Right});
         bool active=false;
         for(const auto& projectile:sim.enemyProjectiles())
             if(projectile.active)active=true;
