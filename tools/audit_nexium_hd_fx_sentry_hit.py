@@ -88,7 +88,7 @@ def fifth_heart_loss(before,after):
             if (before[ix:ix+3]==healthy and
                 after[ix:ix+3] in (healthy,flashed)):
                 kept+=1
-    if changed<80 or kept<360:
+    if changed<80 or kept<440:
         raise ValueError(
             "fifth heart did not turn from healthy to empty with four "
             "remaining hearts in genuine X11 pixels")
