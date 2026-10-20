@@ -34,24 +34,24 @@ class GuestAuditTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,"fourth manual stage"):
                 audit(base)
             (base/"fourth-stage-result.txt").write_text(
-                "VPD_NEXIUM_FOURTH_STAGE_PASS exit_frame=535\\n",
+                "VPD_NEXIUM_FOURTH_STAGE_PASS exit_frame=535\n",
                 encoding="ascii")
             with self.assertRaises(OSError):
                 audit(base) # no physical host input transcript
             (base/"input-probe.txt").write_text(
-                "host_hd_fx_chord_sent=yes keys=Q+E expected=off guest_seen=yes\\n"
-                "host_hd_fx_chord_sent=yes keys=Q+E expected=on guest_seen=yes\\n",
+                "host_hd_fx_chord_sent=yes keys=Q+E expected=off guest_seen=yes\n"
+                "host_hd_fx_chord_sent=yes keys=Q+E expected=on guest_seen=yes\n",
                 encoding="ascii")
             with self.assertRaises(OSError):
                 audit(base) # no X11 capture timeline
             (base/"visual-probe.txt").write_text(
-                "capture=screen-live-hd-fx-off\\n"
-                "capture=screen-live-hd-fx-on\\n",
+                "capture=screen-live-hd-fx-off\n"
+                "capture=screen-live-hd-fx-on\n",
                 encoding="ascii")
             with self.assertRaisesRegex(ValueError,"PNG not found"):
                 audit(base) # trace, input and capture markers cannot forge pixels
             (base/"fourth-stage-result.txt").write_text(
-                "VPD_NEXIUM_FOURTH_STAGE_PASS exit_frame=550\\n",
+                "VPD_NEXIUM_FOURTH_STAGE_PASS exit_frame=550\n",
                 encoding="ascii")
             with self.assertRaisesRegex(ValueError,"predates completed"):
                 audit(base) # reject proof recorded before stage completion
