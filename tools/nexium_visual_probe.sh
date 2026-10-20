@@ -106,6 +106,26 @@ if [[ -s "$out/ne-x11-windows.txt" ]]; then
       sleep 0.12
       capture screen-live-strike
       echo "live_raster_strike_after_guest_event=yes" >> "$out/visual-probe.txt"
+      # The SAME native game naturally decrements melee 32 -> 20 across
+      # twelve idle simulation ticks after this guard's genuine strike.
+      # Observe its libnx source record and take ONE real X11 frame
+      # before sending Fire. Do not alter HP, input or countdown.
+      guard_refill_path="$XDG_CONFIG_HOME/NeXium/sdmc/switch/vice_project_doom/guard_cooldown_refill_guest.txt"
+      saw_guard_refill=no
+      for (( attempt=0; attempt<60; ++attempt )); do
+        if [[ -f "$guard_refill_path" ]] &&
+           grep -q '^VPD_GUARD_COOLDOWN_REFILL_V1 strike_frame=' "$guard_refill_path"; then
+          saw_guard_refill=yes
+          break
+        fi
+        sleep 0.02
+      done
+      echo "host_guard_cooldown20_source_seen=$saw_guard_refill input=idle" >> "$out/input-probe.txt"
+      if [[ "$saw_guard_refill" == yes ]]; then
+        sleep 0.06
+        capture screen-live-guard-refill
+        echo "host_guard_refill_x11_after_source_cooldown=yes" >> "$out/visual-probe.txt"
+      fi
       # Keep the preceding one-shot control test unchanged.
       xdotool keydown --clearmodifiers z
       sleep 1.6

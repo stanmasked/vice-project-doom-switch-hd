@@ -163,6 +163,15 @@ python3 tools/audit_nexium_guard_cooldown_x11.py --evidence "$out"
 # Source-triggered real X11 readiness glyph from the same first alert,
 # before first authentic guard melee strike switches to cooldown pips.
 python3 tools/audit_nexium_guard_ready_x11.py --evidence "$out"
+# Same physical manual guard combat: passive libnx source marker when
+# 12 genuine idle ticks naturally refill its melee 32->20 cooldown.
+find "$HOME" "$XDG_DATA_HOME" "$XDG_CONFIG_HOME" "$XDG_CACHE_HOME" \
+  -type f -name guard_cooldown_refill_guest.txt -print > "$out/guard-refill-trace-paths.txt"
+if [[ -s "$out/guard-refill-trace-paths.txt" ]]; then
+  IFS= read -r guest < "$out/guard-refill-trace-paths.txt"
+  cp "$guest" "$out/guest-guard-cooldown-refill-witness.txt"
+fi
+python3 tools/audit_nexium_guard_refill_x11.py --evidence "$out"
 # Independent AArch64 guest script for guard gate + sentry hostile projectile
 # + real player swept hits + level exit. Not keyboard-driven wave-two play.
 find "$HOME" "$XDG_DATA_HOME" "$XDG_CONFIG_HOME" "$XDG_CACHE_HOME" \
