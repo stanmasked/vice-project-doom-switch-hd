@@ -66,6 +66,7 @@ def audit_directory(root,allow_incomplete=False):
     screen_mode=None
     previous_frame=-1
     previous_events=-1
+    previous_drops=-1
     incomplete=[]
     for metapath in metas:
         m=META_NAME.fullmatch(metapath.name)
@@ -113,6 +114,13 @@ def audit_directory(root,allow_incomplete=False):
             (drops==0)!=(completeness=="yes")
         ):
             raise ValueError("contradictory capture register completeness")
+        if drops<previous_drops:
+            raise ValueError("cumulative dropped-register counter decreased")
+        previous_drops=drops
+        if screen_mode=="no" and integer(
+            meta,"invalid_screen_palette_values",0,256*240
+        )!=0:
+            raise ValueError("screen capture disabled but unavailable palette counter nonzero")
         observed=integer(meta,"logged_register_writes",0,10**9)
         if observed<previous_events:
             raise ValueError("cumulative register writes decreased")
