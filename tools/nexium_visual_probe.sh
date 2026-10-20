@@ -392,6 +392,36 @@ if [[ -s "$out/ne-x11-windows.txt" ]]; then
                                     sleep 0.10
                                     capture screen-live-fourth-impact
                                     echo "live_fourth_impact_raster_after_guest_event=yes" >> "$out/visual-probe.txt"
+                                    # Native source still has a wounded living guard
+                                    # (HP=2, exactly one swept hit). During this
+                                    # fight, inject two real shoulder edges before
+                                    # killing the guard. Preserve post-victory
+                                    # V2 gestures for independent comparison.
+                                    combat_fx_path="$XDG_CONFIG_HOME/NeXium/sdmc/switch/vice_project_doom/hd_fx_combat_guest.txt"
+                                    for expected in off on; do
+                                      combat_seq=1
+                                      if [[ "$expected" == on ]]; then combat_seq=2; fi
+                                      # Send both shoulders in one XTest command.
+                                      # Holding L alone previously triggered the
+                                      # unrelated backdrop reload before R arrived.
+                                      xdotool keydown --clearmodifiers q e
+                                      combat_fx_seen=no
+                                      for (( attempt=0; attempt<70; ++attempt )); do
+                                        if [[ -f "$combat_fx_path" ]] &&
+                                           grep -q "^VPD_HD_FX_COMBAT_V1 seq=$combat_seq mode=$expected " "$combat_fx_path"; then
+                                          combat_fx_seen=yes
+                                          break
+                                        fi
+                                        sleep 0.05
+                                      done
+                                      echo "host_combat_hd_fx_chord_sent=yes keys=Q+E expected=$expected guest_seen=$combat_fx_seen" >> "$out/input-probe.txt"
+                                      if [[ "$combat_fx_seen" == yes ]]; then
+                                        sleep 0.12
+                                        capture "screen-live-combat-hd-fx-$expected"
+                                      fi
+                                      xdotool keyup e q
+                                      sleep 0.20
+                                    done
                                     # Same fourth run: keep firing until the
                                     # third native swept hit kills the guard.
                                     fourth_clear_path="$XDG_CONFIG_HOME/NeXium/sdmc/switch/vice_project_doom/fourth_guard_clear_witness.txt"

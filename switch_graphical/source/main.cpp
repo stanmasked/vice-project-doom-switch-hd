@@ -177,9 +177,13 @@ int main(int,char**) {
     bool native_hostile_halo_logged=false;
     vpd::HdFxRuntimeMode hd_fx_mode{};
     unsigned hd_fx_guest_seq=0;
+    unsigned hd_fx_combat_seq=0;
     if(has_sd){
         if(auto* report=std::fopen(
             "sdmc:/switch/vice_project_doom/hd_fx_toggle_guest.txt","w"))
+            std::fclose(report);
+        if(auto* report=std::fopen(
+            "sdmc:/switch/vice_project_doom/hd_fx_combat_guest.txt","w"))
             std::fclose(report);
     }
     bool fourth_fire_logged=false;
@@ -220,8 +224,11 @@ int main(int,char**) {
             (buttons&HidNpadButton_R)!=0,
             (pressed&HidNpadButton_L)!=0,
             (pressed&HidNpadButton_R)!=0);
+        // The established guest V2 proof remains POST-CLEAR only.
+        // Combat chords use a separate source-owned witness below.
         const bool hd_fx_guest_edge=hd_fx_chord &&
-            hd_fx_before!=hd_fx_mode.enabled && hd_fx_guest_seq<2;
+            hd_fx_before!=hd_fx_mode.enabled && hd_fx_guest_seq<2 &&
+            fourth_stage_seq==2;
         // Left-stick click switches between 200-frame demo and manual play.
         // StickL+Y still performs the independent development-art reset.
         const bool toggle_manual=
@@ -754,10 +761,20 @@ int main(int,char**) {
         // Snapshot the authoritative game state after the one legitimate
         // simulation tick, before either HD-effect raster pass. This proves
         // both comparison draws are render-only inside the actual NRO.
-        const uint64_t fx_sim_before=hd_fx_guest_edge &&
+        const bool hd_fx_combat_edge=hd_fx_chord &&
+            hd_fx_before!=hd_fx_mode.enabled && hd_fx_combat_seq<2 &&
+            fourth_hit_logged && !fourth_guard_clear_logged &&
+            view.manual_controls && game.enemyEncounterEnabled() &&
+            game.guardEnemy().health==2 &&
+            game.guardEnemy().projectile_hits==1 &&
+            game.playerHealth()>0 && !game.stageCleared();
+        const bool hd_fx_probe_edge=hd_fx_guest_edge || hd_fx_combat_edge;
+        // One shared edge gate drives both raster passes and both source
+        // fingerprints. No duplicated, potentially divergent predicates.
+        const uint64_t fx_sim_before=hd_fx_probe_edge &&
             view.manual_controls ? game.fingerprint() : 0;
         vpd::HdFxGuestFingerprint fx_other{},fx_presented{};
-        if(hd_fx_guest_edge && view.manual_controls){
+        if(hd_fx_probe_edge && view.manual_controls){
             auto alternate=view;
             const bool alt=!hd_effects;
             alternate.hd_hit_lighting=alt;
@@ -774,10 +791,10 @@ int main(int,char**) {
         }
         const bool drawn=vpd::drawScene(
             pixels,vpd::kSceneWidth,vpd::kSceneHeight,pixels_per_row,view);
-        if(drawn && hd_fx_guest_edge && view.manual_controls)
+        if(drawn && hd_fx_probe_edge && view.manual_controls)
             fx_presented=vpd::fingerprintHdFxVisual(
                 pixels,vpd::kSceneWidth,vpd::kSceneHeight,pixels_per_row);
-        const uint64_t fx_sim_after=hd_fx_guest_edge &&
+        const uint64_t fx_sim_after=hd_fx_probe_edge &&
             view.manual_controls && drawn ? game.fingerprint() : 0;
         if(drawn && hd_sample_frame)
             lit=vpd::sampleGuardImpact(
@@ -793,6 +810,34 @@ int main(int,char**) {
                 pixels_per_row,hostile_x,hostile_y);
         framebufferEnd(&fb);
         if(!drawn)break;
+        if(hd_fx_combat_edge && view.manual_controls && has_sd &&
+           fx_other.pixels==414000 && fx_presented.pixels==414000 &&
+           fx_other.hash!=fx_presented.hash &&
+           fx_sim_before==fx_sim_after){
+            if(auto* report=std::fopen(
+                "sdmc:/switch/vice_project_doom/hd_fx_combat_guest.txt","a")){
+                ++hd_fx_combat_seq;
+                (void)std::fprintf(report,
+                    "VPD_HD_FX_COMBAT_V1 seq=%u mode=%s frame=%u "
+                    "manual=1 l=1 r=1 edge=1 "
+                    "guard_health=%u guard_hits=%u hero_health=%u "
+                    "wave_active=0 stage_clear=0 "
+                    "scene_other=%016llx scene_displayed=%016llx "
+                    "roi_pixels=%u simulation_before=%016llx "
+                    "simulation_after=%016llx "
+                    "source=libnx_pad same_frame=yes\n",
+                    hd_fx_combat_seq,hd_effects?"on":"off",game.frame(),
+                    static_cast<unsigned>(game.guardEnemy().health),
+                    static_cast<unsigned>(game.guardEnemy().projectile_hits),
+                    static_cast<unsigned>(game.playerHealth()),
+                    static_cast<unsigned long long>(fx_other.hash),
+                    static_cast<unsigned long long>(fx_presented.hash),
+                    fx_presented.pixels,
+                    static_cast<unsigned long long>(fx_sim_before),
+                    static_cast<unsigned long long>(fx_sim_after));
+                std::fclose(report);
+            }
+        }
         if(hd_fx_guest_edge && view.manual_controls && has_sd &&
            fx_other.pixels==414000 && fx_presented.pixels==414000 &&
            fx_other.hash!=fx_presented.hash &&

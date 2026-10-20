@@ -51,7 +51,82 @@ void compareLive(const vpd::Simulation& sim,
     require(sim.fingerprint()==before,
             "active combat HD differential render mutated gameplay");
 }
+// A targeted live-guard replay: emulate the two real shoulder edges after
+// the first swept impact, while a second copy runs the identical game inputs.
+// The cosmetic setting must not leak into AI, HP, projectiles or frame hash.
+void verifyGuardShoulderReplay(){
+    using namespace vpd;
+    Simulation toggled{},untoggled{};
+    toggled.enableEnemyEncounter();
+    untoggled.enableEnemyEncounter();
+    HdFxRuntimeMode fx{};
+    std::vector<uint32_t> off(
+        static_cast<std::size_t>(kSceneWidth)*kSceneHeight),on(off.size());
+    unsigned first_hit_frame=0;
+    // A *single* actual Fire edge: subsequent bullets would remain in
+    // flight and could kill the wounded guard during the L+R hold test.
+    // Match the NeXium harness, which releases Fire on projectile spawn.
+    for(int frame=0;frame<180;++frame){
+        const Input input=frame==0?Input{Fire}:Input{};
+        toggled.tick(input);
+        untoggled.tick(input);
+        require(toggled.fingerprint()==untoggled.fingerprint(),
+                "pre-combat shoulder baseline states diverged");
+        if(toggled.guardEnemy().projectile_hits==1){
+            first_hit_frame=toggled.frame();
+            break;
+        }
+    }
+    require(first_hit_frame>0 && toggled.guardEnemy().health==2 &&
+            untoggled.guardEnemy().projectile_hits==1,
+            "first native swept guard impact missing before L+R");
+    require(fx.acceptShoulders(true,true,true,true,true) && !fx.enabled,
+            "first in-combat L+R edge did not disable authored effects");
+    const uint64_t before_off=toggled.fingerprint();
+    compareLive(toggled,off,on);
+    require(toggled.fingerprint()==before_off &&
+            toggled.fingerprint()==untoggled.fingerprint(),
+            "in-combat HD OFF changed authoritative source state");
+    for(int frame=0;frame<12;++frame){
+        require(fx.acceptShoulders(true,true,true,false,false) &&
+                !fx.enabled,
+                "held combat L+R incorrectly re-toggled effects");
+        toggled.tick(Input{});
+        untoggled.tick(Input{});
+        require(toggled.fingerprint()==untoggled.fingerprint(),
+                "HD OFF mode changed moving guard or player simulation");
+    }
+    require(toggled.guardEnemy().health==2 &&
+            toggled.guardEnemy().projectile_hits==1 &&
+            toggled.playerHealth()>0,
+            "first hit guard not alive at second HD edge");
+    require(!fx.acceptShoulders(true,false,false,false,false),
+            "combat shoulder release triggered a mode change");
+    require(fx.acceptShoulders(true,true,true,true,true) && fx.enabled,
+            "second in-combat L+R edge did not restore authored effects");
+    const uint64_t before_on=toggled.fingerprint();
+    compareLive(toggled,off,on);
+    require(toggled.fingerprint()==before_on &&
+            toggled.fingerprint()==untoggled.fingerprint(),
+            "in-combat HD ON changed authoritative source state");
+    for(int frame=0;frame<180 && toggled.guardEnemy().health>0;++frame){
+        toggled.tick(Input{Fire});
+        untoggled.tick(Input{Fire});
+        require(toggled.fingerprint()==untoggled.fingerprint(),
+                "guard fight diverged after live HD OFF/ON");
+    }
+    require(toggled.guardEnemy().health==0 &&
+            toggled.guardEnemy().projectile_hits==3 &&
+            toggled.fingerprint()==untoggled.fingerprint(),
+            "combat did not continue to authentic guard defeat after toggles");
+    std::puts("VPD_HD_FX_LIVE_CHORD_HOST_PASS combat_edges=2 "
+              "guard_alive_both=yes guard_first_hits=1 "
+              "scene_roi_pixels=414000 simulation_hash_equal_every_tick=yes "
+              "guard_defeated_after_chords=yes physical_switch_proven=no "
+              "original_game_proven=no");
+}
 void verify(){
+    verifyGuardShoulderReplay();
     using namespace vpd;
     Simulation sim;
     sim.enableEnemyEncounter();
@@ -99,14 +174,14 @@ void verify(){
                 "guard_hits=%u guard_defeated=%u hostile_bullet=%u "
                 "roi_pixels=414000 same_frame_gameplay_hash=yes "
                 "manual_visual_difference=yes original_game_proven=no "
-                "physical_switch_proven=no\\n",
+                "physical_switch_proven=no\n",
                 live_impact,live_defeat,live_hostile);
 }
 }
 int main(){
     try{verify();return 0;}
     catch(const std::exception& e){
-        std::fprintf(stderr,"VPD_HD_FX_LIVE_COMBAT_HOST_FAIL %s\\n",e.what());
+        std::fprintf(stderr,"VPD_HD_FX_LIVE_COMBAT_HOST_FAIL %s\n",e.what());
         return 1;
     }
 }

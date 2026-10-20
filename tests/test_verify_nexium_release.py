@@ -25,6 +25,17 @@ class ReleaseDigestTests(unittest.TestCase):
             archive=Path(temp)/ASSET
             archive.write_bytes(data)
             self.assertEqual(verify(release,archive)["archive_sha256"],sha)
+            # A downloaded archive can be corrupted while preserving its exact
+            # byte length. GitHub's digest must catch this, not size alone.
+            with archive.open("r+b") as stream:
+                stream.seek(17)
+                stream.write(b"y")
+            with self.assertRaisesRegex(ValueError,"SHA-256 differs"):
+                verify(release,archive)
+            with archive.open("r+b") as stream:
+                stream.seek(17)
+                stream.write(b"x")
+            self.assertEqual(verify(release,archive)["archive_sha256"],sha)
             scenarios=[
                 ("wrong tag",lambda r:r.update(tag_name="surprise")),
                 ("draft",lambda r:r.update(draft=True)),
