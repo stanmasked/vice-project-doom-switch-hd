@@ -57,6 +57,8 @@ on:
       - "tools/audit_nexium_hd_hostile_halo.py"
       - "tools/audit_nexium_hd_fx_guest.py"
       - "tests/test_nexium_hd_fx_guest.py"
+      - "tools/audit_nexium_hd_fx_combat.py"
+      - "tests/test_nexium_hd_fx_combat.py"
       - "graphics_core/hd_fx_guest_proof.hpp"
       - "tests/test_nexium_hd_hostile_halo.py"
       - "game_core/hd_hit_light_witness.hpp"
@@ -122,6 +124,7 @@ jobs:
           bash -n tools/run_nexium_vice_ci.sh
           bash -n tools/nexium_visual_probe.sh
           python3 tests/test_nexium_hd_fx_guest.py
+          python3 tests/test_nexium_hd_fx_combat.py
           python3 tests/test_verify_nexium_release.py
       - name: Install NeXium, launch graphical NRO and check real guest record
         run: bash tools/run_nexium_vice_ci.sh emulator-input/vpd_native_scene.nro emulator-evidence
@@ -193,6 +196,13 @@ jobs:
             emulator-evidence/emulator-release-attestation.txt
             emulator-evidence/release-api.log
             emulator-evidence/emulator-sha256.txt
+            emulator-evidence/hd-fx-combat-result.txt
+            emulator-evidence/hd-fx-combat-paths.txt
+            emulator-evidence/guest-hd-fx-combat-witness.txt
+            emulator-evidence/screen-live-combat-hd-fx-off.png
+            emulator-evidence/screen-live-combat-hd-fx-off.ppm
+            emulator-evidence/screen-live-combat-hd-fx-on.png
+            emulator-evidence/screen-live-combat-hd-fx-on.ppm
             emulator-evidence/hd-fx-guest-result.txt
             emulator-evidence/hd-fx-guest-paths.txt
             emulator-evidence/guest-hd-fx-toggle-witness.txt
