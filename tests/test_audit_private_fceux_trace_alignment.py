@@ -148,5 +148,43 @@ class PrivateLogAlignmentTests(unittest.TestCase):
                 audit_directory(root,require_logs=True)
 
 
+    def test_reject_per_frame_event_overflow(self):
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d)
+            prepared(root)
+            write_video(root,[(120,"2000","10")]*12001)
+            with self.assertRaisesRegex(ValueError,"per-frame event cap"):
+                audit_directory(root,require_logs=True)
+
+    def test_accept_trailing_events_after_last_capture(self):
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d)
+            prepared(root,clock=True)
+            trailing=EVENTS+[(241,"2001","02")]
+            write_video(root,trailing)
+            write_cycles(root,trailing)
+            report=audit_directory(root,require_logs=True)
+            self.assertTrue(report["cpu_cycle_trace_verified"])
+            self.assertEqual(report["verified_register_events"],5)
+
+    def test_reject_invalid_trailing_event(self):
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d)
+            prepared(root)
+            write_video(root,EVENTS+[(241,"FFFF","02")])
+            with self.assertRaisesRegex(ValueError,"unexpected register address"):
+                audit_directory(root,require_logs=True)
+
+    def test_reject_wrong_read_marker_kind(self):
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d)
+            prepared(root,clock=True)
+            p=root/"mmc3_ppu_cycles.tsv"
+            replace_meta(p,"240\\t104\\t2002\\t00\\tR",
+                            "240\\t104\\t2002\\t00\\tW")
+            with self.assertRaisesRegex(ValueError,"read/write kind"):
+                audit_directory(root,require_logs=True)
+
+
 if __name__=="__main__":
     unittest.main()
