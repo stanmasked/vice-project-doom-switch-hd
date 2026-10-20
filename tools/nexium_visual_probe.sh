@@ -191,6 +191,48 @@ if [[ -s "$out/ne-x11-windows.txt" ]]; then
             xdotool keyup d
             echo "host_post_victory_guard_contact_sent=yes key=D observed=$observed_contact" >> "$out/input-probe.txt"
             if [[ "$observed_contact" == yes ]]; then
+              # Source-owned third guard blow leaves exactly TWO hearts;
+              # take three native X11 snapshots while all pad input is idle.
+              # Each is a real framebuffer (never a software render) and
+              # includes the HD warning during whichever 12-tick pulse is ON.
+              low_hp_path="$XDG_CONFIG_HOME/NeXium/sdmc/switch/vice_project_doom/hd_low_health_guest.txt"
+              low_hp_seen=no
+              for (( attempt=0; attempt<160; ++attempt )); do
+                if [[ -f "$low_hp_path" ]] &&
+                   grep -q '^VPD_HD_LOW_HEALTH_GUEST_V1 contact_frame=' "$low_hp_path"; then
+                  low_hp_seen=yes
+                  break
+                fi
+                sleep 0.04
+              done
+              echo "host_low_hp2_source_seen=$low_hp_seen input=idle" >> "$out/input-probe.txt"
+              if [[ "$low_hp_seen" == yes ]]; then
+                # Do not take three blind shots in an arbitrary phase.
+                # The source's real 12-on / 12-off visual heartbeat can
+                # have all three shots fall in the invisible half.
+                # Wait until the same guest Simulation reports frame%24=0
+                # WITH its HP2 still alive and HD preference enabled.
+                low_hp_phase_path="$XDG_CONFIG_HOME/NeXium/sdmc/switch/vice_project_doom/hd_low_health_phase_guest.txt"
+                low_hp_phase_seen=no
+                for (( attempt=0; attempt<75; ++attempt )); do
+                  if [[ -f "$low_hp_phase_path" ]] &&
+                     grep -q '^VPD_HD_LOW_HEALTH_PHASE_V1 third_frame=' "$low_hp_phase_path"; then
+                    low_hp_phase_seen=yes
+                    break
+                  fi
+                  sleep 0.025
+                done
+                echo "host_low_hp_phase_seen=$low_hp_phase_seen source=live_guest" >> "$out/input-probe.txt"
+                if [[ "$low_hp_phase_seen" == yes ]]; then
+                  # Permit two fresh native Vulkan/X11 present frames
+                  # while still INSIDE the real 12-tick ON window.
+                  for sample in 0 1 2; do
+                    sleep 0.11
+                    capture "screen-live-low-hp-$sample"
+                  done
+                  echo "host_low_hp_x11_samples=3 source=real_guard_hit" >> "$out/visual-probe.txt"
+                fi
+              fi
               for (( attempt=0; attempt<240; ++attempt )); do
                 if [[ -f "$defeat_path" ]] &&
                    grep -q '^VPD_ROMFREE_DEFEAT_RETRY_V1 seq=2 event=death ' "$defeat_path"; then

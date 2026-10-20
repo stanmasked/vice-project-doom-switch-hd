@@ -68,6 +68,8 @@ on:
       - "tools/audit_nexium_sentry_hero_recovery.py"
       - "tests/test_nexium_sentry_hero_recovery.py"
       - "tests/test_hd_low_health_warning.cpp"
+      - "tools/audit_nexium_hd_low_health.py"
+      - "tests/test_nexium_hd_low_health.py"
       - "graphics_core/hd_fx_guest_proof.hpp"
       - "tests/test_nexium_hd_hostile_halo.py"
       - "game_core/hd_hit_light_witness.hpp"
@@ -138,6 +140,7 @@ jobs:
           python3 tests/test_nexium_hd_fx_sentry_hit.py
           python3 tests/test_nexium_sentry_hero_impact.py
           python3 tests/test_nexium_sentry_hero_recovery.py
+          python3 tests/test_nexium_hd_low_health.py
           python3 tests/test_verify_nexium_release.py
           python3 tests/test_nexium_witness_audit.py
       - name: Install NeXium, launch graphical NRO and check real guest record
@@ -180,6 +183,17 @@ jobs:
             emulator-evidence/defeat-retry-result.txt
             emulator-evidence/live-defeat-retry-paths.txt
             emulator-evidence/guest-live-defeat-retry-witness.txt
+            emulator-evidence/hd-low-health-paths.txt
+            emulator-evidence/guest-hd-low-health-witness.txt
+            emulator-evidence/hd-low-health-phase-paths.txt
+            emulator-evidence/guest-hd-low-health-phase-witness.txt
+            emulator-evidence/hd-low-health-result.txt
+            emulator-evidence/screen-live-low-hp-0.png
+            emulator-evidence/screen-live-low-hp-0.ppm
+            emulator-evidence/screen-live-low-hp-1.png
+            emulator-evidence/screen-live-low-hp-1.ppm
+            emulator-evidence/screen-live-low-hp-2.png
+            emulator-evidence/screen-live-low-hp-2.ppm
             emulator-evidence/third-run-control-result.txt
             emulator-evidence/post-defeat-control-paths.txt
             emulator-evidence/guest-post-defeat-control-witness.txt
