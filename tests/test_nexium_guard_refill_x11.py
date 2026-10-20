@@ -74,17 +74,22 @@ class NativeRefillTest(unittest.TestCase):
         d=verify_refill_raster(ppm(sample(False)),ppm(sample(True)),SOURCE_X)
         self.assertEqual((d["warm"],d["dim"],d["gx"]),(24,48,GX))
 
-    def test_real_nexium_x11_two_dim_bars_clip_to_15_pixels(self):
-        # Actual independent NeXium image (2026-10-20, run 39496177544)
-        # shows native source guard (370,559): 24 warm + 15/15 dim.
-        # Only the two far dim pips lose 9 border pixels apiece.
+    def test_real_nexium_x11_native_shift_reproduces_18_15_15_pixels(self):
+        # Measured from actual P6 frame in run #39496177544, anchored
+        # to the original living guard at (370,559). The three displayed
+        # rectangles occupy y=538..541, while the bounded strict audit
+        # samples y=537..540. Thus 3 scanned rows: warm 6*3=18,
+        # and each native five-wide dim bar 5*3=15 (not 24/15/15).
         frame=sample(True)
-        for base in (GX+13,GX+21):
-            box(frame,base,base+6,GY-22,GY-21,(42,56,75))
-            box(frame,base,base+3,GY-21,GY-20,(42,56,75))
+        for base in (GX+5,GX+13,GX+21):
+            box(frame,base,base+6,GY-22,GY-18,(0,0,0))
+        for index,base in enumerate((GX+5,GX+13,GX+21)):
+            width=6 if index==0 else 5
+            color=(237,170,101) if index==0 else (92,101,118)
+            box(frame,base,base+width,GY-21,GY-17,color)
         result=verify_refill_raster(
             ppm(sample(False)),ppm(frame),SOURCE_X)
-        self.assertEqual((result["warm"],result["dim"]), (24,30))
+        self.assertEqual((result["warm"],result["dim"]), (18,30))
 
     def test_reject_dim_pip_below_native_measured_coverage(self):
         frame=sample(True)
