@@ -53,8 +53,8 @@ def regular_file_size(path,size):
 
 def audit_directory(root,allow_incomplete=False):
     root=Path(root)
-    if not root.is_dir():
-        raise ValueError("private local capture directory is missing")
+    if root.is_symlink() or not root.is_dir():
+        raise ValueError("private capture root must be an existing non-symlink directory")
     metas=sorted(root.glob("frame_*.meta.txt"))
     if not 1<=len(metas)<=512:
         raise ValueError("expected 1..512 capture metadata files")
@@ -64,6 +64,8 @@ def audit_directory(root,allow_incomplete=False):
     cadence=None
     cap=None
     screen_mode=None
+    capture_format=None
+    trace_clock=None
     previous_frame=-1
     previous_events=-1
     previous_drops=-1
@@ -77,10 +79,25 @@ def audit_directory(root,allow_incomplete=False):
             raise ValueError("duplicate or out-of-order capture frame")
         previous_frame=frame
         meta=metadata(metapath)
-        if meta.get("format") not in (
+        version=meta.get("format")
+        if version not in (
             "fceux_ppu_snapshot_v3","fceux_ppu_snapshot_v4"
         ):
             raise ValueError("unsupported FCEUX capture schema")
+        if capture_format is None:
+            capture_format=version
+        elif version!=capture_format:
+            raise ValueError("mixed capture format versions in one session")
+        if version=="fceux_ppu_snapshot_v4":
+            clock=meta.get("cycle_trace_available")
+            if clock not in ("yes","no"):
+                raise ValueError("missing or invalid v4 CPU cycle trace availability")
+            if meta.get("cycle_trace_counter_epoch")!="debugger_since_reset":
+                raise ValueError("unexpected v4 CPU cycle counter epoch")
+            if trace_clock is None:
+                trace_clock=clock
+            elif clock!=trace_clock:
+                raise ValueError("mixed CPU cycle trace availability in one session")
         if integer(meta,"frame",0,999999999)!=frame:
             raise ValueError("source frame/metadata filename mismatch")
         rh=meta.get("rom_md5")
@@ -160,6 +177,7 @@ def audit_directory(root,allow_incomplete=False):
         "first_frame":frames[0],
         "last_frame":frames[-1],
         "screen_reference":screen_mode=="yes",
+        "cycle_trace_available":None if trace_clock is None else trace_clock=="yes",
         "all_register_logs_complete":not bool(incomplete),
         "incomplete_frame_count":len(incomplete),
         "fceux_rom_identity_consistent":True,
