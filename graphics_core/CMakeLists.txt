@@ -175,6 +175,18 @@ add_executable(vpd_combat_hud_feedback_test ../tests/test_combat_hud_feedback.cp
 target_link_libraries(vpd_combat_hud_feedback_test
                       PRIVATE vpd_scene_renderer vpd_simulation)
 add_test(NAME romfree_combat_hud_feedback COMMAND vpd_combat_hud_feedback_test)
+# Optional HD low-HP pulse derives from authentic guard damage to HP2;
+# its complete image diff must exclude gameplay art and legacy HUD hearts.
+add_executable(vpd_hd_low_health_warning_test
+               ../tests/test_hd_low_health_warning.cpp)
+target_link_libraries(vpd_hd_low_health_warning_test
+                      PRIVATE vpd_scene_renderer vpd_simulation)
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+  target_compile_options(vpd_hd_low_health_warning_test PRIVATE
+                         -Wall -Wextra -Wpedantic -Werror)
+endif()
+add_test(NAME romfree_hd_low_health_warning
+         COMMAND vpd_hd_low_health_warning_test)
 add_executable(vpd_graphics_animation_test ../tests/test_graphics_animation_integration.cpp)
 target_include_directories(vpd_graphics_animation_test PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/generated)
 add_dependencies(vpd_graphics_animation_test vpd_demo_atlas vpd_demo_animation)
