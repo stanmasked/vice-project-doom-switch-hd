@@ -309,6 +309,15 @@ if [[ -s "$out/hd-hostile-halo-paths.txt" ]]; then
   cp "$guest" "$out/guest-hd-hostile-halo-witness.txt"
 fi
 python3 tools/audit_nexium_hd_hostile_halo.py --evidence "$out"
+# Two physical L+R transitions must occur on the SAME first hostile bullet
+# while the fourth wave is active. Preserve the old post-clear proof.
+find "$HOME" "$XDG_DATA_HOME" "$XDG_CONFIG_HOME" "$XDG_CACHE_HOME" \
+  -type f -name hd_fx_sentry_guest.txt -print > "$out/hd-fx-sentry-paths.txt"
+if [[ -s "$out/hd-fx-sentry-paths.txt" ]]; then
+  IFS= read -r guest < "$out/hd-fx-sentry-paths.txt"
+  cp "$guest" "$out/guest-hd-fx-sentry-witness.txt"
+fi
+python3 tools/audit_nexium_hd_fx_sentry.py --evidence "$out"
 # Independent native HD-effects L+R gesture after fourth-run completion.
 find "$HOME" "$XDG_DATA_HOME" "$XDG_CONFIG_HOME" "$XDG_CACHE_HOME" \
   -type f -name hd_fx_toggle_guest.txt -print > "$out/hd-fx-guest-paths.txt"
