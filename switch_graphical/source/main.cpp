@@ -178,12 +178,16 @@ int main(int,char**) {
     vpd::HdFxRuntimeMode hd_fx_mode{};
     unsigned hd_fx_guest_seq=0;
     unsigned hd_fx_combat_seq=0;
+    unsigned hd_fx_sentry_seq=0;
     if(has_sd){
         if(auto* report=std::fopen(
             "sdmc:/switch/vice_project_doom/hd_fx_toggle_guest.txt","w"))
             std::fclose(report);
         if(auto* report=std::fopen(
             "sdmc:/switch/vice_project_doom/hd_fx_combat_guest.txt","w"))
+            std::fclose(report);
+        if(auto* report=std::fopen(
+            "sdmc:/switch/vice_project_doom/hd_fx_sentry_guest.txt","w"))
             std::fclose(report);
     }
     bool fourth_fire_logged=false;
@@ -768,7 +772,23 @@ int main(int,char**) {
             game.guardEnemy().health==2 &&
             game.guardEnemy().projectile_hits==1 &&
             game.playerHealth()>0 && !game.stageCleared();
-        const bool hd_fx_probe_edge=hd_fx_guest_edge || hd_fx_combat_edge;
+        // Separate guest-only witness while a genuine second-wave bullet
+        // remains active after the previously audited live halo sample.
+        // A host key event alone cannot create this source-owned record.
+        int hd_fx_sentry_slot=-1;
+        const auto& hostile_bullets=game.enemyProjectiles();
+        for(unsigned i=0;i<hostile_bullets.size();++i){
+            if(hostile_bullets[i].active){hd_fx_sentry_slot=static_cast<int>(i);break;}
+        }
+        const bool hd_fx_sentry_edge=hd_fx_chord &&
+            hd_fx_before!=hd_fx_mode.enabled && hd_fx_sentry_seq<2 &&
+            native_hostile_halo_logged && fourth_stage_seq==1 &&
+            view.manual_controls && game.enemyEncounterEnabled() &&
+            game.guardEnemy().health==0 && game.secondWaveActive() &&
+            game.sentry().health==2 && game.playerHealth()>0 &&
+            !game.stageCleared() && hd_fx_sentry_slot>=0;
+        const bool hd_fx_probe_edge=hd_fx_guest_edge ||
+            hd_fx_combat_edge || hd_fx_sentry_edge;
         // One shared edge gate drives both raster passes and both source
         // fingerprints. No duplicated, potentially divergent predicates.
         const uint64_t fx_sim_before=hd_fx_probe_edge &&
@@ -810,6 +830,42 @@ int main(int,char**) {
                 pixels_per_row,hostile_x,hostile_y);
         framebufferEnd(&fb);
         if(!drawn)break;
+        if(hd_fx_sentry_edge && drawn && has_sd &&
+           fx_other.pixels==414000 && fx_presented.pixels==414000 &&
+           fx_other.hash!=fx_presented.hash &&
+           fx_sim_before==fx_sim_after){
+            const auto& bullet=hostile_bullets[
+                static_cast<unsigned>(hd_fx_sentry_slot)];
+            if(auto* report=std::fopen(
+                "sdmc:/switch/vice_project_doom/hd_fx_sentry_guest.txt","a")){
+                ++hd_fx_sentry_seq;
+                (void)std::fprintf(report,
+                    "VPD_HD_FX_SENTRY_V1 seq=%u mode=%s frame=%u "
+                    "manual=1 l=1 r=1 edge=1 "
+                    "guard_hp=0 wave=1 sentry_hp=%u hero_hp=%u "
+                    "bullet_slot=%u bullet_age=%u bullet_x=%ld bullet_y=%ld "
+                    "bullet_vx=%ld sentry_shots=%u stage_clear=0 "
+                    "scene_other=%016llx scene_displayed=%016llx "
+                    "roi_pixels=%u simulation_before=%016llx "
+                    "simulation_after=%016llx "
+                    "source=libnx_pad same_frame=yes\n",
+                    hd_fx_sentry_seq,hd_effects?"on":"off",game.frame(),
+                    static_cast<unsigned>(game.sentry().health),
+                    static_cast<unsigned>(game.playerHealth()),
+                    static_cast<unsigned>(hd_fx_sentry_slot),
+                    static_cast<unsigned>(bullet.age),
+                    static_cast<long>(bullet.x),
+                    static_cast<long>(bullet.y),
+                    static_cast<long>(bullet.vx),
+                    static_cast<unsigned>(game.sentry().shots_fired),
+                    static_cast<unsigned long long>(fx_other.hash),
+                    static_cast<unsigned long long>(fx_presented.hash),
+                    fx_presented.pixels,
+                    static_cast<unsigned long long>(fx_sim_before),
+                    static_cast<unsigned long long>(fx_sim_after));
+                std::fclose(report);
+            }
+        }
         if(hd_fx_combat_edge && view.manual_controls && has_sd &&
            fx_other.pixels==414000 && fx_presented.pixels==414000 &&
            fx_other.hash!=fx_presented.hash &&
