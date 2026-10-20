@@ -27,3 +27,9 @@ The native scene renderer already paints both actor-only stripes when `view.play
 ## Boundary
 
 The actual NeXium rerun on the new exact-head commit must still pass before stage completion. Synthetic tests plus previously recorded X11 measurements are not a substitute for fresh emulator proof. This remains a clean-room ROM-free original prototype; original NES fidelity, physical Switch presentation and frame-perfect timing are not established.
+
+## Live CI race found on first attempt
+
+At first exact-head [NeXium run #39458112786](https://github.com/stanmasked/vice-project-doom-switch-hd/actions/runs/39458112786), the guest wrote a fully valid swept source collision at frame 397 (HP 5 to 4), but the X11 root screenshot was taken **before that frame was presented**: the fifth HUD heart was still teal 132/132 pixels, the four other hearts remained teal, and the hero had no flashes. The strict preceding HUD audit correctly rejected this stale raster, so the new hero audit did not execute.
+
+The fix in `tools/nexium_visual_probe.sh` waits **0.18 seconds** after observing the guest SD collision before taking the real X11 `after-hit` screenshot. This is a presentation delay only, not simulated gameplay input or synthetic hit editing. Source flash lifetime is 16 ticks. A new exact-head emulator rerun must confirm the delay suffices.
