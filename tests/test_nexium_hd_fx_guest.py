@@ -2,10 +2,11 @@
 """Adversarial parser checks; never substitute fixtures for NeXium runtime."""
 import sys
 from pathlib import Path
+from tempfile import TemporaryDirectory
 import unittest
 
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/"tools"))
-from audit_nexium_hd_fx_guest import verify
+from audit_nexium_hd_fx_guest import audit, verify
 
 def line(seq,mode,frame,other,shown):
     return (
@@ -23,6 +24,37 @@ class GuestAuditTests(unittest.TestCase):
     def test_real_native_shape(self):
         rows=verify(GOOD)
         self.assertEqual([540,548],[r[0] for r in rows])
+
+    def test_guest_audit_requires_independent_source_and_x11_gates(self):
+        # A syntactically valid guest line is never enough to pass.
+        with TemporaryDirectory() as temp:
+            base=Path(temp)
+            proof=base/"guest-hd-fx-toggle-witness.txt"
+            proof.write_bytes(GOOD)
+            with self.assertRaisesRegex(ValueError,"fourth manual stage"):
+                audit(base)
+            (base/"fourth-stage-result.txt").write_text(
+                "VPD_NEXIUM_FOURTH_STAGE_PASS exit_frame=535\\n",
+                encoding="ascii")
+            with self.assertRaises(OSError):
+                audit(base) # no physical host input transcript
+            (base/"input-probe.txt").write_text(
+                "host_hd_fx_chord_sent=yes keys=Q+E expected=off guest_seen=yes\\n"
+                "host_hd_fx_chord_sent=yes keys=Q+E expected=on guest_seen=yes\\n",
+                encoding="ascii")
+            with self.assertRaises(OSError):
+                audit(base) # no X11 capture timeline
+            (base/"visual-probe.txt").write_text(
+                "capture=screen-live-hd-fx-off\\n"
+                "capture=screen-live-hd-fx-on\\n",
+                encoding="ascii")
+            with self.assertRaisesRegex(ValueError,"PNG not found"):
+                audit(base) # trace, input and capture markers cannot forge pixels
+            (base/"fourth-stage-result.txt").write_text(
+                "VPD_NEXIUM_FOURTH_STAGE_PASS exit_frame=550\\n",
+                encoding="ascii")
+            with self.assertRaisesRegex(ValueError,"predates completed"):
+                audit(base) # reject proof recorded before stage completion
 
     def test_fail_closed_mutations(self):
         for data in (
