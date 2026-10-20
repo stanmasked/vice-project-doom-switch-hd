@@ -58,7 +58,31 @@ bool haloDiff(const vpd::Simulation& sim,
             "HUD-free scene pixel sample size changed");
     require(sim.fingerprint()==state,
             "sentry halo raster changed authoritative simulation");
-    return x.hash!=y.hash;
+    const bool differing=x.hash!=y.hash;
+    if(differing){
+        // A changed ROI hash alone could hide an unrelated scene effect.
+        // Require actual differing pixels next to a source-owned ACTIVE
+        // hostile bullet, in the exact world-to-screen coordinates used
+        // by scene_renderer.cpp's authored projectile halo.
+        unsigned near_bullet_pixels=0;
+        for(const auto& shot:sim.enemyProjectiles()){
+            if(!shot.active)continue;
+            const int cx=(shot.x/kFixed-sim.cameraX())*2+2;
+            const int cy=(shot.y/kFixed+80)*2;
+            for(int py=cy-32;py<=cy+32;++py){
+                if(py<160 || py>=620)continue;
+                for(int px=cx-32;px<=cx+32;++px){
+                    if(px<0 || px>=900)continue;
+                    const auto idx=static_cast<std::size_t>(py)*kSceneWidth+
+                                   static_cast<std::size_t>(px);
+                    if(off[idx]!=on[idx])++near_bullet_pixels;
+                }
+            }
+        }
+        require(near_bullet_pixels>=5,
+                "HD visual difference has no spatial provenance at live bullet");
+    }
+    return differing;
 }
 void equalGameplay(const vpd::Simulation& a,const vpd::Simulation& b){
     require(a.fingerprint()==b.fingerprint(),
