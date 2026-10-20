@@ -30,22 +30,22 @@ def rectangle(a,x0,x1,y0,y1,rgb):
             a[offset:offset+3]=ink
 
 
-def screenshot(ready):
+def screenshot(ready,gx=GX):
     a=bytearray(W*H*3)
     # Anchor a unique simulated *native* sprite: precisely the four
     # independent source-colour evidence samples required by the actual
     # X11 guard locator. Broad solid fixture rectangles create multiple
     # valid guard x/y origins and should be rejected as ambiguous.
-    rectangle(a,GX+2,GX+3,GY-7,GY-6,(247,175,96))
-    rectangle(a,GX+10,GX+11,GY-7,GY-6,(247,175,96))
-    rectangle(a,GX+3,GX+4,GY+3,GY+4,(65,76,94))
-    rectangle(a,GX+10,GX+11,GY+4,GY+5,(194,110,92))
+    rectangle(a,gx+2,gx+3,GY-7,GY-6,(247,175,96))
+    rectangle(a,gx+10,gx+11,GY-7,GY-6,(247,175,96))
+    rectangle(a,gx+3,gx+4,GY+3,GY+4,(65,76,94))
+    rectangle(a,gx+10,gx+11,GY+4,GY+5,(194,110,92))
     if ready:
-        rectangle(a,GX+10,GX+16,GY-27,GY-16,(248,198,104))
-        rectangle(a,GX+10,GX+16,GY-13,GY-9,(248,198,104))
+        rectangle(a,gx+10,gx+16,GY-27,GY-16,(248,198,104))
+        rectangle(a,gx+10,gx+16,GY-13,GY-9,(248,198,104))
     else:
         for n in range(3):
-            rectangle(a,GX+5+n*8,GX+11+n*8,GY-22,GY-18,
+            rectangle(a,gx+5+n*8,gx+11+n*8,GY-22,GY-18,
                       (92,101,118))
     return a
 
@@ -57,12 +57,23 @@ def ppm(buf):
 class ReadyRasterTests(unittest.TestCase):
     def test_authentic_ready_exclamation_and_replacement(self):
         d=verify_ready_raster(ppm(screenshot(True)),
-                              ppm(screenshot(False)),SOURCE_X)
+                              ppm(screenshot(False)),SOURCE_X,SOURCE_X)
         self.assertEqual((d["stem_pixels"],d["dot_pixels"],
                           d["strike_dim_pixels"]),(66,24,72))
 
     def test_source_first_alert_authoritative_and_in_view(self):
         self.assertEqual(source_ready_x(SRC),482)
+
+    def test_genuine_camera_movement_uses_independent_strike_anchor(self):
+        # Real source trace moves the guard from x≈482 at alert
+        # to x≈360 at strike as the host-camera follows the hero.
+        a=ppm(screenshot(True,gx=480))
+        b=ppm(screenshot(False,gx=360))
+        good=verify_ready_raster(a,b,482,360)
+        self.assertEqual((good["stem_pixels"],good["dot_pixels"],
+                          good["strike_dim_pixels"]),(66,24,72))
+        with self.assertRaisesRegex(ValueError,"sprite"):
+            verify_ready_raster(a,b,482,482)
 
     def test_source_rejects_forged_health_or_attack_cooldown(self):
         for old,new in ((b"cooldown=0",b"cooldown=32"),
@@ -77,13 +88,13 @@ class ReadyRasterTests(unittest.TestCase):
         a=screenshot(True)
         rectangle(a,GX+10,GX+16,GY-27,GY-16,(0,0,0))
         with self.assertRaisesRegex(ValueError,"stem or dot"):
-            verify_ready_raster(ppm(a),ppm(screenshot(False)),SOURCE_X)
+            verify_ready_raster(ppm(a),ppm(screenshot(False)),SOURCE_X,SOURCE_X)
 
     def test_reject_ready_without_dot(self):
         a=screenshot(True)
         rectangle(a,GX+10,GX+16,GY-13,GY-9,(0,0,0))
         with self.assertRaisesRegex(ValueError,"stem or dot"):
-            verify_ready_raster(ppm(a),ppm(screenshot(False)),SOURCE_X)
+            verify_ready_raster(ppm(a),ppm(screenshot(False)),SOURCE_X,SOURCE_X)
 
     def test_reject_cooldown_pips_visible_during_ready(self):
         a=screenshot(True)
@@ -96,29 +107,29 @@ class ReadyRasterTests(unittest.TestCase):
             rectangle(a,GX+5+n*8,GX+11+n*8,GY-22,GY-18,
                       (92,101,118))
         with self.assertRaisesRegex(ValueError,"already on cooldown"):
-            verify_ready_raster(ppm(a),ppm(screenshot(False)),SOURCE_X)
+            verify_ready_raster(ppm(a),ppm(screenshot(False)),SOURCE_X,SOURCE_X)
 
     def test_reject_ready_icon_persists_after_hit(self):
         b=screenshot(False)
         rectangle(b,GX+10,GX+16,GY-27,GY-16,(248,198,104))
         with self.assertRaisesRegex(ValueError,"still visible"):
-            verify_ready_raster(ppm(screenshot(True)),ppm(b),SOURCE_X)
+            verify_ready_raster(ppm(screenshot(True)),ppm(b),SOURCE_X,SOURCE_X)
 
     def test_reject_unanchored_icon(self):
         with self.assertRaisesRegex(ValueError,"sprite"):
             verify_ready_raster(ppm(screenshot(True)),
-                                ppm(screenshot(False)),850)
+                                ppm(screenshot(False)),850,SOURCE_X)
 
     def test_reject_not_enough_strike_pips(self):
         b=screenshot(False)
         rectangle(b,GX+21,GX+27,GY-22,GY-18,(0,0,0))
         with self.assertRaisesRegex(ValueError,"cooldown pips"):
-            verify_ready_raster(ppm(screenshot(True)),ppm(b),SOURCE_X)
+            verify_ready_raster(ppm(screenshot(True)),ppm(b),SOURCE_X,SOURCE_X)
 
     def test_reject_malformed_original_x11_p6(self):
         with self.assertRaises(ValueError):
             verify_ready_raster(ppm(screenshot(True))[:-1],
-                                ppm(screenshot(False)),SOURCE_X)
+                                ppm(screenshot(False)),SOURCE_X,SOURCE_X)
 
 
 if __name__=="__main__":
