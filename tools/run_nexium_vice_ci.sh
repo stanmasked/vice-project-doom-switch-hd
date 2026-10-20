@@ -318,6 +318,15 @@ if [[ -s "$out/hd-fx-sentry-paths.txt" ]]; then
   cp "$guest" "$out/guest-hd-fx-sentry-witness.txt"
 fi
 python3 tools/audit_nexium_hd_fx_sentry.py --evidence "$out"
+# The first source-confirmed hostile projectile must also be the one that
+# actually damages the hero AFTER native L+R OFF/ON in the same guest run.
+find "$HOME" "$XDG_DATA_HOME" "$XDG_CONFIG_HOME" "$XDG_CACHE_HOME" \
+  -type f -name hd_fx_sentry_hit_guest.txt -print > "$out/hd-fx-sentry-hit-paths.txt"
+if [[ -s "$out/hd-fx-sentry-hit-paths.txt" ]]; then
+  IFS= read -r guest < "$out/hd-fx-sentry-hit-paths.txt"
+  cp "$guest" "$out/guest-hd-fx-sentry-hit-witness.txt"
+fi
+python3 tools/audit_nexium_hd_fx_sentry_hit.py --evidence "$out"
 # Independent native HD-effects L+R gesture after fourth-run completion.
 find "$HOME" "$XDG_DATA_HOME" "$XDG_CONFIG_HOME" "$XDG_CACHE_HOME" \
   -type f -name hd_fx_toggle_guest.txt -print > "$out/hd-fx-guest-paths.txt"
