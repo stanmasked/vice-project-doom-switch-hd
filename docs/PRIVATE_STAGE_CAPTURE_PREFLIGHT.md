@@ -75,7 +75,7 @@ synthetic but consistent files, or inaccurate FCEUX Lua APIs. Reconstructed
 tiles must remain private alongside original gameplay recordings.
 No captures, exported sprites or commercial ROMs belong in GitHub or CI.
 
-All **42 Python tests** fabricate private captures in temporary
+All **44 Python tests** fabricate private captures in temporary
 directories. No NES images, copyright artwork or original-game ROM
 identity is stored in this repository.
 
@@ -121,7 +121,7 @@ and effective world camera require separate private investigation.
 
 Twelve initial invented-data tests cover valid event and clock logs plus missing,
 truncated, reordered, unexpected, mismatched, or stale logs. Combined with
-the previous 26 tests and four Stage 109 tests, 42 synthetic regression tests are present; their
+the previous 26 tests and four Stage 109 tests, 44 synthetic regression tests are present; their
 latest GitHub Actions result must be checked independently before marking
 this PR ready for review.
 
@@ -141,3 +141,14 @@ valid post-capture tail, malformed post-capture tail, and forged
 PPUSTATUS read/write markers. The dedicated preflight suite now contains
 **42 ROM-free test methods**; do not equate source-level test presence
 with completed GitHub Actions or a real first-stage capture.
+
+## Stage 110 — exact PPUSTATUS marker and native session cap
+
+FCEUX's script records a read of PPUSTATUS at address `$2002` as a
+synthetic event with value `00`. Any trace that encodes a different value
+is rejected, even if its CPU-cycle TSV repeats the same fabricated value.
+The v4 metadata auditor also rejects `logged_register_writes` greater
+than the capture script's native **250,000-event per-session maximum**, even
+when log cross-validation is not requested. Two additional ROM-free tests
+cover these impossible states. **44** dedicated synthetic test methods are
+now present; latest CI must pass before this branch can be reviewed.

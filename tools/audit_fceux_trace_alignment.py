@@ -57,6 +57,8 @@ def video_events(path):
         addr=int(columns[1],16)
         if addr not in ALLOWED_ADDRESSES:
             raise ValueError("unexpected register address in private trace")
+        if addr==0x2002 and columns[2]!="00":
+            raise ValueError("PPUSTATUS synthetic read marker must have zero value")
         if frame<previous:
             raise ValueError("register trace frame ordering regressed")
         if frame!=previous:

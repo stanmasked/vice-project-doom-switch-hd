@@ -185,6 +185,26 @@ class PrivateLogAlignmentTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,"read/write kind"):
                 audit_directory(root,require_logs=True)
 
+    def test_reject_nonzero_ppustatus_read_marker(self):
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d)
+            prepared(root,clock=True)
+            altered=list(EVENTS)
+            altered[2]=(240,"2002","FF")
+            write_video(root,altered)
+            write_cycles(root,altered)
+            with self.assertRaisesRegex(ValueError,"PPUSTATUS synthetic read marker"):
+                audit_directory(root,require_logs=True)
+
+    def test_reject_impossible_v4_cumulative_logged_count(self):
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d)
+            p=capture(root,120,screen=False)
+            replace_meta(p,"logged_register_writes=153",
+                         "logged_register_writes=250001")
+            with self.assertRaisesRegex(ValueError,"native FCEUX session cap"):
+                audit_directory(root)
+
 
 if __name__=="__main__":
     unittest.main()

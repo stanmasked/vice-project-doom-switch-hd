@@ -143,6 +143,8 @@ def audit_directory(root,allow_incomplete=False,require_logs=False):
         )!=0:
             raise ValueError("screen capture disabled but unavailable palette counter nonzero")
         observed=integer(meta,"logged_register_writes",0,10**9)
+        if version=="fceux_ppu_snapshot_v4" and observed>250000:
+            raise ValueError("logged register count exceeds native FCEUX session cap")
         if observed<previous_events:
             raise ValueError("cumulative register writes decreased")
         previous_events=observed
