@@ -17,8 +17,8 @@ Host X11 now detects the source-owned **first alert** milestone, leaves the exac
 
 `tools/audit_nexium_guard_ready_x11.py` fails closed unless the prior strict guard contact, real strike/defeat pixels, and new independently validated cooldown pips are already PASS. It validates the original guest alert event's real HP, attack cooldown and physical Right input. It computes the guest projected camera location from native source coordinates and independently finds the actual guard torso, face and two surviving HP bars in the earlier X11 image. Only then does it accept both parts of the authored alert exclamation in the proper relative rectangle above that same enemy:
 
-- Alert stem: original amber RGB **(248,198,104)**, at least **57** exact pixels from the six-by-eleven column.
-- Alert dot: same RGB, at least **19** exact pixels from the separate six-by-four bottom block.
+- Alert stem: original amber RGB **(248,198,104)**, at least **50** exact pixels from the native X11 five-by-eleven presentation region (55 if fully visible).
+- Alert dot: same RGB, at least **13** exact pixels from the separate native X11 five-by-three region (15 if fully visible). These dimensions are measured from real NeXium X11 capture, not taken verbatim from the six-pixel-wide source renderer.
 - No false dark attack cooldown bars in the ready image; after actual melee, no lingering READY ! pixel and **60–72** real dim cooldown pip pixels.
 
 The X11 alert frame must precede the real strike and death captures, all must have original PNG companions and genuine independent raw P6. Each capture SHA256 is included in the new PASS report. Ten adversarial tests reject source-forged HP/cooldown/detection/input, missing stem/dot, incorrect cooldown overlap, lingering icon after strike, forged on-screen guard sprite, missing cooldown pips, and invalid image dimensions.
