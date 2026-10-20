@@ -463,6 +463,40 @@ if [[ -s "$out/ne-x11-windows.txt" ]]; then
         fi
       fi
     fi
+    # Run only after the actual fourth-stage completion: shoulder input
+    # must not alter any inherited combat, retry or movement attestation.
+    # NeXium keyboard defaults Q=L / E=R. A host keypress is NOT proof:
+    # only guest-recorded libnx edges + same-frame pixel deltas count.
+    if [[ "${fourth_exit:-no}" == yes ]]; then
+      hd_fx_guest_path="$XDG_CONFIG_HOME/NeXium/sdmc/switch/vice_project_doom/hd_fx_toggle_guest.txt"
+      for expected in off on; do
+        xdotool keydown --clearmodifiers q
+        sleep 0.14
+        xdotool keydown --clearmodifiers e
+        sleep 0.33
+        xdotool keyup e
+        xdotool keyup q
+        hd_fx_seen=no
+        seq=1
+        if [[ "$expected" == on ]]; then seq=2; fi
+        for (( attempt=0; attempt<65; ++attempt )); do
+          if [[ -f "$hd_fx_guest_path" ]] &&
+             grep -q "^VPD_HD_FX_GUEST_V1 seq=$seq mode=$expected " "$hd_fx_guest_path"; then
+            hd_fx_seen=yes
+            break
+          fi
+          sleep 0.05
+        done
+        echo "host_hd_fx_chord_sent=yes keys=Q+E expected=$expected guest_seen=$hd_fx_seen" >> "$out/input-probe.txt"
+        if [[ "$hd_fx_seen" == yes ]]; then
+          sleep 0.12
+          capture "screen-live-hd-fx-$expected"
+        fi
+        sleep 0.16
+      done
+    else
+      echo "host_hd_fx_chord_sent=no fourth_stage_not_proven=yes" >> "$out/input-probe.txt"
+    fi
     xdotool key --clearmodifiers --delay 150 m >> "$out/input-probe.txt" 2>&1 &&
       echo "host_plus_key_sent=yes" >> "$out/input-probe.txt"
   fi

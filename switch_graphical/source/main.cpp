@@ -28,6 +28,7 @@
 #include "guard_live_defeat_witness.hpp"
 #include "scene_renderer.hpp"
 #include "hd_fx_toggle.hpp"
+#include "hd_fx_guest_proof.hpp"
 #include "combat_scene_bridge.hpp"
 #include "asset_atlas.hpp"
 #include "asset_bundle.hpp"
@@ -175,6 +176,12 @@ int main(int,char**) {
     bool native_hd_dust_logged=false;
     bool native_hostile_halo_logged=false;
     vpd::HdFxRuntimeMode hd_fx_mode{};
+    unsigned hd_fx_guest_seq=0;
+    if(has_sd){
+        if(auto* report=std::fopen(
+            "sdmc:/switch/vice_project_doom/hd_fx_toggle_guest.txt","w"))
+            std::fclose(report);
+    }
     bool fourth_fire_logged=false;
     bool fourth_hit_logged=false;
     bool native_hd_hit_logged=false;
@@ -206,12 +213,15 @@ int main(int,char**) {
         // L+R toggles only the authored HD effects during manual play.
         // A held chord consumes both individual asset commands, so
         // no backdrop reload/reset is accidentally performed.
+        const bool hd_fx_before=hd_fx_mode.enabled;
         const bool hd_fx_chord=hd_fx_mode.acceptShoulders(
             !demo.enabled(),
             (buttons&HidNpadButton_L)!=0,
             (buttons&HidNpadButton_R)!=0,
             (pressed&HidNpadButton_L)!=0,
             (pressed&HidNpadButton_R)!=0);
+        const bool hd_fx_guest_edge=hd_fx_chord &&
+            hd_fx_before!=hd_fx_mode.enabled && hd_fx_guest_seq<2;
         // Left-stick click switches between 200-frame demo and manual play.
         // StickL+Y still performs the independent development-art reset.
         const bool toggle_manual=
@@ -737,8 +747,31 @@ int main(int,char**) {
                 center_x,center_y);
             view.hd_hit_lighting=true;
         }
+        // Real libnx L+R input must change source-owned HD pixels on the
+        // SAME guest frame. Render the opposite setting first, fingerprint
+        // a HUD-free region, then render the actual state for presentation.
+        // No additional input, game tick, camera step or allocated buffer.
+        vpd::HdFxGuestFingerprint fx_other{},fx_presented{};
+        if(hd_fx_guest_edge && view.manual_controls){
+            auto alternate=view;
+            const bool alt=!hd_effects;
+            alternate.hd_hit_lighting=alt;
+            alternate.hd_atmospheric_haze=alt;
+            alternate.hd_footstep_dust=alt;
+            alternate.hd_hostile_projectile_halo=alt;
+            alternate.hd_fx_status_enabled=alt;
+            if(!vpd::drawScene(pixels,vpd::kSceneWidth,
+                               vpd::kSceneHeight,pixels_per_row,alternate)){
+                framebufferEnd(&fb);break;
+            }
+            fx_other=vpd::fingerprintHdFxVisual(
+                pixels,vpd::kSceneWidth,vpd::kSceneHeight,pixels_per_row);
+        }
         const bool drawn=vpd::drawScene(
             pixels,vpd::kSceneWidth,vpd::kSceneHeight,pixels_per_row,view);
+        if(drawn && hd_fx_guest_edge && view.manual_controls)
+            fx_presented=vpd::fingerprintHdFxVisual(
+                pixels,vpd::kSceneWidth,vpd::kSceneHeight,pixels_per_row);
         if(drawn && hd_sample_frame)
             lit=vpd::sampleGuardImpact(
                 pixels,vpd::kSceneWidth,vpd::kSceneHeight,pixels_per_row,
@@ -753,6 +786,24 @@ int main(int,char**) {
                 pixels_per_row,hostile_x,hostile_y);
         framebufferEnd(&fb);
         if(!drawn)break;
+        if(hd_fx_guest_edge && view.manual_controls && has_sd &&
+           fx_other.pixels==414000 && fx_presented.pixels==414000 &&
+           fx_other.hash!=fx_presented.hash){
+            if(auto* report=std::fopen(
+                "sdmc:/switch/vice_project_doom/hd_fx_toggle_guest.txt","a")){
+                ++hd_fx_guest_seq;
+                (void)std::fprintf(report,
+                    "VPD_HD_FX_GUEST_V1 seq=%u mode=%s frame=%u "
+                    "manual=1 l=1 r=1 edge=1 "
+                    "scene_other=%016llx scene_displayed=%016llx "
+                    "roi_pixels=%u source=libnx_pad same_frame=yes\n",
+                    hd_fx_guest_seq,hd_effects?"on":"off",game.frame(),
+                    static_cast<unsigned long long>(fx_other.hash),
+                    static_cast<unsigned long long>(fx_presented.hash),
+                    fx_presented.pixels);
+                std::fclose(report);
+            }
+        }
         if(hostile_sample_frame){
             const unsigned changed=vpd::countHostileHaloChanges(
                 hostile_dark,hostile_lit);

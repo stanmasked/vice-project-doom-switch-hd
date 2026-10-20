@@ -1,5 +1,6 @@
 // Portable L+R HD-effects toggle and pixel-layer acceptance.
 #include "hd_fx_toggle.hpp"
+#include "hd_fx_guest_proof.hpp"
 #include "scene_renderer.hpp"
 #include <cstdint>
 #include <cstdio>
@@ -120,6 +121,18 @@ int main(){
                       enabled[static_cast<std::size_t>(y)*stride+x]==padding,
                       "isolated HD effect overwrote row stride padding");
     }
+    // Exclude the ON/OFF label from guest visual evidence: only authored
+    // scene pixels inside the fixed foreground/background ROI count.
+    const auto on_visual=fingerprintHdFxVisual(
+        on.data(),kSceneWidth,kSceneHeight,stride);
+    const auto off_visual=fingerprintHdFxVisual(
+        off.data(),kSceneWidth,kSceneHeight,stride);
+    check(on_visual.pixels==414000 && off_visual.pixels==414000 &&
+          on_visual.hash!=off_visual.hash,
+          "guest HUD-free visual evidence did not change with effects");
+    check(fingerprintHdFxVisual(nullptr,kSceneWidth,kSceneHeight,stride).pixels==0 &&
+          fingerprintHdFxVisual(off.data(),899,kSceneHeight,stride).pixels==0,
+          "guest witness accepted a missing or undersized framebuffer");
     // Independently check the HUD indicator changes without changing
     // the established attract-mode pixels.
     scene.hd_fx_status_visible=true;
@@ -127,6 +140,9 @@ int main(){
     check(drawScene(off.data(),kSceneWidth,kSceneHeight,stride,scene),
           "OFF status overlay failed");
     const uint64_t off_label=digest(off,stride);
+    check(fingerprintHdFxVisual(
+              off.data(),kSceneWidth,kSceneHeight,stride).hash==off_visual.hash,
+          "HD status label contaminated the guest effect-only sample");
     scene.hd_fx_status_enabled=true;
     check(drawScene(off.data(),kSceneWidth,kSceneHeight,stride,scene) &&
           digest(off,stride)!=off_label,"ON and OFF HUD labels matched");
