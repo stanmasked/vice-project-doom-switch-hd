@@ -83,7 +83,12 @@ class ReadyRasterTests(unittest.TestCase):
 
     def test_reject_cooldown_pips_visible_during_ready(self):
         a=screenshot(True)
-        for n in range(3):
+        # Do NOT paint all three bars over the amber center stem:
+        # doing so makes the independent missing-! test reject first,
+        # without ever testing the contradictory live cooldown bars.
+        # Real hostile fixture: two dim bars remain visible outside
+        # the intact original READY glyph.
+        for n in (0,2):
             rectangle(a,GX+5+n*8,GX+11+n*8,GY-22,GY-18,
                       (92,101,118))
         with self.assertRaisesRegex(ValueError,"already on cooldown"):
