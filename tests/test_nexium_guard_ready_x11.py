@@ -32,10 +32,14 @@ def rectangle(a,x0,x1,y0,y1,rgb):
 
 def screenshot(ready):
     a=bytearray(W*H*3)
-    for x in (GX+2,GX+10):
-        rectangle(a,x,x+6,GY-7,GY-4,(247,175,96))
-    rectangle(a,GX+3,GX+21,GY+3,GY+11,(65,76,94))
-    rectangle(a,GX+10,GX+20,GY+4,GY+9,(194,110,92))
+    # Anchor a unique simulated *native* sprite: precisely the four
+    # independent source-colour evidence samples required by the actual
+    # X11 guard locator. Broad solid fixture rectangles create multiple
+    # valid guard x/y origins and should be rejected as ambiguous.
+    rectangle(a,GX+2,GX+3,GY-7,GY-6,(247,175,96))
+    rectangle(a,GX+10,GX+11,GY-7,GY-6,(247,175,96))
+    rectangle(a,GX+3,GX+4,GY+3,GY+4,(65,76,94))
+    rectangle(a,GX+10,GX+11,GY+4,GY+5,(194,110,92))
     if ready:
         rectangle(a,GX+10,GX+16,GY-27,GY-16,(248,198,104))
         rectangle(a,GX+10,GX+16,GY-13,GY-9,(248,198,104))
