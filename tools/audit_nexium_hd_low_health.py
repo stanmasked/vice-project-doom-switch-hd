@@ -6,6 +6,7 @@ import re
 
 from audit_nexium_defeat_retry import verify as verify_defeat
 from audit_nexium_fourth_stage import raster
+from audit_nexium_hd_fx_sentry_hit import LIVE_HEART_RECTS, FIFTH_HEART_RECT
 
 WIDTH = 1280
 HEIGHT = 720
@@ -16,6 +17,12 @@ RECORD = re.compile(
     rb"guard_attacks_before=2 guard_attacks_after=3 "
     rb"input=idle hd=on guard_hp=3 wave=0 clear=0 "
     rb"source=libnx_tick original_game_proven=no\n$"
+)
+PHASE = re.compile(
+    rb"^VPD_HD_LOW_HEALTH_PHASE_V1 third_frame=(0|[1-9][0-9]*) "
+    rb"frame=(0|[1-9][0-9]*) hero_hp=2 guard_attacks=3 "
+    rb"input=idle hd=on pulse=on source=libnx_tick "
+    rb"original_game_proven=no\n$"
 )
 TEAL = bytes((106, 198, 174))
 FLASH = bytes((255, 220, 153))
@@ -35,6 +42,19 @@ def source_witness(raw, defeat):
         raise ValueError("HP2 event not 2 genuine 32-tick strikes after contact")
     return contact, third
 
+def verify_phase(raw, third):
+    """Only real source frame 0 mod 24 may trigger a pulse-on capture."""
+    if not isinstance(raw, bytes) or len(raw) > 380:
+        raise ValueError("native LOW HP phase witness missing/oversized")
+    match = PHASE.fullmatch(raw)
+    if not match:
+        raise ValueError("source LOW HP ON half-cycle not verified")
+    recorded_third, lit_frame = map(int, match.groups())
+    if (recorded_third != third or lit_frame % 24 != 0 or
+        not third <= lit_frame < third + 32):
+        raise ValueError("LOW HP ON phase not tied to live HP2 third strike")
+    return lit_frame
+
 def count_color(image, rect, color):
     x0, y0, x1, y1 = rect
     count = 0
@@ -49,9 +69,12 @@ def hp2_warning(image):
     if len(image) != WIDTH * HEIGHT * 3:
         raise ValueError("not a native full-resolution NeXium RGB frame")
     hearts = []
-    for n in range(5):
-        x = 761 + 15 * n
-        roi = (x, 18, x+11, 30)
+    # Native NeXium guest pixels differ from untransformed renderer
+    # coords by 4–5 px at this HUD. Reuse THE SAME independent X11
+    # heart chip rectangles already proved for live sentry damage.
+    rects = (*LIVE_HEART_RECTS, FIFTH_HEART_RECT)
+    for left, right in rects:
+        roi = (left, 17, right+1, 29)
         healthy = count_color(image, roi, TEAL) + count_color(image, roi, FLASH)
         dark = count_color(image, roi, EMPTY)
         hearts.append((healthy, dark))
@@ -59,8 +82,10 @@ def hp2_warning(image):
     # count a label painted over the HUD as proof of authentic damage.
     source_hp2 = (all(h >= 110 and e == 0 for h, e in hearts[:2]) and
                   all(e >= 110 and h == 0 for h, e in hearts[2:]))
-    underline = count_color(image, (757, 34, 836, 37), WARNING)
-    text = count_color(image, (846, 17, 946, 33), LABEL)
+    # Include native X11 presentation padding and the -4 px window
+    # offset; exact authored colors distinguish these from other HUD.
+    underline = count_color(image, (747, 29, 843, 42), WARNING)
+    text = count_color(image, (832, 11, 954, 39), LABEL)
     return source_hp2, underline, text
 
 def audit(evidence):
@@ -71,11 +96,15 @@ def audit(evidence):
     defeat = verify_defeat((base/"guest-live-defeat-retry-witness.txt").read_bytes())
     contact, third = source_witness(
         (base/"guest-hd-low-health-witness.txt").read_bytes(), defeat)
+    on_phase = verify_phase(
+        (base/"guest-hd-low-health-phase-witness.txt").read_bytes(), third)
     host = (base/"input-probe.txt").read_text("ascii").splitlines()
     if host.count("host_low_hp2_source_seen=yes input=idle") != 1 or (
         "host_post_victory_guard_contact_sent=yes key=D observed=yes" not in host
     ):
         raise ValueError("host did not wait for real idle third melee strike")
+    if host.count("host_low_hp_phase_seen=yes source=live_guest") != 1:
+        raise ValueError("host did not wait for native HP2 pulse ON marker")
     timeline = (base/"visual-probe.txt").read_text("ascii").splitlines()
     if timeline.count("host_low_hp_x11_samples=3 source=real_guard_hit") != 1:
         raise ValueError("host source-aligned HP2 screenshots absent")
@@ -101,6 +130,7 @@ def audit(evidence):
     result = (
         "VPD_NEXIUM_HD_LOW_HEALTH_PASS "
         f"contact_frame={contact} third_strike_frame={third} "
+        f"source_on_frame={on_phase} "
         "hero_hp=2 guard_attacks=3 guard_cooldown=32 "
         f"live_x11_sample={index} underline_pixels={underline} "
         f"label_pixels={label} ppm_sha256={sha} "
