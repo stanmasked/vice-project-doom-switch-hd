@@ -751,6 +751,11 @@ int main(int,char**) {
         // SAME guest frame. Render the opposite setting first, fingerprint
         // a HUD-free region, then render the actual state for presentation.
         // No additional input, game tick, camera step or allocated buffer.
+        // Snapshot the authoritative game state after the one legitimate
+        // simulation tick, before either HD-effect raster pass. This proves
+        // both comparison draws are render-only inside the actual NRO.
+        const uint64_t fx_sim_before=hd_fx_guest_edge &&
+            view.manual_controls ? game.fingerprint() : 0;
         vpd::HdFxGuestFingerprint fx_other{},fx_presented{};
         if(hd_fx_guest_edge && view.manual_controls){
             auto alternate=view;
@@ -772,6 +777,8 @@ int main(int,char**) {
         if(drawn && hd_fx_guest_edge && view.manual_controls)
             fx_presented=vpd::fingerprintHdFxVisual(
                 pixels,vpd::kSceneWidth,vpd::kSceneHeight,pixels_per_row);
+        const uint64_t fx_sim_after=hd_fx_guest_edge &&
+            view.manual_controls && drawn ? game.fingerprint() : 0;
         if(drawn && hd_sample_frame)
             lit=vpd::sampleGuardImpact(
                 pixels,vpd::kSceneWidth,vpd::kSceneHeight,pixels_per_row,
@@ -788,19 +795,24 @@ int main(int,char**) {
         if(!drawn)break;
         if(hd_fx_guest_edge && view.manual_controls && has_sd &&
            fx_other.pixels==414000 && fx_presented.pixels==414000 &&
-           fx_other.hash!=fx_presented.hash){
+           fx_other.hash!=fx_presented.hash &&
+           fx_sim_before==fx_sim_after){
             if(auto* report=std::fopen(
                 "sdmc:/switch/vice_project_doom/hd_fx_toggle_guest.txt","a")){
                 ++hd_fx_guest_seq;
                 (void)std::fprintf(report,
-                    "VPD_HD_FX_GUEST_V1 seq=%u mode=%s frame=%u "
+                    "VPD_HD_FX_GUEST_V2 seq=%u mode=%s frame=%u "
                     "manual=1 l=1 r=1 edge=1 "
                     "scene_other=%016llx scene_displayed=%016llx "
-                    "roi_pixels=%u source=libnx_pad same_frame=yes\n",
+                    "roi_pixels=%u simulation_before=%016llx "
+                    "simulation_after=%016llx "
+                    "source=libnx_pad same_frame=yes\n",
                     hd_fx_guest_seq,hd_effects?"on":"off",game.frame(),
                     static_cast<unsigned long long>(fx_other.hash),
                     static_cast<unsigned long long>(fx_presented.hash),
-                    fx_presented.pixels);
+                    fx_presented.pixels,
+                    static_cast<unsigned long long>(fx_sim_before),
+                    static_cast<unsigned long long>(fx_sim_after));
                 std::fclose(report);
             }
         }
