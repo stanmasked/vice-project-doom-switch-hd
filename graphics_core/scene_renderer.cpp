@@ -348,6 +348,28 @@ bool drawScene(uint32_t* target,int width,int height,int stride_pixels,
         for(unsigned n=0;n<view.guard.health && n<3;++n)
             s.rect(gx+2+8*static_cast<int>(n),gy-7,6,3,
                    rgba(247,175,96));
+        // Manual HD-only readiness cue above the enemy's actual sprite.
+        // Detection and cooldown are both sourced from GuardEnemy; no
+        // local animation timer, no new hitboxes, no sprite recoloring.
+        // The first alert has a bright exclamation mark (attack ready);
+        // after real contact the three pips refill as its 32-tick melee
+        // cooldown naturally counts down. Keep HP chips at gy-7 untouched.
+        if(view.manual_controls && view.hd_guard_threat_tell &&
+           view.guard.alerted && view.player_health>0 &&
+           !view.stage_cleared){
+            if(view.guard.attack_cooldown==0){
+                s.rect(gx+10,gy-27,6,11,rgba(248,198,104));
+                s.rect(gx+10,gy-13,6,4,rgba(248,198,104));
+            }else{
+                s.rect(gx+3,gy-24,27,8,rgba(42,56,75));
+                const unsigned elapsed=32u-std::min<unsigned>(
+                    32u,view.guard.attack_cooldown);
+                const unsigned filled=elapsed*3u/32u;
+                for(unsigned n=0;n<3;++n)
+                    s.rect(gx+5+8*static_cast<int>(n),gy-22,6,4,
+                           n<filled?rgba(237,170,101):rgba(92,101,118));
+            }
+        }
     }
     // Distinct fixed sentry sprite is absent from the first encounter and
     // every golden demo frame. It is driven by the wave-two simulation.

@@ -68,6 +68,7 @@ on:
       - "tools/audit_nexium_sentry_hero_recovery.py"
       - "tests/test_nexium_sentry_hero_recovery.py"
       - "tests/test_hd_low_health_warning.cpp"
+      - "tests/test_hd_guard_threat_tell.cpp"
       - "tools/audit_nexium_hd_low_health.py"
       - "tests/test_nexium_hd_low_health.py"
       - "tools/audit_nexium_hd_low_health_lifecycle.py"

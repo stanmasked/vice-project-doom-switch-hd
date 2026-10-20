@@ -21,7 +21,7 @@ inline void applyCombatOverlay(SceneView& view,const Simulation& game) {
     const auto& guard=game.guardEnemy();
     view.guard={guard.x/kFixed,guard.y/kFixed,guard.health,
                 game.enemyEncounterEnabled(),guard.alerted,
-                guard.hit_flash_ticks};
+                guard.hit_flash_ticks,guard.attack_cooldown};
     view.player_health=game.playerHealth();
     view.player_hit_flash_ticks=game.playerHitFlashTicks();
     static_assert(std::tuple_size<decltype(SceneView{}.enemy_projectiles)>::value

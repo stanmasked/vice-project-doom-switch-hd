@@ -10,6 +10,7 @@ struct GuardView {
     bool enabled=false;
     bool alerted=false;
     uint8_t hit_flash_ticks=0;
+    uint8_t attack_cooldown=0; // source guard melee cadence, no new logic
 };
 struct SentryView {
     int32_t x_px=0,y_px=0;
@@ -72,6 +73,7 @@ struct SceneView {
     bool hd_footstep_dust=false; // optional visual-only grounded movement cue
     bool hd_hostile_projectile_halo=false; // real turret-bullet cue, manual only
     bool hd_low_health_warning=false; // visual-only pulse at HP 1 or 2
+    bool hd_guard_threat_tell=false; // opt-in alert and cooldown cue
     bool hd_fx_status_visible=false; // optional L+R mode indicator, off in golden demo
     bool hd_fx_status_enabled=true; // visual setting only, never physics
     // ROM-free stage-two completion gate; explicit source-derived visibility.
