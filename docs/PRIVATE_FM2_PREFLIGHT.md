@@ -98,3 +98,34 @@ On FCEUX builds exposing the older Windows-style CLI, use
 installed build's help first. In all cases select read-only movie playback
 and keep the ROM/movie private. A Linux build may offer `--loadlua` to load
 a capture script at launch; do not assume the same option exists on macOS.
+
+## Stage 113 — one-pass FCEUX visual storyboard
+
+The standalone `tools/capture_fceux_movie_storyboard.lua` captures the actual
+FCEUX-rendered screen at fixed 1,803-frame intervals (about 30 seconds on
+NES NTSC). A full 43,652-frame movie can yield 25 reference stills in **one**
+private, read-only FM2 playback. This is substantially cheaper than
+restarting the movie once for every capture window.
+
+Create an empty private directory and set the following globals in FCEUX's
+Lua Script Window while replaying the matching FM2 and personally held ROM:
+
+```lua
+VPD_STORYBOARD_DIRECTORY = "private/us_storyboard"
+VPD_STORYBOARD_START_FRAME = 0
+VPD_STORYBOARD_STOP_FRAME = 43651
+VPD_STORYBOARD_INTERVAL = 1803
+VPD_STORYBOARD_LIMIT = 25
+dofile("tools/capture_fceux_movie_storyboard.lua")
+```
+
+Output is **private**: full-color binary P6 `.ppm` (256x240 RGB), matching
+`.pal.bin` palette indices, and `.meta.txt` containing frame and FCEUX ROM
+identity. The script refuses to overwrite existing captures, so use a new
+empty directory per session. Convert PPM to PNG only locally if desired.
+Never commit the original frames, palettes, ROM, FM2 or extracted art.
+
+Native Core CI exercises the production storyboard Lua under fabricated
+FCEUX callbacks and checks two 256x240 samples and absence of captures
+outside the configured interval. This is an API/format test only: no real
+playback, stage boundaries, PPU/CHR timings or map geometry are proven.
