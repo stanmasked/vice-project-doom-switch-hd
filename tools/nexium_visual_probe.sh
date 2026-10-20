@@ -401,9 +401,10 @@ if [[ -s "$out/ne-x11-windows.txt" ]]; then
                                     for expected in off on; do
                                       combat_seq=1
                                       if [[ "$expected" == on ]]; then combat_seq=2; fi
-                                      xdotool keydown --clearmodifiers q
-                                      sleep 0.14
-                                      xdotool keydown --clearmodifiers e
+                                      # Send both shoulders in one XTest command.
+                                      # Holding L alone previously triggered the
+                                      # unrelated backdrop reload before R arrived.
+                                      xdotool keydown --clearmodifiers q e
                                       combat_fx_seen=no
                                       for (( attempt=0; attempt<70; ++attempt )); do
                                         if [[ -f "$combat_fx_path" ]] &&
@@ -418,8 +419,7 @@ if [[ -s "$out/ne-x11-windows.txt" ]]; then
                                         sleep 0.12
                                         capture "screen-live-combat-hd-fx-$expected"
                                       fi
-                                      xdotool keyup e
-                                      xdotool keyup q
+                                      xdotool keyup e q
                                       sleep 0.20
                                     done
                                     # Same fourth run: keep firing until the
