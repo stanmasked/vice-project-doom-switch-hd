@@ -66,7 +66,7 @@ int main(){
         lowView.hd_low_health_warning=true;
         const auto on=render(lowView);
         require(px(on,760,34)==rgba(237,115,112) &&
-                px(on,850,17)!=px(off,850,17),
+                px(on,846,17)!=px(off,846,17),
                 "visual low HP cue or label absent");
         sameOutsideWarning(off,on);
         // The source-authoritative five HP cells must stay bit-for-bit
@@ -79,7 +79,9 @@ int main(){
                 "renderer changed gameplay state after low-health cue");
         lowView.frame+=12;
         const auto phaseOff=render(lowView);
-        require(phaseOff==off,
+        auto expectedQuiet=lowView;
+        expectedQuiet.hd_low_health_warning=false;
+        require(phaseOff==render(expectedQuiet),
                 "source frame phase should extinguish all warning pixels");
         // Ineligible conditions: 3+ HP, 0 HP, earned stage clear, demo.
         for(unsigned hp: {0u,3u,5u}){
