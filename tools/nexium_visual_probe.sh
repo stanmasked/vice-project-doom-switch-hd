@@ -491,6 +491,15 @@ if [[ -s "$out/ne-x11-windows.txt" ]]; then
                                             done
                                             echo "host_sentry_fx_chord_sent=yes keys=Q+E expected=$expected guest_seen=$sentry_fx_seen" >> "$out/input-probe.txt"
                                             if [[ "$sentry_fx_seen" == yes ]]; then
+                                              # SD guest event is written in the
+                                              # simulation tick, BEFORE a Vulkan
+                                              # frame is actually presented to X11.
+                                              # Capturing immediately sometimes
+                                              # retains HD FX: ON on the OFF image.
+                                              # Hold the SAME L+R mode for several
+                                              # real guest draws before capture;
+                                              # no input/physics state is faked.
+                                              sleep 0.24
                                               capture "screen-live-sentry-hd-fx-$expected"
                                             fi
                                             xdotool keyup e q
