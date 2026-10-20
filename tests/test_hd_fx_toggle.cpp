@@ -68,6 +68,58 @@ int main(){
     check(drawScene(off.data(),kSceneWidth,kSceneHeight,stride,scene) &&
           digest(off,stride)!=digest(on,stride),
           "HD OFF did not change manually controlled authored effects");
+    // Each authored layer must independently change source-eligible manual
+    // pixels, not merely inherit a changed checksum from the haze layer.
+    // Keep input/state fixed between OFF and ON renders of each layer.
+    for(int effect=0;effect<4;++effect){
+        SceneView isolated{};
+        isolated.manual_controls=true;
+        isolated.player_x_px=80;
+        isolated.player_y_px=210;
+        isolated.frame=19;
+        switch(effect){
+            case 0: isolated.player_hit_flash_ticks=7;break;
+            case 1: break; // haze needs only manual camera/world coordinates
+            case 2: isolated.moving=true;isolated.grounded=true;break;
+            case 3:
+                isolated.sentry.enabled=true;
+                isolated.sentry.health=2;
+                isolated.sentry.x_px=210;
+                isolated.sentry.y_px=210;
+                isolated.enemy_projectiles[0]={150,210,true};
+                break;
+        }
+        std::vector<uint32_t> base(on.size(),padding);
+        std::vector<uint32_t> enabled(on.size(),padding);
+        check(drawScene(base.data(),kSceneWidth,kSceneHeight,stride,isolated),
+              "individual HD layer baseline failed to render");
+        switch(effect){
+            case 0: isolated.hd_hit_lighting=true;break;
+            case 1: isolated.hd_atmospheric_haze=true;break;
+            case 2: isolated.hd_footstep_dust=true;break;
+            case 3: isolated.hd_hostile_projectile_halo=true;break;
+        }
+        check(drawScene(enabled.data(),kSceneWidth,kSceneHeight,stride,isolated) &&
+              digest(base,stride)!=digest(enabled,stride),
+              "individual HD layer produced no source-conditioned pixel change");
+        // All four layers must remain completely invisible in autoplay.
+        isolated.manual_controls=false;
+        check(drawScene(enabled.data(),kSceneWidth,kSceneHeight,stride,isolated),
+              "autoplay individual HD render failed");
+        const uint64_t autoplay_with_effect=digest(enabled,stride);
+        isolated.hd_hit_lighting=false;
+        isolated.hd_atmospheric_haze=false;
+        isolated.hd_footstep_dust=false;
+        isolated.hd_hostile_projectile_halo=false;
+        check(drawScene(base.data(),kSceneWidth,kSceneHeight,stride,isolated) &&
+              digest(base,stride)==autoplay_with_effect,
+              "individual HD layer leaked into legacy autoplay pixels");
+        for(int y=0;y<kSceneHeight;++y)
+            for(int x=kSceneWidth;x<stride;++x)
+                check(base[static_cast<std::size_t>(y)*stride+x]==padding &&
+                      enabled[static_cast<std::size_t>(y)*stride+x]==padding,
+                      "isolated HD effect overwrote row stride padding");
+    }
     // Independently check the HUD indicator changes without changing
     // the established attract-mode pixels.
     scene.hd_fx_status_visible=true;
