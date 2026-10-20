@@ -74,17 +74,22 @@ def verify_ready_raster(ready_ppm,strike_ppm,source_x,strike_source_x):
     # Require *both* parts of the original source-authored exclamation:
     # the tall amber stem AND the separate small dot, never a detached
     # one-color region or any nearby bright actor sprite.
+    # Measure the native X11/Vulkan PRESENTED shape, not the authored
+    # 6x11 and 6x4 source rectangles. A genuine sample saved by NeXium
+    # shows a five-wide stem at gx+10..14, gy-26..-16 (55 pixels)
+    # and a separate five-by-three dot at gy-12..-10 (15 pixels).
+    # Keep both distinct and require >90% of each compact native ROI.
     stem=sum(
         rgb(ready,x,y)==READY
-        for y in range(gy-27,gy-16)
-        for x in range(gx+10,gx+16)
+        for y in range(gy-26,gy-15)
+        for x in range(gx+10,gx+15)
     )
     dot=sum(
         rgb(ready,x,y)==READY
-        for y in range(gy-13,gy-9)
-        for x in range(gx+10,gx+16)
+        for y in range(gy-12,gy-9)
+        for x in range(gx+10,gx+15)
     )
-    if stem<57 or dot<19:
+    if stem<50 or dot<13:
         raise ValueError("native X11 alert guard missing READY ! stem or dot")
     bar=sum(
         rgb(ready,x,y)==DIM
