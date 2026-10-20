@@ -60,13 +60,17 @@ def verify(raw, on):
         raise ValueError("swept hostile bullet never intersected hero hitbox")
     return v
 
-def fifth_heart_loss(before,after):
-    """Find the exact live->empty health pixels in native NeXium X11 P6.
+# Exact per-heart horizontal bounds from the preserved 1280x720 NeXium
+# native capture. Keep these disjoint from the fifth heart's cell.
+LIVE_HEART_RECTS=((757,766),(771,781),(786,795),(800,810))
+FIFTH_HEART_RECT=(814,824)
 
-    Guest GUI coordinates are scaled/shifted relative to the 1280-wide
-    framebuffer: the fifth heart occupies x=814..824, not the
-    untransformed authored rect at x=821..831. Reject HUD flash
-    or mere animation as evidence of losing a life segment.
+def fifth_heart_loss(before,after):
+    """Verify one lost heart AND the survival of *each* of the other four.
+
+    All coordinates are captured native X11 pixels, not untransformed
+    renderer coordinates. The earlier sum-only guard admitted small,
+    localized loss in another cell if enough other healthy pixels remained.
     """
     if len(before)!=1280*720*3 or len(after)!=len(before):
         raise ValueError("native X11 heart raster dimensions invalid")
@@ -75,20 +79,33 @@ def fifth_heart_loss(before,after):
     flashed=bytes((255,220,153))
     changed=0
     for y in range(15,32):
-        for x in range(805,836):
+        for x in range(FIFTH_HEART_RECT[0],FIFTH_HEART_RECT[1]+1):
             ix=(y*1280+x)*3
             if before[ix:ix+3]==healthy and after[ix:ix+3]==empty:
                 changed+=1
-    # The same screenshot must retain the first FOUR live heart cells:
-    # after a legitimate hit they may flash yellow, but not go dark.
-    kept=0
-    for y in range(15,32):
-        for x in range(750,813):
-            ix=(y*1280+x)*3
-            if (before[ix:ix+3]==healthy and
-                after[ix:ix+3] in (healthy,flashed)):
-                kept+=1
-    if changed<80 or kept<440:
+    kept_total=0
+    for number,(left,right) in enumerate(LIVE_HEART_RECTS,1):
+        kept=0
+        lost=0
+        for y in range(15,32):
+            for x in range(left,right+1):
+                ix=(y*1280+x)*3
+                if before[ix:ix+3]!=healthy:
+                    continue
+                current=after[ix:ix+3]
+                if current in (healthy,flashed):
+                    kept+=1
+                elif current==empty:
+                    lost+=1
+        # The authentic post-collision image yields 120/132/120/132.
+        # Reject even partial teal-to-empty changes in any previous cell:
+        # a global 440-pixel sum could previously mask a damaged cell.
+        if kept<105 or lost:
+            raise ValueError(
+                f"remaining heart {number} changed or disappeared in X11 "
+                f"(preserved={kept}, lost={lost})")
+        kept_total+=kept
+    if changed<80 or kept_total<440:
         raise ValueError(
             "fifth heart did not turn from healthy to empty with four "
             "remaining hearts in genuine X11 pixels")
