@@ -473,6 +473,13 @@ bool drawScene(uint32_t* target,int width,int height,int stride_pixels,
         s.rect(932,47,126,8,rgba(55,88,108));
         s.rect(932,47,83,8,rgba(87,184,194));
     }
+    // A small manual-only indicator makes the active HD visual mode
+    // observable without changing simulation or old replay golden pixels.
+    if(view.manual_controls && view.hd_fx_status_visible)
+        s.text(957,205,
+               view.hd_fx_status_enabled?"HD FX: ON":"HD FX: OFF",
+               view.hd_fx_status_enabled?rgba(153,218,195):
+                                         rgba(225,155,136),2);
     if(view.external_animation_source)
         s.text(view.manual_controls?1050:788,54,"ANIM: SD OVERRIDE",
                rgba(164,210,193),2);
