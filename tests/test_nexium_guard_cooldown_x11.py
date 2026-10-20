@@ -65,8 +65,10 @@ class TestGuardNativeCooldown(unittest.TestCase):
             verify_cooldown_raster(ppm(on),ppm(bytearray(WIDTH*HEIGHT*3)),ANCHORS)
 
     def test_reject_pips_still_visible_after_guard_kill(self):
+        ghost=scene()
+        ink(ghost,GX+3,GY+3,(0,0,0))
         with self.assertRaisesRegex(ValueError,"persisted"):
-            verify_cooldown_raster(ppm(scene()),ppm(scene()),ANCHORS)
+            verify_cooldown_raster(ppm(scene()),ppm(ghost),ANCHORS)
 
     def test_reject_health_color_fake_and_unanchored_three_bars(self):
         on=scene()
