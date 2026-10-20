@@ -147,15 +147,22 @@ void runCombatReplay(){
     a.enableEnemyEncounter();
     b.enableEnemyEncounter();
     bool defeated=false;
+    // Match the proven native guard-defeat scenario: approach until the
+    // first actual melee attack, then stop and receive subsequent blows.
+    // Holding Right forever escapes the guard and cannot cause defeat.
+    bool first_contact=false;
     for(int frame=0;frame<500;++frame){
-        a.tick(Input{Right});b.tick(Input{Right});
+        const Input actual=first_contact?Input{}:Input{Right};
+        a.tick(actual);b.tick(actual);
         require(a.fingerprint()==b.fingerprint(),
                 "defeat replay diverged with HD preference disabled");
+        if(a.guardEnemy().attacks>0)first_contact=true;
         if(a.playerHealth()==0){
             defeated=true;
             break;
         }
     }
+    require(first_contact,"synthetic guard never reached real melee contact");
     require(defeated,"synthetic guard contact did not reach defeat");
     require(retryTerminalEncounter(a,true)==ManualRetryOutcome::AfterDefeat &&
             retryTerminalEncounter(b,true)==ManualRetryOutcome::AfterDefeat,
