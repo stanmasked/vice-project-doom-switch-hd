@@ -13,7 +13,8 @@ evidence for *one pip refilling while the pad is idle at the source-observation 
 The same physical right-pad first guard contact remains recorded in the
 existing guest `guard_live_witness.txt`. After that authentic strike,
 the guest stores its actual source frame. Only at **exactly twelve
-additional simulation ticks**, with the pad idle at the observation tick\nand the
+additional simulation ticks**, with the pad idle at the observation tick
+and the
 same alerted living guard remains at HP2 with one attack, the hero remains
 HP4, HD FX is ON and the actual old cooldown has naturally decreased from
 32 to **20**, does it write one source-owned
