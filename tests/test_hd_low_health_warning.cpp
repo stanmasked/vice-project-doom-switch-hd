@@ -43,13 +43,35 @@ int main(){
         vpd::Simulation sim;
         sim.enableEnemyEncounter();
         // Actual guard strikes must lower the authoritative Simulation HP.
-        bool low=false;
-        for(int n=0;n<600;++n){
+        // Approach until the first authentic melee strike, then remain
+        // idle in guard range. Holding Right throughout outruns its 32-tick
+        // cooldown and is NOT a valid three-hit gameplay witness.
+        bool first_hit=false;
+        for(int n=0;n<260;++n){
             sim.tick(vpd::Input{vpd::Right});
+            if(sim.guardEnemy().attacks==1){
+                first_hit=sim.playerHealth()==4;
+                break;
+            }
+        }
+        require(first_hit,"first real guard contact did not reduce HP to 4");
+        uint32_t last_hit_frame=sim.frame();
+        unsigned attacks=sim.guardEnemy().attacks;
+        bool low=false;
+        for(int n=0;n<140;++n){
+            sim.tick(vpd::Input{});
+            if(sim.guardEnemy().attacks!=attacks){
+                require(sim.guardEnemy().attacks==attacks+1 &&
+                        sim.frame()==last_hit_frame+32 &&
+                        sim.playerHealth()==5-sim.guardEnemy().attacks,
+                        "guard strike cadence/HP diverged during idle");
+                last_hit_frame=sim.frame();
+                attacks=sim.guardEnemy().attacks;
+            }
             if(sim.playerHealth()==2){low=true;break;}
         }
-        require(low && sim.guardEnemy().attacks>=3,
-                "real guard contact failed to reach two health");
+        require(low && sim.guardEnemy().attacks==3,
+                "three real guard contact hits failed to reach HP2");
         const auto stable=sim.fingerprint();
         const auto& player=sim.player();
         vpd::SceneView lowView{
