@@ -5,7 +5,7 @@ from pathlib import Path
 import unittest
 
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/"tools"))
-from audit_nexium_guard_refill_x11 import witness,verify_refill_raster
+from audit_nexium_guard_refill_x11 import witness,verify_refill_raster,verify_prior_strike_receipts
 
 W,H=1280,720
 GX,GY=370,559
@@ -97,6 +97,37 @@ class NativeRefillTest(unittest.TestCase):
     def test_reject_unanchored_forged_cooldown_pips(self):
         with self.assertRaisesRegex(ValueError,"sprite"):
             verify_refill_raster(ppm(sample(False)),ppm(sample(True)),780)
+
+    def test_prior_real_x11_receipts_same_strike(self):
+        sha="a"*64
+        cool=("VPD_NEXIUM_GUARD_COOLDOWN_X11_PASS "
+              "alert_frame=131 strike_frame=177 defeat_frame=199 "
+              "strike_ppm_sha256="+sha+" source=live_guest\\n")
+        ready=("VPD_NEXIUM_GUARD_READY_X11_PASS "
+               "alert_frame=131 strike_frame=177 source_guard_hp=2 "
+               "strike_ppm_sha256="+sha+" source=live_guest\\n")
+        self.assertTrue(verify_prior_strike_receipts(cool,ready,177,sha))
+
+    def test_reject_foreign_strike_receipts_and_replays(self):
+        sha="a"*64
+        cool=("VPD_NEXIUM_GUARD_COOLDOWN_X11_PASS "
+              "alert_frame=131 strike_frame=177 "
+              "strike_ppm_sha256="+sha+" source=live_guest\\n")
+        ready=("VPD_NEXIUM_GUARD_READY_X11_PASS "
+               "alert_frame=131 strike_frame=177 "
+               "strike_ppm_sha256="+sha+" source=live_guest\\n")
+        for bad_cool,bad_ready in (
+            (cool.replace("strike_frame=177","strike_frame=178"),ready),
+            (cool,ready.replace("strike_frame=177","strike_frame=178")),
+            (cool.replace(sha,"b"*64),ready),
+            (cool,ready.replace(sha,"b"*64)),
+            (cool,ready+ready),
+            (cool.replace("VPD_NEXIUM_GUARD_COOLDOWN_X11_PASS ",
+                          "unverified "),ready),
+            (cool,ready.replace("strike_ppm_sha256=","fake_sha256=")),
+        ):
+            with self.subTest(forgery=bad_cool[:30]),self.assertRaises(ValueError):
+                verify_prior_strike_receipts(bad_cool,bad_ready,177,sha)
 
     def test_reject_stale_or_replayed_x11(self):
         src=ppm(sample(True))
