@@ -213,6 +213,19 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
 endif()
 add_test(NAME romfree_hd_fx_live_combat
          COMMAND vpd_hd_fx_live_combat_test)
+# Real second-wave sentry bullet: isolated HD projectile halo differs only
+# in raster, while both simulations deliver identical hostile collision damage.
+add_executable(vpd_hd_fx_live_sentry_replay_test
+               ../tests/test_hd_fx_live_sentry_replay.cpp)
+target_link_libraries(vpd_hd_fx_live_sentry_replay_test
+                      PRIVATE vpd_scene_renderer vpd_simulation)
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+  target_compile_options(vpd_hd_fx_live_sentry_replay_test PRIVATE
+                         -Wall -Wextra -Wpedantic -Werror)
+endif()
+add_test(NAME romfree_hd_fx_live_sentry_projectile_replay
+         COMMAND vpd_hd_fx_live_sentry_replay_test)
+
 # Independent pixel-safe original-style combat hit-light regression.
 add_executable(vpd_hd_impact_lighting_test
                ../tests/test_impact_lighting.cpp)
