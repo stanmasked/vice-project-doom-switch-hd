@@ -63,9 +63,13 @@ void verifyGuardShoulderReplay(){
     std::vector<uint32_t> off(
         static_cast<std::size_t>(kSceneWidth)*kSceneHeight),on(off.size());
     unsigned first_hit_frame=0;
+    // A *single* actual Fire edge: subsequent bullets would remain in
+    // flight and could kill the wounded guard during the L+R hold test.
+    // Match the NeXium harness, which releases Fire on projectile spawn.
     for(int frame=0;frame<180;++frame){
-        toggled.tick(Input{Fire});
-        untoggled.tick(Input{Fire});
+        const Input input=frame==0?Input{Fire}:Input{};
+        toggled.tick(input);
+        untoggled.tick(input);
         require(toggled.fingerprint()==untoggled.fingerprint(),
                 "pre-combat shoulder baseline states diverged");
         if(toggled.guardEnemy().projectile_hits==1){
