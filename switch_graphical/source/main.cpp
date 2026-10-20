@@ -165,6 +165,8 @@ int main(int,char**) {
     bool retry_native_logged=false;
     bool replay_guard_contact_logged=false;
     bool hd_low_hp_logged=false;
+    bool hd_low_hp_phase_logged=false;
+    uint32_t hd_low_hp_third_frame=0;
     uint32_t hd_low_hp_first_contact_frame=0;
     bool replay_guard_death_logged=false;
     bool replay_guard_restart_logged=false;
@@ -209,6 +211,9 @@ int main(int,char**) {
             std::fclose(report);
         if(auto* report=std::fopen(
             "sdmc:/switch/vice_project_doom/hd_low_health_guest.txt","w"))
+            std::fclose(report);
+        if(auto* report=std::fopen(
+            "sdmc:/switch/vice_project_doom/hd_low_health_phase_guest.txt","w"))
             std::fclose(report);
     }
     bool fourth_fire_logged=false;
@@ -543,7 +548,39 @@ int main(int,char**) {
                         hd_low_hp_first_contact_frame,game.frame());
                     hd_low_hp_logged=written>0 &&
                         std::fclose(report)==0;
+                    if(hd_low_hp_logged)
+                        hd_low_hp_third_frame=game.frame();
                     if(!hd_low_hp_logged && written<=0)
+                        std::fclose(report);
+                }
+            }
+            // Issue the native X11 cue only on an actual ON half-cycle
+            // (12 source frames visible, 12 absent). The first arbitrary
+            // HP2 screenshots could all land in an OFF half-cycle, even
+            // with authentic HP and real images. Tie the cue to source
+            // frame % 24 == 0 while HP2 remains unchanged in guest.
+            if(hd_low_hp_logged && !hd_low_hp_phase_logged &&
+               hd_low_hp_third_frame>0 && !restarted &&
+               input==0 && hd_fx_mode.enabled && has_sd &&
+               game.playerHealth()==2 && prior_hp==2 &&
+               game.guardEnemy().attacks==3 &&
+               game.frame()>=hd_low_hp_third_frame &&
+               game.frame()<hd_low_hp_third_frame+32 &&
+               game.frame()%24u==0u &&
+               game.guardEnemy().health==3 &&
+               !game.secondWaveActive() && !game.stageCleared()){
+                if(auto* report=std::fopen(
+                    "sdmc:/switch/vice_project_doom/hd_low_health_phase_guest.txt",
+                    "a")){
+                    const int written=std::fprintf(report,
+                        "VPD_HD_LOW_HEALTH_PHASE_V1 third_frame=%u "
+                        "frame=%u hero_hp=2 guard_attacks=3 "
+                        "input=idle hd=on pulse=on "
+                        "source=libnx_tick original_game_proven=no\n",
+                        hd_low_hp_third_frame,game.frame());
+                    hd_low_hp_phase_logged=written>0 &&
+                        std::fclose(report)==0;
+                    if(!hd_low_hp_phase_logged && written<=0)
                         std::fclose(report);
                 }
             }
