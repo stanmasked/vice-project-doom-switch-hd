@@ -185,6 +185,8 @@ jobs:
             emulator-evidence/guest-live-defeat-retry-witness.txt
             emulator-evidence/hd-low-health-paths.txt
             emulator-evidence/guest-hd-low-health-witness.txt
+            emulator-evidence/hd-low-health-phase-paths.txt
+            emulator-evidence/guest-hd-low-health-phase-witness.txt
             emulator-evidence/hd-low-health-result.txt
             emulator-evidence/screen-live-low-hp-0.png
             emulator-evidence/screen-live-low-hp-0.ppm
