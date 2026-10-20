@@ -50,6 +50,8 @@ on:
       - "tests/test_nexium_hd_footstep.py"
       - "game_core/hd_footstep_witness.hpp"
       - "game_core/hd_hostile_halo_witness.hpp"
+      - "graphics_core/hd_fx_toggle.hpp"
+      - "tests/test_hd_fx_toggle.cpp"
       - "tools/audit_nexium_hd_hostile_halo.py"
       - "tests/test_nexium_hd_hostile_halo.py"
       - "game_core/hd_hit_light_witness.hpp"
