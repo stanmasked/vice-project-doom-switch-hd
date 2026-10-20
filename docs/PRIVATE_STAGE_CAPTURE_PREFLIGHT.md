@@ -35,7 +35,7 @@ files. It checks real FCEUX 2026-current v3/v4 metadata contracts,
 matching frame filename and number, six-digit-or-longer frame numbering,
 consistent FCEUX-provided ROM hash within one session without outputting
 it, recorded sampling interval and cap, cumulative event counter,
-all-or-none screen mode, no stray/unpaired frame files, valid NES screen
+all-or-none screen mode, monotonic cumulative lost-write counts, zero\nunavailable-color count when screen recording is disabled, no stray/unpaired\nframe files, valid NES screen
 palette indices (0..63 or unavailable sentinel 254), and exact counts of
 unavailable palette samples.
 
@@ -71,6 +71,6 @@ synthetic but consistent files, or inaccurate FCEUX Lua APIs. Reconstructed
 tiles must remain private alongside original gameplay recordings.
 No captures, exported sprites or commercial ROMs belong in GitHub or CI.
 
-All **17 Python tests** fabricate private captures in temporary
+All **19 Python tests** fabricate private captures in temporary
 directories. No NES images, copyright artwork or original-game ROM
 identity is stored in this repository.
