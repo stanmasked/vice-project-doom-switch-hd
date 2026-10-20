@@ -184,7 +184,8 @@ def audit_directory(root,allow_incomplete=False,require_logs=False):
     )
     return {
         **trace_report,
-        "classification":"private ROM capture metadata/length preflight only",
+        "classification":("private ROM capture metadata and register trace consistency preflight only"
+                          if require_logs else "private ROM capture metadata/length preflight only"),
         "capture_count":len(frames),
         "first_frame":frames[0],
         "last_frame":frames[-1],
