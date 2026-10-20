@@ -458,6 +458,50 @@ if [[ -s "$out/ne-x11-windows.txt" ]]; then
                                       done
                                       echo "host_fourth_stage_gate_sent=yes key=D observed=$fourth_wave" >> "$out/input-probe.txt"
                                       if [[ "$fourth_wave" == yes ]]; then
+                                        # Advance into the real active sentry bullet
+                                        # while fourth_stage_seq stays 1. The guest
+                                        # owns the source halo event; never trust a
+                                        # scheduled key chord as proof of a shot.
+                                        sentry_halo_path="$XDG_CONFIG_HOME/NeXium/sdmc/switch/vice_project_doom/hd_hostile_halo_witness.txt"
+                                        sentry_halo_seen=no
+                                        for (( attempt=0; attempt<260; ++attempt )); do
+                                          if [[ -f "$sentry_halo_path" ]] &&
+                                             grep -q '^VPD_ROMFREE_HOSTILE_HALO_V1 event=fourth_turret_bullet ' "$sentry_halo_path"; then
+                                            sentry_halo_seen=yes
+                                            break
+                                          fi
+                                          sleep 0.05
+                                        done
+                                        xdotool keyup d
+                                        echo "host_sentry_halo_observed=$sentry_halo_seen source=live_guest" >> "$out/input-probe.txt"
+                                        sentry_fx_path="$XDG_CONFIG_HOME/NeXium/sdmc/switch/vice_project_doom/hd_fx_sentry_guest.txt"
+                                        if [[ "$sentry_halo_seen" == yes ]]; then
+                                          for expected in off on; do
+                                            sentry_seq=1
+                                            [[ "$expected" == on ]] && sentry_seq=2
+                                            xdotool keydown --clearmodifiers q e
+                                            sentry_fx_seen=no
+                                            for (( attempt=0; attempt<45; ++attempt )); do
+                                              if [[ -f "$sentry_fx_path" ]] &&
+                                                 grep -q "^VPD_HD_FX_SENTRY_V1 seq=$sentry_seq mode=$expected " "$sentry_fx_path"; then
+                                                sentry_fx_seen=yes
+                                                break
+                                              fi
+                                              sleep 0.05
+                                            done
+                                            echo "host_sentry_fx_chord_sent=yes keys=Q+E expected=$expected guest_seen=$sentry_fx_seen" >> "$out/input-probe.txt"
+                                            if [[ "$sentry_fx_seen" == yes ]]; then
+                                              capture "screen-live-sentry-hd-fx-$expected"
+                                            fi
+                                            xdotool keyup e q
+                                            sleep 0.10
+                                          done
+                                        else
+                                          echo "host_sentry_fx_chord_sent=no missing_live_bullet=yes" >> "$out/input-probe.txt"
+                                        fi
+                                        # Preserve the old real-pad fourth-stage
+                                        # D+Z clear and downstream HD V2 witness.
+                                        xdotool keydown --clearmodifiers d
                                         xdotool keydown --clearmodifiers z
                                         for (( attempt=0; attempt<650; ++attempt )); do
                                           if [[ -f "$fourth_stage_path" ]] &&
