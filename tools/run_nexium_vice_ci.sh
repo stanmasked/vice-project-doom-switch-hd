@@ -157,6 +157,9 @@ python3 tools/audit_nexium_guard_live_defeat.py --evidence "$out"
 # records, must show disappearance of the guard's alert-colored torso.
 # Real screenshots complement but cannot replace guest state/exit audits.
 python3 tools/audit_nexium_guard_live_raster.py --evidence "$out"
+# Independent X11 probe of the NEW real-guard melee cooldown pips. Reuse
+# source-verified strike/death PNG/P6 screenshots; no new gameplay actions.
+python3 tools/audit_nexium_guard_cooldown_x11.py --evidence "$out"
 # Independent AArch64 guest script for guard gate + sentry hostile projectile
 # + real player swept hits + level exit. Not keyboard-driven wave-two play.
 find "$HOME" "$XDG_DATA_HOME" "$XDG_CONFIG_HOME" "$XDG_CACHE_HOME" \
