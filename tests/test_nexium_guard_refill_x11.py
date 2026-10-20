@@ -74,6 +74,28 @@ class NativeRefillTest(unittest.TestCase):
         d=verify_refill_raster(ppm(sample(False)),ppm(sample(True)),SOURCE_X)
         self.assertEqual((d["warm"],d["dim"],d["gx"]),(24,48,GX))
 
+    def test_real_nexium_x11_two_dim_bars_clip_to_15_pixels(self):
+        # Actual independent NeXium image (2026-10-20, run 39496177544)
+        # shows native source guard (370,559): 24 warm + 15/15 dim.
+        # Only the two far dim pips lose 9 border pixels apiece.
+        frame=sample(True)
+        for base in (GX+13,GX+21):
+            box(frame,base,base+6,GY-22,GY-21,(42,56,75))
+            box(frame,base,base+3,GY-21,GY-20,(42,56,75))
+        result=verify_refill_raster(
+            ppm(sample(False)),ppm(frame),SOURCE_X)
+        self.assertEqual((result["warm"],result["dim"]), (24,30))
+
+    def test_reject_dim_pip_below_native_measured_coverage(self):
+        frame=sample(True)
+        # The genuine X11 dim cells have 15 pixels, but a fragment with
+        # 13 must not qualify as one of the two correctly dim pips.
+        box(frame,GX+13,GX+19,GY-22,GY-21,(42,56,75))
+        box(frame,GX+13,GX+18,GY-21,GY-20,(42,56,75))
+        with self.assertRaisesRegex(ValueError,"one pip"):
+            verify_refill_raster(
+                ppm(sample(False)),ppm(frame),SOURCE_X)
+
     def test_reject_no_refill(self):
         with self.assertRaisesRegex(ValueError,"one pip"):
             verify_refill_raster(
