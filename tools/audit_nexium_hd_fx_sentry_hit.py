@@ -60,6 +60,40 @@ def verify(raw, on):
         raise ValueError("swept hostile bullet never intersected hero hitbox")
     return v
 
+def fifth_heart_loss(before,after):
+    """Find the exact live->empty health pixels in native NeXium X11 P6.
+
+    Guest GUI coordinates are scaled/shifted relative to the 1280-wide
+    framebuffer: the fifth heart occupies x=814..824, not the
+    untransformed authored rect at x=821..831. Reject HUD flash
+    or mere animation as evidence of losing a life segment.
+    """
+    if len(before)!=1280*720*3 or len(after)!=len(before):
+        raise ValueError("native X11 heart raster dimensions invalid")
+    healthy=bytes((106,198,174))
+    empty=bytes((55,64,79))
+    flashed=bytes((255,220,153))
+    changed=0
+    for y in range(15,32):
+        for x in range(805,836):
+            ix=(y*1280+x)*3
+            if before[ix:ix+3]==healthy and after[ix:ix+3]==empty:
+                changed+=1
+    # The same screenshot must retain the first FOUR live heart cells:
+    # after a legitimate hit they may flash yellow, but not go dark.
+    kept=0
+    for y in range(15,32):
+        for x in range(750,813):
+            ix=(y*1280+x)*3
+            if (before[ix:ix+3]==healthy and
+                after[ix:ix+3] in (healthy,flashed)):
+                kept+=1
+    if changed<80 or kept<360:
+        raise ValueError(
+            "fifth heart did not turn from healthy to empty with four "
+            "remaining hearts in genuine X11 pixels")
+    return changed
+
 def audit(base):
     base=Path(base)
     prior=(base/"hd-fx-sentry-result.txt").read_text("ascii")
@@ -88,15 +122,7 @@ def audit(base):
     after,sha_after=raster(base,"screen-live-sentry-after-hit")
     if sha_before==sha_after:
         raise ValueError("X11 image did not change after genuine hero HP loss")
-    # The fifth life bar: 761 + 15*4 .. +10, y=18..29
-    # Host status/HUD effects elsewhere cannot satisfy a real HP proof.
-    changed=0
-    for y in range(18,30):
-        for x in range(821,832):
-            index=(y*1280+x)*3
-            changed+=before[index:index+3]!=after[index:index+3]
-    if changed<60:
-        raise ValueError("fifth heart indicator did not disappear in real X11 capture")
+    changed=fifth_heart_loss(before,after)
     result=(
         "VPD_NEXIUM_HD_FX_SENTRY_HIT_PASS "
         f"on_frame={on['frame']} hit_frame={hit['frame']} "
