@@ -181,6 +181,15 @@ add_dependencies(vpd_graphics_animation_test vpd_demo_atlas vpd_demo_animation)
 target_link_libraries(vpd_graphics_animation_test PRIVATE vpd_scene_renderer vpd_simulation)
 add_test(NAME gameplay_sprite_animation_integration COMMAND vpd_graphics_animation_test)
 
+# Portable HD-visuals shoulder toggle must preserve replay and source state.
+add_executable(vpd_hd_fx_toggle_test ../tests/test_hd_fx_toggle.cpp)
+target_link_libraries(vpd_hd_fx_toggle_test PRIVATE vpd_scene_renderer)
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+  target_compile_options(vpd_hd_fx_toggle_test PRIVATE
+                         -Wall -Wextra -Wpedantic -Werror)
+endif()
+add_test(NAME romfree_hd_effects_runtime_toggle
+         COMMAND vpd_hd_fx_toggle_test)
 # Independent pixel-safe original-style combat hit-light regression.
 add_executable(vpd_hd_impact_lighting_test
                ../tests/test_impact_lighting.cpp)
