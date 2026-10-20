@@ -761,13 +761,6 @@ int main(int,char**) {
         // Snapshot the authoritative game state after the one legitimate
         // simulation tick, before either HD-effect raster pass. This proves
         // both comparison draws are render-only inside the actual NRO.
-        const uint64_t fx_sim_before=(hd_fx_guest_edge ||
-            (hd_fx_chord && hd_fx_before!=hd_fx_mode.enabled &&
-             fourth_hit_logged && !fourth_guard_clear_logged &&
-             game.guardEnemy().health==2 &&
-             game.guardEnemy().projectile_hits==1 &&
-             game.playerHealth()>0 && hd_fx_combat_seq<2)) &&
-            view.manual_controls ? game.fingerprint() : 0;
         const bool hd_fx_combat_edge=hd_fx_chord &&
             hd_fx_before!=hd_fx_mode.enabled && hd_fx_combat_seq<2 &&
             fourth_hit_logged && !fourth_guard_clear_logged &&
@@ -776,6 +769,10 @@ int main(int,char**) {
             game.guardEnemy().projectile_hits==1 &&
             game.playerHealth()>0 && !game.stageCleared();
         const bool hd_fx_probe_edge=hd_fx_guest_edge || hd_fx_combat_edge;
+        // One shared edge gate drives both raster passes and both source
+        // fingerprints. No duplicated, potentially divergent predicates.
+        const uint64_t fx_sim_before=hd_fx_probe_edge &&
+            view.manual_controls ? game.fingerprint() : 0;
         vpd::HdFxGuestFingerprint fx_other{},fx_presented{};
         if(hd_fx_probe_edge && view.manual_controls){
             auto alternate=view;
