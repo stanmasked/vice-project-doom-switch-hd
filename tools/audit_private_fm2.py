@@ -27,18 +27,28 @@ def rom_payload(path):
         header=file.read(16)
         if len(header)!=16 or header[:4]!=b'NES\x1a':
             raise ValueError("invalid iNES header")
-        if (header[7]&0x0c)==0x08:
-            raise ValueError("NES2 unsupported by this conservative ROM checker")
+        nes2=(header[7]&0x0c)==0x08
         if header[6]&0x04:
             raise ValueError("trainer ROM unsupported by this conservative ROM checker")
-        prg=header[4]*16384
-        chr_=header[5]*8192
+        if nes2:
+            prg_upper=header[9]&15
+            chr_upper=header[9]>>4
+            if prg_upper==15 or chr_upper==15:
+                raise ValueError("NES2 exponent-size ROM unsupported")
+            prg=((prg_upper<<8)|header[4])*16384
+            chr_=((chr_upper<<8)|header[5])*8192
+        else:
+            prg=header[4]*16384
+            chr_=header[5]*8192
         if not prg:
             raise ValueError("empty PRG ROM")
         raw=file.read()
     if len(raw)!=prg+chr_:
-        raise ValueError("ROM byte count differs from iNES header")
-    return hashlib.md5(raw).digest(), ((header[6]>>4)|(header[7]&0xf0))
+        raise ValueError("ROM byte count differs from iNES/NES2 header")
+    mapper=(header[6]>>4)|(header[7]&0xf0)
+    if nes2:
+        mapper|=(header[8]&15)<<8
+    return hashlib.md5(raw).digest(), mapper
 
 
 def audit_movie(path, rom=None, threshold=1200, interval=8, frames_per_window=96):
@@ -74,7 +84,8 @@ def audit_movie(path, rom=None, threshold=1200, interval=8, frames_per_window=96
                 if command & ~31:
                     raise ValueError("unsupported FM2 command bits")
                 p1,p2=fields[2],fields[3]
-                if len(p1)!=8 or len(p2)!=8:
+                expected_p2_width=0 if header.get('port1')=='0' else 8
+                if len(p1)!=8 or len(p2)!=expected_p2_width:
                     raise ValueError("invalid FM2 controller width")
                 if not all((c=='.' or c==' ' or c==BUTTONS[i]) for i,c in enumerate(p1)):
                     raise ValueError("unexpected player-one controller alphabet")
@@ -118,10 +129,12 @@ def audit_movie(path, rom=None, threshold=1200, interval=8, frames_per_window=96
                     if k!='comment':header[k]=v
     if not total:
         raise ValueError("empty FM2 input log")
-    required={"version":"3","fourscore":"0","port0":"1","port1":"1","port2":"0","FDS":"0"}
+    required={"version":"3","fourscore":"0","port0":"1","port2":"0","FDS":"0"}
     for name,expected in required.items():
         if header.get(name)!=expected:
             raise ValueError("unsupported FM2 header value: "+name)
+    if header.get('port1') not in ('0','1'):
+        raise ValueError("unsupported FM2 header value: port1")
     if header.get('binary','0')!='0':
         raise ValueError("binary FM2 input log not supported")
     if header.get('palFlag','0') not in ('0','1') or header.get('NewPPU','0') not in ('0','1'):
@@ -149,21 +162,33 @@ def audit_movie(path, rom=None, threshold=1200, interval=8, frames_per_window=96
         if idle_length>=threshold:
             pauses.append({'from_frame':quiet_from,'to_frame':total-1,'frames':idle_length})
     fps=FPS_PAL if header.get('palFlag','0')=='1' else FPS_NTSC
+    # TAS may have no long pauses. Use regular private replay checkpoints,
+    # not an empty window plan; checkpoints are not stage boundaries.
+    if not candidates:
+        step=max(1,round(30*fps))
+        candidates=[(frame,0) for frame in range(0,total,step)][:48]
     windows=[]
     for n,(resume,quiet) in enumerate(candidates,1):
         aligned=max(0,((resume-64)//interval)*interval)
-        windows.append({"candidate":n,"reason":"input resumes after long idle; stage not identified",
-                        "idle_frames_before":quiet,"resume_frame":resume,
+        end=min(total-1,aligned+(frames_per_window-1)*interval)
+        actual_limit=1+(end-aligned)//interval
+        windows.append({"candidate":n,
+                        "reason":("input resumes after long idle; stage not identified"
+                                  if quiet else "uniform timeline checkpoint; stage not identified"),
+                        "idle_frames_before":quiet,
+                        "resume_frame":resume if quiet else None,
+                        "reference_frame":resume,
                         "capture_start_frame":aligned,
-                        "capture_end_frame":aligned+(frames_per_window-1)*interval,
-                        "capture_interval":interval,"capture_limit":frames_per_window,
-                        "approx_resume_second":round(resume/fps,2)})
+                        "capture_end_frame":aligned+(actual_limit-1)*interval,
+                        "capture_interval":interval,"capture_limit":actual_limit,
+                        "approx_reference_second":round(resume/fps,2)})
     return {
         "classification":"private FM2 input provenance and candidate window planning; no emulator replay",
         "format":"FM2 v3","emulator_build":header.get('emuVersion'),
         "ntsc":header.get('palFlag','0')=='0',"new_ppu":header.get('NewPPU','0')=='1',
         "frames":total,"duration_seconds":round(total/fps,2),"rerecord_count":int(header.get('rerecordCount','0')),
-        "starts_from_power_on":commands.get('0')==2 and 'savestate' not in header,
+        "starts_from_power_on":'savestate' not in header,
+        "has_explicit_power_command_at_start":bool(commands.get('0',0)&2),
         "rom_identity_matched":matches,"mapper_if_rom_checked":mapper,
         "active_input_frames":active,"first_active_frame":first_active,"last_active_frame":last_active,
         "player_two_active_frames":port1_active,"button_frame_counts":dict(keys),
