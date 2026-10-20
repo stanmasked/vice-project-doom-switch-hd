@@ -140,6 +140,7 @@ jobs:
           python3 tests/test_nexium_hd_fx_sentry_hit.py
           python3 tests/test_nexium_sentry_hero_impact.py
           python3 tests/test_nexium_sentry_hero_recovery.py
+          python3 tests/test_nexium_hd_low_health.py
           python3 tests/test_verify_nexium_release.py
           python3 tests/test_nexium_witness_audit.py
       - name: Install NeXium, launch graphical NRO and check real guest record
