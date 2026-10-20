@@ -35,6 +35,9 @@ files. It checks real FCEUX 2026-current v3/v4 metadata contracts,
 matching frame filename and number, six-digit-or-longer frame numbering,
 consistent FCEUX-provided ROM hash within one session without outputting
 it, recorded sampling interval and cap, cumulative event counter,
+strictly non-symlink capture roots, no mixing v3/v4 capture schemas,
+and for v4 a consistent CPU-cycle trace availability flag and explicit
+`debugger_since_reset` counter epoch,
 all-or-none screen mode, monotonic cumulative lost-write counts, zero\nunavailable-color count when screen recording is disabled, no stray/unpaired\nframe files, valid NES screen
 palette indices (0..63 or unavailable sentinel 254), and exact counts of
 unavailable palette samples.
@@ -54,6 +57,7 @@ PRIVATE_FCEUX_CAPTURE_PREFLIGHT_PASS
   "first_frame": 120,
   "last_frame": 240,
   "screen_reference": true,
+  "cycle_trace_available": false,
   "all_register_logs_complete": true,
   "incomplete_frame_count": 0,
   "fceux_rom_identity_consistent": true,
@@ -71,6 +75,20 @@ synthetic but consistent files, or inaccurate FCEUX Lua APIs. Reconstructed
 tiles must remain private alongside original gameplay recordings.
 No captures, exported sprites or commercial ROMs belong in GitHub or CI.
 
-All **19 Python tests** fabricate private captures in temporary
+All **26 Python tests** fabricate private captures in temporary
 directories. No NES images, copyright artwork or original-game ROM
 identity is stored in this repository.
+
+## Stage 107 — provenance hardening
+
+The v4 verifier rejects missing or contradictory CPU-cycle trace declarations,
+unsupported counter epochs, or mixed clock availability within one capture
+session. These are consistency checks, not evidence that a clock trace really
+exists or proves effective scroll, CHR timing, or game authenticity. The
+legacy v3 format remains accepted without these two fields and reports
+`cycle_trace_available=null` (unknown). A symbolic-link capture root is
+rejected to avoid accidentally analyzing a different directory.
+
+Seven additional invented-data regression tests cover these rejection cases,
+v3 backwards compatibility, and the root-path guard. Neither the original
+ROM nor any extracted frame data is required in GitHub Actions.
