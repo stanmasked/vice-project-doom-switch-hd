@@ -940,6 +940,7 @@ int main(int,char**) {
             alternate.hd_atmospheric_haze=alt;
             alternate.hd_footstep_dust=alt;
             alternate.hd_hostile_projectile_halo=alt;
+            alternate.hd_low_health_warning=alt;
             alternate.hd_fx_status_enabled=alt;
             if(!vpd::drawScene(pixels,vpd::kSceneWidth,
                                vpd::kSceneHeight,pixels_per_row,alternate)){
