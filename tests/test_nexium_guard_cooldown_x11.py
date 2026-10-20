@@ -72,7 +72,11 @@ class TestGuardNativeCooldown(unittest.TestCase):
 
     def test_reject_health_color_fake_and_unanchored_three_bars(self):
         on=scene()
-        ink(on,GX+10,GY-7,(0,0,0))
+        # Erase the WHOLE actual guard-health cell. A single lost pixel
+        # still permits a legitimate 1-2px anchor offset, so it is not a
+        # sound adversarial forgery of the source-owned HP evidence.
+        for x in range(GX+10,GX+16):
+            ink(on,x,GY-7,(0,0,0))
         with self.assertRaisesRegex(ValueError,"sprite"):
             verify_cooldown_raster(ppm(on),ppm(bytearray(WIDTH*HEIGHT*3)),ANCHORS)
 
