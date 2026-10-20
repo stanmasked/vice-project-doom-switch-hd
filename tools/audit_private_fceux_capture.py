@@ -58,7 +58,9 @@ def audit_directory(root,allow_incomplete=False,require_logs=False):
     root=Path(root)
     if root.is_symlink() or not root.is_dir():
         raise ValueError("private capture root must be an existing non-symlink directory")
-    metas=sorted(root.glob("frame_*.meta.txt"))
+    # FCEUX emits at least six digits; numeric frame order crosses width boundaries.
+    metas=sorted(root.glob("frame_*.meta.txt"),
+                 key=lambda path:(len(path.name),path.name))
     if not 1<=len(metas)<=512:
         raise ValueError("expected 1..512 capture metadata files")
     expected=set()
@@ -79,6 +81,8 @@ def audit_directory(root,allow_incomplete=False,require_logs=False):
         if not m:
             raise ValueError("capture filename is not frame_NUMBER.meta.txt")
         frame=int(m.group(1))
+        if metapath.name!=f"frame_{frame:06d}.meta.txt":
+            raise ValueError("noncanonical FCEUX frame filename")
         if frame<=previous_frame:
             raise ValueError("duplicate or out-of-order capture frame")
         previous_frame=frame

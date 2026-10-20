@@ -81,5 +81,27 @@ class PrivateTraceProvenanceTests(unittest.TestCase):
                 audit_directory(alias)
 
 
+    def test_numeric_order_across_six_and_seven_digit_frames(self):
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d)
+            first=capture(root,999999,screen=False,interval=1)
+            second=capture(root,1000000,screen=False,interval=1)
+            replace_meta(first,"logged_register_writes=1000032",
+                         "logged_register_writes=10")
+            replace_meta(second,"logged_register_writes=1000033",
+                         "logged_register_writes=12")
+            report=audit_directory(root)
+            self.assertEqual((report["first_frame"],report["last_frame"]),
+                             (999999,1000000))
+
+    def test_reject_noncanonical_zero_padded_frame_alias(self):
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d)
+            source=capture(root,120,screen=False)
+            source.rename(root/"frame_0000120.meta.txt")
+            with self.assertRaisesRegex(ValueError,"noncanonical FCEUX frame filename"):
+                audit_directory(root)
+
+
 if __name__=="__main__":
     unittest.main()

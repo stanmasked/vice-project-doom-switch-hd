@@ -75,7 +75,7 @@ synthetic but consistent files, or inaccurate FCEUX Lua APIs. Reconstructed
 tiles must remain private alongside original gameplay recordings.
 No captures, exported sprites or commercial ROMs belong in GitHub or CI.
 
-All **44 Python tests** fabricate private captures in temporary
+All **46 Python tests** fabricate private captures in temporary
 directories. No NES images, copyright artwork or original-game ROM
 identity is stored in this repository.
 
@@ -152,3 +152,15 @@ than the capture script's native **250,000-event per-session maximum**, even
 when log cross-validation is not requested. Two additional ROM-free tests
 cover these impossible states. **44** dedicated synthetic test methods are
 now present; latest CI must pass before this branch can be reviewed.
+
+## Stage 111 — numeric ordering across FCEUX frame width changes
+
+FCEUX emits frame filenames using `%06d`: six digits for frames through
+999999 and seven or more digits thereafter. A lexicographic sort wrongly
+places `frame_1000000.meta.txt` ahead of `frame_999999.meta.txt`, causing
+a valid continuous capture to fail. The audit now orders canonical frame
+names by length and then lexically, which is numeric order for this exact
+zero-padding contract. It rejects alternate overpadded aliases rather than
+silently interpreting two spellings of the same frame. Two synthetic,
+ROM-free regression tests cover the rollover and alias rejection. There
+are **46 dedicated test methods**, not 46 confirmed CI passes.
