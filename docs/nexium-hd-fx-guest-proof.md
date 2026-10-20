@@ -47,3 +47,21 @@ never accepted as guest proof.
 
 Original NES game fidelity, real Nintendo Switch hardware latency and
 performance are **not** established by these checks.
+
+## Guest V2: same-frame gameplay-state identity
+
+The follow-up native runtime records two **actual** `Simulation::fingerprint()`
+values on each real libnx L+R edge, one after the normal simulation step but
+**before** any differential drawing, and the other **after** both draws.
+These values must be identical for the existing witness to be emitted.
+The versioned `VPD_HD_FX_GUEST_V2` line carries `simulation_before` and
+`simulation_after` as sixteen lowercase hexadecimal digits. The fail-closed
+NeXium auditor checks equality independently, not only through the NRO gate.
+
+It still requires two distinct HUD-free scene hashes and real NeXium
+screen captures, so a frozen physics state or unchanged pixel image does not
+pass by itself. This proves only that the two native raster passes did not
+change the exposed source simulation during that frame; it does **not**
+measure real Switch frame rate, gameplay correctness versus the NES ROM, or
+runtime performance. PR #51 separately exercises dual-simulation replay and
+retry invariance on the host.
