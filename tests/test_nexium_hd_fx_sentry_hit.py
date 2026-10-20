@@ -5,7 +5,7 @@ import sys
 import unittest
 
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/"tools"))
-from audit_nexium_hd_fx_sentry_hit import verify
+from audit_nexium_hd_fx_sentry_hit import verify, fifth_heart_loss
 
 ON={"frame":360,"slot":0,"age":12,"x":150272,"y":57000,"hero_hp":5}
 
@@ -72,6 +72,54 @@ class RealSentryHitTest(unittest.TestCase):
             verify(record()[:-1],ON)
         with self.assertRaises(ValueError):
             verify(record()+record(),ON)
+
+class FifthHeartX11Test(unittest.TestCase):
+    """Synthetic 1280x720 X11 bars: force exact health colors/viewport shift."""
+    @staticmethod
+    def pair(*,no_hit=False,other_lost=False,flash_only=False):
+        before=bytearray(1280*720*3)
+        after=bytearray(before)
+        teal=bytes((106,198,174))
+        yellow=bytes((255,220,153))
+        grey=bytes((55,64,79))
+        # Observed X11 shift/scale from renderer HUD rectangles:
+        # 757..766, 771..781, 786..795, 800..810, 814..824.
+        for n,(left,right) in enumerate(
+            ((757,766),(771,781),(786,795),(800,810),(814,824))):
+            for y in range(17,29):
+                for x in range(left,right+1):
+                    ix=(y*1280+x)*3
+                    before[ix:ix+3]=teal
+                    after[ix:ix+3]=(
+                        teal if no_hit else
+                        grey if (n==4 and not flash_only) or
+                                (other_lost and n==2) else yellow)
+        return bytes(before),bytes(after)
+
+    def test_one_actual_empty_segment_and_four_survive(self):
+        before,after=self.pair()
+        self.assertEqual(fifth_heart_loss(before,after),132)
+
+    def test_reject_damage_flash_without_hp_loss(self):
+        before,after=self.pair(flash_only=True)
+        with self.assertRaises(ValueError):
+            fifth_heart_loss(before,after)
+
+    def test_reject_missing_fifth_heart_loss(self):
+        before,after=self.pair(no_hit=True)
+        with self.assertRaises(ValueError):
+            fifth_heart_loss(before,after)
+
+    def test_reject_other_lost_heart(self):
+        before,after=self.pair(other_lost=True)
+        # A second lost heart must be rejected by the four-kept condition.
+        with self.assertRaises(ValueError):
+            fifth_heart_loss(before,after)
+
+    def test_reject_incomplete_image(self):
+        before,after=self.pair()
+        with self.assertRaises(ValueError):
+            fifth_heart_loss(before[:400],after)
 
 if __name__=="__main__":
     unittest.main()
