@@ -295,3 +295,13 @@ if [[ -s "$out/hd-fx-guest-paths.txt" ]]; then
   cp "$guest" "$out/guest-hd-fx-toggle-witness.txt"
 fi
 python3 tools/audit_nexium_hd_fx_guest.py --evidence "$out"
+# Extra LIVE combat check is separate from both post-victory L+R edges.
+# A native guest's simulation and source movement must be proven before the
+# fourth wave exits; host keyboard events and screenshots alone cannot pass.
+find "$HOME" "$XDG_DATA_HOME" "$XDG_CONFIG_HOME" "$XDG_CACHE_HOME" \
+  -type f -name hd_fx_live_combat.txt -print > "$out/hd-fx-live-paths.txt"
+if [[ -s "$out/hd-fx-live-paths.txt" ]]; then
+  IFS= read -r guest < "$out/hd-fx-live-paths.txt"
+  cp "$guest" "$out/guest-hd-fx-live-witness.txt"
+fi
+python3 tools/audit_nexium_hd_fx_live.py --evidence "$out"

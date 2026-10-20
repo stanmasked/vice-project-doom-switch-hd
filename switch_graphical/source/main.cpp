@@ -177,9 +177,13 @@ int main(int,char**) {
     bool native_hostile_halo_logged=false;
     vpd::HdFxRuntimeMode hd_fx_mode{};
     unsigned hd_fx_guest_seq=0;
+    unsigned hd_fx_live_seq=0;
     if(has_sd){
         if(auto* report=std::fopen(
             "sdmc:/switch/vice_project_doom/hd_fx_toggle_guest.txt","w"))
+            std::fclose(report);
+        if(auto* report=std::fopen(
+            "sdmc:/switch/vice_project_doom/hd_fx_live_combat.txt","w"))
             std::fclose(report);
     }
     bool fourth_fire_logged=false;
@@ -220,8 +224,14 @@ int main(int,char**) {
             (buttons&HidNpadButton_R)!=0,
             (pressed&HidNpadButton_L)!=0,
             (pressed&HidNpadButton_R)!=0);
-        const bool hd_fx_guest_edge=hd_fx_chord &&
-            hd_fx_before!=hd_fx_mode.enabled && hd_fx_guest_seq<2;
+        const bool hd_fx_changed=hd_fx_chord &&
+            hd_fx_before!=hd_fx_mode.enabled;
+        // Keep the inherited two POST-VICTORY edges independent of the
+        // newly attested two in-combat L+R edges.
+        const bool hd_fx_guest_edge=hd_fx_changed &&
+            fourth_stage_seq==2 && hd_fx_guest_seq<2;
+        const bool hd_fx_live_edge=hd_fx_changed &&
+            fourth_stage_seq==1 && hd_fx_live_seq<2;
         // Left-stick click switches between 200-frame demo and manual play.
         // StickL+Y still performs the independent development-art reset.
         const bool toggle_manual=
@@ -327,6 +337,7 @@ int main(int,char**) {
             layout.reset();
             decor_layout_reload_failed=false;
         }
+        bool hd_fx_live_moved=false;
         uint8_t input=0;
         if(buttons&(HidNpadButton_Left|HidNpadButton_StickLLeft))input|=vpd::Left;
         if(buttons&(HidNpadButton_Right|HidNpadButton_StickLRight))input|=vpd::Right;
@@ -353,6 +364,17 @@ int main(int,char**) {
             const auto prior_turret_hits=game.sentry().projectile_hits;
             if(toggle_manual)input=0; // R+A is a mode switch, not a jump
             if(!restarted)game.tick(vpd::Input{input});
+            // Require genuine *simultaneous* pad Right+Fire while crossing
+            // an active, undefeated sentry. Compare actual movement across
+            // the ordinary game tick; the visual mode never drives movement.
+            if(hd_fx_live_edge && !restarted &&
+               input==static_cast<uint8_t>(vpd::Right|vpd::Fire) &&
+               fourth_stage_seq==1 && game.secondWaveActive() &&
+               !game.stageCleared() && game.playerHealth()>0 &&
+               game.guardEnemy().health==0 && game.sentry().health>0 &&
+               game.shotsFired()>0 &&
+               game.player().x-before_x==2*vpd::kFixed)
+                hd_fx_live_moved=true;
             // Following the *already witnessed* victory Minus, the newly
             // reset visible simulation is played again with actual Right
             // input. The first guard must strike and eventually defeat this
@@ -754,10 +776,12 @@ int main(int,char**) {
         // Snapshot the authoritative game state after the one legitimate
         // simulation tick, before either HD-effect raster pass. This proves
         // both comparison draws are render-only inside the actual NRO.
-        const uint64_t fx_sim_before=hd_fx_guest_edge &&
+        const bool fx_measure_edge=hd_fx_guest_edge ||
+            (hd_fx_live_edge && hd_fx_live_moved);
+        const uint64_t fx_sim_before=fx_measure_edge &&
             view.manual_controls ? game.fingerprint() : 0;
         vpd::HdFxGuestFingerprint fx_other{},fx_presented{};
-        if(hd_fx_guest_edge && view.manual_controls){
+        if(fx_measure_edge && view.manual_controls){
             auto alternate=view;
             const bool alt=!hd_effects;
             alternate.hd_hit_lighting=alt;
@@ -774,10 +798,10 @@ int main(int,char**) {
         }
         const bool drawn=vpd::drawScene(
             pixels,vpd::kSceneWidth,vpd::kSceneHeight,pixels_per_row,view);
-        if(drawn && hd_fx_guest_edge && view.manual_controls)
+        if(drawn && fx_measure_edge && view.manual_controls)
             fx_presented=vpd::fingerprintHdFxVisual(
                 pixels,vpd::kSceneWidth,vpd::kSceneHeight,pixels_per_row);
-        const uint64_t fx_sim_after=hd_fx_guest_edge &&
+        const uint64_t fx_sim_after=fx_measure_edge &&
             view.manual_controls && drawn ? game.fingerprint() : 0;
         if(drawn && hd_sample_frame)
             lit=vpd::sampleGuardImpact(
@@ -808,6 +832,36 @@ int main(int,char**) {
                     "simulation_after=%016llx "
                     "source=libnx_pad same_frame=yes\n",
                     hd_fx_guest_seq,hd_effects?"on":"off",game.frame(),
+                    static_cast<unsigned long long>(fx_other.hash),
+                    static_cast<unsigned long long>(fx_presented.hash),
+                    fx_presented.pixels,
+                    static_cast<unsigned long long>(fx_sim_before),
+                    static_cast<unsigned long long>(fx_sim_after));
+                std::fclose(report);
+            }
+        }
+        // This second SD record is strictly for a LIVE wave-two pad chord.
+        // It cannot be issued in attract mode, after victory, without
+        // Right+Fire movement, or from an isolated host-side simulation.
+        if(drawn && hd_fx_live_edge && hd_fx_live_moved &&
+           view.manual_controls && has_sd &&
+           fx_other.pixels==414000 && fx_presented.pixels==414000 &&
+           fx_other.hash!=fx_presented.hash &&
+           fx_sim_before==fx_sim_after){
+            if(auto* report=std::fopen(
+                "sdmc:/switch/vice_project_doom/hd_fx_live_combat.txt","a")){
+                ++hd_fx_live_seq;
+                (void)std::fprintf(report,
+                    "VPD_HD_FX_LIVE_V1 seq=%u mode=%s frame=%u "
+                    "right=1 fire=1 moving=1 wave=1 guard_dead=1 "
+                    "sentry_hp=%u hero_dx_fixed=%d "
+                    "scene_other=%016llx scene_displayed=%016llx "
+                    "roi_pixels=%u simulation_before=%016llx "
+                    "simulation_after=%016llx source=libnx_pad "
+                    "same_frame=yes\n",
+                    hd_fx_live_seq,hd_effects?"on":"off",game.frame(),
+                    static_cast<unsigned>(game.sentry().health),
+                    2*vpd::kFixed,
                     static_cast<unsigned long long>(fx_other.hash),
                     static_cast<unsigned long long>(fx_presented.hash),
                     fx_presented.pixels,
