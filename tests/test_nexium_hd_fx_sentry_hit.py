@@ -116,6 +116,28 @@ class FifthHeartX11Test(unittest.TestCase):
         with self.assertRaises(ValueError):
             fifth_heart_loss(before,after)
 
+    def test_reject_single_empty_pixel_in_another_heart(self):
+        # Old aggregate 440-pixel guard would accept 503 remaining
+        # pixels and miss this partial second-cell damage.
+        before,after=self.pair()
+        after=bytearray(after)
+        x,y=775,22  # second heart, disjoint from the lost fifth
+        ix=(y*1280+x)*3
+        after[ix:ix+3]=bytes((55,64,79))
+        with self.assertRaisesRegex(ValueError,"remaining heart 2"):
+            fifth_heart_loss(before,bytes(after))
+
+    def test_accept_four_healthy_hearts_without_flash(self):
+        # Flash is permitted, not required: unflashed cells remain teal.
+        before,after=self.pair()
+        after=bytearray(after)
+        for left,right in ((757,766),(771,781),(786,795),(800,810)):
+            for y in range(17,29):
+                for x in range(left,right+1):
+                    ix=(y*1280+x)*3
+                    after[ix:ix+3]=bytes((106,198,174))
+        self.assertEqual(fifth_heart_loss(before,bytes(after)),132)
+
     def test_reject_incomplete_image(self):
         before,after=self.pair()
         with self.assertRaises(ValueError):
