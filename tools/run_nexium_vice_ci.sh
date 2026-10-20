@@ -327,6 +327,9 @@ if [[ -s "$out/hd-fx-sentry-hit-paths.txt" ]]; then
   cp "$guest" "$out/guest-hd-fx-sentry-hit-witness.txt"
 fi
 python3 tools/audit_nexium_hd_fx_sentry_hit.py --evidence "$out"
+# On those exact authentic source-hit X11 frames require separate actor-body
+# flash evidence; HUD changes or scenery bloom alone must not count.
+python3 tools/audit_nexium_sentry_hero_impact.py --evidence "$out"
 # Independent native HD-effects L+R gesture after fourth-run completion.
 find "$HOME" "$XDG_DATA_HOME" "$XDG_CONFIG_HOME" "$XDG_CACHE_HOME" \
   -type f -name hd_fx_toggle_guest.txt -print > "$out/hd-fx-guest-paths.txt"
