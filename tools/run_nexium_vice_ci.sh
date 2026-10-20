@@ -216,6 +216,9 @@ if [[ -s "$out/hd-low-health-phase-paths.txt" ]]; then
   cp "$guest" "$out/guest-hd-low-health-phase-witness.txt"
 fi
 python3 tools/audit_nexium_hd_low_health.py --evidence "$out"
+# The same native screenshots must show warning ON, then OFF at unchanged
+# HP2, no warning after real guard death, and no warning after Minus HP5.
+python3 tools/audit_nexium_hd_low_health_lifecycle.py --evidence "$out"
 # After the two genuinely completed terminal retries, confirm that a third
 # attempt is still pad-controlled in the SAME visible NRO process.
 find "$HOME" "$XDG_DATA_HOME" "$XDG_CONFIG_HOME" "$XDG_CACHE_HOME" \
