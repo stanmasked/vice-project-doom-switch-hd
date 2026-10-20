@@ -10,6 +10,8 @@ import json
 from pathlib import Path
 import re
 
+from audit_fceux_trace_alignment import verify_trace_alignment
+
 META_NAME=re.compile(r"^frame_([0-9]{6,9})\.meta\.txt$")
 HEX32=re.compile(r"^[0-9a-fA-F]{32}$")
 VALID_SCREEN_PALETTE=set(range(64)) | {254}
@@ -51,7 +53,7 @@ def regular_file_size(path,size):
         raise ValueError("missing, linked, or bad length: "+path.name)
 
 
-def audit_directory(root,allow_incomplete=False):
+def audit_directory(root,allow_incomplete=False,require_logs=False):
     root=Path(root)
     if root.is_symlink() or not root.is_dir():
         raise ValueError("private capture root must be an existing non-symlink directory")
@@ -60,6 +62,7 @@ def audit_directory(root,allow_incomplete=False):
         raise ValueError("expected 1..512 capture metadata files")
     expected=set()
     frames=[]
+    counter_samples=[]
     rom_hash=None
     cadence=None
     cap=None
@@ -142,6 +145,7 @@ def audit_directory(root,allow_incomplete=False):
         if observed<previous_events:
             raise ValueError("cumulative register writes decreased")
         previous_events=observed
+        counter_samples.append((frame,observed))
         if drops:
             incomplete.append(frame)
         prefix=root/("frame_"+m.group(1))
@@ -171,7 +175,15 @@ def audit_directory(root,allow_incomplete=False):
             raise ValueError("orphan/unpaired frame file: "+path.name)
     if incomplete and not allow_incomplete:
         raise ValueError("incomplete register logs; use explicit --allow-incomplete")
+    trace_report=(
+        verify_trace_alignment(root,counter_samples,
+                               None if trace_clock is None else trace_clock=="yes")
+        if require_logs else
+        {"register_trace_verified":False,"cpu_cycle_trace_verified":False,
+         "verified_register_events":0}
+    )
     return {
+        **trace_report,
         "classification":"private ROM capture metadata/length preflight only",
         "capture_count":len(frames),
         "first_frame":frames[0],
@@ -193,9 +205,12 @@ def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument("private_directory",type=Path)
     p.add_argument("--allow-incomplete",action="store_true")
+    p.add_argument("--require-logs",action="store_true",
+                   help="verify actual private register TSV and CPU-cycle trace alignment")
     args=p.parse_args()
     try:
-        report=audit_directory(args.private_directory,args.allow_incomplete)
+        report=audit_directory(args.private_directory,args.allow_incomplete,
+                               args.require_logs)
     except (OSError,ValueError,UnicodeError) as exc:
         p.exit(1,"PRIVATE_FCEUX_CAPTURE_INCONCLUSIVE: "+str(exc)+"\n")
     print("PRIVATE_FCEUX_CAPTURE_PREFLIGHT_PASS")
