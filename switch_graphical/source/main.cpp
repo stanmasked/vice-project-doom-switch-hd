@@ -82,6 +82,13 @@ int main(int,char**) {
     vpd::guardLiveDebugReset(has_sd);
     (void)vpd::liveGuardProofReset(has_sd);
     (void)vpd::liveGuardDefeatReset(has_sd);
+    // Optional native source observation: first REAL melee recovery to 20.
+    // Never consumed by game logic; reset before each emulator session.
+    if(has_sd){
+        if(auto* report=std::fopen(
+            "sdmc:/switch/vice_project_doom/guard_cooldown_refill_guest.txt","w"))
+            std::fclose(report);
+    }
     (void)vpd::liveWaveReset(has_sd);
     vpd::resetManualRetryGuest(has_sd);
     vpd::resetLiveDefeatRetry(has_sd);
@@ -157,6 +164,8 @@ int main(int,char**) {
     bool dash_probe_finished=false;
     bool live_guard_alert_logged=false;
     bool live_guard_strike_logged=false;
+    bool live_guard_refill_logged=false;
+    uint32_t first_live_guard_strike_frame=0;
     bool live_guard_fire_logged=false;
     bool live_guard_defeated=false;
     unsigned live_guard_defeat_seq=0;
@@ -272,6 +281,8 @@ int main(int,char**) {
             dash_probe_finished=false;
             live_guard_alert_logged=false;
             live_guard_strike_logged=false;
+            live_guard_refill_logged=false;
+            first_live_guard_strike_frame=0;
             live_guard_fire_logged=false;
             live_guard_defeated=false;
             live_guard_defeat_seq=0;
@@ -703,9 +714,44 @@ int main(int,char**) {
             if(live_guard_alert_logged && !live_guard_strike_logged &&
                (input&vpd::Right) && prior_hp==5 &&
                game.playerHealth()==4 && prior_attacks==0 &&
-               game.guardEnemy().attacks==1)
+               game.guardEnemy().attacks==1){
                 live_guard_strike_logged=vpd::liveGuardProofAppend(
                     has_sd,vpd::LiveGuardEvent::FirstStrike,game,input);
+                if(live_guard_strike_logged)
+                    first_live_guard_strike_frame=game.frame();
+            }
+            // Stage95: passive C++ guest witness for the first real
+            // melee recovery. This never assigns enemy fields or changes
+            // the existing 32-tick cooldown. A screenshot alone may not
+            // be treated as source provenance.
+            if(live_guard_strike_logged && !live_guard_refill_logged &&
+               !live_guard_fire_logged && !live_guard_defeated &&
+               first_live_guard_strike_frame>0 && has_sd &&
+               !restarted && input==0 && hd_fx_mode.enabled &&
+               game.frame()==first_live_guard_strike_frame+12u &&
+               game.playerHealth()==4 && game.guardEnemy().health==2 &&
+               game.guardEnemy().alerted && game.guardEnemy().attacks==1 &&
+               game.guardEnemy().attack_cooldown==20){
+                if(auto* report=std::fopen(
+                    "sdmc:/switch/vice_project_doom/guard_cooldown_refill_guest.txt",
+                    "a")){
+                    const int written=std::fprintf(report,
+                        "VPD_GUARD_COOLDOWN_REFILL_V1 "
+                        "strike_frame=%u frame=%u "
+                        "hero_x=%d guard_x=%d camera_x=%d "
+                        "hero_hp=4 guard_hp=2 attacks=1 cooldown=20 "
+                        "input=idle hd=on source=libnx_tick "
+                        "original_game_proven=no\n",
+                        first_live_guard_strike_frame,game.frame(),
+                        static_cast<int>(game.player().x),
+                        static_cast<int>(game.guardEnemy().x),
+                        static_cast<int>(game.cameraX()));
+                    live_guard_refill_logged=written>0 &&
+                        std::fclose(report)==0;
+                    if(!live_guard_refill_logged && written<=0)
+                        std::fclose(report);
+                }
+            }
             // A separate attestation of the real player-controlled Fire
             // sequence after the first melee strike. Only count actual
             // swept collision changes in this same rendered simulation.
