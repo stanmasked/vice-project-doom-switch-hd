@@ -33,8 +33,23 @@ only when a real `Simulation::tick(Input{})` satisfies all conditions:
 The strict auditor compares this record to the independently verified
 guest L+R events and fourth-stage chronology, requires one native
 X11 image taken after the source collision, and compares it with
-the HD ON pre-hit X11 image. The rendered **fifth health segment**
-(x=821..831, y=18..29) must lose at least 60 changed RGB pixels.
+the HD ON pre-hit X11 image. The actual NeXium X11 viewport transforms
+the authored fifth HUD segment: its observed bright rect occupies
+approximately x=814..824, y=17..28 rather than authored x=821..831.
+Require at least 80 pixels of exact `healthy teal -> empty grey`
+transitions within x=805..835, y=15..31. Also require at least 440
+pixels in the four preceding health bars to remain filled (teal or
+legitimate yellow damage flash). This explicitly rejects HUD flashes
+and a second missing heart as evidence of exactly one HP loss.
+
+**Failure-driven verification:** NeXium run #39450682479 supplied the
+real guest source collision record at frame 394 (HP 5 -> 4,
+`shots_hit` 0 -> 1). Its archived P6 images show exactly
+132 teal-to-empty fifth-bar pixels and 504 retained pixels across
+the first four bars. The old x=821..831 scan detected only
+44 changes and had an incorrect minimum of 60. The revised
+color-specific ROI was measured from the authentic archived frames;
+this is a visual-audit correction, NOT a gameplay or renderer change.
 
 `tests/test_nexium_hd_fx_sentry_hit.py` rejects fabricated host-only
 damage, duplicate records, expired/replaced bullets, wrong age or
