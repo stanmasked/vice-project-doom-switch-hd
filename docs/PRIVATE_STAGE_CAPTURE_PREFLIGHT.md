@@ -75,7 +75,7 @@ synthetic but consistent files, or inaccurate FCEUX Lua APIs. Reconstructed
 tiles must remain private alongside original gameplay recordings.
 No captures, exported sprites or commercial ROMs belong in GitHub or CI.
 
-All **38 Python tests** fabricate private captures in temporary
+All **42 Python tests** fabricate private captures in temporary
 directories. No NES images, copyright artwork or original-game ROM
 identity is stored in this repository.
 
@@ -119,8 +119,25 @@ A verified TSV is still neither proof of authentic source-game execution nor
 proof of exact raster timing: FCEUX counter reset behavior, scanline splits,
 and effective world camera require separate private investigation.
 
-Twelve new invented-data tests cover valid event and clock logs plus missing,
+Twelve initial invented-data tests cover valid event and clock logs plus missing,
 truncated, reordered, unexpected, mismatched, or stale logs. Combined with
-the previous 26 tests, 38 synthetic regression tests are present; their
+the previous 26 tests and four Stage 109 tests, 42 synthetic regression tests are present; their
 latest GitHub Actions result must be checked independently before marking
 this PR ready for review.
+
+## Stage 109 — per-frame logger limits and post-capture evidence
+
+The strict TSV verifier now checks both documented native FCEUX limits:
+250,000 recorded events per session **and 12,000 per frame**. Traces that
+exceed the per-frame limit fail the audit even if the metadata counts
+were manipulated to agree with them.
+
+A real capture can legitimately continue logging **after its final sampled
+frame**, so the auditor validates those trailing rows but only matches the
+cumulative metadata counter at the sampled frame boundary. All trailing
+rows must still have valid addresses and compatible CPU-cycle entries.
+The synthesized test suite adds four cases: per-frame overflow,
+valid post-capture tail, malformed post-capture tail, and forged
+PPUSTATUS read/write markers. The dedicated preflight suite now contains
+**42 ROM-free test methods**; do not equate source-level test presence
+with completed GitHub Actions or a real first-stage capture.
