@@ -4,6 +4,8 @@ on:
     paths:
       - ".github/workflows/nexium-runtime.yml"
       - "tools/run_nexium_vice_ci.sh"
+      - "tools/verify_nexium_release.py"
+      - "tests/test_verify_nexium_release.py"
       - "tools/audit_nexium_vice_witness.py"
       - "tests/test_nexium_witness_audit.py"
       - "tests/test_nexium_vice_manual.py"
@@ -120,6 +122,7 @@ jobs:
           bash -n tools/run_nexium_vice_ci.sh
           bash -n tools/nexium_visual_probe.sh
           python3 tests/test_nexium_hd_fx_guest.py
+          python3 tests/test_verify_nexium_release.py
       - name: Install NeXium, launch graphical NRO and check real guest record
         run: bash tools/run_nexium_vice_ci.sh emulator-input/vpd_native_scene.nro emulator-evidence
       - name: Save emulator logs, guest output and diagnostics even if blocked
@@ -187,6 +190,9 @@ jobs:
             emulator-evidence/guest-hd-hostile-halo-witness.txt
             emulator-evidence/hd-hostile-halo-paths.txt
             emulator-evidence/hd-hostile-halo-result.txt
+            emulator-evidence/emulator-release-attestation.txt
+            emulator-evidence/release-api.log
+            emulator-evidence/emulator-sha256.txt
             emulator-evidence/hd-fx-guest-result.txt
             emulator-evidence/hd-fx-guest-paths.txt
             emulator-evidence/guest-hd-fx-toggle-witness.txt
