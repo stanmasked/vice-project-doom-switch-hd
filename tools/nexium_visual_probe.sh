@@ -499,6 +499,28 @@ if [[ -s "$out/ne-x11-windows.txt" ]]; then
                                         else
                                           echo "host_sentry_fx_chord_sent=no missing_live_bullet=yes" >> "$out/input-probe.txt"
                                         fi
+                                        # Remain idle after both source-confirmed
+                                        # shoulder edges. Do not manufacture damage:
+                                        # a genuine flying sentry projectile must
+                                        # hit the real player and record its swept
+                                        # collision in the guest SD witness.
+                                        sentry_hit_path="$XDG_CONFIG_HOME/NeXium/sdmc/switch/vice_project_doom/hd_fx_sentry_hit_guest.txt"
+                                        sentry_hit_seen=no
+                                        if [[ "${sentry_fx_seen:-no}" == yes ]]; then
+                                          for (( attempt=0; attempt<180; ++attempt )); do
+                                            if [[ -f "$sentry_hit_path" ]] &&
+                                               grep -q '^VPD_HD_FX_SENTRY_HIT_V1 frame=' "$sentry_hit_path"; then
+                                              sentry_hit_seen=yes
+                                              break
+                                            fi
+                                            sleep 0.05
+                                          done
+                                        fi
+                                        echo "host_sentry_projectile_hit_observed=$sentry_hit_seen source=live_guest" >> "$out/input-probe.txt"
+                                        if [[ "$sentry_hit_seen" == yes ]]; then
+                                          capture "screen-live-sentry-after-hit"
+                                          echo "live_sentry_damage_raster_after_guest_event=yes" >> "$out/visual-probe.txt"
+                                        fi
                                         # Preserve the old real-pad fourth-stage
                                         # D+Z clear and downstream HD V2 witness.
                                         xdotool keydown --clearmodifiers d
