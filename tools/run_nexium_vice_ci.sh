@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # NeXium native Switch NRO smoke test. No commercial ROM or firmware.
-# Uses the pinned public Linux emulator archive already verified in QuackShot CI.
+# Validates the mutable upstream nightly against GitHub's published asset
+# SHA-256, size, asset ID and release URL; records identity for reproducibility.
 set -euo pipefail
 if [[ "$#" -ne 2 ]]; then
   echo "Usage: bash tools/run_nexium_vice_ci.sh app.nro evidence-directory" >&2
@@ -12,13 +13,11 @@ mkdir -p "$out"
 scratch="$(mktemp -d)"
 trap 'rm -rf "$scratch"' EXIT
 release="https://github.com/nexium-emu/nexium-nightly/releases/download/nightly/nexium-linux-x86_64.tar.gz"
-# Reuse the digest of the identical Linux release proven by the QuackShot
-# project on 2026-10-18. The nightly tag is mutable: if it changes, fail.
-expected="0ec2da5d58b6b362a9f0a4c927af0e55d36a0b50d1ab3f035dd075ea12d76761"
+release_api="https://api.github.com/repos/nexium-emu/nexium-nightly/releases/tags/nightly"
 {
   echo "emulator=NeXium experimental nightly"
   echo "archive_url=$release"
-  echo "expected_archive_sha256=$expected"
+  echo "release_metadata_url=$release_api"
   echo "nro_sha256=$(sha256sum "$nro" | cut -d ' ' -f 1)"
   echo "runner=$(uname -m)"
   echo "glibc=$(getconf GNU_LIBC_VERSION)"
@@ -28,11 +27,24 @@ if ! curl -fL --retry 3 --connect-timeout 20 --max-time 240 \
   echo "BLOCKED: emulator release download failed" > "$out/result.txt"
   exit 1
 fi
-if ! printf '%s  %s\n' "$expected" "$scratch/nexium.tar.gz" |
-    sha256sum -c - > "$out/emulator-sha256.txt" 2>&1; then
-  echo "BLOCKED: nightly archive changed; refusing unknown executable" > "$out/result.txt"
+# Fetch trusted publisher metadata *after* downloading the archive, to
+# avoid silently treating the mutable nightly URL as an immutable binary.
+# A release change during acquisition fails closed on digest/size mismatch.
+if ! curl -fLsS --retry 3 --connect-timeout 20 --max-time 60 \
+    -H "Accept: application/vnd.github+json" \
+    -H "X-GitHub-Api-Version: 2022-11-28" \
+    "$release_api" -o "$scratch/release.json" > "$out/release-api.log" 2>&1; then
+  echo "BLOCKED: official GitHub NeXium release metadata unavailable" > "$out/result.txt"
   exit 1
 fi
+if ! python3 tools/verify_nexium_release.py \
+    --release-json "$scratch/release.json" \
+    --archive "$scratch/nexium.tar.gz" \
+    --out "$out/emulator-release-attestation.txt" > "$out/emulator-sha256.txt" 2>&1; then
+  echo "BLOCKED: nightly archive fails official GitHub release digest attestation" > "$out/result.txt"
+  exit 1
+fi
+cat "$out/emulator-release-attestation.txt" >> "$out/metadata.txt"
 tar -tzf "$scratch/nexium.tar.gz" > "$out/archive-list.txt"
 mkdir -p "$scratch/emulator"
 tar -xzf "$scratch/nexium.tar.gz" -C "$scratch/emulator" --no-same-owner
