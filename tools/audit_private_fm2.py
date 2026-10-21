@@ -215,7 +215,7 @@ def audit_movie(path, rom=None, threshold=1200, interval=8, frames_per_window=96
                         "capture_end_frame":aligned+(actual_limit-1)*interval,
                         "capture_interval":interval,"capture_limit":actual_limit,
                         "approx_reference_second":round(resume/fps,2)})
-    return {
+    result={
         "classification":"private FM2 input provenance and candidate window planning; no emulator replay",
         "format":"FM2 v3","emulator_build":header.get('emuVersion'),
         "ntsc":header.get('palFlag','0')=='0',"new_ppu":header.get('NewPPU','0')=='1',
