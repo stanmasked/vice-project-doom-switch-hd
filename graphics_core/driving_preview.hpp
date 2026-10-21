@@ -24,6 +24,12 @@ struct DrivingPreviewView {
     uint32_t ticks=0;  // prototype timer; not extracted NES timer
     uint8_t health=5;  // HUD visualization only; no original car physics
     bool show_car=true;
+    int car_x=640;
+    int obstacle_x=640;
+    int obstacle_y=20;
+    bool show_obstacle=false; // invented traffic fixture
+    bool impact_flash=false;
+    uint8_t speed=3;
 };
 
 namespace driving_detail {
@@ -91,11 +97,21 @@ inline void drawRoad(Canvas& road,const DrivingPreviewView& view) {
     for(int y=-72+offset;y<kDrivingHudTop;y+=72) {
         road.rect(634+bend*7,y,12,32,rgba(191,190,164));
     }
-    // Placeholder player car. This tests clipping, not real vehicle physics.
+    // Invented traffic rectangle; fully clipped above the HUD.
+    if(view.show_obstacle) {
+        road.rect(view.obstacle_x-35,view.obstacle_y-40,
+                  70,80,rgba(33,33,50));
+        road.rect(view.obstacle_x-27,view.obstacle_y-32,
+                  54,63,rgba(58,131,155));
+        road.rect(view.obstacle_x-18,view.obstacle_y-19,
+                  36,22,rgba(166,200,187));
+    }
+    // Placeholder player car, controlled by an independent ROM-free model.
     if(view.show_car) {
-        const int x=640+bend*7, y=433;
+        const int x=view.car_x, y=433;
         road.rect(x-44,y,88,105,rgba(20,28,44));
-        road.rect(x-35,y+7,70,88,rgba(163,47,63));
+        road.rect(x-35,y+7,70,88,
+                  view.impact_flash?rgba(232,200,126):rgba(163,47,63));
         road.rect(x-26,y+24,52,32,rgba(96,152,166));
         road.rect(x-30,y+74,60,8,rgba(226,179,101));
         road.rect(x-51,y+21,12,25,rgba(23,26,33));
@@ -119,6 +135,8 @@ inline void drawHud(Canvas& hud,const DrivingPreviewView& view) {
                  21,26,rgba(211,85,91));
     hud.rect(820,kDrivingHudTop+24,180,5,kHudBorder);
     hud.rect(820,kDrivingHudTop+43,180,4,rgba(69,94,114));
+    // Prototype speed readout: no original driving-speed claim.
+    number(hud,1095,kDrivingHudTop+63,view.speed,1,kAccent);
     number(hud,833,kDrivingHudTop+64,view.frame%10000u,4,kAccent);
     hud.rect(1092,kDrivingHudTop+23,146,11,rgba(42,94,112));
 }
