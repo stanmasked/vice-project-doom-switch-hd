@@ -133,7 +133,7 @@ def audit(root, require_complete=False):
     # A structurally sound but truncated recording is not full-movie evidence.
     # FCEUX uses global frame numbering; samples satisfy frame % interval == 0.
     _, interval, start, stop, limit=session
-    first=(start+interval-1)//interval*interval
+    first=max(interval,(start+interval-1)//interval*interval)
     expected_frames=[]
     for n in range(limit):
         frame=first+n*interval
