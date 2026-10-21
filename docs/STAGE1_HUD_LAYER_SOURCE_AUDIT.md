@@ -106,3 +106,35 @@ independently recomputed from the actual original private images.
 4. Keep Stage 1-1 geometry, vehicle physics, collisions and the 41-frame
    exit blackout as independent testable contracts; no complete original
    gameplay recreation is claimed yet.
+
+
+## Stage 160 — opt-in ROM-free Switch renderer integration
+
+Implemented an independent source-only graphical preview in
+`graphics_core/driving_preview.hpp`. It draws procedural road geometry,
+moving marker stripes and a test car *only* above Y=588 at 1280×720.
+The HUD background, counters, and health bars are drawn *only* at or
+below Y=588. The 588px boundary is the 3× vertical mapping of the
+private original screenshot's manually observed 196px split; it is
+**not** a measured PPU dot or scanline transition.
+
+`graphics_core/scene_renderer.cpp` selects the separate preview
+only when the new `SceneView.driving_stage_preview` flag is set.
+`switch_graphical/source/main.cpp` offers a **manual-only
+ZL+ZR+X** opt-in toggle, disabled for the original ROM-free synthetic
+autoplay; neither original game ROM/FM2 nor its image data are added.
+The preview is a visual prototype only and deliberately consumes the
+current simulation frame and health without changing collision,
+vehicle mechanics, transition states, or default rendering.
+
+CTest target `vpd_driving_preview_test` asserts that road stripe
+phase affects only the upper region, status counters only the HUD,
+car sprite only the road, padded framebuffer columns remain untouched,
+repeated draws are deterministic, and disabling `SceneView` preview
+restores the unmodified default scene pixels.
+
+**Next:** replace invented placeholder positions with measured
+original gameplay geometry and implement a distinct driving
+simulation under separate tests. Authentic road scroll/camera
+velocity, traffic collision/physics and gameplay stage-exit remain
+unverified, as does original bitmap appearance in this preview.
