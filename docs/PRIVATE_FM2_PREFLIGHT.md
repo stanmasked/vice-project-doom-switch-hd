@@ -153,3 +153,25 @@ frames have the right stage identities. The exact Python verifier is exercised
 by **16 independent ROM-free synthetic unit tests**, included in standard
 Python CI discovery; these were also run locally with 16/16 success.
 The new tests construct invented pixel data, not original game content.
+
+## Stage 115 — strict complete-window verification (optional)
+
+Use `--require-complete-window` when a storyboard is intended to cover
+**all** predeclared FM2 checkpoints. The structural-only default still
+accepts deliberately partial recordings, but marks
+`complete_window_verified=false` and reports the expected sample count.
+Strict mode regenerates the scheduled global FCEUX frame numbers from
+`start_frame`, `stop_frame`, `interval` and `capture_limit` and
+compares them **one by one** to the frames actually saved.
+
+```sh
+python3 tools/audit_private_fceux_storyboard.py \
+  private/us_storyboard --require-complete-window
+```
+
+This is a completeness check for the **declared private window**, not
+proof of the actual ROM, level boundaries, or final game completion.
+Six wholly synthetic regressions cover missing start/middle/end samples,
+non-aligned starts, capture limits and default opt-in behavior.
+22 storyboard Python tests now pass locally; GitHub Actions remain
+a separate exact-commit verification.

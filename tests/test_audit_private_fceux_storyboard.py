@@ -165,5 +165,58 @@ class StoryboardAuditTests(unittest.TestCase):
             self.assertEqual(r['first_frame'],999999)
             self.assertEqual(r['last_frame'],1000000)
 
+    def test_complete_window_valid_two_frames(self):
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d)
+            capture(root,8,stop=16)
+            capture(root,16,stop=16)
+            r=audit(root,require_complete=True)
+            self.assertTrue(r['complete_window_verified'])
+            self.assertEqual(r['expected_sample_count'],2)
+
+    def test_incomplete_window_missing_last_frame(self):
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d)
+            capture(root,8,stop=16)
+            report=audit(root)
+            self.assertFalse(report['complete_window_verified'])
+            self.assertEqual(report['expected_sample_count'],2)
+            with self.assertRaisesRegex(ValueError,'window incomplete'):
+                audit(root,require_complete=True)
+
+    def test_incomplete_window_middle_frame_missing(self):
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d)
+            capture(root,8)
+            capture(root,24)
+            with self.assertRaisesRegex(ValueError,'window incomplete'):
+                audit(root,require_complete=True)
+
+    def test_complete_window_respects_capture_limit(self):
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d)
+            capture(root,8,limit=2)
+            capture(root,16,limit=2)
+            report=audit(root,require_complete=True)
+            self.assertTrue(report['complete_window_verified'])
+            self.assertEqual(report['expected_sample_count'],2)
+
+    def test_complete_window_non_aligned_start(self):
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d)
+            capture(root,16,start=10,stop=20)
+            report=audit(root,require_complete=True)
+            self.assertTrue(report['complete_window_verified'])
+            self.assertEqual(report['expected_sample_count'],1)
+
+    def test_strict_window_does_not_infer_from_count(self):
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d)
+            capture(root,16)
+            capture(root,24)
+            self.assertEqual(audit(root)['sample_count'],2)
+            with self.assertRaisesRegex(ValueError,'window incomplete'):
+                audit(root,require_complete=True)
+
 
 if __name__=='__main__':unittest.main()

@@ -63,7 +63,7 @@ def parse_meta(path):
     return fields
 
 
-def audit(root):
+def audit(root, require_complete=False):
     root=Path(root)
     if root.is_symlink() or not root.is_dir():
         raise ValueError('storyboard root must be a non-symlink directory')
@@ -82,6 +82,7 @@ def audit(root):
     first_frame=last_frame=None
     missing_pixels=0
     previous=-1
+    sampled_frames=[]
     for file in metas:
         m=META_RE.fullmatch(file.name)
         if not m:
@@ -92,6 +93,7 @@ def audit(root):
         if frame<=previous:
             raise ValueError('out of order or duplicate storyboard frames')
         previous=frame
+        sampled_frames.append(frame)
         data=parse_meta(file)
         if decimal(data,'frame',0,999999999)!=frame:
             raise ValueError('frame filename/metadata mismatch')
@@ -128,10 +130,25 @@ def audit(root):
         expected.update({file.name,ppm.name,pal.name})
     if {p.name for p in items}!=expected:
         raise ValueError('orphan or missing storyboard artifact')
+    # A structurally sound but truncated recording is not full-movie evidence.
+    # FCEUX uses global frame numbering; samples satisfy frame % interval == 0.
+    _, interval, start, stop, limit=session
+    first=(start+interval-1)//interval*interval
+    expected_frames=[]
+    for n in range(limit):
+        frame=first+n*interval
+        if frame>stop:
+            break
+        expected_frames.append(frame)
+    complete=sampled_frames==expected_frames
+    if require_complete and not complete:
+        raise ValueError('storyboard window incomplete or missing scheduled frames')
     return {
        'classification':'private FCEUX storyboard structural preflight only',
        'storyboard_integrity_verified':True,
        'sample_count':len(metas),
+       'expected_sample_count':len(expected_frames),
+       'complete_window_verified':bool(require_complete and complete),
        'first_frame':first_frame,
        'last_frame':last_frame,
        'capture_interval':session[1],
@@ -148,9 +165,11 @@ def audit(root):
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('private_storyboard',type=Path)
+    p.add_argument('--require-complete-window',action='store_true',
+                   help='fail if any scheduled frame in the configured capture window is missing')
     args=p.parse_args()
     try:
-        report=audit(args.private_storyboard)
+        report=audit(args.private_storyboard,require_complete=args.require_complete_window)
     except (OSError,ValueError,UnicodeError) as exc:
         p.exit(1,'PRIVATE_FCEUX_STORYBOARD_INCONCLUSIVE: '+str(exc)+'\n')
     print('PRIVATE_FCEUX_STORYBOARD_PREFLIGHT_PASS')
