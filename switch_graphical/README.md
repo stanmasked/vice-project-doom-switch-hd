@@ -251,3 +251,23 @@ This is NOT the original Vice: Project Doom Stage 1-1 vehicle physics,
 camera scroll, road geometry or source graphical content. The next
 development stage must derive those properties independently from
 private original-game evidence before calling them authentic.
+
+
+## Stage 162 — shared driving-state-to-raster adapter (synthetic only)
+
+`graphics_core/driving_scene_bridge.hpp` is now the single mapping from a
+`DrivingState` tick to the `DrivingPreviewView` that libnx renders. It covers
+position, scrolling, frame counter, independent HP/speed, obstacle and impact
+flash; no hidden platform `Simulation` fields are read. This removes the
+duplicated NRO-side assignment sequence that could silently drift away from
+native tests.
+
+The new `romfree_driving_scene_bridge` CTest checks that all adapter fields
+track the same invented physics state, that an actual simulated collision
+updates the HUD without altering roadway pixels when only HP changes, that
+`drawScene` selects exactly the direct driving preview when enabled, and that
+the old platform framebuffer/fingerprint are unchanged after returning.
+
+This is **host-side source integration coverage**, not a claim of a successful
+NeXium guest controller run or calibrated original NES car behavior. No ROM,
+FM2, screenshots, graphics captures, or licensed assets are included.
