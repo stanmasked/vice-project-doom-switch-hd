@@ -24,7 +24,7 @@ class DrivingAuditTests(unittest.TestCase):
             self.record(3, "left_brake", 4, 644, 642, 4, 2, 5, 5, 0, 0,
                         left=1, brake=1),
             self.record(4, "impact", 45, 640, 640, 8, 6, 5, 4, 1, 45),
-            self.record(5, "exit", 48, 640, 640, 6, 6, 4, 4, 1, 42),
+            self.record(5, "exit", 48, 640, 640, 6, 6, 4, 4, 1, 42).replace("before_frame=47 ", "before_frame=48 "),
         ]
 
     def test_valid_synthetic_fixture_is_parsable_not_guest_proof(self):
