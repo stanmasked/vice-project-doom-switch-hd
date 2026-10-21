@@ -82,7 +82,7 @@ def capture_plan(movie_summary,interval=1803,start_frame=None,stop_frame=None):
         raise ValueError("capture window outside the FM2 movie timeline")
     # FCEUX uses the global movie frame counter, so window sampling remains
     # aligned to the same cadence regardless of where the window begins.
-    first=(capture_start+interval-1)//interval*interval
+    first=max(interval,(capture_start+interval-1)//interval*interval)
     regular_samples=0 if first>capture_stop else (capture_stop-first)//interval+1
     terminal_sample=int(capture_stop%interval!=0)
     samples=regular_samples+terminal_sample
