@@ -48,6 +48,19 @@ class RomVariantTests(unittest.TestCase):
             self.assertEqual([x["index"] for x in r["chr_comparison"]["different_banks"]],[124,125,126])
             self.assertEqual(r["chr_comparison"]["different_byte_count"],145)
 
+    def test_no_identical_chr_cannot_claim_shared_patterns(self):
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d)
+            a=root/"a.nes";b=root/"b.nes"
+            a.write_bytes(fake_rom())
+            changed=bytearray(fake_rom())
+            changed[-131072:]=bytes([4])*131072
+            b.write_bytes(changed)
+            report=compare_roms(a,b)
+            self.assertEqual(report["chr_comparison"]["identical_1kb_banks"],0)
+            self.assertFalse(report["shared_chr_proven_at_equal_offsets"])
+            self.assertFalse(report["shared_level_geometry_proven"])
+
     def test_prg_difference_does_not_erase_identical_chr(self):
         with tempfile.TemporaryDirectory() as d:
             a=Path(d)/"first.nes";b=Path(d)/"second.nes"
