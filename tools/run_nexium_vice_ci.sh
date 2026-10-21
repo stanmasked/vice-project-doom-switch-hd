@@ -377,3 +377,6 @@ mkdir -p "$out/driving-run"
 xvfb-run -a -s "-screen 0 1280x720x24" \
   bash tools/nexium_driving_probe.sh "$emulator" "$nro" "$out/driving-run"
 python3 tools/audit_nexium_driving_live.py --evidence "$out/driving-run"
+cp "$XDG_CONFIG_HOME/NeXium/sdmc/switch/vice_project_doom/driving_raster_guest.txt" \
+  "$out/driving-run/guest-driving-raster-witness.txt"
+python3 tools/audit_nexium_driving_raster.py --evidence "$out/driving-run"

@@ -4,6 +4,7 @@
 #include "driving_simulation.hpp"
 #include "driving_scene_bridge.hpp"
 #include "driving_guest_witness.hpp"
+#include "driving_raster_witness.hpp"
 #include "manual_retry.hpp"
 #include "manual_retry_guest_witness.hpp"
 #include "live_defeat_retry_witness.hpp"
@@ -80,6 +81,7 @@ int main(int,char**) {
     (void)vpd::manualProofReset(has_sd);
     (void)vpd::dashGuestProofReset(has_sd);
     vpd::resetDrivingGuestProof(has_sd);
+    vpd::resetDrivingRasterProof(has_sd);
     (void)vpd::guardProofReset(has_sd);
     (void)vpd::guardCombatProofReset(has_sd);
     (void)vpd::resetSentryProof(has_sd);
@@ -234,6 +236,7 @@ int main(int,char**) {
         padUpdate(&pad);
         const u64 buttons=padGetButtons(&pad);
         const u64 pressed=padGetButtonsDown(&pad);
+        unsigned driving_raster_event_seq=0;
         // Deliberately uncommon debug chord preserves all approved autoplay.
         const bool driving_preview_chord=!demo.enabled() &&
             (pressed&HidNpadButton_X) &&
@@ -439,9 +442,11 @@ int main(int,char**) {
                     };
                     const vpd::DrivingState car_before=driving_state;
                     driving_state.tick(drive_input);
-                    (void)vpd::appendDrivingGuestProof(has_sd,
-                        driving_proof.tick(drive_input,car_before,
-                                           driving_state,game.fingerprint()));
+                    const auto driving_event=driving_proof.tick(
+                        drive_input,car_before,driving_state,game.fingerprint());
+                    if(driving_event.seq==2 || driving_event.seq==4)
+                        driving_raster_event_seq=driving_event.seq;
+                    (void)vpd::appendDrivingGuestProof(has_sd,driving_event);
                 }
                 input=0;
             } else if(toggle_manual || driving_preview_chord) {
@@ -1075,6 +1080,12 @@ int main(int,char**) {
         }
         const bool drawn=vpd::drawScene(
             pixels,vpd::kSceneWidth,vpd::kSceneHeight,pixels_per_row,view);
+        if(drawn && view.driving_stage_preview &&
+           driving_raster_event_seq!=0) {
+            (void)vpd::appendDrivingRasterProof(
+                has_sd,driving_raster_event_seq,view.driving,
+                pixels,pixels_per_row);
+        }
         if(drawn && hd_fx_probe_edge && view.manual_controls)
             fx_presented=vpd::fingerprintHdFxVisual(
                 pixels,vpd::kSceneWidth,vpd::kSceneHeight,pixels_per_row);
