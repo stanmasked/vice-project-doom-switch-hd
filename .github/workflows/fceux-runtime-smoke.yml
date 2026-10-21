@@ -16,6 +16,8 @@ on:
       - "tools/run_private_fm2_storyboard.py"
       - "tools/run_private_fm2_storyboard.lua"
       - "tests/test_run_private_fm2_storyboard.py"
+      - "tests/test_audit_private_fceux_storyboard.py"
+      - "tests/test_fceux_storyboard.lua"
       - "tools/audit_private_fm2_terminal_witness.py"
       - "tests/test_audit_private_fm2_terminal_witness.py"
       - "tools/capture_private_mmc3_chr_focus.lua"
@@ -38,6 +40,8 @@ on:
       - "tools/run_private_fm2_storyboard.py"
       - "tools/run_private_fm2_storyboard.lua"
       - "tests/test_run_private_fm2_storyboard.py"
+      - "tests/test_audit_private_fceux_storyboard.py"
+      - "tests/test_fceux_storyboard.lua"
       - "tools/audit_private_fm2_terminal_witness.py"
       - "tests/test_audit_private_fm2_terminal_witness.py"
   workflow_dispatch:
@@ -144,10 +148,10 @@ jobs:
             "$RUNNER_TEMP/fceux_full_timeline_synthetic.terminal_witness.txt"
           grep -qx 'movie_frame_count=64' \
             "$RUNNER_TEMP/fceux_full_timeline_synthetic.terminal_witness.txt"
-          test "$(find "$RUNNER_TEMP/fceux_full_timeline_synthetic" -maxdepth 1 -name 'frame_*.meta.txt' | wc -l)" -eq 7
+          test "$(find "$RUNNER_TEMP/fceux_full_timeline_synthetic" -maxdepth 1 -name 'frame_*.meta.txt' | wc -l)" -eq 8
           python3 tools/audit_private_fceux_storyboard.py \
             "$RUNNER_TEMP/fceux_full_timeline_synthetic" --require-complete-window
-          echo "REAL_FCEUX_PRIVATE_RUNNER_SYNTHETIC_PASS terminal_frame=63 captured=7 original_game_proven=no"
+          echo "REAL_FCEUX_PRIVATE_RUNNER_SYNTHETIC_PASS terminal_frame=63 captured=8 original_game_proven=no"
       - name: Run real FCEUX on invented NES2 MMC3 and verify recorded input
         shell: bash
         env:
@@ -240,14 +244,14 @@ jobs:
             --movie "$RUNNER_TEMP/fceux_invented_mmc3_extended.fm2" \
             --output "$RUNNER_TEMP/fceux_mmc3_extended_run" \
             --interval 16 --timeout-seconds 110 --trace-chr-banks 124,125,126
-          test "$(find "$RUNNER_TEMP/fceux_mmc3_extended_run" -maxdepth 1 -name 'frame_*.meta.txt' | wc -l)" -eq 15
+          test "$(find "$RUNNER_TEMP/fceux_mmc3_extended_run" -maxdepth 1 -name 'frame_*.meta.txt' | wc -l)" -eq 16
           grep -qx 'movie_terminal_frame=255' \
             "$RUNNER_TEMP/fceux_mmc3_extended_run.terminal_witness.txt"
           grep -qx 'movie_frame_gaps=0' \
             "$RUNNER_TEMP/fceux_mmc3_extended_run.terminal_witness.txt"
           grep -qx 'trace_closed=yes' \
             "$RUNNER_TEMP/fceux_mmc3_extended_run.mmc3_chr_focus.witness.txt"
-          echo "REAL_FCEUX_EXTENDED_256_FRAME_SYNTHETIC_PASS frames=256 snapshots=15 original_game_proven=no"
+          echo "REAL_FCEUX_EXTENDED_256_FRAME_SYNTHETIC_PASS frames=256 snapshots=16 including_terminal=255 original_game_proven=no"
       - name: Test real 1803-frame capture cadence on extended invented MMC3 FM2
         if: github.event_name == 'pull_request'
         shell: bash
@@ -285,12 +289,12 @@ jobs:
           assert witness["movie_readonly"]
           assert witness["fm2_header_power_on_preflight_verified"]
           report=audit(base,require_complete=True)
-          assert report["sample_count"]==2,report
+          assert report["sample_count"]==3,report
           assert report["first_frame"]==1803,report
-          assert report["last_frame"]==3606,report
+          assert report["last_frame"]==4095,report
           assert report["capture_interval"]==1803,report
           assert not report["original_game_emulation_proven"]
-          print("REAL_FCEUX_SYNTHETIC_1803_CADENCE_PASS terminal=4095 snapshots=1803,3606 source_game=no")
+          print("REAL_FCEUX_SYNTHETIC_1803_CADENCE_PASS terminal=4095 snapshots=1803,3606,4095 source_game=no")
           PY
       - name: Stress long real FCEUX playback with varied synthetic inputs
         if: github.event_name == 'pull_request'
@@ -330,12 +334,12 @@ jobs:
           assert witness["frame_gaps"]==0
           assert witness["movie_readonly"]
           report=audit(base,require_complete=True)
-          assert report["sample_count"]==3,report
+          assert report["sample_count"]==4,report
           assert report["first_frame"]==1024,report
-          assert report["last_frame"]==3072,report
+          assert report["last_frame"]==4095,report
           assert report["capture_interval"]==1024,report
           assert not report["original_game_emulation_proven"]
-          print(f"REAL_FCEUX_SYNTHETIC_LONG_PATTERN_PASS pattern={pattern} frames=4096 snapshots=1024,2048,3072 original_game_proven=no")
+          print(f"REAL_FCEUX_SYNTHETIC_LONG_PATTERN_PASS pattern={pattern} frames=4096 snapshots=1024,2048,3072,4095 original_game_proven=no")
           PY
           done
       - name: Reject tracked ROM, FM2 and binary capture files
