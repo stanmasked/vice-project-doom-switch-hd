@@ -299,3 +299,26 @@ screenshots, palette dumps or extracted game art into GitHub.
 
 Nine independent ROM-free tests exercise invented normal, shifted,
 unavailable, corrupted, incomplete, and partial screenshots.
+
+## Stage 126 — private US/Japan cartridge-bank comparison
+
+Use `tools/audit_private_nes_variant_banks.py --first-rom /private/us.nes
+--second-rom /private/jp.nes` to compare privately held FCEUX sources.
+This scanner requires equal Mapper and PRG/CHR sizes, but accepts an NES 2.0
+header on one version and classic iNES on the other. It compares 1KB
+cartridge banks at identical offsets and emits only bank numbers plus
+numeric difference counts, never source bytes, original tile graphics,
+original CPU instructions, nor ROM/FCEUX asset digests.
+
+Verified privately for the owner's US Vice Project Doom and Japanese
+Gun-Dec (262,160 bytes each, mapper 4 / MMC3): all 128 KB PRG + 128 KB
+CHR are size-aligned across versions. 125/128 one-KB CHR banks were
+identical at their original positions. The three differing CHR banks
+are 124, 125, and 126 (929, 898, and 571 differing bytes).
+87/128 PRG banks were identical at equal offsets, so gameplay equivalence
+and level order are **not** proven and must not be inferred from CHR alone.
+
+Nine ROM-free, entirely invented fixtures test header variants, aligned
+bank comparisons and fail-closed behavior on incompatible layouts, linked
+files and malformed inputs. No actual commercial ROM is used by CI.
+Original cartridge images and the private audit report are not committed.
