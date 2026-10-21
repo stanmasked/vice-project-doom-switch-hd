@@ -83,14 +83,16 @@ def compare_roms(us_path,jp_path):
         raise ValueError("ROM mapper differs; versions not directly bank-aligned")
     if len(first["prg"])!=len(second["prg"]) or len(first["chr"])!=len(second["chr"]):
         raise ValueError("ROM PRG/CHR layout differs; bank indices not aligned")
+    prg_result=compare_region(first["prg"],second["prg"])
+    chr_result=compare_region(first["chr"],second["chr"])
     return {
         "classification":"private static cartridge cross-version bank comparison only",
         "mapper":first["mapper"],
         "first_rom_uses_nes2":first["nes2"],
         "second_rom_uses_nes2":second["nes2"],
-        "prg_comparison":compare_region(first["prg"],second["prg"]),
-        "chr_comparison":compare_region(first["chr"],second["chr"]),
-        "shared_chr_proven_at_equal_offsets":True,
+        "prg_comparison":prg_result,
+        "chr_comparison":chr_result,
+        "shared_chr_proven_at_equal_offsets":chr_result["identical_1kb_banks"]>0,
         "shared_original_gameplay_proven":False,
         "shared_level_geometry_proven":False,
         "shared_stage_order_proven":False,
