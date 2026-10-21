@@ -174,6 +174,25 @@ prove what scroll remains effective on visible raster lines: later
 per-frame $2005/$2006 writes, mapper IRQ/raster splits, CHR changes and
 screen composition need independent analysis.
 
+A fifth independent private FCEUX run registered all **16** fixed-bank
+literal $2005 store-instruction candidates from the source audit. It collected
+**1,284 executed writer PCs**, each matched at the exact CPU-cycle timestamp
+of one of the **1,284 previously recorded real $2005 writes**. Every original
+frame 600–920 used the exact same four-instruction order:
+
+| $2005 write order | Executed CPU address | Observed value |
+|---|---|---|
+| 1 | $E8EC | 00 |
+| 2 | $E8F1 | RAM $0D at emitter entry |
+| 3 | $E369 | 00 |
+| 4 | $E36C | 00 |
+
+The two late zero writes are therefore traced to specific original CPU
+instructions, rather than assigned to a guessed NMI/IRQ or screen region.
+**All 321 frames and all four individual write cycles matched exactly
+(0 mismatches).** Determining whether the late writers belong to a
+particular visible raster interval remains the next separate task.
+
 The reusable, **source-only** private research tooling now includes
 tools/capture_private_e8de_instructions.lua and
 tools/audit_private_e8de_exec.py with synthetic positive/negative tests.
