@@ -32,7 +32,8 @@
 - [x] Parse CPU-cycle timelines with reset epochs, unknown initial CHR state and strict capture-completeness metadata.
 - [x] Six synthetic Python regression cases and FCEUX Lua mock test; see [CPU_CYCLE_CAPTURE.md](CPU_CYCLE_CAPTURE.md).
 - [ ] Validate camera/scroll and actual CPU-cycle timestamp fidelity against real FCEUX title/first-stage recordings.
-- [ ] **Run** FCEUX capture during title and first-stage transitions; no verified live captures yet.
+- [x] **Run** private original USA ROM+FM2 in FCEUX and verify first-stage transition: last driving frame 3606, black 3607–3647, platform 3648. See [original transition contract](ORIGINAL_STAGE_TRANSITION_CONTRACT.md).
+- [ ] Capture and validate the separate original title-stage transition, not covered by the Stage 1-1 evidence.
 - [ ] Capture actual queued packets, palette RAM and PPU state during **runtime**.
 - [ ] Recover real PPU palettes, nametables, metatiles and OAM frames.
 - [ ] Produce timed local reference traces for movement/collisions/AI.
