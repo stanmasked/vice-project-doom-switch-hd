@@ -97,6 +97,26 @@ class RunnerPlanningTests(unittest.TestCase):
                     launch(rom,movie,root/"new",interval=8,trace_chr_banks="0")
             self.assertFalse((root/"new").exists())
 
+    def test_private_file_integrity_stamp_changes_on_edit(self):
+        from run_private_fm2_storyboard import file_sha256
+        with tempfile.TemporaryDirectory() as d:
+            p=Path(d)/"private_synthetic.bin"
+            p.write_bytes(b"invented synthetic payload A")
+            initial=file_sha256(p)
+            self.assertEqual(file_sha256(p),initial)
+            p.write_bytes(b"invented synthetic payload B")
+            self.assertNotEqual(file_sha256(p),initial)
+
+    def test_symlink_cannot_enter_private_integrity_stamp(self):
+        from run_private_fm2_storyboard import file_sha256
+        with tempfile.TemporaryDirectory() as d:
+            p=Path(d)/"original";p.write_bytes(b"synthetic")
+            alias=Path(d)/"alias"
+            try:alias.symlink_to(p)
+            except OSError as exc:self.skipTest(str(exc))
+            with self.assertRaisesRegex(ValueError,"linked"):
+                file_sha256(alias)
+
     def test_reject_checkout_directory(self):
         with tempfile.TemporaryDirectory() as d:
             base=Path(d)

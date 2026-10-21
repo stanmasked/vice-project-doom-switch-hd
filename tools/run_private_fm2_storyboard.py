@@ -6,6 +6,7 @@ The command does not claim it has reproduced the source game unless a real
 local FCEUX process completes the movie-timeline witness and capture audit.
 """
 import argparse
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -22,6 +23,22 @@ from audit_private_fm2_terminal_witness import audit_movie_witness
 from audit_private_nes_variant_banks import read_layout
 
 SCRIPT_DIR=Path(__file__).resolve().parent
+
+
+def file_sha256(path):
+    """Private in-memory source-file integrity stamp; never emit a digest."""
+    path=Path(path)
+    if path.is_symlink() or not path.is_file():
+        raise ValueError("private playback input unavailable or linked")
+    digest=hashlib.sha256()
+    with path.open("rb") as file:
+        while True:
+            chunk=file.read(1024*1024)
+            if not chunk:
+                break
+            digest.update(chunk)
+    return digest.digest()
+
 
 
 def private_target(directory):
@@ -82,6 +99,7 @@ def launch(rom,movie,directory,fceux="fceux",timeout_seconds=1800,
         raise ValueError("private ROM/movie symlinks are not accepted")
     rom=rom.resolve(strict=True)
     movie=movie.resolve(strict=True)
+    expected_source_digests=(file_sha256(rom),file_sha256(movie))
     summary=audit_movie(movie,rom=rom)
     plan=capture_plan(summary,interval=interval)
     bank_count=0
@@ -120,6 +138,7 @@ def launch(rom,movie,directory,fceux="fceux",timeout_seconds=1800,
         "VPD_PRIVATE_STORYBOARD_SCRIPT":str(storyboard.resolve()),
         "VPD_PRIVATE_WITNESS":str(witness),
         "VPD_PRIVATE_FRAME_COUNT":str(plan["frames"]),
+        "VPD_PRIVATE_FM2_HEADER_POWERON_PREFLIGHT":"yes",
         "VPD_PRIVATE_ROM_PAYLOAD_MD5":rom_payload(rom)[0].hex(),
         "VPD_PRIVATE_CAPTURE_INTERVAL":str(plan["interval"]),
         "VPD_PRIVATE_CAPTURE_LIMIT":str(plan["sample_count"])
@@ -160,6 +179,8 @@ def launch(rom,movie,directory,fceux="fceux",timeout_seconds=1800,
                     process.kill()
                     process.wait(timeout=5)
     movie_evidence=audit_movie_witness(witness,expected_frame_count=plan["frames"])
+    if (file_sha256(rom),file_sha256(movie))!=expected_source_digests:
+        raise ValueError("private ROM or FM2 changed during FCEUX playback")
     report=audit_storyboard(target,require_complete=True)
     if (report["sample_count"]!=plan["sample_count"]
         or not report["complete_window_verified"]):
@@ -168,7 +189,9 @@ def launch(rom,movie,directory,fceux="fceux",timeout_seconds=1800,
             "rom_identity_matched":True,
             "fceux_terminal_frame_confirmed":True,
             "rom_loaded_in_emulator_verified":movie_evidence["loaded_rom_verified"],
-            "power_on_source_verified":movie_evidence["power_on_source_verified"],
+            "fm2_header_power_on_preflight_verified":
+                movie_evidence["fm2_header_power_on_preflight_verified"],
+            "private_input_files_unchanged_verified":True,
             "verified_consecutive_movie_frames":movie_evidence["consecutive_unique_frames"],
             "movie_first_observed_frame":movie_evidence["first_observed_frame"],
             "frame_count":plan["frames"],

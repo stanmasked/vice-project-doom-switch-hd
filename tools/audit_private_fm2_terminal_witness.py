@@ -8,13 +8,13 @@ movie state, never correctness of the game's scene or enemy simulation.
 import re
 from pathlib import Path
 
-SCHEMA="private_fm2_terminal_witness_v3"
+SCHEMA="private_fm2_terminal_witness_v4"
 REQUIRED={
     "format","movie_readonly","movie_terminal_frame","movie_frame_count",
     "movie_first_observed_frame","movie_last_observed_frame",
     "movie_consecutive_unique_frames","movie_frame_gaps",
     "movie_active_before_terminal","movie_mode_at_terminal",
-    "loaded_rom_verified","power_on_source_verified",
+    "loaded_rom_verified","fm2_header_power_on_preflight_verified",
     "original_stage_proven","game_completion_proven"
 }
 NUMBER=re.compile(r"(?:0|[1-9][0-9]*)\Z")
@@ -38,7 +38,7 @@ def audit_movie_witness(path,*,expected_frame_count):
     if data.keys()!=REQUIRED or data["format"]!=SCHEMA:
         raise ValueError("missing, extra or legacy FM2 witness fields")
     for key in ("movie_readonly","movie_active_before_terminal",
-                "loaded_rom_verified","power_on_source_verified"):
+                "loaded_rom_verified","fm2_header_power_on_preflight_verified"):
         if data[key]!="yes":
             raise ValueError("FM2 playback identity, power-on origin or read-only state unverified")
     if data["movie_mode_at_terminal"] not in ("playback","finished"):
@@ -71,7 +71,7 @@ def audit_movie_witness(path,*,expected_frame_count):
         "frame_gaps":0,
         "movie_readonly":True,
         "loaded_rom_verified":True,
-        "power_on_source_verified":True,
+        "fm2_header_power_on_preflight_verified":True,
         "movie_mode_at_terminal":data["movie_mode_at_terminal"],
         "original_stage_proven":False,
         "game_completion_proven":False
