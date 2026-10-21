@@ -275,3 +275,63 @@ effect on visible PPU scanlines is **not**.
 3. Which road/background pixels depend on each PPU scroll state.
 4. World camera velocity, physics, collisions, and actual HD Switch
    reproduction of Stage 1-1.
+
+
+## Stage 155 — late PPU/CHR routine verified with original CPU register state
+
+A **new independent private FCEUX 2.6.5 run** replayed the owner's matching
+USA ROM+FM2 from movie start, validating the callback timeline through frame
+920 (0 gaps, read-only movie, matching ROM hash). It recorded the executing
+CPU instruction PC, CPU cycle, A/X/Y/P registers, and writes to
+$2000/$2001/$2005/$2006/$8000/$8001 on original Stage 1-1 frames 600–920.
+No source media or full logs are included in the public repository.
+
+The 16-instruction late routine from $E367 was observed **in exactly the
+same order and at the same relative CPU-cycle offsets on all 321 frames**.
+The following nine CPU write instructions match their corresponding memory
+register writes **at the exact same CPU cycle**, with 2,889/2,889 matches
+and zero disagreements:
+
+| Instruction PC | Relative cycles from $E367 | Source instruction | Verified port/value |
+|---|---:|---|---|
+| $E369 | +4 | STX $2005 (X=00) | $2005=00 |
+| $E36C | +8 | STX $2005 (X=00) | $2005=00 |
+| $E373 | +16 | STA $2006 (A=0F) | $2006=0F |
+| $E376 | +20 | STX $2006 (X=00) | $2006=00 |
+| $E37D | +28 | STX $8000 (X=00) | MMC3 $8000=00 |
+| $E380 | +32 | STX $8001 (X=00) | MMC3 $8001=00 |
+| $E384 | +38 | STX $8000 (X=01) | MMC3 $8000=01 |
+| $E387 | +42 | STA $8001 (A=02) | MMC3 $8001=02 |
+| $E38E | +51 | STA $2001 (A=0E) | PPUMASK=0E |
+
+The full 16-PC timing chain therefore provides **5,136/5,136 exact
+instruction offsets**. The instructions between those writes include
+LDX #00 at $E367, LDA #0F at $E36F, LDX #00 at $E371,
+LDA #02 at $E379, LDX #00 at $E37B, INX at $E383,
+and LDA $01 / AND #EF before the final $E38E write.
+
+At that observed register write, PPUMASK 0E has its **background rendering
+enable bit set** and **sprite rendering enable bit unset**. This is a CPU
+register-state observation, **not** evidence that sprites were absent across
+the whole rendered frame. The MMC3 $8000/$8001 sequence selects CHR bank
+registers 0 and 1 with values 0 and 2, respectively, at that moment;
+other mapper writes later can change the banks.
+
+### Public reproducibility and restrictions
+
+- Source-only private capture: tools/capture_private_late_ppu_routine.lua
+- Fail-closed auditor: tools/audit_private_late_ppu_routine.py
+- Synthetic regressions: tests/test_audit_private_late_ppu_routine.py and
+  tests/test_private_late_ppu_routine.lua
+- Private captures require read-only FM2, matching ROM identity and contiguous
+  callback frames. The auditor checks the complete callback transcript
+  against its completion witness; output contains only aggregate
+  source-free numbers.
+- No original ROM, FM2, screenshots, CPU transcript, or extracted copyrighted
+  game art should be checked into public GitHub.
+
+**Still unproven:** the raster scanline/dot when PPUMASK and CHR
+register state takes effect, its intended HUD/road/camera role, authentic
+driving physics or collision geometry, and Switch gameplay integration.
+Although these are frame-synchronized CPU writes, they alone do **not**
+establish which pixels were rendered under which PPU state.
