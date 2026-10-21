@@ -136,10 +136,11 @@ for (( sample=1; sample<=8; ++sample )); do
   done
   echo "native_review_sample_$sample=$found" >> "$out/host-input.txt"
   [[ "$found" == yes ]]
-  if [[ "$sample" -eq 1 || "$sample" -eq 5 || "$sample" -eq 8 ]]; then
-    sleep 0.12
-    capture "screen-review-$sample"
-  fi
+  # Every sample is a separate physical Y edge followed by an
+  # independently saved actual X11 RGB24 framebuffer. Capture all seven
+  # sourced numeric frames and the eighth OFF for width AND center checks.
+  sleep 0.12
+  capture "screen-review-$sample"
   sleep 0.13
 done
 xdotool keyup t
