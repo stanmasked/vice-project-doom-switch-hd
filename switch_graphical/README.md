@@ -286,3 +286,13 @@ and the return to the original platform rendering. The auditor requires
 five ordered native guest records and four different actual X11 P6 frames.
 This is a gated real-emulator test: merely adding the script does not
 establish that the emulator passed it.
+## Stage 164 — source frame raster/health witness (synthetic art only)
+
+For native pad-driven events 2 (steer+throttle) and 4 (real synthetic
+collision), the NRO now samples its OWN final `drawScene` buffer before
+`framebufferEnd`: the car body pixel at `(car_x,450)` and the fifth
+health pip at `(535,648)`. Both are validated against source-defined RGBA
+colors and source flash phase. A second independent Python auditor joins
+each sample to the exact native physics frame and refuses incomplete or
+inconsistent records. This is additional proof of synthetic preview wiring,
+not of original NES sprites or Switch hardware output.
