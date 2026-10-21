@@ -70,9 +70,14 @@ def capture_plan(movie_summary,interval=1803):
         raise ValueError("unsupported storyboard frame interval")
     # Lua after-frame hooks may register after the power-on frame 0.
     # Do not demand an unobservable frame-0 image for a complete audit.
-    samples=(frames-1)//interval
-    if samples<1:
+    stop=frames-1
+    regular_samples=stop//interval
+    if regular_samples<1:
         raise ValueError("movie shorter than the first reliable capture interval")
+    # Keep the regular cadence and also capture the exact terminal frame when
+    # it is not cadence-aligned; otherwise the last visual sample can precede
+    # the end of a long recording by hundreds of frames.
+    samples=regular_samples+int(stop%interval!=0)
     if samples>64:
         raise ValueError("movie requires more than 64 storyboard samples")
     return {"frames":frames,"last_frame":frames-1,
