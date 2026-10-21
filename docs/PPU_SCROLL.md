@@ -83,8 +83,17 @@ and [PPU programmer reference](https://www.nesdev.org/wiki/PPU_programmer_refere
 
 ## Remaining blockers
 
-Actual title/first-stage RAM/PPU/screen recordings from a **running**
-FCEUX session have not been obtained. Without them, real scroll offsets,
-subframe CHR bank changes and accurate first-stage images cannot be
-claimed or supplied. The natively built Switch test scene remains a
-separate independent ASCII prototype.
+On 21 October 2026, real FCEUX 2.6.5 playback of the owner's USA ROM+FM2
+provided original Stage 1-1 RGB/palette screenshots and **observed CPU
+$2005/$2000/$2006 write events** for frames 600–920, plus sampled RAM $0B/$0C/$0D.
+The private CPU trace contains exactly four $2005 writes on each of those
+321 frames. These are verified CPU-write observations, **not** full PPU
+memory snapshots or display-effective scroll. The running FCEUX Lua API lacks
+`memory.registerread`, so no $2002 latch-reset witness was obtainable that
+way; the capture code records this limitation rather than inventing events.
+See [original Stage 1-1 timing/road evidence](ORIGINAL_STAGE_TRANSITION_CONTRACT.md).
+
+Still unresolved: complete original PPU nametable/CHR snapshots, subframe
+raster and IRQ effects, exact scanline-effective scroll, first-stage collision
+geometry, and separate original title-scene provenance. The native Switch
+prototype remains distinct from these original-game observations.
