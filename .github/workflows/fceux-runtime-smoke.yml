@@ -233,7 +233,7 @@ jobs:
             "$RUNNER_TEMP/fceux_mmc3_extended_run.mmc3_chr_focus.witness.txt"
           echo "REAL_FCEUX_EXTENDED_256_FRAME_SYNTHETIC_PASS frames=256 snapshots=15 original_game_proven=no"
       - name: Test real 1803-frame capture cadence on extended invented MMC3 FM2
-        if: github.event_name == 'push'
+        if: github.event_name == 'pull_request'
         shell: bash
         env:
           SDL_AUDIODRIVER: dummy
