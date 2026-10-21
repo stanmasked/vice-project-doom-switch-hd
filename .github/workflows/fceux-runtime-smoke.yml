@@ -47,6 +47,7 @@ jobs:
         run: |
           set -euo pipefail
           export VPD_SMOKE_DIRECTORY="$RUNNER_TEMP/fceux_fabricated_frames"
+          export VPD_STORYBOARD_SCRIPT="$GITHUB_WORKSPACE/tools/capture_fceux_movie_storyboard.lua"
           logfile="$RUNNER_TEMP/fceux_smoke.log"
           timeout 55s xvfb-run -a -s '-screen 0 1024x768x24' \
             fceux --no-config 1 --sound 0 \
