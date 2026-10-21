@@ -1,6 +1,7 @@
 // Independent libnx native raster scene; no NES emulator or proprietary art.
 #include <switch.h>
 #include "simulation.hpp"
+#include "driving_simulation.hpp"
 #include "manual_retry.hpp"
 #include "manual_retry_guest_witness.hpp"
 #include "live_defeat_retry_witness.hpp"
@@ -181,6 +182,7 @@ int main(int,char**) {
     bool native_hostile_halo_logged=false;
     vpd::HdFxRuntimeMode hd_fx_mode{};
     bool driving_preview=false; // manual-only ROM-free road/HUD visual preview
+    vpd::DrivingState driving_state{}; // separate from platform Simulation
     unsigned hd_fx_guest_seq=0;
     unsigned hd_fx_combat_seq=0;
     unsigned hd_fx_sentry_seq=0;
@@ -233,7 +235,10 @@ int main(int,char**) {
             (pressed&HidNpadButton_X) &&
             (buttons&HidNpadButton_ZL) &&
             (buttons&HidNpadButton_ZR);
-        if(driving_preview_chord)driving_preview=!driving_preview;
+        if(driving_preview_chord) {
+            driving_preview=!driving_preview;
+            if(driving_preview)driving_state.reset();
+        }
         if(buttons&HidNpadButton_Plus){
             if(!demo.enabled())vpd::guardLiveDebugRecord(
                 has_sd,"plus",game,0);
@@ -408,8 +413,23 @@ int main(int,char**) {
             const uint64_t prior_sentry_fingerprint=
                 hd_fx_sentry_seq==2 && !hd_fx_sentry_hit_logged ?
                 game.fingerprint():0;
-            if(toggle_manual || driving_preview_chord)input=0; // mode chord never consumes gameplay input
-            if(!restarted)game.tick(vpd::Input{input});
+            if(driving_preview) {
+                // The road prototype updates only its own invented simulation.
+                // Keep the established platform game/fingerprint unchanged.
+                if(!driving_preview_chord) {
+                    const vpd::DriveInput drive_input{
+                        (buttons&(HidNpadButton_Left|HidNpadButton_StickLLeft))!=0,
+                        (buttons&(HidNpadButton_Right|HidNpadButton_StickLRight))!=0,
+                        (buttons&(HidNpadButton_Up|HidNpadButton_StickLUp|HidNpadButton_A))!=0,
+                        (buttons&(HidNpadButton_Down|HidNpadButton_StickLDown|HidNpadButton_B))!=0
+                    };
+                    driving_state.tick(drive_input);
+                }
+                input=0;
+            } else if(toggle_manual || driving_preview_chord) {
+                input=0; // entering/leaving preview never performs a jump/dash
+            }
+            if(!restarted && !driving_preview)game.tick(vpd::Input{input});
             // Verify the actual physics tick consumed the SAME bullet
             // witnessed at native L+R ON, not another hostile projectile.
             // A host keypress, synthetic HP subtraction or raster change
@@ -868,6 +888,19 @@ int main(int,char**) {
         view.replay_demo=demo.enabled();
         view.manual_controls=!demo.enabled();
         view.driving_stage_preview=driving_preview && view.manual_controls;
+        if(view.driving_stage_preview) {
+            view.driving.frame=driving_state.frame;
+            view.driving.road_phase=driving_state.road_phase;
+            view.driving.ticks=driving_state.frame;
+            view.driving.health=driving_state.health;
+            view.driving.car_x=driving_state.car_x;
+            view.driving.obstacle_x=driving_state.obstacle_x;
+            view.driving.obstacle_y=driving_state.obstacle_y;
+            view.driving.show_obstacle=true;
+            view.driving.impact_flash=driving_state.hit_cooldown>0 &&
+                (driving_state.frame/4u)%2u==0u;
+            view.driving.speed=static_cast<uint8_t>(driving_state.speed);
+        }
         const bool hd_effects=hd_fx_mode.activeForGameplay(
             view.manual_controls);
         view.hd_hit_lighting=hd_effects;
