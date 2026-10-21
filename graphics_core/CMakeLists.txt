@@ -314,7 +314,8 @@ add_test(NAME romfree_driving_guest_witness COMMAND vpd_driving_guest_witness_te
 # Stage 164: proof of source-colored framebuffer pixels, sampled at the
 # same drawScene frame as real vehicle input/collision (host reference).
 add_executable(vpd_driving_raster_witness_test ../tests/test_driving_raster_witness.cpp)
-target_include_directories(vpd_driving_raster_witness_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(vpd_driving_raster_witness_test PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/../game_core)
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
   target_compile_options(vpd_driving_raster_witness_test PRIVATE -Wall -Wextra -Wpedantic -Werror)
 endif()
