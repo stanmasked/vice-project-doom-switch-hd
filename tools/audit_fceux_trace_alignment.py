@@ -77,16 +77,18 @@ def verify_trace_alignment(root,samples,cycle_available):
         raise ValueError("trace provenance requires capture schema v4")
     video_path=root/"mmc3_video_writes.tsv"
     cycles_path=root/"mmc3_ppu_cycles.tsv"
+    # Validate ordering and syntax of the entire bounded event sequence
+    # before reconciling snapshot counters; otherwise malformed chronology
+    # can be masked by an earlier cumulative-count mismatch.
+    observed=list(video_events(video_path))
     seen=0
     sample_index=0
-    observed=[]
-    for frame,addr,value in video_events(video_path):
+    for frame,addr,value in observed:
         while sample_index<len(samples) and frame>samples[sample_index][0]:
             if seen!=samples[sample_index][1]:
                 raise ValueError("cumulative register event count differs from capture metadata")
             sample_index+=1
         seen+=1
-        observed.append((frame,addr,value))
     while sample_index<len(samples):
         if seen!=samples[sample_index][1]:
             raise ValueError("cumulative register event count differs from capture metadata")
