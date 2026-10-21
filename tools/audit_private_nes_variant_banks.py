@@ -27,7 +27,7 @@ def read_layout(path):
     if h[:4]!=b"NES\x1a":
         raise ValueError("not an NES cartridge image")
     if h[6]&0x04:
-        raise ValueError("trained NES ROM unsupported: provenance ambiguous")
+        raise ValueError("NES trainer ROM unsupported: provenance ambiguous")
     nes2=(h[7]&0x0c)==0x08
     if h[7]&0x0c not in (0,0x08):
         raise ValueError("unsupported or malformed NES header")
