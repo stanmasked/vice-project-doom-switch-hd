@@ -20,6 +20,8 @@ def make_fixture(root, target=600, change_at=None, y=202, x=100,
                   'last_observed_frame': str(target + 2), 'frame_gaps': '0',
                   'target_instruction_hits': '1',
                   'source_rom_unchanged': 'yes', 'fm2_readonly': 'yes'}
+        fields['accumulator_restored_before_rts'] = (
+            'yes' if path == probe else 'not_needed')
         if invalid_witness and path == probe:
             fields[invalid_witness] = 'no' if fields[invalid_witness] == 'yes' else '-1'
         (path / 'COMPLETE.txt').write_text(''.join(f'{k}={v}\n'
@@ -47,6 +49,31 @@ class RasterABTests(unittest.TestCase):
             self.assertEqual(report['pixel_differences'][2]['palette_changed']['pixels'], 1)
             self.assertTrue(report['pre_intervention_images_match'])
             self.assertFalse(report['exact_ppu_scanline_of_cpu_write_proven'])
+
+    def test_strict_accumulator_restore_witness_is_verified(self):
+        with tempfile.TemporaryDirectory() as d:
+            a, b = make_fixture(Path(d), change_at=601)
+            report = audit(a, b, target_frame=600)
+            self.assertTrue(report['diagnostic_accumulator_restored_before_rts_verified'])
+            self.assertTrue(report['baseline_explicit_accumulator_witness'])
+
+    def test_reject_false_accumulator_restoration_claim(self):
+        with tempfile.TemporaryDirectory() as d:
+            a, b = make_fixture(Path(d),
+                                invalid_witness='accumulator_restored_before_rts')
+            with self.assertRaisesRegex(ValueError, 'restore witness'):
+                audit(a, b, target_frame=600)
+
+    def test_legacy_capture_does_not_claim_cpu_restore(self):
+        with tempfile.TemporaryDirectory() as d:
+            a, b = make_fixture(Path(d), change_at=601)
+            for root in (a, b):
+                marker = root / 'COMPLETE.txt'
+                data = marker.read_text('ascii')
+                marker.write_text(''.join(line for line in data.splitlines(True)
+                    if not line.startswith('accumulator_restored_before_rts=')))
+            result = audit(a, b, target_frame=600)
+            self.assertFalse(result['diagnostic_accumulator_restored_before_rts_verified'])
 
     def test_no_effect_must_not_be_called_proof(self):
         with tempfile.TemporaryDirectory() as d:
