@@ -96,6 +96,8 @@ on:
       - "tests/test_nexium_road_review.py"
       - "tools/audit_nexium_road_x11_shape.py"
       - "tests/test_nexium_road_x11_shape.py"
+      - "tools/audit_nexium_road_x11_sweep.py"
+      - "tests/test_nexium_road_x11_sweep.py"
       - "game_core/**"
       - "switch_graphical/**"
       - "graphics_core/**"
@@ -158,6 +160,7 @@ jobs:
           python3 tests/test_nexium_driving_blackout.py
           python3 tests/test_nexium_road_review.py
           python3 tests/test_nexium_road_x11_shape.py
+          python3 tests/test_nexium_road_x11_sweep.py
           python3 tests/test_nexium_hd_fx_guest.py
           python3 tests/test_nexium_hd_fx_combat.py
           python3 tests/test_nexium_hd_fx_sentry.py

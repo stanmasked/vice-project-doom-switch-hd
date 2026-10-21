@@ -392,3 +392,18 @@ original NES graphics, original ROM screenshots or actual game
 collision geometry. Nearest-neighbor RGB colors are intentional;
 changes to NeXium filtering/window presentation must be detected,
 not silently reinterpreted as authentic original-game road geometry.
+## Stage 175 — seven X11 numeric road samples plus OFF
+
+NeXium's independent driving probe captures all **eight** actual X11
+RGB24 review frames after the same native guest Y-key edges. The prior
+tests and captures are unchanged; extra screenshots are evidence only.
+
+The new `audit_nexium_road_x11_sweep.py` checks seven source-backed
+published **numerical** road widths and relative image centers in the
+real host X11 raster, plus a blank eighth OFF swatch. It infers one
+common host display X scale from wide/narrow intervals but **never**
+assumes a desktop window X offset. It confirms equal-width source
+frames 600/744 and 840/920, narrowing through 760/784/800, widening
+at 840, and measured lateral X shift to 920. Checks do not interpolate
+unobserved original movie frames or infer source PPU scroll/camera
+velocity, opponent behavior, collision geometry or original NES art.
