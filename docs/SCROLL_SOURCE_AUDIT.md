@@ -126,3 +126,17 @@ Reproducible source-only private tools:
 
 Only invented-data tests are suitable for public CI. Keep all genuine
 CPU-event and instruction traces, the ROM, the FM2 and screenshots private.
+
+
+The two late $2005 instructions were also identified at runtime:
+
+- Fixed-bank $E369 executes the **third** $2005 write, value 00.
+- Fixed-bank $E36C executes the **fourth** $2005 write, value 00.
+- Both are observed once per frame in all 321 checked Stage 1-1 frames.
+- Across all 1,284 writes, original CPU write-event cycles exactly equal the
+  executing writer-PC callback cycles (zero mismatches).
+
+The first and second writes remain $E8EC and $E8F1, with $0B/$0D matching
+CPU register values at the earlier $E8DE callback. The later writer addresses
+identify **which instruction executed**, not which visible scanline or pixel
+received the PPU scroll state. Private trace sources are local only.
