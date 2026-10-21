@@ -75,7 +75,56 @@ def _witness(path,start,stop):
     return _num(fields["exec_callback_count"],"execution calls")
 
 
-def audit(execs,counts,events,witness,*,start=600,stop=920):
+PC_FIELDS=["frame","cycle","pc"]
+PC_SEQUENCE=[("E8DE",0),("E8E4",9),("E8E7",13),("E8EC",20),("E8F1",27)]
+
+
+def _audit_instruction_chain(path,witness_path,selected,start,stop):
+    n=stop-start+1
+    rows=_rows(path,PC_FIELDS,2*1024*1024,n*5+1)
+    if len(rows)!=n*len(PC_SEQUENCE):
+        raise ValueError("incomplete original $E8DE instruction execution chain")
+    metadata={}
+    for line in _file(witness_path,4096).read_text("ascii").splitlines():
+        if "=" not in line: raise ValueError("malformed PC execution witness")
+        key,value=line.split("=",1)
+        if key in metadata: raise ValueError("duplicate PC execution witness field")
+        metadata[key]=value
+    required={"format","first_observed_frame","last_observed_frame",
+              "frame_gaps","total_instruction_callbacks",
+              "rom_identity_verified","movie_readonly_verified"}
+    if (metadata.keys()!=required or
+        metadata["format"]!="private_e8de_instruction_trace_v1" or
+        metadata["rom_identity_verified"]!="yes" or
+        metadata["movie_readonly_verified"]!="yes"):
+        raise ValueError("unverified private instruction trace")
+    if (_num(metadata["first_observed_frame"],"first frame") not in (0,1)
+        or _num(metadata["last_observed_frame"],"last frame")!=stop
+        or _num(metadata["frame_gaps"],"frame gaps")!=0
+        or _num(metadata["total_instruction_callbacks"],"instruction callbacks")!=len(rows)):
+        raise ValueError("incomplete private instruction trace witness")
+    for i,frame in enumerate(range(start,stop+1)):
+        base_cycle=selected[frame][0]
+        for j,(address,offset) in enumerate(PC_SEQUENCE):
+            row=rows[i*len(PC_SEQUENCE)+j]
+            if (_num(row["frame"],"PC frame")!=frame or
+                row["pc"].upper()!=address or
+                _num(row["cycle"],"PC cycle")!=base_cycle+offset):
+                raise ValueError("instruction PC chain differs from verified emitter offsets")
+    return {
+        "executed_instruction_addresses":["$"+pc for pc,_ in PC_SEQUENCE],
+        "relative_instruction_execution_cpu_cycles":[offset for _,offset in PC_SEQUENCE],
+        "instruction_callbacks_verified":len(rows),
+        "frames_with_exact_instruction_sequence":n,
+        "runtime_executed_opcode_at_e8e7":True,
+        "static_e8e7_opcode_name":"LDA $2002 (source-audited separately)",
+        "direct_lua_2002_read_callback_claimed":False,
+        "display_effective_scroll_verified_by_instruction_chain":False
+    }
+
+
+def audit(execs,counts,events,witness,*,start=600,stop=920,
+          instruction_trace=None,instruction_witness=None):
     if (type(start)is not int or type(stop)is not int or start<1 or
         stop<start or stop-start>1200):
         raise ValueError("invalid private frame window")
@@ -132,7 +181,13 @@ def audit(execs,counts,events,witness,*,start=600,stop=920):
         if scroll[2][1:]!=(0,) or scroll[3][1:]!=(0,):
             raise ValueError("late $2005 writes are not the observed zero reset pair")
         seen_zero_after+=1
-    return {
+    if (instruction_trace is None)!=(instruction_witness is None):
+        raise ValueError("instruction trace and witness must be supplied together")
+    instruction_report=None
+    if instruction_trace is not None:
+        instruction_report=_audit_instruction_chain(
+            instruction_trace,instruction_witness,selected,start,stop)
+    result={
         "classification":"PRIVATE verified CPU execution provenance, NOT rendered scroll",
         "first_frame":start,"last_frame":stop,"checked_frames":n,
         "emitter_address":"$E8DE",
@@ -154,6 +209,9 @@ def audit(execs,counts,events,witness,*,start=600,stop=920):
         "full_movie_terminal_verified":False,
         "original_rom_or_graphics_in_report":False
     }
+    if instruction_report is not None:
+        result.update(instruction_report)
+    return result
 
 
 def main():
@@ -164,11 +222,15 @@ def main():
     parser.add_argument("private_terminal_witness",type=Path)
     parser.add_argument("--start",type=int,default=600)
     parser.add_argument("--stop",type=int,default=920)
+    parser.add_argument("--private-instruction-trace",type=Path)
+    parser.add_argument("--private-instruction-witness",type=Path)
     args=parser.parse_args()
     try:
         result=audit(args.private_execution_tsv,args.private_count_tsv,
                      args.private_cpu_video_tsv,args.private_terminal_witness,
-                     start=args.start,stop=args.stop)
+                     start=args.start,stop=args.stop,
+                     instruction_trace=args.private_instruction_trace,
+                     instruction_witness=args.private_instruction_witness)
     except (OSError,ValueError,UnicodeError) as exc:
         parser.exit(1,"PRIVATE_E8DE_PROVENANCE_INCONCLUSIVE: "+str(exc)+"\n")
     print("PRIVATE_E8DE_RUNTIME_PROVENANCE_PASS")
