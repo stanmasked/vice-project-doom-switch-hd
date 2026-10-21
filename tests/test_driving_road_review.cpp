@@ -32,7 +32,8 @@ int main() {
     vpd::Simulation platform;
     vpd::DrivingState driving;
     const auto platform_fp=platform.fingerprint();
-    const auto source_car=driving.car_x, source_hp=driving.health;
+    const int source_car=driving.car_x;
+    const std::uint8_t source_hp=driving.health;
     const auto view=vpd::makeDrivingSceneView(driving);
     need(vpd::drawDrivingPreview(standard.data(),w,h,pitch,view),
          "standard driving stage source draw failed");
