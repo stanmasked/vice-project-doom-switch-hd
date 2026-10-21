@@ -1,49 +1,53 @@
 // Stand-alone ROM-free validation of the original game's measured transition.
 #include "stage_transition.hpp"
-#include <cassert>
+#include <stdexcept>
 #include <cstdint>
 #include <iostream>
 using namespace vpd::stage_transition;
 
+void require(bool result) {
+    if (!result) throw std::runtime_error("transition timing invariant failed");
+}
+
 int main() {
     Timeline sequence;
     for (std::uint32_t f = 0; f <= kOriginalLastDrivingFrame; ++f) {
-        assert(sequence.present() == Scene::Driving);
+        require(sequence.present() == Scene::Driving);
     }
-    assert(sequence.requestExit());
-    assert(!sequence.requestExit());
+    require(sequence.requestExit());
+    require(!sequence.requestExit());
     for (std::uint32_t f = kOriginalFirstBlackFrame;
          f <= kOriginalLastBlackFrame; ++f) {
-        assert(sequence.present() == Scene::Black);
-        assert(sequence.presentedBlackFrames() == f - kOriginalFirstBlackFrame + 1);
-        assert(sequence.remainingBlackFrames() == kOriginalLastBlackFrame - f);
-        assert(!sequence.requestExit());
+        require(sequence.present() == Scene::Black);
+        require(sequence.presentedBlackFrames() == f - kOriginalFirstBlackFrame + 1);
+        require(sequence.remainingBlackFrames() == kOriginalLastBlackFrame - f);
+        require(!sequence.requestExit());
     }
-    assert(sequence.presentedBlackFrames() == 41);
-    assert(sequence.present() == Scene::Platform);
-    assert(sequence.nextScene() == Scene::Platform);
-    assert(!sequence.requestExit());
-    for (int n = 0; n < 100; ++n) assert(sequence.present() == Scene::Platform);
+    require(sequence.presentedBlackFrames() == 41);
+    require(sequence.present() == Scene::Platform);
+    require(sequence.nextScene() == Scene::Platform);
+    require(!sequence.requestExit());
+    for (int n = 0; n < 100; ++n) require(sequence.present() == Scene::Platform);
 
     Timeline replay;
     for (std::uint32_t f = 0; f <= kOriginalLastDrivingFrame; ++f)
-        assert(replay.present() == Scene::Driving);
-    assert(replay.requestExit());
+        require(replay.present() == Scene::Driving);
+    require(replay.requestExit());
     for (std::uint32_t f = kOriginalFirstBlackFrame;
          f <= kOriginalLastBlackFrame; ++f)
-        assert(replay.present() == Scene::Black);
-    assert(replay.present() == Scene::Platform);
-    assert(replay.presentedBlackFrames() == sequence.presentedBlackFrames());
+        require(replay.present() == Scene::Black);
+    require(replay.present() == Scene::Platform);
+    require(replay.presentedBlackFrames() == sequence.presentedBlackFrames());
 
     sequence.reset();
-    assert(sequence.nextScene() == Scene::Driving);
-    assert(sequence.presentedBlackFrames() == 0);
-    assert(sequence.remainingBlackFrames() == 0);
-    assert(sequence.present() == Scene::Driving);
-    assert(sequence.requestExit());
+    require(sequence.nextScene() == Scene::Driving);
+    require(sequence.presentedBlackFrames() == 0);
+    require(sequence.remainingBlackFrames() == 0);
+    require(sequence.present() == Scene::Driving);
+    require(sequence.requestExit());
     for (std::uint32_t n = 0; n < kBlackFrames; ++n)
-        assert(sequence.present() == Scene::Black);
-    assert(sequence.present() == Scene::Platform);
+        require(sequence.present() == Scene::Black);
+    require(sequence.present() == Scene::Platform);
 
     std::cout << "VPD_ORIGINAL_STAGE_TRANSITION_TIMING_CONTRACT_PASS"
               << " last_driving=3606 first_black=3607 last_black=3647"
