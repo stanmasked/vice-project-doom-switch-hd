@@ -1,0 +1,387 @@
+name: FCEUX Real Runtime Smoke (Synthetic ROM)
+
+on:
+  push:
+    paths:
+      - ".github/workflows/fceux-runtime-smoke.yml"
+      - "tools/build_fceux_smoke_rom.py"
+      - "tools/fceux_runtime_smoke.lua"
+      - "tools/capture_fceux_movie_storyboard.lua"
+      - "tools/audit_private_fceux_storyboard.py"
+      - "tests/test_build_fceux_smoke_rom.py"
+      - "tools/build_fceux_smoke_movie.py"
+      - "tests/test_build_fceux_smoke_movie.py"
+      - "tools/build_fceux_smoke_mmc3_nes2.py"
+      - "tests/test_build_fceux_smoke_mmc3_nes2.py"
+      - "tools/run_private_fm2_storyboard.py"
+      - "tools/run_private_fm2_storyboard.lua"
+      - "tests/test_run_private_fm2_storyboard.py"
+      - "tests/test_audit_private_fceux_storyboard.py"
+      - "tests/test_fceux_storyboard.lua"
+      - "tools/audit_private_fm2_terminal_witness.py"
+      - "tests/test_audit_private_fm2_terminal_witness.py"
+      - "tools/capture_private_mmc3_chr_focus.lua"
+      - "tools/audit_private_mmc3_chr_mapping.py"
+      - "tests/test_audit_private_mmc3_chr_mapping.py"
+      - "tools/audit_private_mmc3_chr_trace_witness.py"
+      - "tests/test_audit_private_mmc3_chr_trace_witness.py"
+  pull_request:
+    paths:
+      - ".github/workflows/fceux-runtime-smoke.yml"
+      - "tools/build_fceux_smoke_rom.py"
+      - "tools/fceux_runtime_smoke.lua"
+      - "tools/capture_fceux_movie_storyboard.lua"
+      - "tools/audit_private_fceux_storyboard.py"
+      - "tests/test_build_fceux_smoke_rom.py"
+      - "tools/build_fceux_smoke_movie.py"
+      - "tests/test_build_fceux_smoke_movie.py"
+      - "tools/build_fceux_smoke_mmc3_nes2.py"
+      - "tests/test_build_fceux_smoke_mmc3_nes2.py"
+      - "tools/run_private_fm2_storyboard.py"
+      - "tools/run_private_fm2_storyboard.lua"
+      - "tests/test_run_private_fm2_storyboard.py"
+      - "tests/test_audit_private_fceux_storyboard.py"
+      - "tests/test_fceux_storyboard.lua"
+      - "tools/audit_private_fm2_terminal_witness.py"
+      - "tests/test_audit_private_fm2_terminal_witness.py"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  real-fceux-api:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Ubuntu FCEUX and Xvfb
+        run: |
+          sudo apt-get update -qq
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y fceux xvfb xauth
+          command -v fceux
+          # Export only the open-source emulator package; never include game ROM/FM2.
+          mkdir -p "$RUNNER_TEMP/fceux-runtime-package"
+          (cd "$RUNNER_TEMP/fceux-runtime-package" && apt-get download fceux liblua5.1-0)
+          : > "$RUNNER_TEMP/fceux-runtime-package/package-info.txt"
+          for package in "$RUNNER_TEMP"/fceux-runtime-package/*.deb; do
+            dpkg-deb -f "$package" Package Version Architecture >> "$RUNNER_TEMP/fceux-runtime-package/package-info.txt"
+            printf '\n' >> "$RUNNER_TEMP/fceux-runtime-package/package-info.txt"
+          done
+          (cd "$RUNNER_TEMP/fceux-runtime-package" && sha256sum ./*.deb > SHA256SUMS)
+      - name: Export emulator package for private local replay
+        uses: actions/upload-artifact@v4
+        with:
+          name: fceux-runtime-package-ubuntu24
+          path: ${{ runner.temp }}/fceux-runtime-package/*
+          if-no-files-found: error
+          retention-days: 1
+      - name: Generate invented NES program only inside temporary directory
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -p test_build_fceux_smoke_rom.py -v
+          python3 tools/build_fceux_smoke_rom.py --output "$RUNNER_TEMP/fceux_fabricated.nes"
+          python3 -m unittest discover -s tests -p test_build_fceux_smoke_movie.py -v
+          python3 tools/build_fceux_smoke_movie.py --rom "$RUNNER_TEMP/fceux_fabricated.nes" --output "$RUNNER_TEMP/fceux_fabricated.fm2"
+          mkdir -p "$RUNNER_TEMP/fceux_fabricated_frames"
+      - name: Run real FCEUX Lua screen hooks on that invented ROM
+        shell: bash
+        env:
+          SDL_AUDIODRIVER: dummy
+        run: |
+          set -euo pipefail
+          export VPD_SMOKE_DIRECTORY="$RUNNER_TEMP/fceux_fabricated_frames"
+          export VPD_STORYBOARD_SCRIPT="$GITHUB_WORKSPACE/tools/capture_fceux_movie_storyboard.lua"
+          export VPD_SMOKE_MOVIE="$RUNNER_TEMP/fceux_fabricated.fm2"
+          export VPD_SMOKE_WITNESS="$RUNNER_TEMP/fceux_movie_verified.txt"
+          logfile="$RUNNER_TEMP/fceux_smoke.log"
+          timeout 55s xvfb-run -a -s '-screen 0 1024x768x24' \
+            fceux --no-config 1 --sound 0 \
+              --loadlua tools/fceux_runtime_smoke.lua \
+              "$RUNNER_TEMP/fceux_fabricated.nes" >"$logfile" 2>&1 &
+          pid=$!
+          cleanup() { kill "$pid" 2>/dev/null || true; wait "$pid" 2>/dev/null || true; }
+          trap cleanup EXIT
+          for i in $(seq 1 75); do
+            if [[ -f "$VPD_SMOKE_DIRECTORY/frame_000016.meta.txt" ]]; then break; fi
+            if ! kill -0 "$pid" 2>/dev/null; then break; fi
+            sleep 0.5
+          done
+          if [[ ! -f "$VPD_SMOKE_DIRECTORY/frame_000016.meta.txt" ]]; then
+            echo "Real FCEUX did not save second frame" >&2
+            tail -100 "$logfile" >&2
+            exit 1
+          fi
+          python3 tools/audit_private_fceux_storyboard.py \
+            "$VPD_SMOKE_DIRECTORY" --require-complete-window
+          test -f "$VPD_SMOKE_WITNESS"
+          grep -qx "movie_loaded=yes" "$VPD_SMOKE_WITNESS"
+          grep -qx "movie_mode=playback" "$VPD_SMOKE_WITNESS"
+          grep -qx "movie_readonly=yes" "$VPD_SMOKE_WITNESS"
+          grep -qx "movie_frames=64" "$VPD_SMOKE_WITNESS"
+          grep -qx "cpu_ram_a_at_frame_8=0" "$VPD_SMOKE_WITNESS"
+          grep -qx "cpu_ram_a_at_frame_16=1" "$VPD_SMOKE_WITNESS"
+          grep -qx "controller_evidence=cpu_4016_to_zero_page" "$VPD_SMOKE_WITNESS"
+          echo "REAL_FCEUX_SYNTHETIC_STORYBOARD_PASS frames=8,16 original_game_proven=no"
+          cleanup
+          trap - EXIT
+      - name: Exercise complete private-style FM2 launcher on invented ROM and movie
+        shell: bash
+        env:
+          SDL_AUDIODRIVER: dummy
+        run: |
+          set -euo pipefail
+          # All paths are ephemeral GitHub runner files with a handmade
+          # 6502 program and handmade 64-frame movie. NO user ROM or FM2.
+          if ! python3 tools/run_private_fm2_storyboard.py \
+            --rom "$RUNNER_TEMP/fceux_fabricated.nes" \
+            --movie "$RUNNER_TEMP/fceux_fabricated.fm2" \
+            --output "$RUNNER_TEMP/fceux_full_timeline_synthetic" \
+            --interval 8 --timeout-seconds 30; then
+            echo "Invented ROM only: emulator diagnostic follows" >&2
+            tail -65 "$RUNNER_TEMP/fceux_full_timeline_synthetic.fceux.log" >&2
+            exit 1
+          fi
+          test -f "$RUNNER_TEMP/fceux_full_timeline_synthetic.terminal_witness.txt"
+          grep -qx 'movie_terminal_frame=63' \
+            "$RUNNER_TEMP/fceux_full_timeline_synthetic.terminal_witness.txt"
+          grep -qx 'movie_frame_count=64' \
+            "$RUNNER_TEMP/fceux_full_timeline_synthetic.terminal_witness.txt"
+          test "$(find "$RUNNER_TEMP/fceux_full_timeline_synthetic" -maxdepth 1 -name 'frame_*.meta.txt' | wc -l)" -eq 8
+          python3 tools/audit_private_fceux_storyboard.py \
+            "$RUNNER_TEMP/fceux_full_timeline_synthetic" --require-complete-window
+          echo "REAL_FCEUX_PRIVATE_RUNNER_SYNTHETIC_PASS terminal_frame=63 captured=8 original_game_proven=no"
+      - name: Run real FCEUX on invented NES2 MMC3 and verify recorded input
+        shell: bash
+        env:
+          SDL_AUDIODRIVER: dummy
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -p test_build_fceux_smoke_mmc3_nes2.py -v
+          python3 tools/build_fceux_smoke_mmc3_nes2.py \
+            --output "$RUNNER_TEMP/fceux_invented_mmc3.nes"
+          python3 tools/build_fceux_smoke_movie.py \
+            --rom "$RUNNER_TEMP/fceux_invented_mmc3.nes" \
+            --output "$RUNNER_TEMP/fceux_invented_mmc3.fm2"
+          export VPD_SMOKE_DIRECTORY="$RUNNER_TEMP/fceux_invented_mmc3_frames"
+          export VPD_STORYBOARD_SCRIPT="$GITHUB_WORKSPACE/tools/capture_fceux_movie_storyboard.lua"
+          export VPD_SMOKE_MOVIE="$RUNNER_TEMP/fceux_invented_mmc3.fm2"
+          export VPD_SMOKE_WITNESS="$RUNNER_TEMP/fceux_invented_mmc3.input_witness.txt"
+          mkdir -p "$VPD_SMOKE_DIRECTORY"
+          logfile="$RUNNER_TEMP/fceux_mmc3.log"
+          timeout 55s xvfb-run -a -s '-screen 0 1024x768x24' \
+            fceux --no-config 1 --sound 0 \
+              --loadlua tools/fceux_runtime_smoke.lua \
+              "$RUNNER_TEMP/fceux_invented_mmc3.nes" >"$logfile" 2>&1 &
+          pid=$!
+          cleanup() { kill "$pid" >/dev/null 2>&1 || true; wait "$pid" >/dev/null 2>&1 || true; }
+          trap cleanup EXIT
+          for n in $(seq 1 75); do
+            if [[ -f "$VPD_SMOKE_WITNESS" ]]; then break; fi
+            if ! kill -0 "$pid" 2>/dev/null; then break; fi
+            sleep 0.5
+          done
+          if [[ ! -f "$VPD_SMOKE_WITNESS" ]]; then
+            echo "Real FCEUX did not execute NES2 MMC3 FM2 input" >&2
+            tail -120 "$logfile" >&2
+            exit 1
+          fi
+          grep -qx "cpu_ram_a_at_frame_8=0" "$VPD_SMOKE_WITNESS"
+          grep -qx "cpu_ram_a_at_frame_16=1" "$VPD_SMOKE_WITNESS"
+          grep -qx "movie_frames=64" "$VPD_SMOKE_WITNESS"
+          python3 tools/audit_private_fceux_storyboard.py \
+            "$VPD_SMOKE_DIRECTORY" --require-complete-window
+          cleanup
+          trap - EXIT
+          # The same private full-timeline launcher is separately checked
+          # against the invented MMC3 ROM/FM2, never against user files.
+          if ! python3 tools/run_private_fm2_storyboard.py \
+            --rom "$RUNNER_TEMP/fceux_invented_mmc3.nes" \
+            --movie "$RUNNER_TEMP/fceux_invented_mmc3.fm2" \
+            --output "$RUNNER_TEMP/fceux_mmc3_full_timeline" \
+            --interval 8 --timeout-seconds 30 --trace-chr-banks 124,125,126; then
+            echo "Invented MMC3 ROM only: emulator diagnostic follows" >&2
+            tail -65 "$RUNNER_TEMP/fceux_mmc3_full_timeline.fceux.log" >&2
+            exit 1
+          fi
+          grep -qx "movie_terminal_frame=63" \
+            "$RUNNER_TEMP/fceux_mmc3_full_timeline.terminal_witness.txt"
+          grep -qx "movie_frame_gaps=0" \
+            "$RUNNER_TEMP/fceux_mmc3_full_timeline.terminal_witness.txt"
+          python3 tools/audit_private_fceux_storyboard.py \
+            "$RUNNER_TEMP/fceux_mmc3_full_timeline" \
+            --require-complete-window
+          PYTHONPATH=tools python3 - <<'PY'
+          import os
+          from pathlib import Path
+          from audit_private_mmc3_chr_mapping import analyze_trace
+          from audit_private_mmc3_chr_trace_witness import audit_trace_witness
+          log=Path(os.environ["RUNNER_TEMP"])/"fceux_mmc3_full_timeline.mmc3_chr_focus.tsv"
+          witness=Path(os.environ["RUNNER_TEMP"])/"fceux_mmc3_full_timeline.mmc3_chr_focus.witness.txt"
+          evidence=analyze_trace(log,bank_count=128,focus_banks=(124,125,126),frame_interval=8)
+          stats=audit_trace_witness(witness,expected_terminal_frame=63,
+                                    parsed_pair_count=evidence["valid_chr_mapping_data_writes"])
+          assert stats["raw_matching_mapping_writes"]>=stats["retained_deduplicated_mapping_pairs"]>0
+          assert stats["trace_closed"]
+          assert all(item["mapping_write_count"]>0 for item in evidence["focus_bank_reports"])
+          assert not evidence["actual_ppu_rendered_bank_proven"]
+          print("REAL_FCEUX_MMC3_CPU_BANK_SELECTION_PASS banks=124,125,126 rendered=no")
+          PY
+          echo "REAL_FCEUX_NES2_MMC3_SYNTHETIC_PASS input_frame_16=A terminal_frame=63 original_game_proven=no"
+      - name: Run extended 256-frame invented MMC3 movie through real private-style runner
+        shell: bash
+        env:
+          SDL_AUDIODRIVER: dummy
+        run: |
+          set -euo pipefail
+          python3 tools/build_fceux_smoke_movie.py \
+            --rom "$RUNNER_TEMP/fceux_invented_mmc3.nes" \
+            --frames 256 \
+            --output "$RUNNER_TEMP/fceux_invented_mmc3_extended.fm2"
+          python3 tools/run_private_fm2_storyboard.py \
+            --rom "$RUNNER_TEMP/fceux_invented_mmc3.nes" \
+            --movie "$RUNNER_TEMP/fceux_invented_mmc3_extended.fm2" \
+            --output "$RUNNER_TEMP/fceux_mmc3_extended_run" \
+            --interval 16 --timeout-seconds 110 --trace-chr-banks 124,125,126
+          test "$(find "$RUNNER_TEMP/fceux_mmc3_extended_run" -maxdepth 1 -name 'frame_*.meta.txt' | wc -l)" -eq 16
+          grep -qx 'movie_terminal_frame=255' \
+            "$RUNNER_TEMP/fceux_mmc3_extended_run.terminal_witness.txt"
+          grep -qx 'movie_frame_gaps=0' \
+            "$RUNNER_TEMP/fceux_mmc3_extended_run.terminal_witness.txt"
+          grep -qx 'trace_closed=yes' \
+            "$RUNNER_TEMP/fceux_mmc3_extended_run.mmc3_chr_focus.witness.txt"
+          echo "REAL_FCEUX_EXTENDED_256_FRAME_SYNTHETIC_PASS frames=256 snapshots=16 including_terminal=255 original_game_proven=no"
+      - name: Verify bounded capture window and non-aligned stop in real FCEUX
+        shell: bash
+        env:
+          SDL_AUDIODRIVER: dummy
+        run: |
+          set -euo pipefail
+          python3 tools/run_private_fm2_storyboard.py \
+            --rom "$RUNNER_TEMP/fceux_invented_mmc3.nes" \
+            --movie "$RUNNER_TEMP/fceux_invented_mmc3_extended.fm2" \
+            --output "$RUNNER_TEMP/fceux_mmc3_transition_window" \
+            --interval 16 --start-frame 100 --stop-frame 251 \
+            --timeout-seconds 110
+          python3 tools/audit_private_fceux_storyboard.py \
+            "$RUNNER_TEMP/fceux_mmc3_transition_window" --require-complete-window
+          PYTHONPATH=tools python3 - <<'PY'
+          import os
+          from pathlib import Path
+          from audit_private_fm2_terminal_witness import audit_movie_witness
+          from audit_private_fceux_storyboard import audit
+          root=Path(os.environ["RUNNER_TEMP"])
+          base=root/"fceux_mmc3_transition_window"
+          witness=audit_movie_witness(
+              root/"fceux_mmc3_transition_window.terminal_witness.txt",
+              expected_frame_count=256)
+          report=audit(base,require_complete=True)
+          assert witness["terminal_frame_verified"]==255
+          assert witness["frame_gaps"]==0
+          assert report["sample_count"]==10,report
+          assert report["expected_sample_count"]==10,report
+          assert report["first_frame"]==112,report
+          assert report["last_frame"]==251,report
+          assert report["capture_interval"]==16,report
+          assert report["capture_limit"]==10,report
+          print("REAL_FCEUX_FOCUSED_WINDOW_PASS sampled=112..240 step=16 plus stop=251 movie_terminal=255 original_game_proven=no")
+          PY
+      - name: Test real 1803-frame capture cadence on extended invented MMC3 FM2
+        if: github.event_name == 'pull_request'
+        shell: bash
+        env:
+          SDL_AUDIODRIVER: dummy
+        run: |
+          set -euo pipefail
+          # Solely an invented 6502 ROM and invented 4096-frame FM2.
+          # Preserve user's original game/movie outside public CI.
+          python3 tools/build_fceux_smoke_movie.py \
+            --rom "$RUNNER_TEMP/fceux_invented_mmc3.nes" \
+            --frames 4096 \
+            --output "$RUNNER_TEMP/fceux_invented_mmc3_cadence.fm2"
+          if ! python3 tools/run_private_fm2_storyboard.py \
+            --rom "$RUNNER_TEMP/fceux_invented_mmc3.nes" \
+            --movie "$RUNNER_TEMP/fceux_invented_mmc3_cadence.fm2" \
+            --output "$RUNNER_TEMP/fceux_mmc3_1803_cadence" \
+            --interval 1803 --timeout-seconds 230; then
+            echo "Only invented MMC3 ROM used; failure log:" >&2
+            tail -75 "$RUNNER_TEMP/fceux_mmc3_1803_cadence.fceux.log" >&2
+            exit 1
+          fi
+          PYTHONPATH=tools python3 - <<'PY'
+          import os
+          from pathlib import Path
+          from audit_private_fm2_terminal_witness import audit_movie_witness
+          from audit_private_fceux_storyboard import audit
+          root=Path(os.environ["RUNNER_TEMP"])
+          base=root/"fceux_mmc3_1803_cadence"
+          witness=audit_movie_witness(root/"fceux_mmc3_1803_cadence.terminal_witness.txt",
+                                      expected_frame_count=4096)
+          assert witness["terminal_frame_verified"]==4095
+          assert witness["frame_gaps"]==0
+          assert witness["loaded_rom_verified"]
+          assert witness["movie_readonly"]
+          assert witness["fm2_header_power_on_preflight_verified"]
+          report=audit(base,require_complete=True)
+          assert report["sample_count"]==3,report
+          assert report["first_frame"]==1803,report
+          assert report["last_frame"]==4095,report
+          assert report["capture_interval"]==1803,report
+          assert not report["original_game_emulation_proven"]
+          print("REAL_FCEUX_SYNTHETIC_1803_CADENCE_PASS terminal=4095 snapshots=1803,3606,4095 source_game=no")
+          PY
+      - name: Stress long real FCEUX playback with varied synthetic inputs
+        if: github.event_name == 'pull_request'
+        shell: bash
+        env:
+          SDL_AUDIODRIVER: dummy
+        run: |
+          set -euo pipefail
+          # Repeat a long, read-only replay with two distinct invented input
+          # patterns. All generated movies and captures stay in RUNNER_TEMP.
+          for pattern in alternating bursts; do
+            movie="$RUNNER_TEMP/fceux_long_${pattern}.fm2"
+            output="$RUNNER_TEMP/fceux_long_${pattern}"
+            python3 tools/build_fceux_smoke_movie.py \
+              --rom "$RUNNER_TEMP/fceux_invented_mmc3.nes" \
+              --frames 4096 --pattern "$pattern" --output "$movie"
+            if ! python3 tools/run_private_fm2_storyboard.py \
+              --rom "$RUNNER_TEMP/fceux_invented_mmc3.nes" \
+              --movie "$movie" --output "$output" \
+              --interval 1024 --timeout-seconds 230; then
+              echo "Synthetic input pattern failed: $pattern" >&2
+              tail -75 "$output.fceux.log" >&2
+              exit 1
+            fi
+            PYTHONPATH=tools PATTERN="$pattern" python3 - <<'PY'
+          import os
+          from pathlib import Path
+          from audit_private_fm2_terminal_witness import audit_movie_witness
+          from audit_private_fceux_storyboard import audit
+          root=Path(os.environ["RUNNER_TEMP"])
+          pattern=os.environ["PATTERN"]
+          base=root/f"fceux_long_{pattern}"
+          witness=audit_movie_witness(
+              root/f"fceux_long_{pattern}.terminal_witness.txt",
+              expected_frame_count=4096)
+          assert witness["terminal_frame_verified"]==4095
+          assert witness["frame_gaps"]==0
+          assert witness["movie_readonly"]
+          report=audit(base,require_complete=True)
+          assert report["sample_count"]==4,report
+          assert report["first_frame"]==1024,report
+          assert report["last_frame"]==4095,report
+          assert report["capture_interval"]==1024,report
+          assert not report["original_game_emulation_proven"]
+          print(f"REAL_FCEUX_SYNTHETIC_LONG_PATTERN_PASS pattern={pattern} frames=4096 snapshots=1024,2048,3072,4095 original_game_proven=no")
+          PY
+          done
+      - name: Reject tracked ROM, FM2 and binary capture files
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git ls-files | grep -E -i '\.(nes|fm2|nro|pal|ppm|bin)$'; then
+            echo "ROM or capture must never be tracked" >&2
+            exit 1
+          fi

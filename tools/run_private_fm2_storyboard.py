@@ -1,0 +1,260 @@
+#!/usr/bin/env python3
+"""Run a locally installed real FCEUX with a private ROM and matching FM2.
+
+Never copy files to any GitHub repository or third-party service.
+The command does not claim it has reproduced the source game unless a real
+local FCEUX process completes the movie-timeline witness and capture audit.
+"""
+import argparse
+import hashlib
+import json
+import os
+from pathlib import Path
+import shutil
+import subprocess
+import sys
+import time
+
+from audit_private_fm2 import audit_movie, rom_payload
+from audit_private_fceux_storyboard import audit as audit_storyboard
+from audit_private_mmc3_chr_mapping import analyze_trace
+from audit_private_mmc3_chr_trace_witness import audit_trace_witness
+from audit_private_fm2_terminal_witness import audit_movie_witness
+from audit_private_nes_variant_banks import read_layout
+
+SCRIPT_DIR=Path(__file__).resolve().parent
+
+
+def file_sha256(path):
+    """Private in-memory source-file integrity stamp; never emit a digest."""
+    path=Path(path)
+    if path.is_symlink() or not path.is_file():
+        raise ValueError("private playback input unavailable or linked")
+    digest=hashlib.sha256()
+    with path.open("rb") as file:
+        while True:
+            chunk=file.read(1024*1024)
+            if not chunk:
+                break
+            digest.update(chunk)
+    return digest.digest()
+
+
+
+def private_target(directory):
+    requested=Path(directory).expanduser()
+    # Check the caller's path before resolving it. resolve() erases the
+    # lexical symlink, including a dangling symlink to a not-yet-created
+    # directory, which would otherwise silently redirect private captures.
+    if requested.is_symlink():
+        raise ValueError("private capture destination must not be a symlink")
+    directory=requested.resolve(strict=False)
+    if directory.exists():
+        raise ValueError("private capture destination must be a NEW directory")
+    parent=directory.parent
+    if not parent.is_dir() or parent.is_symlink():
+        raise ValueError("private output parent must exist and not be a symlink")
+    for ancestor in (parent,*parent.parents):
+        if (ancestor/".git").exists():
+            raise ValueError("refusing a private capture folder inside any Git checkout")
+    return directory
+
+
+def capture_plan(movie_summary,interval=1803,start_frame=None,stop_frame=None):
+    frames=movie_summary["frames"]
+    if not movie_summary["rom_identity_matched"]:
+        raise ValueError("ROM identity not independently verified")
+    if not movie_summary["starts_from_power_on"]:
+        raise ValueError("FM2 does not have a reliable power-on initial state")
+    if not 1<=interval<=120000:
+        raise ValueError("unsupported storyboard frame interval")
+    custom_window=start_frame is not None or stop_frame is not None
+    capture_start=interval if start_frame is None else start_frame
+    capture_stop=frames-1 if stop_frame is None else stop_frame
+    if (not isinstance(capture_start,int) or isinstance(capture_start,bool)
+        or not isinstance(capture_stop,int) or isinstance(capture_stop,bool)):
+        raise ValueError("capture window frame bounds must be integers")
+    # Preserve the familiar error for a full movie too short to reach its
+    # first reliable after-frame capture.
+    if not custom_window and capture_stop<capture_start:
+        raise ValueError("movie shorter than the first reliable capture interval")
+    if capture_start<0 or capture_stop<capture_start or capture_stop>=frames:
+        raise ValueError("capture window outside the FM2 movie timeline")
+    # FCEUX uses the global movie frame counter, so window sampling remains
+    # aligned to the same cadence regardless of where the window begins.
+    first=max(interval,(capture_start+interval-1)//interval*interval)
+    regular_samples=0 if first>capture_stop else (capture_stop-first)//interval+1
+    terminal_sample=int(capture_stop%interval!=0)
+    samples=regular_samples+terminal_sample
+    if samples<1:
+        raise ValueError("capture window contains no scheduled frames")
+    if samples>64:
+        raise ValueError("capture window requires more than 64 storyboard samples")
+    return {"frames":frames,"last_frame":frames-1,
+            "interval":interval,"sample_count":samples,
+            "start_frame":capture_start,"stop_frame":capture_stop}
+
+
+def parse_chr_targets(spec,bank_count):
+    if not spec:
+        return ()
+    parts=spec.split(",")
+    if len(parts)>64 or any(not p.isdecimal() or p.startswith("+") for p in parts):
+        raise ValueError("invalid comma-separated CHR target bank list")
+    result=tuple(sorted({int(p) for p in parts}))
+    if not result or any(x>=bank_count for x in result):
+        raise ValueError("CHR focus bank outside owner ROM layout")
+    return result
+
+
+def launch(rom,movie,directory,fceux="fceux",timeout_seconds=1800,
+           interval=1803,trace_chr_banks="",start_frame=None,stop_frame=None):
+    rom=Path(rom).expanduser()
+    movie=Path(movie).expanduser()
+    if rom.is_symlink() or movie.is_symlink():
+        raise ValueError("private ROM/movie symlinks are not accepted")
+    rom=rom.resolve(strict=True)
+    movie=movie.resolve(strict=True)
+    expected_source_digests=(file_sha256(rom),file_sha256(movie))
+    summary=audit_movie(movie,rom=rom)
+    plan=capture_plan(summary,interval=interval,
+                      start_frame=start_frame,stop_frame=stop_frame)
+    bank_count=0
+    if trace_chr_banks:
+        cartridge=read_layout(rom)
+        if cartridge["mapper"]!=4:
+            raise ValueError("private MMC3 CHR trace requires a Mapper 4 cartridge")
+        bank_count=len(cartridge["chr"])//1024
+    focus=parse_chr_targets(trace_chr_banks,bank_count)
+    target=private_target(directory)
+    binary=shutil.which(fceux)
+    if binary is None:
+        raise ValueError("FCEUX executable not installed (no emulation performed)")
+    if not 1<=timeout_seconds<=7200:
+        raise ValueError("invalid private replay watchdog")
+    storyboard=SCRIPT_DIR/"capture_fceux_movie_storyboard.lua"
+    wrapper=SCRIPT_DIR/"run_private_fm2_storyboard.lua"
+    for source in (storyboard,wrapper):
+        if not source.is_file():
+            raise ValueError("missing public source-only FCEUX Lua script")
+    witness=target.parent/(target.name+".terminal_witness.txt")
+    logfile=target.parent/(target.name+".fceux.log")
+    trace_path=target.parent/(target.name+".mmc3_chr_focus.tsv")
+    trace_summary=target.parent/(target.name+".mmc3_chr_focus.witness.txt")
+    # Validate all destinations before creating the capture folder. A stale
+    # witness must not cause a partial or ambiguous new private session.
+    if witness.exists() or logfile.exists() or witness.is_symlink() or logfile.is_symlink():
+        raise ValueError("private witness or log filename already exists")
+    if focus and any(p.exists() or p.is_symlink() for p in (trace_path,trace_summary)):
+        raise ValueError("private MMC3 trace or summary filename already exists")
+    target.mkdir(mode=0o700)
+    env=os.environ.copy()
+    env.update({
+        "VPD_PRIVATE_OUTPUT_DIR":str(target),
+        "VPD_PRIVATE_FM2_PATH":str(movie),
+        "VPD_PRIVATE_STORYBOARD_SCRIPT":str(storyboard.resolve()),
+        "VPD_PRIVATE_WITNESS":str(witness),
+        "VPD_PRIVATE_FRAME_COUNT":str(plan["frames"]),
+        "VPD_PRIVATE_FM2_HEADER_POWERON_PREFLIGHT":"yes",
+        "VPD_PRIVATE_ROM_PAYLOAD_MD5":rom_payload(rom)[0].hex(),
+        "VPD_PRIVATE_CAPTURE_INTERVAL":str(plan["interval"]),
+        "VPD_PRIVATE_CAPTURE_LIMIT":str(plan["sample_count"]),
+        "VPD_PRIVATE_CAPTURE_START_FRAME":str(plan["start_frame"]),
+        "VPD_PRIVATE_CAPTURE_STOP_FRAME":str(plan["stop_frame"])
+    })
+    if focus:
+        chr_capture=SCRIPT_DIR/"capture_private_mmc3_chr_focus.lua"
+        if not chr_capture.is_file():
+            raise ValueError("private CHR capture Lua script missing")
+        env.update({
+            "VPD_PRIVATE_MMC3_TRACE_SCRIPT":str(chr_capture.resolve()),
+            "VPD_PRIVATE_MMC3_TRACE_PATH":str(trace_path),
+            "VPD_PRIVATE_MMC3_SUMMARY_PATH":str(trace_summary),
+            "VPD_PRIVATE_MMC3_TARGETS":",".join(str(x) for x in focus),
+            "VPD_PRIVATE_MMC3_BANK_COUNT":str(bank_count)
+        })
+    command=[binary,"--no-config","1","--sound","0",
+             "--loadlua",str(wrapper.resolve()),str(rom)]
+    if sys.platform.startswith("linux") and not env.get("DISPLAY") and shutil.which("xvfb-run"):
+        command=["xvfb-run","-a","-s","-screen 0 1024x768x24",*command]
+    process=None
+    with logfile.open("xb") as log:
+        try:
+            process=subprocess.Popen(command,env=env,stdout=log,stderr=subprocess.STDOUT)
+            deadline=time.monotonic()+timeout_seconds
+            while time.monotonic()<deadline:
+                if witness.is_file():
+                    break
+                if process.poll() is not None:
+                    raise ValueError("FCEUX exited before terminal FM2 witness")
+                time.sleep(0.25)
+            else:
+                raise ValueError("FCEUX did not reach terminal movie frame within watchdog")
+        finally:
+            if process is not None and process.poll() is None:
+                process.terminate()
+                try:process.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+                    process.wait(timeout=5)
+    movie_evidence=audit_movie_witness(witness,expected_frame_count=plan["frames"])
+    if (file_sha256(rom),file_sha256(movie))!=expected_source_digests:
+        raise ValueError("private ROM or FM2 changed during FCEUX playback")
+    report=audit_storyboard(target,require_complete=True)
+    if (report["sample_count"]!=plan["sample_count"]
+        or not report["complete_window_verified"]):
+        raise ValueError("private FM2 storyboard incomplete")
+    result={"classification":"private ROM/FM2 actual emulator terminal-frame preflight",
+            "rom_identity_matched":True,
+            "fceux_terminal_frame_confirmed":True,
+            "rom_loaded_in_emulator_verified":movie_evidence["loaded_rom_verified"],
+            "fm2_header_power_on_preflight_verified":
+                movie_evidence["fm2_header_power_on_preflight_verified"],
+            "private_input_files_unchanged_verified":True,
+            "verified_consecutive_movie_frames":movie_evidence["consecutive_unique_frames"],
+            "movie_first_observed_frame":movie_evidence["first_observed_frame"],
+            "frame_count":plan["frames"],
+            "storyboard_frames":report["sample_count"],
+            "storyboard_complete":True,
+            "original_level_identity_proven":False,
+            "game_completion_proven":False}
+    if focus:
+        evidence=analyze_trace(trace_path,bank_count=bank_count,
+                               focus_banks=focus,frame_interval=interval)
+        summary_evidence=audit_trace_witness(
+            trace_summary,expected_terminal_frame=plan["last_frame"],
+            parsed_pair_count=evidence["valid_chr_mapping_data_writes"])
+        evidence["trace_finalization"]=summary_evidence
+        evidence["mapping_write_count_semantics"]="deduplicated observed pairs per interval"
+        result["mmc3_chr_mapper_write_evidence"]=evidence
+    return result
+
+
+def main():
+    p=argparse.ArgumentParser(description=__doc__)
+    p.add_argument("--rom",type=Path,required=True)
+    p.add_argument("--movie",type=Path,required=True)
+    p.add_argument("--output",type=Path,required=True)
+    p.add_argument("--fceux",default="fceux")
+    p.add_argument("--interval",type=int,default=1803,
+                   help="global FCEUX frame cadence for the private storyboard")
+    p.add_argument("--start-frame",type=int,default=None,
+                   help="optional inclusive global frame at which screenshot sampling begins")
+    p.add_argument("--stop-frame",type=int,default=None,
+                   help="optional inclusive global frame for the final screenshot; playback still runs to movie end")
+    p.add_argument("--timeout-seconds",type=int,default=1800)
+    p.add_argument("--trace-chr-banks",default="",
+                   help="opt-in numeric CHR bank list; mapper writes only, not PPU display")
+    a=p.parse_args()
+    try:
+        result=launch(a.rom,a.movie,a.output,fceux=a.fceux,
+                      interval=a.interval,timeout_seconds=a.timeout_seconds,
+                      trace_chr_banks=a.trace_chr_banks,
+                      start_frame=a.start_frame,stop_frame=a.stop_frame)
+    except (OSError,ValueError,UnicodeError) as exc:
+        p.exit(1,"PRIVATE_FM2_REPLAY_INCONCLUSIVE: "+str(exc)+"\n")
+    print("PRIVATE_FM2_REPLAY_FRAME_CAPTURE_PASS")
+    print(json.dumps(result,indent=2))
+
+if __name__=="__main__":
+    main()

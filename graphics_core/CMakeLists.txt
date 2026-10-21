@@ -261,3 +261,30 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
 endif()
 add_test(NAME hd_impact_lighting_bounds
          COMMAND vpd_hd_impact_lighting_test)
+
+# Stage 160: ROM-free overhead driving preview, with hard-clipped road and
+# separately bounded HUD. Opt-in only; approved platform golden unchanged.
+add_executable(vpd_driving_preview_test ../tests/test_driving_preview.cpp)
+target_link_libraries(vpd_driving_preview_test PRIVATE vpd_scene_renderer)
+target_include_directories(vpd_driving_preview_test PRIVATE
+                           ${CMAKE_CURRENT_SOURCE_DIR}/../game_core)
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+  target_compile_options(vpd_driving_preview_test PRIVATE
+                         -Wall -Wextra -Wpedantic -Werror)
+endif()
+add_test(NAME romfree_driving_preview_hud_road_isolation
+         COMMAND vpd_driving_preview_test)
+
+# Stage 161: synthetic driving state is independent from the original
+# platform simulation, with deterministic steering/collision invariants.
+add_executable(vpd_driving_simulation_test
+               ../tests/test_driving_simulation.cpp)
+target_link_libraries(vpd_driving_simulation_test PRIVATE vpd_simulation)
+target_include_directories(vpd_driving_simulation_test PRIVATE
+                           ${CMAKE_CURRENT_SOURCE_DIR}/../game_core)
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+  target_compile_options(vpd_driving_simulation_test PRIVATE
+                         -Wall -Wextra -Wpedantic -Werror)
+endif()
+add_test(NAME romfree_driving_independent_vehicle_controls
+         COMMAND vpd_driving_simulation_test)

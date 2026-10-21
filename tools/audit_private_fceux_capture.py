@@ -72,6 +72,7 @@ def audit_directory(root,allow_incomplete=False,require_logs=False):
     screen_mode=None
     capture_format=None
     trace_clock=None
+    window_contract="uninitialized"
     previous_frame=-1
     previous_events=-1
     previous_drops=-1
@@ -87,6 +88,24 @@ def audit_directory(root,allow_incomplete=False,require_logs=False):
             raise ValueError("duplicate or out-of-order capture frame")
         previous_frame=frame
         meta=metadata(metapath)
+        window_keys=("capture_window_start","capture_window_stop","register_log_scope")
+        present=[key in meta for key in window_keys]
+        if any(present) and not all(present):
+            raise ValueError("incomplete capture-window provenance metadata")
+        if all(present):
+            start=integer(meta,"capture_window_start",0,999999999)
+            stop=integer(meta,"capture_window_stop",0,999999999)
+            if stop<start or not start<=frame<=stop:
+                raise ValueError("sampled frame outside declared capture window")
+            if meta["register_log_scope"]!="selected_frame_window_only":
+                raise ValueError("unsupported register log scope declaration")
+            contract=(start,stop,meta["register_log_scope"])
+        else:
+            contract=None
+        if window_contract=="uninitialized":
+            window_contract=contract
+        elif contract!=window_contract:
+            raise ValueError("mixed capture-window provenance in one session")
         version=meta.get("format")
         if version not in (
             "fceux_ppu_snapshot_v3","fceux_ppu_snapshot_v4"
@@ -194,6 +213,7 @@ def audit_directory(root,allow_incomplete=False,require_logs=False):
         "classification":("private ROM capture metadata and register trace consistency preflight only"
                           if require_logs else "private ROM capture metadata/length preflight only"),
         "capture_count":len(frames),
+        "capture_window_contract_consistent":window_contract is not None,
         "first_frame":frames[0],
         "last_frame":frames[-1],
         "screen_reference":screen_mode=="yes",

@@ -180,3 +180,74 @@ Up/Down remain dedicated to the decoration image atlas.
 
 Read docs/LEVEL_PLACEMENTS.md for the binary schema and safety rules.
 These positions are diagnostic fixtures, not reconstructed original map data.
+
+
+## Stage 160 — opt-in driving/HUD visual preview
+
+The graphical Switch NRO now includes a **ROM-free overhead driving-stage
+preview**. First leave autoplay for manual play using the left-stick click
+(the existing control); then press **ZL + ZR + X** together to toggle the
+preview on/off. The same chord consumes the X atlas reload and ZL terrain
+reload on that activation, and no extra dash command is submitted from
+the toggle. Returning to autoplay resets preview selection.
+
+The driving preview has a strict, unchanging original-framebuffer-inspired
+HUD split: the observed NES image-space line **Y=196/240** maps to output
+**Y=588/720**. Drawing in the road layer is hard-clipped above output
+row 588, while the HUD is hard-clipped to rows 588–719. The road area
+uses invented test road markings and an invented car sprite; the HUD
+contains independent numeric status/HP bars. Source ROM, NES tiles, game
+screenshots, FM2 and copyrighted HUD lettering are **not included**.
+
+The preview receives the pre-existing simulation's current frame and
+health **for visualization only**. It does not implement vehicle physics,
+road collision, authentic gameplay or original camera speed. The
+pre-existing platform renderer, golden synthetic replay frame and
+manual combat scene are unchanged by default. Test coverage:
+`tests/test_driving_preview.cpp`, registered as
+`romfree_driving_preview_hud_road_isolation` in graphics_core CTest.
+It verifies layer independence, padded framebuffer bounds, deterministic
+redraw, source viewport boundary and reversion to the old SceneView path.
+
+Research provenance: `docs/STAGE1_HUD_LAYER_SOURCE_AUDIT.md`.
+
+
+## Stage 161 — independent playable driving prototype controls
+
+The opt-in ROM-free overhead driving preview now uses a **separate,
+deterministic test-only vehicle controller**, `game_core/driving_simulation.hpp`,
+instead of copying the platformer's running-frame and hit-point values.
+Enter manual mode with StickL, then toggle this driving preview with
+**ZL+ZR+X**. While the preview is selected:
+
+- **Left/right or left stick** steers the invented test car, constrained
+  within the invented road bounds.
+- **Up or A** accelerates. **Down or B** brakes (brake takes priority
+  when both are held). Maximum and acceleration values are diagnostic,
+  not source-game measurements.
+- A **synthetic traffic obstacle** progresses down the separate road
+  layer. Invented AABB contact lowers the preview health bar with a
+  45-update invulnerability cooldown and temporary visual flash.
+- An independent status HUD displays prototype time/frame, speed and
+  vehicle health. Road pixels are hard-clipped to rows 0–587; HUD pixels
+  are hard-clipped to 588–719 at 1280×720. No original copyrighted
+  background/tile/car artwork is embedded.
+
+During this mode the original **platform `Simulation` is paused**:
+its `game.tick()` is not invoked, and the current vehicle update
+does not modify platform enemies, projectiles, game-map collision or
+existing stage completion. Leaving the preview restores the normal
+platform renderer and resumes its prior state; entering the preview
+again starts a fresh diagnostic car fixture.
+
+Native CTest coverage in `tests/test_driving_simulation.cpp` checks
+steering and speed limits, collision cooldown, deterministic replay,
+health clamping and reset. `tests/test_driving_preview.cpp` additionally
+verifies the input-driven vehicle snapshot draws only to the road
+while independent health/speed counters draw only to the HUD and the
+legacy platform framebuffer remains unchanged after toggling.
+
+This is NOT the original Vice: Project Doom Stage 1-1 vehicle physics,
+camera scroll, road geometry or source graphical content. The next
+development stage must derive those properties independently from
+private original-game evidence before calling them authentic.
