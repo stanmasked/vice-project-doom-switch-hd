@@ -303,3 +303,11 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
 endif()
 add_test(NAME romfree_driving_scene_bridge
          COMMAND vpd_driving_scene_bridge_test)
+# Stage 163: ROM-free source-owned guest record state machine.
+add_executable(vpd_driving_guest_witness_test ../tests/test_driving_guest_witness.cpp)
+target_link_libraries(vpd_driving_guest_witness_test PRIVATE vpd_simulation)
+target_include_directories(vpd_driving_guest_witness_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../game_core)
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+  target_compile_options(vpd_driving_guest_witness_test PRIVATE -Wall -Wextra -Wpedantic -Werror)
+endif()
+add_test(NAME romfree_driving_guest_witness COMMAND vpd_driving_guest_witness_test)
