@@ -132,4 +132,95 @@ class RunnerPlanningTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,"Git checkout"):
                 private_target(base/"captures")
 
+    def test_unexpected_fceux_exit_before_witness_is_inconclusive(self):
+        from unittest.mock import patch
+        from build_fceux_smoke_rom import build_rom
+        from build_fceux_smoke_movie import make_movie
+        from run_private_fm2_storyboard import launch
+        class ExitedProcess:
+            def poll(self): return 1
+            def terminate(self): raise AssertionError("already exited")
+            def wait(self,timeout=None): return 1
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d)
+            rom=root/"synthetic.nes"; movie=root/"synthetic.fm2"
+            rom.write_bytes(build_rom())
+            movie.write_text(make_movie(rom.read_bytes()),encoding="ascii")
+            output=root/"capture"
+            with patch("run_private_fm2_storyboard.shutil.which",return_value="/usr/games/fceux"), \
+                 patch("run_private_fm2_storyboard.subprocess.Popen",return_value=ExitedProcess()):
+                with self.assertRaisesRegex(ValueError,"exited before terminal"):
+                    launch(rom,movie,output,interval=8,timeout_seconds=5)
+            self.assertTrue(output.is_dir())
+            self.assertTrue((root/"capture.fceux.log").is_file())
+            self.assertFalse((root/"capture.terminal_witness.txt").exists())
+
+    def test_terminal_witness_cannot_hide_incomplete_storyboard(self):
+        from unittest.mock import patch
+        from audit_private_fceux_storyboard import P6_HEADER,PAL_SIZE
+        from build_fceux_smoke_rom import build_rom
+        from build_fceux_smoke_movie import make_movie
+        from run_private_fm2_storyboard import launch
+        class RunningProcess:
+            def __init__(self): self.stopped=False
+            def poll(self): return 0 if self.stopped else None
+            def terminate(self): self.stopped=True
+            def wait(self,timeout=None): return 0
+            def kill(self): self.stopped=True
+        def capture_one_frame(root):
+            (root/"frame_000008.ppm").write_bytes(P6_HEADER+bytes([1,2,3])*PAL_SIZE)
+            (root/"frame_000008.pal.bin").write_bytes(bytes([16])*PAL_SIZE)
+            (root/"frame_000008.meta.txt").write_text("\n".join([
+                "format=private_fceux_storyboard_v1","frame=8","rom_md5="+"a"*32,
+                "interval=8","start_frame=8","stop_frame=63","capture_limit=7",
+                "invalid_palette_values=0","screen_size=256x240",
+                "source=emu.getscreenpixel",""]),encoding="ascii")
+        def fake_popen(command,env,stdout,stderr):
+            witness=Path(env["VPD_PRIVATE_WITNESS"])
+            witness.write_text("\n".join([
+                "format=private_fm2_terminal_witness_v4","movie_readonly=yes",
+                "movie_terminal_frame=63","movie_frame_count=64",
+                "movie_first_observed_frame=1","movie_last_observed_frame=63",
+                "movie_consecutive_unique_frames=63","movie_frame_gaps=0",
+                "movie_active_before_terminal=yes","movie_mode_at_terminal=finished",
+                "loaded_rom_verified=yes","fm2_header_power_on_preflight_verified=yes",
+                "original_stage_proven=no","game_completion_proven=no",""]),
+                encoding="ascii")
+            capture_one_frame(Path(env["VPD_PRIVATE_OUTPUT_DIR"]))
+            return RunningProcess()
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d)
+            rom=root/"synthetic.nes"; movie=root/"synthetic.fm2"
+            rom.write_bytes(build_rom())
+            movie.write_text(make_movie(rom.read_bytes()),encoding="ascii")
+            with patch("run_private_fm2_storyboard.shutil.which",return_value="/usr/games/fceux"), \
+                 patch("run_private_fm2_storyboard.subprocess.Popen",side_effect=fake_popen):
+                with self.assertRaisesRegex(ValueError,"window incomplete"):
+                    launch(rom,movie,root/"capture",interval=8,timeout_seconds=5)
+            self.assertTrue((root/"capture.terminal_witness.txt").is_file())
+            self.assertTrue((root/"capture"/"frame_000008.meta.txt").is_file())
+
+    def test_timeout_without_terminal_witness_is_inconclusive(self):
+        from unittest.mock import patch
+        from build_fceux_smoke_rom import build_rom
+        from build_fceux_smoke_movie import make_movie
+        from run_private_fm2_storyboard import launch
+        class StalledProcess:
+            def __init__(self): self.stopped=False
+            def poll(self): return 0 if self.stopped else None
+            def terminate(self): self.stopped=True
+            def wait(self,timeout=None): return 0
+            def kill(self): self.stopped=True
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d)
+            rom=root/"synthetic.nes"; movie=root/"synthetic.fm2"
+            rom.write_bytes(build_rom())
+            movie.write_text(make_movie(rom.read_bytes()),encoding="ascii")
+            with patch("run_private_fm2_storyboard.shutil.which",return_value="/usr/games/fceux"), \
+                 patch("run_private_fm2_storyboard.subprocess.Popen",return_value=StalledProcess()), \
+                 patch("run_private_fm2_storyboard.time.monotonic",side_effect=[0.0,0.0,2.0]), \
+                 patch("run_private_fm2_storyboard.time.sleep",return_value=None):
+                with self.assertRaisesRegex(ValueError,"watchdog"):
+                    launch(rom,movie,root/"capture",interval=8,timeout_seconds=1)
+
 if __name__=="__main__":unittest.main()
