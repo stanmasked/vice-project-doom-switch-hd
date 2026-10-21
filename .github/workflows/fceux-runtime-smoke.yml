@@ -19,6 +19,8 @@ on:
       - "tools/capture_private_mmc3_chr_focus.lua"
       - "tools/audit_private_mmc3_chr_mapping.py"
       - "tests/test_audit_private_mmc3_chr_mapping.py"
+      - "tools/audit_private_mmc3_chr_trace_witness.py"
+      - "tests/test_audit_private_mmc3_chr_trace_witness.py"
   pull_request:
     paths:
       - ".github/workflows/fceux-runtime-smoke.yml"
@@ -180,8 +182,14 @@ jobs:
           import os
           from pathlib import Path
           from audit_private_mmc3_chr_mapping import analyze_trace
+          from audit_private_mmc3_chr_trace_witness import audit_trace_witness
           log=Path(os.environ["RUNNER_TEMP"])/"fceux_mmc3_full_timeline.mmc3_chr_focus.tsv"
+          witness=Path(os.environ["RUNNER_TEMP"])/"fceux_mmc3_full_timeline.mmc3_chr_focus.witness.txt"
           evidence=analyze_trace(log,bank_count=128,focus_banks=(124,125,126),frame_interval=8)
+          stats=audit_trace_witness(witness,expected_terminal_frame=63,
+                                    parsed_pair_count=evidence["valid_chr_mapping_data_writes"])
+          assert stats["raw_matching_mapping_writes"]>=stats["retained_deduplicated_mapping_pairs"]>0
+          assert stats["trace_closed"]
           assert all(item["mapping_write_count"]>0 for item in evidence["focus_bank_reports"])
           assert not evidence["actual_ppu_rendered_bank_proven"]
           print("REAL_FCEUX_MMC3_CPU_BANK_SELECTION_PASS banks=124,125,126 rendered=no")

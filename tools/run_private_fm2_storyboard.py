@@ -17,6 +17,7 @@ import time
 from audit_private_fm2 import audit_movie
 from audit_private_fceux_storyboard import audit as audit_storyboard
 from audit_private_mmc3_chr_mapping import analyze_trace
+from audit_private_mmc3_chr_trace_witness import audit_trace_witness
 from audit_private_nes_variant_banks import read_layout
 
 SCRIPT_DIR=Path(__file__).resolve().parent
@@ -103,12 +104,13 @@ def launch(rom,movie,directory,fceux="fceux",timeout_seconds=1800,
     witness=target.parent/(target.name+".terminal_witness.txt")
     logfile=target.parent/(target.name+".fceux.log")
     trace_path=target.parent/(target.name+".mmc3_chr_focus.tsv")
+    trace_summary=target.parent/(target.name+".mmc3_chr_focus.witness.txt")
     # Validate all destinations before creating the capture folder. A stale
     # witness must not cause a partial or ambiguous new private session.
     if witness.exists() or logfile.exists() or witness.is_symlink() or logfile.is_symlink():
         raise ValueError("private witness or log filename already exists")
-    if focus and (trace_path.exists() or trace_path.is_symlink()):
-        raise ValueError("private MMC3 trace filename already exists")
+    if focus and any(p.exists() or p.is_symlink() for p in (trace_path,trace_summary)):
+        raise ValueError("private MMC3 trace or summary filename already exists")
     target.mkdir(mode=0o700)
     env=os.environ.copy()
     env.update({
@@ -127,6 +129,7 @@ def launch(rom,movie,directory,fceux="fceux",timeout_seconds=1800,
         env.update({
             "VPD_PRIVATE_MMC3_TRACE_SCRIPT":str(chr_capture.resolve()),
             "VPD_PRIVATE_MMC3_TRACE_PATH":str(trace_path),
+            "VPD_PRIVATE_MMC3_SUMMARY_PATH":str(trace_summary),
             "VPD_PRIVATE_MMC3_TARGETS":",".join(str(x) for x in focus),
             "VPD_PRIVATE_MMC3_BANK_COUNT":str(bank_count)
         })
@@ -186,6 +189,11 @@ def launch(rom,movie,directory,fceux="fceux",timeout_seconds=1800,
     if focus:
         evidence=analyze_trace(trace_path,bank_count=bank_count,
                                focus_banks=focus,frame_interval=interval)
+        summary_evidence=audit_trace_witness(
+            trace_summary,expected_terminal_frame=plan["last_frame"],
+            parsed_pair_count=evidence["valid_chr_mapping_data_writes"])
+        evidence["trace_finalization"]=summary_evidence
+        evidence["mapping_write_count_semantics"]="deduplicated observed pairs per interval"
         result["mmc3_chr_mapper_write_evidence"]=evidence
     return result
 

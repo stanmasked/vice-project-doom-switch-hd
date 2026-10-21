@@ -6,6 +6,10 @@ local function required(name)
   return result
 end
 local path=required('VPD_PRIVATE_MMC3_TRACE_PATH')
+local summary_path=required('VPD_PRIVATE_MMC3_SUMMARY_PATH')
+local target_last_frame=tonumber(required('VPD_PRIVATE_FRAME_COUNT'))-1
+assert(target_last_frame>=1 and target_last_frame==math.floor(target_last_frame),
+       'invalid private terminal frame for MMC3 trace')
 local targets=required('VPD_PRIVATE_MMC3_TARGETS')
 local count=tonumber(required('VPD_PRIVATE_MMC3_BANK_COUNT'))
 local interval=tonumber(required('VPD_PRIVATE_CAPTURE_INTERVAL'))
@@ -32,6 +36,9 @@ assert(trace:write('frame\taddress\tvalue\n'))
 assert(trace:flush())
 local select_value=nil
 local logged=0
+local raw_relevant=0
+local repeats=0
+local trace_finalized=false
 local seen={}
 local MAX_PAIR_COUNT=80000
 local function write_select(address,size,value)
@@ -59,7 +66,12 @@ local function write_data(address,size,value)
          'invalid FCEUX mapper event frame')
   local bucket=math.floor(frame/interval)
   local key=bucket..':'..select_value..':'..bank
-  if seen[key] then return end
+  assert(not trace_finalized,'MMC3 mapping after trace finalization')
+  raw_relevant=raw_relevant+1
+  if seen[key] then
+    repeats=repeats+1
+    return
+  end
   seen[key]=true
   logged=logged+1
   assert(logged<=MAX_PAIR_COUNT,'private MMC3 trace exceeded event budget')
@@ -70,3 +82,28 @@ local function write_data(address,size,value)
 end
 memory.registerwrite(0x8000,write_select)
 memory.registerwrite(0x8001,write_data)
+
+-- This function is invoked by the private full-FM2 runner BEFORE its
+-- terminal witness, never by an independent background callback. A
+-- successful full-run witness therefore requires a closed mapper trace.
+VPD_FINALIZE_PRIVATE_MMC3_TRACE=function(frame)
+  assert(not trace_finalized,'MMC3 trace finalized more than once')
+  assert(frame==target_last_frame,'MMC3 trace ended before terminal FM2 frame')
+  assert(raw_relevant==logged+repeats,'MMC3 deduplication totals inconsistent')
+  assert(trace:flush(),'private MMC3 trace could not flush')
+  assert(trace:close(),'private MMC3 trace could not close')
+  trace_finalized=true
+  local old=io.open(summary_path,'rb')
+  if old then old:close();error('private MMC3 summary already exists') end
+  local file=assert(io.open(summary_path,'wb'))
+  assert(file:write(
+    'format=private_mmc3_chr_trace_witness_v1\n'..
+    'movie_terminal_frame='..frame..'\n'..
+    'raw_matching_mapping_writes='..raw_relevant..'\n'..
+    'retained_deduplicated_mapping_pairs='..logged..'\n'..
+    'suppressed_repeated_mapping_writes='..repeats..'\n'..
+    'trace_closed=yes\n'..
+    'ppu_rendering_proven=no\n'
+  ))
+  assert(file:close(),'cannot close private MMC3 summary')
+end

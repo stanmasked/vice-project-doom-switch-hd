@@ -57,6 +57,13 @@ emu.registerafter=function(capture)
       local mode=movie.mode()
       assert(mode=="playback" or mode=="finished",
              "movie did not reach a permitted terminal state")
+      -- Without a complete, closed mapper trace the movie terminal marker
+      -- must not be issued as a positive mapping-capture witness.
+      local finish_trace=rawget(_G,"VPD_FINALIZE_PRIVATE_MMC3_TRACE")
+      if finish_trace~=nil then
+        assert(type(finish_trace)=="function","invalid MMC3 trace finalizer")
+        finish_trace(current)
+      end
       timeline_end=true
       local prior=io.open(witness,"rb")
       if prior then prior:close();error("private terminal witness already exists") end
