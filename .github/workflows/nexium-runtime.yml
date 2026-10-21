@@ -85,6 +85,9 @@ on:
       - "tools/audit_nexium_fourth_stage.py"
       - "tests/test_nexium_fourth_stage.py"
       - "tools/nexium_visual_probe.sh"
+      - "tools/nexium_driving_probe.sh"
+      - "tools/audit_nexium_driving_live.py"
+      - "tests/test_nexium_driving_live.py"
       - "game_core/**"
       - "switch_graphical/**"
       - "graphics_core/**"
@@ -141,6 +144,8 @@ jobs:
         run: |
           bash -n tools/run_nexium_vice_ci.sh
           bash -n tools/nexium_visual_probe.sh
+          bash -n tools/nexium_driving_probe.sh
+          python3 tests/test_nexium_driving_live.py
           python3 tests/test_nexium_hd_fx_guest.py
           python3 tests/test_nexium_hd_fx_combat.py
           python3 tests/test_nexium_hd_fx_sentry.py
@@ -162,6 +167,7 @@ jobs:
           name: vice-nexium-runtime-evidence
           path: |
             emulator-evidence/*.txt
+            emulator-evidence/driving-run/**
             emulator-evidence/*.log
             emulator-evidence/xdg-config/NeXium/logs/*.log
             emulator-evidence/vulkan.txt

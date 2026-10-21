@@ -371,3 +371,9 @@ if [[ -s "$out/hd-fx-guest-paths.txt" ]]; then
   cp "$guest" "$out/guest-hd-fx-toggle-witness.txt"
 fi
 python3 tools/audit_nexium_hd_fx_guest.py --evidence "$out"
+# Stage 163 is intentionally a SEPARATE emulator process after every prior
+# gameplay/fx witness. It cannot silently change the established four runs.
+mkdir -p "$out/driving-run"
+xvfb-run -a -s "-screen 0 1280x720x24" \
+  bash tools/nexium_driving_probe.sh "$emulator" "$nro" "$out/driving-run"
+python3 tools/audit_nexium_driving_live.py --evidence "$out/driving-run"

@@ -3,6 +3,7 @@
 #include "simulation.hpp"
 #include "driving_simulation.hpp"
 #include "driving_scene_bridge.hpp"
+#include "driving_guest_witness.hpp"
 #include "manual_retry.hpp"
 #include "manual_retry_guest_witness.hpp"
 #include "live_defeat_retry_witness.hpp"
@@ -78,6 +79,7 @@ int main(int,char**) {
     // New run, not leftover emulator/SD evidence from a previous NRO.
     (void)vpd::manualProofReset(has_sd);
     (void)vpd::dashGuestProofReset(has_sd);
+    vpd::resetDrivingGuestProof(has_sd);
     (void)vpd::guardProofReset(has_sd);
     (void)vpd::guardCombatProofReset(has_sd);
     (void)vpd::resetSentryProof(has_sd);
@@ -184,6 +186,7 @@ int main(int,char**) {
     vpd::HdFxRuntimeMode hd_fx_mode{};
     bool driving_preview=false; // manual-only ROM-free road/HUD visual preview
     vpd::DrivingState driving_state{}; // separate from platform Simulation
+    vpd::DrivingGuestProof driving_proof{};
     unsigned hd_fx_guest_seq=0;
     unsigned hd_fx_combat_seq=0;
     unsigned hd_fx_sentry_seq=0;
@@ -238,7 +241,16 @@ int main(int,char**) {
             (buttons&HidNpadButton_ZR);
         if(driving_preview_chord) {
             driving_preview=!driving_preview;
-            if(driving_preview)driving_state.reset();
+            if(driving_preview) {
+                driving_state.reset();
+                (void)vpd::appendDrivingGuestProof(has_sd,
+                    driving_proof.enter(!demo.enabled(),true,
+                                        driving_state,game.fingerprint()));
+            } else {
+                (void)vpd::appendDrivingGuestProof(has_sd,
+                    driving_proof.leave(!demo.enabled(),true,
+                                        driving_state,game.fingerprint()));
+            }
         }
         if(buttons&HidNpadButton_Plus){
             if(!demo.enabled())vpd::guardLiveDebugRecord(
@@ -425,7 +437,11 @@ int main(int,char**) {
                         (buttons&(HidNpadButton_Up|HidNpadButton_StickLUp|HidNpadButton_A))!=0,
                         (buttons&(HidNpadButton_Down|HidNpadButton_StickLDown|HidNpadButton_B))!=0
                     };
+                    const vpd::DrivingState car_before=driving_state;
                     driving_state.tick(drive_input);
+                    (void)vpd::appendDrivingGuestProof(has_sd,
+                        driving_proof.tick(drive_input,car_before,
+                                           driving_state,game.fingerprint()));
                 }
                 input=0;
             } else if(toggle_manual || driving_preview_chord) {

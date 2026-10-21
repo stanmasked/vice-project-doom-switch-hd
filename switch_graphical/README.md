@@ -271,3 +271,18 @@ the old platform framebuffer/fingerprint are unchanged after returning.
 This is **host-side source integration coverage**, not a claim of a successful
 NeXium guest controller run or calibrated original NES car behavior. No ROM,
 FM2, screenshots, graphics captures, or licensed assets are included.
+## Stage 163 — live-driving guest proof (pending NeXium validation)
+
+Manual mode is still entered with StickL or R+A. Driving toggles only
+with ZL+ZR+X (the NeXium default keyboard keys R+T+V).
+The native five-event trace records genuine input-driven entry,
+right/throttle, left/brake, a one-point car collision, and exit, together
+with the *unchanged* platform Simulation fingerprint.
+No NES ROM, FM2, CHR or original artwork is committed. Host controls
+alone cannot satisfy the native state-machine proof.
+A separate second NeXium launch in the runtime workflow tests this exact
+chord, both steering directions, accelerator/brake, a 5-to-4 HP collision,
+and the return to the original platform rendering. The auditor requires
+five ordered native guest records and four different actual X11 P6 frames.
+This is a gated real-emulator test: merely adding the script does not
+establish that the emulator passed it.
