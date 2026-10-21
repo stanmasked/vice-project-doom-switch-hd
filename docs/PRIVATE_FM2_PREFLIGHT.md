@@ -270,3 +270,32 @@ The private full-run script therefore begins snapshot sampling at the
 frame 0 can be observed. For 43,652 US FM2 frames and interval 1,803, this
 means 24 guaranteed-scheduled images (frames 1,803 through 43,272), not
 25. The terminal movie witness still requires the last FM2 frame 43,651.
+
+
+## Stage 125 — privacy-preserving candidate-scene analysis
+
+After a real private FCEUX full-playback run has produced a strictly
+audited storyboard, invoke the new Python visual-change tool:
+
+    python3 tools/audit_private_fceux_visual_changes.py /private/us_capture_001
+
+The tool first runs the existing complete-window integrity verifier.
+It compares sampled screen palette indices and their distributions
+between adjacent screenshots, recording only frame numbers and numerical
+change ratios when both independent thresholds are exceeded. An excessive
+number of unavailable palette (254) samples suppresses rather than fabricates
+a visual-change conclusion. The tool exports no images, sprite pixels,
+tile patterns, ROM checksums, raw palettes or proprietary game assets.
+
+A candidate means only that two sparse screenshots appear visually different.
+It does NOT prove a level boundary, boss scene, clear, or game completion.
+Transitions between 1,803-frame checkpoints are not fully observed.
+Final identification requires additional private gameplay and PPU/RAM evidence.
+
+Use --allow-partial only to investigate interrupted sessions; those outputs
+explicitly report complete_window_verified=false. Defaults are stride 4,
+pixel threshold 0.55, and palette threshold 0.35. Never put original
+screenshots, palette dumps or extracted game art into GitHub.
+
+Nine independent ROM-free tests exercise invented normal, shifted,
+unavailable, corrupted, incomplete, and partial screenshots.
