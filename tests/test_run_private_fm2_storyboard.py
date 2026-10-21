@@ -21,6 +21,31 @@ class RunnerPlanningTests(unittest.TestCase):
         self.assertEqual(capture_plan(movie)["sample_count"],25)
         self.assertEqual(capture_plan(movie)["last_frame"],43651)
 
+    def test_transition_window_uses_global_eight_frame_cadence(self):
+        movie={"frames":43652,"rom_identity_matched":True,
+               "starts_from_power_on":True}
+        result=capture_plan(movie,interval=8,start_frame=3500,stop_frame=3800)
+        self.assertEqual(result["start_frame"],3500)
+        self.assertEqual(result["stop_frame"],3800)
+        self.assertEqual(result["sample_count"],38)
+        self.assertEqual(result["last_frame"],43651)
+
+    def test_non_aligned_window_stop_is_included(self):
+        movie={"frames":4096,"rom_identity_matched":True,
+               "starts_from_power_on":True}
+        result=capture_plan(movie,interval=16,start_frame=100,stop_frame=251)
+        self.assertEqual(result["sample_count"],10)
+        self.assertEqual(result["start_frame"],100)
+        self.assertEqual(result["stop_frame"],251)
+
+    def test_reject_window_outside_movie_or_reversed(self):
+        movie={"frames":4096,"rom_identity_matched":True,
+               "starts_from_power_on":True}
+        with self.assertRaisesRegex(ValueError,"window"):
+            capture_plan(movie,interval=8,start_frame=3500,stop_frame=4096)
+        with self.assertRaisesRegex(ValueError,"window"):
+            capture_plan(movie,interval=8,start_frame=200,stop_frame=100)
+
     def test_reject_too_short_movie_for_first_capture(self):
         with self.assertRaisesRegex(ValueError,"shorter"):
             capture_plan({"frames":8,"rom_identity_matched":True,
