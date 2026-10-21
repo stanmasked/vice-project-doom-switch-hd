@@ -18,6 +18,7 @@ from audit_private_fm2 import audit_movie
 from audit_private_fceux_storyboard import audit as audit_storyboard
 from audit_private_mmc3_chr_mapping import analyze_trace
 from audit_private_mmc3_chr_trace_witness import audit_trace_witness
+from audit_private_fm2_terminal_witness import audit_movie_witness
 from audit_private_nes_variant_banks import read_layout
 
 SCRIPT_DIR=Path(__file__).resolve().parent
@@ -157,23 +158,7 @@ def launch(rom,movie,directory,fceux="fceux",timeout_seconds=1800,
                 except subprocess.TimeoutExpired:
                     process.kill()
                     process.wait(timeout=5)
-    if not witness.is_file() or witness.is_symlink():
-        raise ValueError("missing trustworthy terminal FM2 witness")
-    rows={}
-    for line in witness.read_text(encoding="ascii").splitlines():
-        if "=" not in line:raise ValueError("malformed FM2 terminal witness")
-        k,v=line.split("=",1)
-        if k in rows:raise ValueError("duplicate FM2 terminal witness key")
-        rows[k]=v
-    if (rows.get("format")!="private_fm2_terminal_witness_v1"
-       or rows.get("movie_readonly")!="yes"
-       or rows.get("movie_active_before_terminal")!="yes"
-       or rows.get("movie_terminal_frame")!=str(plan["last_frame"])
-       or rows.get("movie_frame_count")!=str(plan["frames"])
-       or rows.get("movie_mode_at_terminal") not in ("playback","finished")
-       or rows.get("original_stage_proven")!="no"
-       or rows.get("game_completion_proven")!="no"):
-        raise ValueError("terminal FM2 witness inconsistent with verified private input")
+    movie_evidence=audit_movie_witness(witness,expected_frame_count=plan["frames"])
     report=audit_storyboard(target,require_complete=True)
     if (report["sample_count"]!=plan["sample_count"]
         or not report["complete_window_verified"]):
@@ -181,6 +166,8 @@ def launch(rom,movie,directory,fceux="fceux",timeout_seconds=1800,
     result={"classification":"private ROM/FM2 actual emulator terminal-frame preflight",
             "rom_identity_matched":True,
             "fceux_terminal_frame_confirmed":True,
+            "verified_consecutive_movie_frames":movie_evidence["consecutive_unique_frames"],
+            "movie_first_observed_frame":movie_evidence["first_observed_frame"],
             "frame_count":plan["frames"],
             "storyboard_frames":report["sample_count"],
             "storyboard_complete":True,

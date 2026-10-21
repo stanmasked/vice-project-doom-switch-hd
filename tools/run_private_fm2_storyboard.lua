@@ -38,11 +38,27 @@ VPD_STORYBOARD_INTERVAL=interval
 VPD_STORYBOARD_LIMIT=limit
 local seen_movie=false
 local timeline_end=false
+local first_observed_frame=nil
+local last_observed_frame=nil
+local consecutive_unique_frames=0
 local after=emu.registerafter
 emu.registerafter=function(capture)
   return after(function()
     capture()
     local current=emu.framecount()
+    assert(type(current)=="number" and current==math.floor(current) and
+           current>=0 and current<frames,"invalid FCEUX FM2 frame index")
+    if last_observed_frame==nil then
+      -- A Lua hook may attach at 0 or 1, but must not attach mid-movie.
+      assert(current<=1,"FM2 callback attached after movie start")
+      first_observed_frame=current
+      consecutive_unique_frames=1
+    elseif current~=last_observed_frame then
+      assert(current==last_observed_frame+1,
+             "FCEUX FM2 callback skipped, rewound or jumped a frame")
+      consecutive_unique_frames=consecutive_unique_frames+1
+    end
+    last_observed_frame=current
     if current>=1 and current<frames-1 then
       assert(movie.active(),"movie stopped before requested terminal frame")
       assert(movie.mode()=="playback","movie exited playback prematurely")
@@ -52,6 +68,11 @@ emu.registerafter=function(capture)
     end
     if current==frames-1 and not timeline_end then
       assert(seen_movie,"no movie playback witness before terminal frame")
+      assert(first_observed_frame==0 or first_observed_frame==1,
+             "movie earliest observed callback missing")
+      assert(last_observed_frame==frames-1 and
+             consecutive_unique_frames==frames-first_observed_frame,
+             "movie callback timeline is not contiguous through terminal frame")
       assert(movie.readonly(),"movie writable at terminal frame")
       assert(movie.length()==frames,"movie length changed")
       local mode=movie.mode()
@@ -68,10 +89,14 @@ emu.registerafter=function(capture)
       local prior=io.open(witness,"rb")
       if prior then prior:close();error("private terminal witness already exists") end
       local f=assert(io.open(witness,"wb"))
-      assert(f:write("format=private_fm2_terminal_witness_v1\n"..
+      assert(f:write("format=private_fm2_terminal_witness_v2\n"..
                      "movie_readonly=yes\n"..
                      "movie_terminal_frame="..tostring(current).."\n"..
                      "movie_frame_count="..tostring(frames).."\n"..
+                     "movie_first_observed_frame="..tostring(first_observed_frame).."\n"..
+                     "movie_last_observed_frame="..tostring(last_observed_frame).."\n"..
+                     "movie_consecutive_unique_frames="..tostring(consecutive_unique_frames).."\n"..
+                     "movie_frame_gaps=0\n"..
                      "movie_active_before_terminal=yes\n"..
                      "movie_mode_at_terminal="..mode.."\n"..
                      "original_stage_proven=no\n"..

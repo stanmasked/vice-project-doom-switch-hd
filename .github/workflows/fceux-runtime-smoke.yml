@@ -16,6 +16,8 @@ on:
       - "tools/run_private_fm2_storyboard.py"
       - "tools/run_private_fm2_storyboard.lua"
       - "tests/test_run_private_fm2_storyboard.py"
+      - "tools/audit_private_fm2_terminal_witness.py"
+      - "tests/test_audit_private_fm2_terminal_witness.py"
       - "tools/capture_private_mmc3_chr_focus.lua"
       - "tools/audit_private_mmc3_chr_mapping.py"
       - "tests/test_audit_private_mmc3_chr_mapping.py"
@@ -36,6 +38,8 @@ on:
       - "tools/run_private_fm2_storyboard.py"
       - "tools/run_private_fm2_storyboard.lua"
       - "tests/test_run_private_fm2_storyboard.py"
+      - "tools/audit_private_fm2_terminal_witness.py"
+      - "tests/test_audit_private_fm2_terminal_witness.py"
   workflow_dispatch:
 
 permissions:
@@ -174,6 +178,8 @@ jobs:
             --output "$RUNNER_TEMP/fceux_mmc3_full_timeline" \
             --interval 8 --timeout-seconds 90 --trace-chr-banks 124,125,126
           grep -qx "movie_terminal_frame=63" \
+            "$RUNNER_TEMP/fceux_mmc3_full_timeline.terminal_witness.txt"
+          grep -qx "movie_frame_gaps=0" \
             "$RUNNER_TEMP/fceux_mmc3_full_timeline.terminal_witness.txt"
           python3 tools/audit_private_fceux_storyboard.py \
             "$RUNNER_TEMP/fceux_mmc3_full_timeline" \
