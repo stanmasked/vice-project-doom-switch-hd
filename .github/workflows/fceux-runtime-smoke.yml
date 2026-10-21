@@ -11,6 +11,8 @@ on:
       - "tests/test_build_fceux_smoke_rom.py"
       - "tools/build_fceux_smoke_movie.py"
       - "tests/test_build_fceux_smoke_movie.py"
+      - "tools/build_fceux_smoke_mmc3_nes2.py"
+      - "tests/test_build_fceux_smoke_mmc3_nes2.py"
       - "tools/run_private_fm2_storyboard.py"
       - "tools/run_private_fm2_storyboard.lua"
       - "tests/test_run_private_fm2_storyboard.py"
@@ -24,6 +26,8 @@ on:
       - "tests/test_build_fceux_smoke_rom.py"
       - "tools/build_fceux_smoke_movie.py"
       - "tests/test_build_fceux_smoke_movie.py"
+      - "tools/build_fceux_smoke_mmc3_nes2.py"
+      - "tests/test_build_fceux_smoke_mmc3_nes2.py"
       - "tools/run_private_fm2_storyboard.py"
       - "tools/run_private_fm2_storyboard.lua"
       - "tests/test_run_private_fm2_storyboard.py"
@@ -115,6 +119,61 @@ jobs:
           python3 tools/audit_private_fceux_storyboard.py \
             "$RUNNER_TEMP/fceux_full_timeline_synthetic" --require-complete-window
           echo "REAL_FCEUX_PRIVATE_RUNNER_SYNTHETIC_PASS terminal_frame=63 captured=7 original_game_proven=no"
+      - name: Run real FCEUX on invented NES2 MMC3 and verify recorded input
+        shell: bash
+        env:
+          SDL_AUDIODRIVER: dummy
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -p test_build_fceux_smoke_mmc3_nes2.py -v
+          python3 tools/build_fceux_smoke_mmc3_nes2.py \
+            --output "$RUNNER_TEMP/fceux_invented_mmc3.nes"
+          python3 tools/build_fceux_smoke_movie.py \
+            --rom "$RUNNER_TEMP/fceux_invented_mmc3.nes" \
+            --output "$RUNNER_TEMP/fceux_invented_mmc3.fm2"
+          export VPD_SMOKE_DIRECTORY="$RUNNER_TEMP/fceux_invented_mmc3_frames"
+          export VPD_STORYBOARD_SCRIPT="$GITHUB_WORKSPACE/tools/capture_fceux_movie_storyboard.lua"
+          export VPD_SMOKE_MOVIE="$RUNNER_TEMP/fceux_invented_mmc3.fm2"
+          export VPD_SMOKE_WITNESS="$RUNNER_TEMP/fceux_invented_mmc3.input_witness.txt"
+          mkdir -p "$VPD_SMOKE_DIRECTORY"
+          logfile="$RUNNER_TEMP/fceux_mmc3.log"
+          timeout 55s xvfb-run -a -s '-screen 0 1024x768x24' \
+            fceux --no-config 1 --sound 0 \
+              --loadlua tools/fceux_runtime_smoke.lua \
+              "$RUNNER_TEMP/fceux_invented_mmc3.nes" >"$logfile" 2>&1 &
+          pid=$!
+          cleanup() { kill "$pid" >/dev/null 2>&1 || true; wait "$pid" >/dev/null 2>&1 || true; }
+          trap cleanup EXIT
+          for n in $(seq 1 75); do
+            if [[ -f "$VPD_SMOKE_WITNESS" ]]; then break; fi
+            if ! kill -0 "$pid" 2>/dev/null; then break; fi
+            sleep 0.5
+          done
+          if [[ ! -f "$VPD_SMOKE_WITNESS" ]]; then
+            echo "Real FCEUX did not execute NES2 MMC3 FM2 input" >&2
+            tail -120 "$logfile" >&2
+            exit 1
+          fi
+          grep -qx "cpu_ram_a_at_frame_8=0" "$VPD_SMOKE_WITNESS"
+          grep -qx "cpu_ram_a_at_frame_16=1" "$VPD_SMOKE_WITNESS"
+          grep -qx "movie_frames=64" "$VPD_SMOKE_WITNESS"
+          python3 tools/audit_private_fceux_storyboard.py \
+            "$VPD_SMOKE_DIRECTORY" --require-complete-window
+          cleanup
+          trap - EXIT
+          # The same private full-timeline launcher is separately checked
+          # against the invented MMC3 ROM/FM2, never against user files.
+          python3 tools/run_private_fm2_storyboard.py \
+            --rom "$RUNNER_TEMP/fceux_invented_mmc3.nes" \
+            --movie "$RUNNER_TEMP/fceux_invented_mmc3.fm2" \
+            --output "$RUNNER_TEMP/fceux_mmc3_full_timeline" \
+            --interval 8 --timeout-seconds 90
+          grep -qx "movie_terminal_frame=63" \
+            "$RUNNER_TEMP/fceux_mmc3_full_timeline.terminal_witness.txt"
+          python3 tools/audit_private_fceux_storyboard.py \
+            "$RUNNER_TEMP/fceux_mmc3_full_timeline" \
+            --require-complete-window
+          echo "REAL_FCEUX_NES2_MMC3_SYNTHETIC_PASS input_frame_16=A terminal_frame=63 original_game_proven=no"
       - name: Reject tracked ROM, FM2 and binary capture files
         shell: bash
         run: |
