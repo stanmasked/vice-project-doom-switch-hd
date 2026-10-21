@@ -2,6 +2,7 @@
 #include <switch.h>
 #include "simulation.hpp"
 #include "driving_simulation.hpp"
+#include "driving_scene_bridge.hpp"
 #include "manual_retry.hpp"
 #include "manual_retry_guest_witness.hpp"
 #include "live_defeat_retry_witness.hpp"
@@ -890,17 +891,7 @@ int main(int,char**) {
         view.manual_controls=!demo.enabled();
         view.driving_stage_preview=driving_preview && view.manual_controls;
         if(view.driving_stage_preview) {
-            view.driving.frame=driving_state.frame;
-            view.driving.road_phase=driving_state.road_phase;
-            view.driving.ticks=driving_state.frame;
-            view.driving.health=driving_state.health;
-            view.driving.car_x=driving_state.car_x;
-            view.driving.obstacle_x=driving_state.obstacle_x;
-            view.driving.obstacle_y=driving_state.obstacle_y;
-            view.driving.show_obstacle=true;
-            view.driving.impact_flash=driving_state.hit_cooldown>0 &&
-                (driving_state.frame/4u)%2u==0u;
-            view.driving.speed=static_cast<uint8_t>(driving_state.speed);
+            view.driving=vpd::makeDrivingSceneView(driving_state);
         }
         const bool hd_effects=hd_fx_mode.activeForGameplay(
             view.manual_controls);

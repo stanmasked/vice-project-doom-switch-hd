@@ -288,3 +288,18 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
 endif()
 add_test(NAME romfree_driving_independent_vehicle_controls
          COMMAND vpd_driving_simulation_test)
+
+# Stage 162: the exact header-only adapter used by the NRO maps each live
+# synthetic physics snapshot to the renderer. The platform path is immutable.
+add_executable(vpd_driving_scene_bridge_test
+               ../tests/test_driving_scene_bridge.cpp)
+target_link_libraries(vpd_driving_scene_bridge_test PRIVATE
+                      vpd_scene_renderer vpd_simulation)
+target_include_directories(vpd_driving_scene_bridge_test PRIVATE
+                           ${CMAKE_CURRENT_SOURCE_DIR}/../game_core)
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+  target_compile_options(vpd_driving_scene_bridge_test PRIVATE
+                         -Wall -Wextra -Wpedantic -Werror)
+endif()
+add_test(NAME romfree_driving_scene_bridge
+         COMMAND vpd_driving_scene_bridge_test)
