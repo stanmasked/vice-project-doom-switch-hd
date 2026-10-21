@@ -468,3 +468,47 @@ python3 tools/audit_private_fm2.py \
 ```
 
 This input-only view helps correlate player actions with private FCEUX screenshots. It cannot identify a level transition by itself. Synthetic unit tests cover exact button runs, held-button compression, missing bounds, reversed ranges, and out-of-range windows. No ROM, FM2, screenshot, or extracted graphics are included in the repository.
+
+
+## Stage 148 — original USA FM2 transition verified in private FCEUX
+
+The owner re-uploaded \`taotao-viceprojectdoom.fm2\` locally on 21 October 2026. A
+checksum of the original US iNES PRG+CHR payload matched the FM2's recorded ROM MD5.
+The private FCEUX 2.6.5 emulator executed the actual ROM and FM2 pair. **Neither
+source ROM, FM2, gameplay screenshots, nor palette arrays were added to GitHub.**
+
+An 8-frame sample window saved **38/38 PPM+PAL pairs**, frames 3504–3800.
+A second independent local FCEUX run saved **59/59 consecutive PPM+PAL pairs**,
+frames 3596–3654, with no observed callback gaps to that point. Its exact
+pixel checks established the following visual boundaries:
+
+- **Frame 3606:** last nonblack frame of the original Stage 1-1 car scene.
+- **Frames 3607–3647:** 41 consecutive frames of entirely black 256×240 RGB output.
+- **Frame 3648:** first nonblack frame of the original Stage 2-1 city/platform scene.
+
+Seven frames common to both independent runs — **3600, 3608, 3616, 3624,
+3632, 3640, 3648** — have byte-identical P6 RGB and indexed-palette arrays
+(**14 files**). This is strong evidence of deterministic *rendering of this
+transition segment* under the recorded local emulator conditions, not a proof
+of every gameplay event or of the full movie's terminal frame in these runs.
+
+The new \`tools/audit_private_fceux_transition.py\` analyzes a fully validated
+private 1-frame-cadence window, verifies the exact bounded blackout and can
+cross-check image+palette bytes from another private capture. It emits only
+numeric transition evidence. It **cannot name game stages by itself**: the
+Stage 1-1 / Stage 2-1 labels above come from reviewing the actual original
+frames, not inferring a stage identifier from the black-screen sequence.
+
+Example private usage, without uploading the source files:
+
+\`\`\`sh
+python3 tools/audit_private_fceux_transition.py \
+  "/private/transition_precision" \
+  --compare-private-capture "/private/transition_captures" \
+  --min-black-frames 40
+\`\`\`
+
+The new runs were intentionally stopped after their respective inspection
+windows; a contiguous replay through all **43,652** movie frames is not
+claimed for either *new* run. The full-run procedure and its independent
+terminal witness remain separate follow-up requirements.
