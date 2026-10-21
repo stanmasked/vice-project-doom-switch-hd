@@ -1,0 +1,80 @@
+name: FCEUX Real Runtime Smoke (Synthetic ROM)
+
+on:
+  push:
+    paths:
+      - ".github/workflows/fceux-runtime-smoke.yml"
+      - "tools/build_fceux_smoke_rom.py"
+      - "tools/fceux_runtime_smoke.lua"
+      - "tools/capture_fceux_movie_storyboard.lua"
+      - "tools/audit_private_fceux_storyboard.py"
+      - "tests/test_build_fceux_smoke_rom.py"
+  pull_request:
+    paths:
+      - ".github/workflows/fceux-runtime-smoke.yml"
+      - "tools/build_fceux_smoke_rom.py"
+      - "tools/fceux_runtime_smoke.lua"
+      - "tools/capture_fceux_movie_storyboard.lua"
+      - "tools/audit_private_fceux_storyboard.py"
+      - "tests/test_build_fceux_smoke_rom.py"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  real-fceux-api:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Ubuntu FCEUX and Xvfb
+        run: |
+          sudo apt-get update -qq
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y fceux xvfb xauth
+          command -v fceux
+      - name: Generate invented NES program only inside temporary directory
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -p test_build_fceux_smoke_rom.py -v
+          python3 tools/build_fceux_smoke_rom.py --output "$RUNNER_TEMP/fceux_fabricated.nes"
+          mkdir -p "$RUNNER_TEMP/fceux_fabricated_frames"
+      - name: Run real FCEUX Lua screen hooks on that invented ROM
+        shell: bash
+        env:
+          SDL_AUDIODRIVER: dummy
+        run: |
+          set -euo pipefail
+          export VPD_SMOKE_DIRECTORY="$RUNNER_TEMP/fceux_fabricated_frames"
+          logfile="$RUNNER_TEMP/fceux_smoke.log"
+          timeout 55s xvfb-run -a -s '-screen 0 1024x768x24' \
+            fceux --no-config 1 --sound 0 \
+              --loadlua tools/fceux_runtime_smoke.lua \
+              "$RUNNER_TEMP/fceux_fabricated.nes" >"$logfile" 2>&1 &
+          pid=$!
+          cleanup() { kill "$pid" 2>/dev/null || true; wait "$pid" 2>/dev/null || true; }
+          trap cleanup EXIT
+          for i in $(seq 1 75); do
+            if [[ -f "$VPD_SMOKE_DIRECTORY/frame_000016.meta.txt" ]]; then break; fi
+            if ! kill -0 "$pid" 2>/dev/null; then break; fi
+            sleep 0.5
+          done
+          if [[ ! -f "$VPD_SMOKE_DIRECTORY/frame_000016.meta.txt" ]]; then
+            echo "Real FCEUX did not save second frame" >&2
+            tail -100 "$logfile" >&2
+            exit 1
+          fi
+          python3 tools/audit_private_fceux_storyboard.py \
+            "$VPD_SMOKE_DIRECTORY" --require-complete-window
+          echo "REAL_FCEUX_SYNTHETIC_STORYBOARD_PASS frames=8,16 original_game_proven=no"
+          cleanup
+          trap - EXIT
+      - name: Reject tracked ROM, FM2 and binary capture files
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git ls-files | grep -E -i '\.(nes|fm2|nro|pal|ppm|bin)$'; then
+            echo "ROM or capture must never be tracked" >&2
+            exit 1
+          fi
