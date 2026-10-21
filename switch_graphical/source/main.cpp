@@ -472,7 +472,11 @@ int main(int,char**) {
             } else if(toggle_manual || driving_preview_chord) {
                 input=0; // entering/leaving preview never performs a jump/dash
             }
-            if(!restarted && !driving_preview)game.tick(vpd::Input{input});
+            // First visible platform presentation is a state-identical
+            // restoration. Normal platform simulation resumes NEXT frame.
+            if(!restarted && !driving_preview &&
+               driving_present!=vpd::stage_transition::Scene::Platform)
+                game.tick(vpd::Input{input});
             // Verify the actual physics tick consumed the SAME bullet
             // witnessed at native L+R ON, not another hostile projectile.
             // A host keypress, synthetic HP subtraction or raster change
