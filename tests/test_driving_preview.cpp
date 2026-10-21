@@ -1,4 +1,5 @@
 #include "driving_preview.hpp"
+#include "scene_renderer.hpp"
 #include <cstdint>
 #include <iostream>
 #include <stdexcept>
@@ -103,6 +104,36 @@ int main() {
     require(hashRows(same,stride,0,split)==originalRoad &&
             hashRows(same,stride,split,h)==originalHud,
             "previous frame state leaked into driving preview");
+
+    // The shared Switch/host SceneView bridge must render the same
+    // isolated preview only on explicit opt-in, and preserve the old scene.
+    vpd::SceneView scene{};
+    scene.frame=view.frame;
+    scene.player_health=view.health;
+    std::vector<uint32_t> legacy(data.size(),sentinel);
+    require(vpd::drawScene(legacy.data(),w,h,stride,scene),
+            "legacy SceneView draw failed");
+    const auto legacyRoad=hashRows(legacy,stride,0,split);
+    const auto legacyHud=hashRows(legacy,stride,split,h);
+    scene.driving_stage_preview=true;
+    require(vpd::drawScene(legacy.data(),w,h,stride,scene),
+            "opt-in shared SceneView driving draw failed");
+    vpd::DrivingPreviewView reference{};
+    reference.frame=scene.frame;
+    reference.road_phase=static_cast<int>(scene.frame%72u);
+    reference.ticks=scene.frame;
+    reference.health=scene.player_health;
+    require(vpd::drawDrivingPreview(same.data(),w,h,stride,reference),
+            "direct driving preview reference failed");
+    require(hashRows(legacy,stride,0,split)==hashRows(same,stride,0,split) &&
+            hashRows(legacy,stride,split,h)==hashRows(same,stride,split,h),
+            "shared SceneView did not select isolated driving renderer");
+    scene.driving_stage_preview=false;
+    require(vpd::drawScene(legacy.data(),w,h,stride,scene),
+            "legacy rendering after toggle failed");
+    require(hashRows(legacy,stride,0,split)==legacyRoad &&
+            hashRows(legacy,stride,split,h)==legacyHud,
+            "driving preview changed the legacy rendering after exit");
 
     std::cout<<"VPD_ROMFREE_DRIVING_HUD_LAYER_PASS"
              <<" source_split_y=196 output_split_y=588"
