@@ -180,6 +180,7 @@ int main(int,char**) {
     bool native_hd_dust_logged=false;
     bool native_hostile_halo_logged=false;
     vpd::HdFxRuntimeMode hd_fx_mode{};
+    bool driving_preview=false; // manual-only ROM-free road/HUD visual preview
     unsigned hd_fx_guest_seq=0;
     unsigned hd_fx_combat_seq=0;
     unsigned hd_fx_sentry_seq=0;
@@ -227,6 +228,12 @@ int main(int,char**) {
         padUpdate(&pad);
         const u64 buttons=padGetButtons(&pad);
         const u64 pressed=padGetButtonsDown(&pad);
+        // Deliberately uncommon debug chord preserves all approved autoplay.
+        const bool driving_preview_chord=!demo.enabled() &&
+            (pressed&HidNpadButton_X) &&
+            (buttons&HidNpadButton_ZL) &&
+            (buttons&HidNpadButton_ZR);
+        if(driving_preview_chord)driving_preview=!driving_preview;
         if(buttons&HidNpadButton_Plus){
             if(!demo.enabled())vpd::guardLiveDebugRecord(
                 has_sd,"plus",game,0);
@@ -265,6 +272,7 @@ int main(int,char**) {
             ((pressed&HidNpadButton_StickL) && !(buttons&HidNpadButton_Y)) ||
             ((pressed&HidNpadButton_A) && (buttons&HidNpadButton_R));
         if(toggle_manual) {
+            driving_preview=false;
             demo.toggle(game);
             animation.reset();
             checkpoint_ok=false;
@@ -286,7 +294,7 @@ int main(int,char**) {
                                              1,game,1);
             } else manual_seq=0;
         }
-        if(pressed&HidNpadButton_X) {
+        if((pressed&HidNpadButton_X) && !driving_preview_chord) {
             const vpd::BundleReload result=has_sd ?
                 assets.reload(kExternalAtlasPath,kExternalAnimationPath) :
                 vpd::BundleReload::MissingAtlas;
@@ -300,7 +308,7 @@ int main(int,char**) {
             animation.reset();
             reload_failed=false;
         }
-        if(pressed&HidNpadButton_ZL) {
+        if((pressed&HidNpadButton_ZL) && !driving_preview_chord) {
             terrain_reload_failed= !has_sd ||
                 terrain.reload(kExternalTerrainPath)!=vpd::TerrainReload::Loaded;
         }
@@ -400,7 +408,7 @@ int main(int,char**) {
             const uint64_t prior_sentry_fingerprint=
                 hd_fx_sentry_seq==2 && !hd_fx_sentry_hit_logged ?
                 game.fingerprint():0;
-            if(toggle_manual)input=0; // R+A is a mode switch, not a jump
+            if(toggle_manual || driving_preview_chord)input=0; // mode chord never consumes gameplay input
             if(!restarted)game.tick(vpd::Input{input});
             // Verify the actual physics tick consumed the SAME bullet
             // witnessed at native L+R ON, not another hostile projectile.
@@ -859,6 +867,7 @@ int main(int,char**) {
         view.moving=actor.vx!=0;
         view.replay_demo=demo.enabled();
         view.manual_controls=!demo.enabled();
+        view.driving_stage_preview=driving_preview && view.manual_controls;
         const bool hd_effects=hd_fx_mode.activeForGameplay(
             view.manual_controls);
         view.hd_hit_lighting=hd_effects;
