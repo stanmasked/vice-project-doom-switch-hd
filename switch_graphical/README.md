@@ -180,3 +180,33 @@ Up/Down remain dedicated to the decoration image atlas.
 
 Read docs/LEVEL_PLACEMENTS.md for the binary schema and safety rules.
 These positions are diagnostic fixtures, not reconstructed original map data.
+
+
+## Stage 160 — opt-in driving/HUD visual preview
+
+The graphical Switch NRO now includes a **ROM-free overhead driving-stage
+preview**. First leave autoplay for manual play using the left-stick click
+(the existing control); then press **ZL + ZR + X** together to toggle the
+preview on/off. The same chord consumes the X atlas reload and ZL terrain
+reload on that activation, and no extra dash command is submitted from
+the toggle. Returning to autoplay resets preview selection.
+
+The driving preview has a strict, unchanging original-framebuffer-inspired
+HUD split: the observed NES image-space line **Y=196/240** maps to output
+**Y=588/720**. Drawing in the road layer is hard-clipped above output
+row 588, while the HUD is hard-clipped to rows 588–719. The road area
+uses invented test road markings and an invented car sprite; the HUD
+contains independent numeric status/HP bars. Source ROM, NES tiles, game
+screenshots, FM2 and copyrighted HUD lettering are **not included**.
+
+The preview receives the pre-existing simulation's current frame and
+health **for visualization only**. It does not implement vehicle physics,
+road collision, authentic gameplay or original camera speed. The
+pre-existing platform renderer, golden synthetic replay frame and
+manual combat scene are unchanged by default. Test coverage:
+`tests/test_driving_preview.cpp`, registered as
+`romfree_driving_preview_hud_road_isolation` in graphics_core CTest.
+It verifies layer independence, padded framebuffer bounds, deterministic
+redraw, source viewport boundary and reversion to the old SceneView path.
+
+Research provenance: `docs/STAGE1_HUD_LAYER_SOURCE_AUDIT.md`.
