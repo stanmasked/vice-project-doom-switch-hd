@@ -60,7 +60,7 @@ def private_target(directory):
     return directory
 
 
-def capture_plan(movie_summary,interval=1803):
+def capture_plan(movie_summary,interval=1803,start_frame=None,stop_frame=None):
     frames=movie_summary["frames"]
     if not movie_summary["rom_identity_matched"]:
         raise ValueError("ROM identity not independently verified")
@@ -68,20 +68,31 @@ def capture_plan(movie_summary,interval=1803):
         raise ValueError("FM2 does not have a reliable power-on initial state")
     if not 1<=interval<=120000:
         raise ValueError("unsupported storyboard frame interval")
-    # Lua after-frame hooks may register after the power-on frame 0.
-    # Do not demand an unobservable frame-0 image for a complete audit.
-    stop=frames-1
-    regular_samples=stop//interval
-    if regular_samples<1:
+    custom_window=start_frame is not None or stop_frame is not None
+    capture_start=interval if start_frame is None else start_frame
+    capture_stop=frames-1 if stop_frame is None else stop_frame
+    if (not isinstance(capture_start,int) or isinstance(capture_start,bool)
+        or not isinstance(capture_stop,int) or isinstance(capture_stop,bool)):
+        raise ValueError("capture window frame bounds must be integers")
+    # Preserve the familiar error for a full movie too short to reach its
+    # first reliable after-frame capture.
+    if not custom_window and capture_stop<capture_start:
         raise ValueError("movie shorter than the first reliable capture interval")
-    # Keep the regular cadence and also capture the exact terminal frame when
-    # it is not cadence-aligned; otherwise the last visual sample can precede
-    # the end of a long recording by hundreds of frames.
-    samples=regular_samples+int(stop%interval!=0)
+    if capture_start<0 or capture_stop<capture_start or capture_stop>=frames:
+        raise ValueError("capture window outside the FM2 movie timeline")
+    # FCEUX uses the global movie frame counter, so window sampling remains
+    # aligned to the same cadence regardless of where the window begins.
+    first=(capture_start+interval-1)//interval*interval
+    regular_samples=0 if first>capture_stop else (capture_stop-first)//interval+1
+    terminal_sample=int(capture_stop%interval!=0)
+    samples=regular_samples+terminal_sample
+    if samples<1:
+        raise ValueError("capture window contains no scheduled frames")
     if samples>64:
-        raise ValueError("movie requires more than 64 storyboard samples")
+        raise ValueError("capture window requires more than 64 storyboard samples")
     return {"frames":frames,"last_frame":frames-1,
-            "interval":interval,"sample_count":samples}
+            "interval":interval,"sample_count":samples,
+            "start_frame":capture_start,"stop_frame":capture_stop}
 
 
 def parse_chr_targets(spec,bank_count):
@@ -97,7 +108,7 @@ def parse_chr_targets(spec,bank_count):
 
 
 def launch(rom,movie,directory,fceux="fceux",timeout_seconds=1800,
-           interval=1803,trace_chr_banks=""):
+           interval=1803,trace_chr_banks="",start_frame=None,stop_frame=None):
     rom=Path(rom).expanduser()
     movie=Path(movie).expanduser()
     if rom.is_symlink() or movie.is_symlink():
@@ -106,7 +117,8 @@ def launch(rom,movie,directory,fceux="fceux",timeout_seconds=1800,
     movie=movie.resolve(strict=True)
     expected_source_digests=(file_sha256(rom),file_sha256(movie))
     summary=audit_movie(movie,rom=rom)
-    plan=capture_plan(summary,interval=interval)
+    plan=capture_plan(summary,interval=interval,
+                      start_frame=start_frame,stop_frame=stop_frame)
     bank_count=0
     if trace_chr_banks:
         cartridge=read_layout(rom)
@@ -146,7 +158,9 @@ def launch(rom,movie,directory,fceux="fceux",timeout_seconds=1800,
         "VPD_PRIVATE_FM2_HEADER_POWERON_PREFLIGHT":"yes",
         "VPD_PRIVATE_ROM_PAYLOAD_MD5":rom_payload(rom)[0].hex(),
         "VPD_PRIVATE_CAPTURE_INTERVAL":str(plan["interval"]),
-        "VPD_PRIVATE_CAPTURE_LIMIT":str(plan["sample_count"])
+        "VPD_PRIVATE_CAPTURE_LIMIT":str(plan["sample_count"]),
+        "VPD_PRIVATE_CAPTURE_START_FRAME":str(plan["start_frame"]),
+        "VPD_PRIVATE_CAPTURE_STOP_FRAME":str(plan["stop_frame"])
     })
     if focus:
         chr_capture=SCRIPT_DIR/"capture_private_mmc3_chr_focus.lua"
@@ -222,7 +236,12 @@ def main():
     p.add_argument("--movie",type=Path,required=True)
     p.add_argument("--output",type=Path,required=True)
     p.add_argument("--fceux",default="fceux")
-    p.add_argument("--interval",type=int,default=1803)
+    p.add_argument("--interval",type=int,default=1803,
+                   help="global FCEUX frame cadence for the private storyboard")
+    p.add_argument("--start-frame",type=int,default=None,
+                   help="optional inclusive global frame at which screenshot sampling begins")
+    p.add_argument("--stop-frame",type=int,default=None,
+                   help="optional inclusive global frame for the final screenshot; playback still runs to movie end")
     p.add_argument("--timeout-seconds",type=int,default=1800)
     p.add_argument("--trace-chr-banks",default="",
                    help="opt-in numeric CHR bank list; mapper writes only, not PPU display")
@@ -230,7 +249,8 @@ def main():
     try:
         result=launch(a.rom,a.movie,a.output,fceux=a.fceux,
                       interval=a.interval,timeout_seconds=a.timeout_seconds,
-                      trace_chr_banks=a.trace_chr_banks)
+                      trace_chr_banks=a.trace_chr_banks,
+                      start_frame=a.start_frame,stop_frame=a.stop_frame)
     except (OSError,ValueError,UnicodeError) as exc:
         p.exit(1,"PRIVATE_FM2_REPLAY_INCONCLUSIVE: "+str(exc)+"\n")
     print("PRIVATE_FM2_REPLAY_FRAME_CAPTURE_PASS")
