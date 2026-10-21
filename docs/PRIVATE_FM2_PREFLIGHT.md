@@ -454,3 +454,17 @@ python3 tools/run_private_fm2_storyboard.py \\
 ```
 
 The real-FCEUX PR smoke adds a 256-frame synthetic focused-window test with a non-aligned stop frame; this verifies the capture contract without uploading or exposing original-game material. Passing this synthetic test does not itself identify the original stage transition.
+
+ 
+## Stage 145 — private FM2 button-window summaries
+
+The existing FM2 preflight now optionally reports run-length-encoded controller inputs for an inclusive frame range. It reuses the strict FM2 parser and optional in-memory ROM checksum match, emits compact button runs rather than raw FM2 rows, and explicitly marks visual scene identity as unproven. Run only on the owner's local files:
+
+```sh
+python3 tools/audit_private_fm2.py \
+  "/path/to/taotao-viceprojectdoom.fm2" \
+  --rom "/path/to/Vice Project Doom.nes" \
+  --window-start-frame 3500 --window-stop-frame 3800
+```
+
+This input-only view helps correlate player actions with private FCEUX screenshots. It cannot identify a level transition by itself. Synthetic unit tests cover exact button runs, held-button compression, missing bounds, reversed ranges, and out-of-range windows. No ROM, FM2, screenshot, or extracted graphics are included in the repository.
