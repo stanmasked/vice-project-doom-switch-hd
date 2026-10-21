@@ -252,6 +252,41 @@ jobs:
           grep -qx 'trace_closed=yes' \
             "$RUNNER_TEMP/fceux_mmc3_extended_run.mmc3_chr_focus.witness.txt"
           echo "REAL_FCEUX_EXTENDED_256_FRAME_SYNTHETIC_PASS frames=256 snapshots=16 including_terminal=255 original_game_proven=no"
+      - name: Verify bounded capture window and non-aligned stop in real FCEUX
+        shell: bash
+        env:
+          SDL_AUDIODRIVER: dummy
+        run: |
+          set -euo pipefail
+          python3 tools/run_private_fm2_storyboard.py \
+            --rom "$RUNNER_TEMP/fceux_invented_mmc3.nes" \
+            --movie "$RUNNER_TEMP/fceux_invented_mmc3_extended.fm2" \
+            --output "$RUNNER_TEMP/fceux_mmc3_transition_window" \
+            --interval 16 --start-frame 100 --stop-frame 251 \
+            --timeout-seconds 110
+          python3 tools/audit_private_fceux_storyboard.py \
+            "$RUNNER_TEMP/fceux_mmc3_transition_window" --require-complete-window
+          PYTHONPATH=tools python3 - <<'PY'
+          import os
+          from pathlib import Path
+          from audit_private_fm2_terminal_witness import audit_movie_witness
+          from audit_private_fceux_storyboard import audit
+          root=Path(os.environ["RUNNER_TEMP"])
+          base=root/"fceux_mmc3_transition_window"
+          witness=audit_movie_witness(
+              root/"fceux_mmc3_transition_window.terminal_witness.txt",
+              expected_frame_count=256)
+          report=audit(base,require_complete=True)
+          assert witness["terminal_frame_verified"]==255
+          assert witness["frame_gaps"]==0
+          assert report["sample_count"]==10,report
+          assert report["expected_sample_count"]==10,report
+          assert report["first_frame"]==112,report
+          assert report["last_frame"]==251,report
+          assert report["capture_interval"]==16,report
+          assert report["capture_limit"]==10,report
+          print("REAL_FCEUX_FOCUSED_WINDOW_PASS sampled=112..240 step=16 plus stop=251 movie_terminal=255 original_game_proven=no")
+          PY
       - name: Test real 1803-frame capture cadence on extended invented MMC3 FM2
         if: github.event_name == 'pull_request'
         shell: bash
