@@ -296,3 +296,18 @@ colors and source flash phase. A second independent Python auditor joins
 each sample to the exact native physics frame and refuses incomplete or
 inconsistent records. This is additional proof of synthetic preview wiring,
 not of original NES sprites or Switch hardware output.
+## Stage 165 — diagnostic driving exit and exact 41-frame blackout
+
+In the manually selected driving preview, press **Minus once** to request
+a **test-only** stage exit. The current road frame finishes rendering first.
+The next **41 presented native framebuffer frames** are fully opaque black
+at 1280x720, and the following frame resumes the prior platform scene.
+Driving physics and the legacy platform Simulation are frozen during
+the blackout. Minus no longer triggers decor layout reload in this mode.
+
+The 41-frame interval is taken from private original FCEUX frames 3607–3647;
+the original 3606→3648 absolute alignment, actual clear condition, original
+road geometry, car AI and NES palette data are NOT recreated by this manual
+transition. Its full framebuffer/padding/legacy-state contract is exercised
+by `romfree_driving_to_platform_blackout`. Genuine NeXium Minus-triggered
+runtime evidence remains a separate, unproven step.

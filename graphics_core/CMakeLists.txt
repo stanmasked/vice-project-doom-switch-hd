@@ -320,3 +320,16 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
   target_compile_options(vpd_driving_raster_witness_test PRIVATE -Wall -Wextra -Wpedantic -Werror)
 endif()
 add_test(NAME romfree_driving_same_frame_raster COMMAND vpd_driving_raster_witness_test)
+# Stage 165: opt-in, source-backed 41-presented-frame blackout, with the
+# platform simulation frozen and original platform frame restored afterward.
+add_executable(vpd_driving_stage_exit_test ../tests/test_driving_stage_exit.cpp)
+target_link_libraries(vpd_driving_stage_exit_test PRIVATE vpd_scene_renderer vpd_simulation)
+target_include_directories(vpd_driving_stage_exit_test PRIVATE
+                           ${CMAKE_CURRENT_SOURCE_DIR}
+                           ${CMAKE_CURRENT_SOURCE_DIR}/../game_core)
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+  target_compile_options(vpd_driving_stage_exit_test PRIVATE
+                         -Wall -Wextra -Wpedantic -Werror)
+endif()
+add_test(NAME romfree_driving_to_platform_blackout
+         COMMAND vpd_driving_stage_exit_test)
