@@ -28,6 +28,15 @@ proof of a solid collision cell or metatile ID.
 
 ## Required local inputs
 
+Before providing externally measured camera/scroll values, run the
+[ROM-private capture preflight](PRIVATE_STAGE_CAPTURE_PREFLIGHT.md) on the
+local FCEUX capture directory. It rejects truncated or inconsistent
+PPU/RAM/screen files and missing FCEUX metadata, but it **does not**
+authenticate that gameplay was really recorded or infer the world
+camera from RAM values. A clean file-integrity result is a prerequisite
+for measurement, not evidence of restored original geometry.
+
+
 Use [capture_fceux_ppu.lua](../tools/capture_fceux_ppu.lua) to obtain
 private frame_NNNNNN.ppu.bin and frame_NNNNNN.meta.txt snapshots from
 the user's lawfully obtained ROM during the actual first stage.
