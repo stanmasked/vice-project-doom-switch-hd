@@ -9,7 +9,7 @@ import argparse
 import json
 from pathlib import Path
 
-from audit_private_fceux_storyboard import audit, P6_HEADER, WIDTH, HEIGHT
+from audit_private_fceux_storyboard import audit, parse_meta, P6_HEADER, WIDTH, HEIGHT
 
 RGB_BYTES = WIDTH * HEIGHT * 3
 
@@ -36,6 +36,12 @@ def _compare(reference_dir, other_dir):
     common = sorted(current & set(_frames(other_dir)))
     if not common:
         raise ValueError("no common frames between private captures")
+    original_id = parse_meta(Path(reference_dir) /
+                             ("frame_%06d.meta.txt" % common[0]))["rom_md5"].lower()
+    comparison_id = parse_meta(Path(other_dir) /
+                               ("frame_%06d.meta.txt" % common[0]))["rom_md5"].lower()
+    if original_id != comparison_id:
+        raise ValueError("private captures disagree on ROM identity")
     for frame in common:
         name = "frame_%06d" % frame
         for ext in (".ppm", ".pal.bin"):
