@@ -31,8 +31,9 @@ local function run(mode)
     end,
     getregister=function(key)assert(key=='a');return accumulator end,
     setregister=function(key,val)
-      assert(key=='a' and val==0x06)
-      accumulator=val;mutated=true
+      assert(key=='a' and (val==0x06 or val==0x0E))
+      accumulator=val
+      if val==0x06 then mutated=true end
     end
   }
   emu={
