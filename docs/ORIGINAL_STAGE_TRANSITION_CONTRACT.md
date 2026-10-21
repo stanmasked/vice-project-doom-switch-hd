@@ -76,3 +76,62 @@ parallax until independent source-level scroll/PPU observations corroborate it.
 **Proven today:** local source-only transition C++ test, private screenshots
 and numerical timing/roadway observations. **Not yet proven:** original car
 physics, camera/scroll speed, collision and Switch runtime integration.
+
+
+## Stage 152 — observed original PPU write timing
+
+A **new private** original ROM+FM2 run on FCEUX 2.6.5 captured CPU register
+events for every frame 600–920 inclusive, plus 41 RAM snapshots at 8-frame
+cadence. Playback callbacks were contiguous from frame 1 through frame 920.
+The original ROM, FM2 and unabridged TSV traces remain local and private.
+
+### Direct observations (not guesses about rendered scroll)
+
+- 321 frames observed; **1,284 writes to $2005**, exactly four writes per
+  observed frame.
+- In all 321 frames, the captured write-value order was
+  **0x00, changing value, 0x00, 0x00**.
+- The first two $2005 writes were **seven measured CPU cycles apart** in
+  all 321 frames.
+- FCEUX reported a usable CPU cycle counter. The trace also contains $2000,
+  $2006, $2007, MMC3 register events, and 41 postframe RAM samples of
+  zero-page $0B, $0C and $0D.
+- The running FCEUX Lua API **did not provide memory.registerread**. No actual
+  $2002/PPUSTATUS read callbacks were observed. Do not reconstruct a known
+  first/second PPUSCROLL latch from these write records alone.
+
+A few aligned private image-and-register observations illustrate why source
+values must not be confused with the effective display or camera position:
+
+| Frame | Second raw $2005 value (decimal) | End-of-frame RAM $0D | Observed road width, pixels |
+|---:|---:|---:|---:|
+| 600 | 79 | 79 | 123 |
+| 744 | 136 | 134 | 123 |
+| 800 | 144 | 139 | 56 |
+| 920 | 24 | 19 | 88 |
+
+The difference between the sampled RAM $0D and an earlier $2005 write
+demonstrates that an end-of-frame memory sample cannot simply be substituted
+for the value used at an earlier CPU write. These are real values **observed
+together**, not a derived camera speed or proof that visible road width is
+caused by a single scroll register.
+
+Added source-only `tools/audit_private_stage1_ppu_timing.py` and nine wholly
+synthetic tests. The analyzer checks the raw event sequence, CPU-cycle order,
+postframe samples, and optional private road measurement JSON, while keeping
+`display_effective_scroll_proven=false`, `camera_speed_proven=false`.
+No raw TSV, ROM, FM2, RGB, PAL or derived commercial graphics are in GitHub.
+
+### Emulator Lua API compatibility
+
+The public `tools/capture_fceux_ppu.lua` now checks for the actual presence
+of `memory.registerread` rather than assuming it exists. Metadata declares
+`ppu_status_read_hook=available` or `unavailable`. When missing, the capture
+still collects supported write evidence but must **not invent PPUSTATUS read
+markers or assert that the scroll latch is synchronized**. A fully invented
+Lua negative test and CI workflow invocation cover that situation.
+
+The next step is to observe the exact execution of the known $E8DE emitter
+with CPU-cycle timing, investigate raster/IRQ split state, and compare an
+independent PPU rendering trace to the visible road before setting authentic
+driving-stage camera parameters in the Switch remake.
