@@ -266,7 +266,8 @@ jobs:
           assert witness["terminal_frame_verified"]==4095
           assert witness["frame_gaps"]==0
           assert witness["loaded_rom_verified"]
-          assert witness["private_input_files_unchanged_verified"] if "private_input_files_unchanged_verified" in witness else True
+          assert witness["movie_readonly"]
+          assert witness["fm2_header_power_on_preflight_verified"]
           report=audit(base,require_complete=True)
           assert report["sample_count"]==2,report
           assert report["first_frame"]==1803,report
