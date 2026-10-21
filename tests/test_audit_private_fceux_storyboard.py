@@ -201,13 +201,33 @@ class StoryboardAuditTests(unittest.TestCase):
             self.assertTrue(report['complete_window_verified'])
             self.assertEqual(report['expected_sample_count'],2)
 
+    def test_complete_window_includes_non_aligned_terminal_frame(self):
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d)
+            capture(root,8,start=8,stop=20,limit=3)
+            capture(root,16,start=8,stop=20,limit=3)
+            capture(root,20,start=8,stop=20,limit=3)
+            report=audit(root,require_complete=True)
+            self.assertTrue(report['complete_window_verified'])
+            self.assertEqual(report['expected_sample_count'],3)
+            self.assertEqual(report['last_frame'],20)
+
+    def test_incomplete_window_missing_non_aligned_terminal_frame(self):
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d)
+            capture(root,8,start=8,stop=20,limit=3)
+            capture(root,16,start=8,stop=20,limit=3)
+            with self.assertRaisesRegex(ValueError,'window incomplete'):
+                audit(root,require_complete=True)
+
     def test_complete_window_non_aligned_start(self):
         with tempfile.TemporaryDirectory() as d:
             root=Path(d)
-            capture(root,16,start=10,stop=20)
+            capture(root,16,start=10,stop=20,limit=2)
+            capture(root,20,start=10,stop=20,limit=2)
             report=audit(root,require_complete=True)
             self.assertTrue(report['complete_window_verified'])
-            self.assertEqual(report['expected_sample_count'],1)
+            self.assertEqual(report['expected_sample_count'],2)
 
     def test_strict_window_does_not_infer_from_count(self):
         with tempfile.TemporaryDirectory() as d:
