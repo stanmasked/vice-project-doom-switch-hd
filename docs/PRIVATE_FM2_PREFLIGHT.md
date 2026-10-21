@@ -226,3 +226,40 @@ storyboard frames remain subject to strict audit. This verifies playback
 input effects on an invented NES CPU program, not original Vice: Project Doom
 input, scene geometry, or movie synchronization. Original ROM/FM2 never
 enter GitHub Actions. Recheck exact-head CI before treating this as proven.
+
+
+## Stage 123 — privately run the complete verified FM2 (source-only, no upload)
+
+A new **opt-in private executable** now connects the working FCEUX Lua
+capture pipeline to an actual matching local NES+FM2 pair without uploading
+either. Example (Linux FCEUX 2.6.5, in a local environment containing
+privately owned game files):
+
+    python3 tools/run_private_fm2_storyboard.py \
+      --rom "/private/Vice Project Doom.nes" \
+      --movie "/private/taotao-viceprojectdoom.fm2" \
+      --output "/private/us_capture_001"
+
+The runner first verifies the complete FM2 format and ROM PRG+CHR checksum,
+rejects untrusted initial states and existing output paths, and will refuse
+to write captures inside any Git checkout. It then launches local FCEUX
+with the actual private ROM and read-only FM2, keeping screen images, palette
+values, logs and witness under user-chosen private directories. Every run
+uses 1,803-frame checkpoints and a maximum of 64 samples, producing 25
+expected stills for the previously verified 43,652-frame American movie.
+
+The **Lua terminal witness** verifies sustained read-only playback and the
+last requested frame number. Only a witness and a complete strict Python
+capture audit allow the runner to claim the *terminal movie timeline* was
+observed. This is NOT evidence that every original gameplay scene rendered
+correctly, no gameplay desynchronization occurred, or that the final boss
+was defeated: those require independent frame-by-frame source inspection.
+If a capture fails or is interrupted, nothing is reported as a passing
+full private replay. Running the program is entirely local and never
+performed by GitHub Actions on the private ROM.
+
+Only this general-purpose source code and 7 fabricated planning/guard tests
+are checked into GitHub. The real FCEUX environment available in CI was
+confirmed earlier with a different invented NES+FM2. The new private runner
+has **not** been run against the owner's original game here because an
+installed local FCEUX binary is unavailable.
