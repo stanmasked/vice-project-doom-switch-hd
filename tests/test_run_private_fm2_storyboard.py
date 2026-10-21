@@ -7,11 +7,16 @@ sys.path.insert(0,str(Path(__file__).resolve().parents[1]/"tools"))
 from run_private_fm2_storyboard import private_target,capture_plan
 
 class RunnerPlanningTests(unittest.TestCase):
-    def test_us_length_requires_25_samples(self):
+    def test_us_length_requires_24_reliable_samples(self):
         movie={"frames":43652,"rom_identity_matched":True,
                "starts_from_power_on":True}
-        self.assertEqual(capture_plan(movie)["sample_count"],25)
+        self.assertEqual(capture_plan(movie)["sample_count"],24)
         self.assertEqual(capture_plan(movie)["last_frame"],43651)
+
+    def test_reject_too_short_movie_for_first_capture(self):
+        with self.assertRaisesRegex(ValueError,"shorter"):
+            capture_plan({"frames":8,"rom_identity_matched":True,
+                          "starts_from_power_on":True},interval=8)
 
     def test_unmatched_rom_rejected(self):
         with self.assertRaisesRegex(ValueError,"identity"):

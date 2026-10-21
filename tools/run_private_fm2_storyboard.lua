@@ -27,7 +27,7 @@ assert(movie.play(movie_path,true),"FCEUX refused private FM2 read-only playback
 assert(movie.length()==frames,"FCEUX loaded a different FM2 frame count")
 assert(movie.readonly(),"private FM2 was not opened read-only")
 VPD_STORYBOARD_DIRECTORY=directory
-VPD_STORYBOARD_START_FRAME=0
+VPD_STORYBOARD_START_FRAME=interval
 VPD_STORYBOARD_STOP_FRAME=frames-1
 VPD_STORYBOARD_INTERVAL=interval
 VPD_STORYBOARD_LIMIT=limit
@@ -53,7 +53,9 @@ emu.registerafter=function(capture)
       assert(mode=="playback" or mode=="finished",
              "movie did not reach a permitted terminal state")
       timeline_end=true
-      local f=assert(io.open(witness,"wx"))
+      local prior=io.open(witness,"rb")
+      if prior then prior:close();error("private terminal witness already exists") end
+      local f=assert(io.open(witness,"wb"))
       assert(f:write("format=private_fm2_terminal_witness_v1\n"..
                      "movie_readonly=yes\n"..
                      "movie_terminal_frame="..tostring(current).."\n"..

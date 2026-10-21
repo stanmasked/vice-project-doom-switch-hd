@@ -263,3 +263,10 @@ are checked into GitHub. The real FCEUX environment available in CI was
 confirmed earlier with a different invented NES+FM2. The new private runner
 has **not** been run against the owner's original game here because an
 installed local FCEUX binary is unavailable.
+
+Stage 123 capture-cadence correction: FCEUX may attach Lua after frame 0.
+The private full-run script therefore begins snapshot sampling at the
+**first positive frame divisible by the interval** instead of assuming
+frame 0 can be observed. For 43,652 US FM2 frames and interval 1,803, this
+means 24 guaranteed-scheduled images (frames 1,803 through 43,272), not
+25. The terminal movie witness still requires the last FM2 frame 43,651.

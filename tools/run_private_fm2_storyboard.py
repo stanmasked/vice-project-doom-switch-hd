@@ -41,7 +41,11 @@ def capture_plan(movie_summary,interval=1803):
         raise ValueError("FM2 does not have a reliable power-on initial state")
     if not 1<=interval<=120000:
         raise ValueError("unsupported storyboard frame interval")
-    samples=1+(frames-1)//interval
+    # Lua after-frame hooks may register after the power-on frame 0.
+    # Do not demand an unobservable frame-0 image for a complete audit.
+    samples=(frames-1)//interval
+    if samples<1:
+        raise ValueError("movie shorter than the first reliable capture interval")
     if samples>64:
         raise ValueError("movie requires more than 64 storyboard samples")
     return {"frames":frames,"last_frame":frames-1,
@@ -50,10 +54,12 @@ def capture_plan(movie_summary,interval=1803):
 
 def launch(rom,movie,directory,fceux="fceux",timeout_seconds=1800,
            interval=1803):
-    rom=Path(rom).expanduser().resolve(strict=True)
-    movie=Path(movie).expanduser().resolve(strict=True)
+    rom=Path(rom).expanduser()
+    movie=Path(movie).expanduser()
     if rom.is_symlink() or movie.is_symlink():
         raise ValueError("private ROM/movie symlinks are not accepted")
+    rom=rom.resolve(strict=True)
+    movie=movie.resolve(strict=True)
     summary=audit_movie(movie,rom=rom)
     plan=capture_plan(summary,interval=interval)
     target=private_target(directory)
