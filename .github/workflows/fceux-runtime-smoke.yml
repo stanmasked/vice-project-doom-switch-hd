@@ -56,6 +56,20 @@ jobs:
           sudo apt-get update -qq
           sudo DEBIAN_FRONTEND=noninteractive apt-get install -y fceux xvfb xauth
           command -v fceux
+          # Export only the open-source emulator package; never include game ROM/FM2.
+          mkdir -p "$RUNNER_TEMP/fceux-runtime-package"
+          (cd "$RUNNER_TEMP/fceux-runtime-package" && apt-get download fceux)
+          package="$(find "$RUNNER_TEMP/fceux-runtime-package" -maxdepth 1 -name 'fceux_*.deb' -print -quit)"
+          test -n "$package"
+          dpkg-deb -f "$package" Package Version Architecture > "$RUNNER_TEMP/fceux-runtime-package/package-info.txt"
+          (cd "$RUNNER_TEMP/fceux-runtime-package" && sha256sum ./*.deb > SHA256SUMS)
+      - name: Export emulator package for private local replay
+        uses: actions/upload-artifact@v4
+        with:
+          name: fceux-runtime-package-ubuntu24
+          path: ${{ runner.temp }}/fceux-runtime-package/*
+          if-no-files-found: error
+          retention-days: 1
       - name: Generate invented NES program only inside temporary directory
         shell: bash
         run: |
