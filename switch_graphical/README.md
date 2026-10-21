@@ -311,3 +311,15 @@ road geometry, car AI and NES palette data are NOT recreated by this manual
 transition. Its full framebuffer/padding/legacy-state contract is exercised
 by `romfree_driving_to_platform_blackout`. Genuine NeXium Minus-triggered
 runtime evidence remains a separate, unproven step.
+## Stage 166 — original-timed diagnostic transition in real NeXium
+
+The independent car preview smoke now uses the real mapped Minus key after
+re-entering the driving preview and requires a native sequence of **43**
+source-owned guest records: last road, 41 black presentations, and resumed
+platform. A separate X11 screen trio is captured at road, midblack and
+platform. The audit checks count, sequence, actual framebuffer-black samples,
+unchanged platform fingerprint and dark central viewport.
+
+Only the **41-frame interval** is taken from private original FCEUX visual
+evidence. The diagnostic Minus control is invented; original game completion,
+absolute original-movie frame indices and level geometry remain unverified.

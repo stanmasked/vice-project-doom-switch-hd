@@ -86,5 +86,34 @@ wait_for_event 5 exit
 sleep 0.20
 capture screen-drive-exit
 cp "$file" "$out/guest-driving-witness.txt"
+# Independent second preview entry, after the original five-event driving
+# guest trace was already saved; original steering/impact tests stay intact.
+toggle_drive
+sleep 0.28
+capture screen-exit-road
+exit_file="$XDG_CONFIG_HOME/NeXium/sdmc/switch/vice_project_doom/driving_exit_guest.txt"
+xdotool key --clearmodifiers --delay 130 n
+await_exit() {
+  local n="$1" scene="$2" found=no
+  for (( check=0; check<220; ++check )); do
+    if [[ -f "$exit_file" ]] &&
+       grep -q "^VPD_DRIVING_EXIT_V1 seq=$n scene=$scene " "$exit_file"; then
+      found=yes
+      break
+    fi
+    sleep 0.04
+  done
+  echo "native_transition_$scene=$found seq=$n" >> "$out/host-input.txt"
+  [[ "$found" == yes ]]
+}
+await_exit 0 last_road
+await_exit 17 black
+sleep 0.08
+capture screen-exit-black
+await_exit 41 black
+await_exit 42 platform
+sleep 0.16
+capture screen-exit-platform
+cp "$exit_file" "$out/guest-driving-exit-witness.txt"
 xdotool key --clearmodifiers --delay 130 m
 echo "host_probe=completed guest_five_events=yes" >> "$out/host-input.txt"

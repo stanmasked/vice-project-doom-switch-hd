@@ -6,6 +6,7 @@
 #include "driving_guest_witness.hpp"
 #include "driving_raster_witness.hpp"
 #include "driving_stage_exit.hpp"
+#include "driving_exit_witness.hpp"
 #include "driving_transition_black.hpp"
 #include "manual_retry.hpp"
 #include "manual_retry_guest_witness.hpp"
@@ -84,6 +85,7 @@ int main(int,char**) {
     (void)vpd::dashGuestProofReset(has_sd);
     vpd::resetDrivingGuestProof(has_sd);
     vpd::resetDrivingRasterProof(has_sd);
+    vpd::resetDrivingExitWitness(has_sd);
     (void)vpd::guardProofReset(has_sd);
     (void)vpd::guardCombatProofReset(has_sd);
     (void)vpd::resetSentryProof(has_sd);
@@ -192,6 +194,7 @@ int main(int,char**) {
     vpd::DrivingState driving_state{}; // separate from platform Simulation
     vpd::DrivingGuestProof driving_proof{};
     vpd::DrivingStageExit driving_stage_exit{};
+    vpd::DrivingExitProof driving_exit_proof{};
     unsigned hd_fx_guest_seq=0;
     unsigned hd_fx_combat_seq=0;
     unsigned hd_fx_sentry_seq=0;
@@ -469,7 +472,11 @@ int main(int,char**) {
             } else if(toggle_manual || driving_preview_chord) {
                 input=0; // entering/leaving preview never performs a jump/dash
             }
-            if(!restarted && !driving_preview)game.tick(vpd::Input{input});
+            // First visible platform presentation is a state-identical
+            // restoration. Normal platform simulation resumes NEXT frame.
+            if(!restarted && !driving_preview &&
+               driving_present!=vpd::stage_transition::Scene::Platform)
+                game.tick(vpd::Input{input});
             // Verify the actual physics tick consumed the SAME bullet
             // witnessed at native L+R ON, not another hostile projectile.
             // A host keypress, synthetic HP subtraction or raster change
@@ -1100,6 +1107,20 @@ int main(int,char**) {
                 pixels,vpd::kSceneWidth,vpd::kSceneHeight,pixels_per_row)
             : vpd::drawScene(
                 pixels,vpd::kSceneWidth,vpd::kSceneHeight,pixels_per_row,view);
+        if(drawn && driving_present==vpd::stage_transition::Scene::Black) {
+            const bool black_pixel=
+                pixels[0]==0xff000000u &&
+                pixels[360*pixels_per_row+640]==0xff000000u &&
+                pixels[719*pixels_per_row+1279]==0xff000000u;
+            (void)vpd::appendDrivingExitWitness(
+                has_sd,driving_exit_proof.black(
+                    driving_stage_exit.blackFramesPresented(),
+                    game.fingerprint(),black_pixel));
+        }
+        if(drawn && driving_present==vpd::stage_transition::Scene::Platform) {
+            (void)vpd::appendDrivingExitWitness(
+                has_sd,driving_exit_proof.platform(game.fingerprint()));
+        }
         if(drawn && view.driving_stage_preview &&
            driving_raster_event_seq!=0) {
             (void)vpd::appendDrivingRasterProof(
@@ -1125,8 +1146,11 @@ int main(int,char**) {
                 pixels_per_row,hostile_x,hostile_y);
         framebufferEnd(&fb);
         if(!drawn)break;
-        if(request_driving_exit && view.driving_stage_preview)
-            (void)driving_stage_exit.requestAfterDrivingFrame(true,true);
+        if(request_driving_exit && view.driving_stage_preview &&
+           driving_stage_exit.requestAfterDrivingFrame(true,true))
+            (void)vpd::appendDrivingExitWitness(
+                has_sd,driving_exit_proof.begin(
+                    true,driving_state.frame,game.fingerprint()));
         if(hd_fx_sentry_edge && drawn && has_sd &&
            fx_other.pixels==414000 && fx_presented.pixels==414000 &&
            fx_other.hash!=fx_presented.hash &&
