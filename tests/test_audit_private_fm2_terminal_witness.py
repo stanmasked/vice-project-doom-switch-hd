@@ -8,7 +8,8 @@ sys.path.insert(0,str(Path(__file__).resolve().parents[1]/"tools"))
 from audit_private_fm2_terminal_witness import audit_movie_witness
 
 GOOD={
-    "format":"private_fm2_terminal_witness_v2",
+    "format":"private_fm2_terminal_witness_v3",
+    "loaded_rom_verified":"yes","power_on_source_verified":"yes",
     "movie_readonly":"yes","movie_terminal_frame":"63","movie_frame_count":"64",
     "movie_first_observed_frame":"1","movie_last_observed_frame":"63",
     "movie_consecutive_unique_frames":"63","movie_frame_gaps":"0",
@@ -56,6 +57,24 @@ class MovieCallbackContinuityTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             values=dict(GOOD,movie_frame_gaps="1")
             with self.assertRaisesRegex(ValueError,"noncontiguous"):
+                self.audit(make(d,values))
+
+    def test_wrong_rom_rejected_in_witness(self):
+        with tempfile.TemporaryDirectory() as d:
+            values=dict(GOOD,loaded_rom_verified="no")
+            with self.assertRaisesRegex(ValueError,"identity"):
+                self.audit(make(d,values))
+
+    def test_savestate_movie_rejected_in_witness(self):
+        with tempfile.TemporaryDirectory() as d:
+            values=dict(GOOD,power_on_source_verified="no")
+            with self.assertRaisesRegex(ValueError,"power-on"):
+                self.audit(make(d,values))
+
+    def test_legacy_v2_witness_refused(self):
+        with tempfile.TemporaryDirectory() as d:
+            values=dict(GOOD,format="private_fm2_terminal_witness_v2")
+            with self.assertRaisesRegex(ValueError,"legacy"):
                 self.audit(make(d,values))
 
     def test_legacy_v1_witness_refused(self):

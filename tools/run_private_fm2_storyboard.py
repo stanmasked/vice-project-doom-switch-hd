@@ -14,7 +14,7 @@ import subprocess
 import sys
 import time
 
-from audit_private_fm2 import audit_movie
+from audit_private_fm2 import audit_movie, rom_payload
 from audit_private_fceux_storyboard import audit as audit_storyboard
 from audit_private_mmc3_chr_mapping import analyze_trace
 from audit_private_mmc3_chr_trace_witness import audit_trace_witness
@@ -120,6 +120,7 @@ def launch(rom,movie,directory,fceux="fceux",timeout_seconds=1800,
         "VPD_PRIVATE_STORYBOARD_SCRIPT":str(storyboard.resolve()),
         "VPD_PRIVATE_WITNESS":str(witness),
         "VPD_PRIVATE_FRAME_COUNT":str(plan["frames"]),
+        "VPD_PRIVATE_ROM_PAYLOAD_MD5":rom_payload(rom)[0].hex(),
         "VPD_PRIVATE_CAPTURE_INTERVAL":str(plan["interval"]),
         "VPD_PRIVATE_CAPTURE_LIMIT":str(plan["sample_count"])
     })
@@ -166,6 +167,8 @@ def launch(rom,movie,directory,fceux="fceux",timeout_seconds=1800,
     result={"classification":"private ROM/FM2 actual emulator terminal-frame preflight",
             "rom_identity_matched":True,
             "fceux_terminal_frame_confirmed":True,
+            "rom_loaded_in_emulator_verified":movie_evidence["loaded_rom_verified"],
+            "power_on_source_verified":movie_evidence["power_on_source_verified"],
             "verified_consecutive_movie_frames":movie_evidence["consecutive_unique_frames"],
             "movie_first_observed_frame":movie_evidence["first_observed_frame"],
             "frame_count":plan["frames"],

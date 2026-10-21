@@ -8,6 +8,23 @@ local directory=required_env("VPD_PRIVATE_OUTPUT_DIR")
 local movie_path=required_env("VPD_PRIVATE_FM2_PATH")
 local source=required_env("VPD_PRIVATE_STORYBOARD_SCRIPT")
 local witness=required_env("VPD_PRIVATE_WITNESS")
+local expected_rom_md5=required_env("VPD_PRIVATE_ROM_PAYLOAD_MD5"):lower()
+assert(expected_rom_md5:match("^[0-9a-f]+$") and #expected_rom_md5==32,
+       "expected private payload digest invalid")
+assert(type(rom)=="table" and type(rom.gethash)=="function",
+       "FCEUX ROM identity API unavailable")
+assert(type(movie)=="table" and type(movie.ispoweron)=="function",
+       "FCEUX movie power-on provenance API unavailable")
+local function check_rom()
+  local actual=rom.gethash("md5")
+  assert(type(actual)=="string" and actual:lower()==expected_rom_md5,
+         "FCEUX loaded ROM does not match verified private PRG/CHR content")
+end
+local function check_origin()
+  assert(movie.ispoweron()==true,
+         "FCEUX movie is not a power-on initial-state recording")
+end
+check_rom()
 local frames=tonumber(required_env("VPD_PRIVATE_FRAME_COUNT"))
 local interval=tonumber(required_env("VPD_PRIVATE_CAPTURE_INTERVAL"))
 local limit=tonumber(required_env("VPD_PRIVATE_CAPTURE_LIMIT"))
@@ -26,6 +43,8 @@ assert(type(movie)=="table" and type(movie.play)=="function" and
 assert(movie.play(movie_path,true),"FCEUX refused private FM2 read-only playback")
 assert(movie.length()==frames,"FCEUX loaded a different FM2 frame count")
 assert(movie.readonly(),"private FM2 was not opened read-only")
+check_origin()
+check_rom()
 local trace_script=os.getenv("VPD_PRIVATE_MMC3_TRACE_SCRIPT")
 if trace_script~=nil and #trace_script>0 then
   assert(trace_script:sub(1,1)=="/","private CHR tracer path must be absolute")
@@ -64,6 +83,8 @@ emu.registerafter=function(capture)
       assert(movie.mode()=="playback","movie exited playback prematurely")
       assert(movie.readonly(),"movie unexpectedly became writable")
       assert(movie.length()==frames,"movie length changed during playback")
+      check_rom()
+      check_origin()
       seen_movie=true
     end
     if current==frames-1 and not timeline_end then
@@ -75,6 +96,8 @@ emu.registerafter=function(capture)
              "movie callback timeline is not contiguous through terminal frame")
       assert(movie.readonly(),"movie writable at terminal frame")
       assert(movie.length()==frames,"movie length changed")
+      check_rom()
+      check_origin()
       local mode=movie.mode()
       assert(mode=="playback" or mode=="finished",
              "movie did not reach a permitted terminal state")
@@ -89,7 +112,9 @@ emu.registerafter=function(capture)
       local prior=io.open(witness,"rb")
       if prior then prior:close();error("private terminal witness already exists") end
       local f=assert(io.open(witness,"wb"))
-      assert(f:write("format=private_fm2_terminal_witness_v2\n"..
+      assert(f:write("format=private_fm2_terminal_witness_v3\n"..
+                     "loaded_rom_verified=yes\n"..
+                     "power_on_source_verified=yes\n"..
                      "movie_readonly=yes\n"..
                      "movie_terminal_frame="..tostring(current).."\n"..
                      "movie_frame_count="..tostring(frames).."\n"..
