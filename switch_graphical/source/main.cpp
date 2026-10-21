@@ -332,18 +332,18 @@ int main(int,char**) {
             backdrop.reset();
             backdrop_reload_failed=false;
         }
-        if(pressed&HidNpadButton_Up) {
+        if((pressed&HidNpadButton_Up) && !driving_preview) {
             decor_reload_failed= !has_sd ||
                 decor.reload(kExternalDecorPath)!=vpd::DecorReload::Loaded;
         }
-        if(pressed&HidNpadButton_Down) {
+        if((pressed&HidNpadButton_Down) && !driving_preview) {
             decor.reset();
             decor_reload_failed=false;
         }
         // Minus means RETRY only on a completed or defeated manual
         // encounter. Else retain its existing decorative-layout reload.
         const auto retry_old=vpd::retryBefore(game);
-        const bool retry_input=(!demo.enabled() &&
+        const bool retry_input=(!demo.enabled() && !driving_preview &&
                                 (pressed&HidNpadButton_Minus));
         const auto retry=vpd::retryTerminalEncounter(game,retry_input);
         const bool restarted=retry!=vpd::ManualRetryOutcome::Ignored;
@@ -369,7 +369,8 @@ int main(int,char**) {
                     has_sd,vpd::DefeatRetryEvent::Restart,
                     game,0,retry_input,retry_old,retry);
         }
-        if((pressed&HidNpadButton_Minus) && !restarted){
+        if((pressed&HidNpadButton_Minus) && !restarted &&
+           !driving_preview){
             decor_layout_reload_failed= !has_sd ||
                 layout.reload(kExternalDecorLayoutPath)!=vpd::LayoutLoadResult::Loaded;
         }
