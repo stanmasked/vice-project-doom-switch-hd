@@ -9,10 +9,11 @@ from build_fceux_smoke_rom import build_rom as build_nrom
 from build_fceux_smoke_mmc3_nes2 import build_rom as build_mmc3
 
 MOVIE_FRAMES=64
+MAX_SYNTHETIC_FRAMES=4096
 
 def make_movie(rom,frames=MOVIE_FRAMES):
-    if type(frames) is not int or not 32<=frames<=2048:
-        raise ValueError('synthetic FM2 frame count must be 32..2048')
+    if type(frames) is not int or not 32<=frames<=MAX_SYNTHETIC_FRAMES:
+        raise ValueError('synthetic FM2 frame count must be 32..4096')
 
     # Whitelist exact handcrafted ROM bytes. Never generate a public-runner
     # FM2 from an arbitrary external/commercial ROM merely because its

@@ -7,6 +7,14 @@ sys.path.insert(0,str(Path(__file__).resolve().parents[1]/"tools"))
 from run_private_fm2_storyboard import private_target,capture_plan
 
 class RunnerPlanningTests(unittest.TestCase):
+    def test_real_us_capture_cadence_with_4096_frame_synthetic(self):
+        invented={"frames":4096,"rom_identity_matched":True,
+                  "starts_from_power_on":True}
+        result=capture_plan(invented,interval=1803)
+        self.assertEqual(result["interval"],1803)
+        self.assertEqual(result["sample_count"],2)
+        self.assertEqual(result["last_frame"],4095)
+
     def test_us_length_requires_24_reliable_samples(self):
         movie={"frames":43652,"rom_identity_matched":True,
                "starts_from_power_on":True}

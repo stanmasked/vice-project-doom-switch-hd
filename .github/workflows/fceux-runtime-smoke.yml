@@ -232,6 +232,49 @@ jobs:
           grep -qx 'trace_closed=yes' \
             "$RUNNER_TEMP/fceux_mmc3_extended_run.mmc3_chr_focus.witness.txt"
           echo "REAL_FCEUX_EXTENDED_256_FRAME_SYNTHETIC_PASS frames=256 snapshots=15 original_game_proven=no"
+      - name: Test real 1803-frame capture cadence on extended invented MMC3 FM2
+        if: github.event_name == 'push'
+        shell: bash
+        env:
+          SDL_AUDIODRIVER: dummy
+        run: |
+          set -euo pipefail
+          # Solely an invented 6502 ROM and invented 4096-frame FM2.
+          # Preserve user's original game/movie outside public CI.
+          python3 tools/build_fceux_smoke_movie.py \
+            --rom "$RUNNER_TEMP/fceux_invented_mmc3.nes" \
+            --frames 4096 \
+            --output "$RUNNER_TEMP/fceux_invented_mmc3_cadence.fm2"
+          if ! python3 tools/run_private_fm2_storyboard.py \
+            --rom "$RUNNER_TEMP/fceux_invented_mmc3.nes" \
+            --movie "$RUNNER_TEMP/fceux_invented_mmc3_cadence.fm2" \
+            --output "$RUNNER_TEMP/fceux_mmc3_1803_cadence" \
+            --interval 1803 --timeout-seconds 230; then
+            echo "Only invented MMC3 ROM used; failure log:" >&2
+            tail -75 "$RUNNER_TEMP/fceux_mmc3_1803_cadence.fceux.log" >&2
+            exit 1
+          fi
+          PYTHONPATH=tools python3 - <<'PY'
+          import os
+          from pathlib import Path
+          from audit_private_fm2_terminal_witness import audit_movie_witness
+          from audit_private_fceux_storyboard import audit
+          root=Path(os.environ["RUNNER_TEMP"])
+          base=root/"fceux_mmc3_1803_cadence"
+          witness=audit_movie_witness(root/"fceux_mmc3_1803_cadence.terminal_witness.txt",
+                                      expected_frame_count=4096)
+          assert witness["terminal_frame_verified"]==4095
+          assert witness["frame_gaps"]==0
+          assert witness["loaded_rom_verified"]
+          assert witness["private_input_files_unchanged_verified"] if "private_input_files_unchanged_verified" in witness else True
+          report=audit(base,require_complete=True)
+          assert report["sample_count"]==2,report
+          assert report["first_frame"]==1803,report
+          assert report["last_frame"]==3606,report
+          assert report["capture_interval"]==1803,report
+          assert not report["original_game_emulation_proven"]
+          print("REAL_FCEUX_SYNTHETIC_1803_CADENCE_PASS terminal=4095 snapshots=1803,3606 source_game=no")
+          PY
       - name: Reject tracked ROM, FM2 and binary capture files
         shell: bash
         run: |

@@ -47,8 +47,15 @@ class SyntheticMovieTests(unittest.TestCase):
         self.assertEqual(sum(x.startswith("|") for x in lines),256)
         self.assertEqual(sum(x=="|0|.......A|||" for x in lines),12)
 
+    def test_4096_frame_long_synthetic_movie_uses_same_rom_digest(self):
+        from build_fceux_smoke_mmc3_nes2 import build_rom as mmc3_rom
+        payload=make_movie(mmc3_rom(),frames=4096)
+        self.assertEqual(sum(line.startswith("|") for line in payload.splitlines()),4096)
+        self.assertIn("romChecksum base64:",payload)
+        self.assertEqual(sum(line=="|0|.......A|||" for line in payload.splitlines()),12)
+
     def test_invalid_extended_movie_bounds(self):
-        for count in (0,31,2049,64.5,True):
+        for count in (0,31,4097,64.5,True):
             with self.subTest(count=count):
                 with self.assertRaisesRegex(ValueError,"frame count"):
                     make_movie(build_rom(),frames=count)
