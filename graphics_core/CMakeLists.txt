@@ -353,3 +353,13 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
 endif()
 add_test(NAME romfree_original_road_cross_section_reference
          COMMAND vpd_driving_road_reference_test)
+# Stage 168: numeric frame-only original image/PPU CPU writer alignment.
+add_executable(vpd_road_ppu_alignment_test ../tests/test_driving_road_ppu_alignment.cpp)
+target_include_directories(vpd_road_ppu_alignment_test PRIVATE
+                           ${CMAKE_CURRENT_SOURCE_DIR}/../game_core)
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+  target_compile_options(vpd_road_ppu_alignment_test PRIVATE
+                         -Wall -Wextra -Wpedantic -Werror)
+endif()
+add_test(NAME romfree_original_road_ppu_exact_frame_alignment
+         COMMAND vpd_road_ppu_alignment_test)

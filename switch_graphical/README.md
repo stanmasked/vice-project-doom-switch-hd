@@ -330,3 +330,10 @@ Seven original Stage 1-1 RGB roadway observations are maintained in
 only. They must not be mistaken for collision geometry, camera scroll
 or vehicle motion. `docs/DRIVING_ROAD_IMAGE_REFERENCE.md` explains
 their origin and limitations. No original assets are included.
+## Stage 168 — exact-frame road/PPU numerical alignment
+
+`game_core/driving_road_ppu_alignment.hpp` pairs four previously published
+original FCEUX movie frames (600,744,800,920) across visible RGB road
+cross-sections, an executed source `$2005` write, and a *later* postframe
+`RAM $0D` sample. No camera speed, display-effective PPU scroll,
+collision geometry or exact raster scanline is inferred.
