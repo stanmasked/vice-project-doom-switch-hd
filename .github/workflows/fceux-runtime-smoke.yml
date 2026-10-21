@@ -292,6 +292,52 @@ jobs:
           assert not report["original_game_emulation_proven"]
           print("REAL_FCEUX_SYNTHETIC_1803_CADENCE_PASS terminal=4095 snapshots=1803,3606 source_game=no")
           PY
+      - name: Stress long real FCEUX playback with varied synthetic inputs
+        if: github.event_name == 'pull_request'
+        shell: bash
+        env:
+          SDL_AUDIODRIVER: dummy
+        run: |
+          set -euo pipefail
+          # Repeat a long, read-only replay with two distinct invented input
+          # patterns. All generated movies and captures stay in RUNNER_TEMP.
+          for pattern in alternating bursts; do
+            movie="$RUNNER_TEMP/fceux_long_${pattern}.fm2"
+            output="$RUNNER_TEMP/fceux_long_${pattern}"
+            python3 tools/build_fceux_smoke_movie.py \
+              --rom "$RUNNER_TEMP/fceux_invented_mmc3.nes" \
+              --frames 4096 --pattern "$pattern" --output "$movie"
+            if ! python3 tools/run_private_fm2_storyboard.py \
+              --rom "$RUNNER_TEMP/fceux_invented_mmc3.nes" \
+              --movie "$movie" --output "$output" \
+              --interval 1024 --timeout-seconds 230; then
+              echo "Synthetic input pattern failed: $pattern" >&2
+              tail -75 "$output.fceux.log" >&2
+              exit 1
+            fi
+            PATTERN="$pattern" python3 - <<'PY'
+          import os
+          from pathlib import Path
+          from audit_private_fm2_terminal_witness import audit_movie_witness
+          from audit_private_fceux_storyboard import audit
+          root=Path(os.environ["RUNNER_TEMP"])
+          pattern=os.environ["PATTERN"]
+          base=root/f"fceux_long_{pattern}"
+          witness=audit_movie_witness(
+              root/f"fceux_long_{pattern}.terminal_witness.txt",
+              expected_frame_count=4096)
+          assert witness["terminal_frame_verified"]==4095
+          assert witness["frame_gaps"]==0
+          assert witness["movie_readonly"]
+          report=audit(base,require_complete=True)
+          assert report["sample_count"]==3,report
+          assert report["first_frame"]==1024,report
+          assert report["last_frame"]==3072,report
+          assert report["capture_interval"]==1024,report
+          assert not report["original_game_emulation_proven"]
+          print(f"REAL_FCEUX_SYNTHETIC_LONG_PATTERN_PASS pattern={pattern} frames=4096 snapshots=1024,2048,3072 original_game_proven=no")
+          PY
+          done
       - name: Reject tracked ROM, FM2 and binary capture files
         shell: bash
         run: |
