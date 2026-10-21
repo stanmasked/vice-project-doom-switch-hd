@@ -16,6 +16,9 @@ on:
       - "tools/run_private_fm2_storyboard.py"
       - "tools/run_private_fm2_storyboard.lua"
       - "tests/test_run_private_fm2_storyboard.py"
+      - "tools/capture_private_mmc3_chr_focus.lua"
+      - "tools/audit_private_mmc3_chr_mapping.py"
+      - "tests/test_audit_private_mmc3_chr_mapping.py"
   pull_request:
     paths:
       - ".github/workflows/fceux-runtime-smoke.yml"
@@ -167,12 +170,22 @@ jobs:
             --rom "$RUNNER_TEMP/fceux_invented_mmc3.nes" \
             --movie "$RUNNER_TEMP/fceux_invented_mmc3.fm2" \
             --output "$RUNNER_TEMP/fceux_mmc3_full_timeline" \
-            --interval 8 --timeout-seconds 90
+            --interval 8 --timeout-seconds 90 --trace-chr-banks 124,125,126
           grep -qx "movie_terminal_frame=63" \
             "$RUNNER_TEMP/fceux_mmc3_full_timeline.terminal_witness.txt"
           python3 tools/audit_private_fceux_storyboard.py \
             "$RUNNER_TEMP/fceux_mmc3_full_timeline" \
             --require-complete-window
+          PYTHONPATH=tools python3 - <<'PY'
+          import os
+          from pathlib import Path
+          from audit_private_mmc3_chr_mapping import analyze_trace
+          log=Path(os.environ["RUNNER_TEMP"])/"fceux_mmc3_full_timeline.mmc3_chr_focus.tsv"
+          evidence=analyze_trace(log,bank_count=128,focus_banks=(124,125,126),frame_interval=8)
+          assert all(item["mapping_write_count"]>0 for item in evidence["focus_bank_reports"])
+          assert not evidence["actual_ppu_rendered_bank_proven"]
+          print("REAL_FCEUX_MMC3_CPU_BANK_SELECTION_PASS banks=124,125,126 rendered=no")
+          PY
           echo "REAL_FCEUX_NES2_MMC3_SYNTHETIC_PASS input_frame_16=A terminal_frame=63 original_game_proven=no"
       - name: Reject tracked ROM, FM2 and binary capture files
         shell: bash

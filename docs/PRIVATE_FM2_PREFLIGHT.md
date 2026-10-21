@@ -411,3 +411,9 @@ was fetched by PPU or visible in a rendered frame. Separate original
 gameplay and PPU data are necessary. Twelve synthetic tests include
 non-CHR register exclusion, unresolved data writes, pairing, inversion,
 out-of-order events, invalid headers, and linked-file rejection.
+
+## Stage 130 — opt-in private FM2 mapper-write timeline
+
+Use `--trace-chr-banks 124,125,126` with `tools/run_private_fm2_storyboard.py` to register only bounded CHR-related MMC3 `$8000/$8001` pairs while replaying an owner-held local ROM and FM2. The Lua handler deduplicates register+data selections within each capture interval; its private TSV is written outside the strict storyboard directory and analyzed by `audit_private_mmc3_chr_mapping.py`. The emitted report contains only selected bank numbers, counts, candidate intervals and explicit false provenance flags for PPU rendering and level identity. No proprietary bytes or original captures enter public CI.
+
+The invented NES2 Mapper 4 smoke cartridge now performs R0=125 (effective banks 124/125) and R2=126 writes in its CPU loop; the real FCEUX workflow uses the full private-style runner with the tracing option and checks that all three mapping targets were actually observed. This proves mapper register writes reached the emulator, *not* that any corresponding sprites were rendered or that the owner's real FM2 completed.

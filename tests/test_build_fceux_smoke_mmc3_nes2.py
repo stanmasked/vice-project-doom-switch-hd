@@ -21,7 +21,10 @@ class SyntheticNes2Mapper4Tests(unittest.TestCase):
         prg=build_rom()[16:16+PRG_SIZE]
         self.assertEqual(prg[-6:],b"\x00\xe0"*3)
         self.assertEqual(prg[-8192:-8192+46],build_nrom()[16:16+46])
-        self.assertEqual(prg[-8192+46:-8192+49],b"\x4c\x1c\xe0")
+        self.assertEqual(prg[-8192+46:-8192+66],
+                         bytes([0xA9,0,0x8D,0,0x80,0xA9,0x7D,0x8D,1,0x80,
+                                0xA9,2,0x8D,0,0x80,0xA9,0x7E,0x8D,1,0x80]))
+        self.assertEqual(prg[-8192+66:-8192+69],b"\x4c\x1c\xe0")
 
     def test_deterministic_original_mmc3(self):
         self.assertEqual(build_rom(),build_rom())

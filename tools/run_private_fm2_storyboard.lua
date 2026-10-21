@@ -26,6 +26,11 @@ assert(type(movie)=="table" and type(movie.play)=="function" and
 assert(movie.play(movie_path,true),"FCEUX refused private FM2 read-only playback")
 assert(movie.length()==frames,"FCEUX loaded a different FM2 frame count")
 assert(movie.readonly(),"private FM2 was not opened read-only")
+local trace_script=os.getenv("VPD_PRIVATE_MMC3_TRACE_SCRIPT")
+if trace_script~=nil and #trace_script>0 then
+  assert(trace_script:sub(1,1)=="/","private CHR tracer path must be absolute")
+  dofile(trace_script)
+end
 VPD_STORYBOARD_DIRECTORY=directory
 VPD_STORYBOARD_START_FRAME=interval
 VPD_STORYBOARD_STOP_FRAME=frames-1

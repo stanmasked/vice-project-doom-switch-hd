@@ -74,6 +74,29 @@ class RunnerPlanningTests(unittest.TestCase):
             self.assertFalse(capture.exists())
             self.assertEqual(witness.read_text(),"stale")
 
+    def test_invalid_chr_focus_fails_before_emulator(self):
+        from run_private_fm2_storyboard import parse_chr_targets
+        self.assertEqual(parse_chr_targets("126,124,125,124",128),(124,125,126))
+        with self.assertRaisesRegex(ValueError,"CHR"):
+            parse_chr_targets("124,125,126",8)
+        with self.assertRaisesRegex(ValueError,"CHR"):
+            parse_chr_targets("wrong",128)
+
+    def test_nrom_cannot_enable_mmc3_trace(self):
+        from unittest.mock import patch
+        from build_fceux_smoke_rom import build_rom
+        from build_fceux_smoke_movie import make_movie
+        from run_private_fm2_storyboard import launch
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d)
+            rom=root/"invented.nes";movie=root/"invented.fm2"
+            rom.write_bytes(build_rom())
+            movie.write_text(make_movie(rom.read_bytes()),encoding="ascii")
+            with patch("run_private_fm2_storyboard.shutil.which",return_value="/usr/games/fceux"):
+                with self.assertRaisesRegex(ValueError,"Mapper 4"):
+                    launch(rom,movie,root/"new",interval=8,trace_chr_banks="0")
+            self.assertFalse((root/"new").exists())
+
     def test_reject_checkout_directory(self):
         with tempfile.TemporaryDirectory() as d:
             base=Path(d)

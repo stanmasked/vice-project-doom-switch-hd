@@ -19,7 +19,16 @@ def build_rom():
     # MMC3's fixed final 8KiB PRG bank at $E000.
     original=build_nrom()[16:16+49]
     assert original[46:49]==b"\x4c\x1c\x80"
-    program=original[:48]+b"\xe0"
+    # Invented MMC3 bank-switch writes inside the controller-polling loop.
+    # R0 odd 0x7D maps the aligned 1KiB pair 124/125;
+    # R2 bank 0x7E maps bank 126. No original game bytes involved.
+    mapped=bytes([
+        0xA9,0x00,0x8D,0x00,0x80,
+        0xA9,0x7D,0x8D,0x01,0x80,
+        0xA9,0x02,0x8D,0x00,0x80,
+        0xA9,0x7E,0x8D,0x01,0x80
+    ])
+    program=original[:46]+mapped+b"\x4c\x1c\xe0"
     prg=bytearray([0xea]*PRG_SIZE)
     prg[-8192:-8192+len(program)]=program
     prg[-6:]=b"\x00\xe0"*3  # IRQ, RESET, NMI all point to $E000
