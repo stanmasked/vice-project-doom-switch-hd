@@ -343,3 +343,13 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
                          -Wall -Wextra -Wpedantic -Werror)
 endif()
 add_test(NAME romfree_driving_exit_guest_witness COMMAND vpd_driving_exit_guest_test)
+# Stage 167: preserve only image-space original numerical road observations.
+add_executable(vpd_driving_road_reference_test ../tests/test_driving_road_reference.cpp)
+target_include_directories(vpd_driving_road_reference_test PRIVATE
+                           ${CMAKE_CURRENT_SOURCE_DIR}/../game_core)
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+  target_compile_options(vpd_driving_road_reference_test PRIVATE
+                         -Wall -Wextra -Wpedantic -Werror)
+endif()
+add_test(NAME romfree_original_road_cross_section_reference
+         COMMAND vpd_driving_road_reference_test)

@@ -323,3 +323,10 @@ unchanged platform fingerprint and dark central viewport.
 Only the **41-frame interval** is taken from private original FCEUX visual
 evidence. The diagnostic Minus control is invented; original game completion,
 absolute original-movie frame indices and level geometry remain unverified.
+## Stage 167 — numeric original road cross-sections
+
+Seven original Stage 1-1 RGB roadway observations are maintained in
+`game_core/driving_road_reference.hpp`, at exact original FM2 frames
+only. They must not be mistaken for collision geometry, camera scroll
+or vehicle motion. `docs/DRIVING_ROAD_IMAGE_REFERENCE.md` explains
+their origin and limitations. No original assets are included.
