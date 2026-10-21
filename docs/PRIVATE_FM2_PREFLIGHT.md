@@ -175,3 +175,41 @@ Six wholly synthetic regressions cover missing start/middle/end samples,
 non-aligned starts, capture limits and default opt-in behavior.
 22 storyboard Python tests now pass locally; GitHub Actions remain
 a separate exact-commit verification.
+
+## Stage 115 — verified completeness and private PNG contact sheet
+
+When the full American FM2 has actually finished in FCEUX, first run the
+storyboard audit in strict mode. Unlike the historical integrity-only
+preflight, strict mode rejects missing scheduled frames in an otherwise
+well-formed partial capture:
+
+```sh
+python3 tools/audit_private_fceux_storyboard.py private/us_storyboard \
+  --require-complete-window
+```
+
+Then create a **private** 5-column PNG with embedded frame-number captions:
+
+```sh
+python3 tools/build_private_fceux_contact_sheet.py \
+  private/us_storyboard private/us_contact_sheet.png --columns 5
+```
+
+The source frame schedule for the intended run is 0 through 43,651
+(inclusive), interval 1,803 and maximum 25 samples. A full uninterrupted
+movie playback should therefore yield 25 candidate stills, displayed in
+a single 1280×1280 PNG (5 columns × 5 rows, each 256×240 plus a 16-pixel
+frame-number banner). These are **visual reference checkpoints**, NOT
+verified level boundaries or full gameplay recovery.
+
+The contact-sheet tool requires a complete audited window by default,
+refuses overwrites, and writes the PNG **outside the strict source folder**
+so it cannot contaminate later audits. For investigating an interrupted
+capture only, `--allow-partial` explicitly opts out of the completion
+requirement. Do not publish source game images or the contact sheet.
+
+Python stdlib only (no Pillow dependency). Six wholly fabricated regression
+tests validate PNG dimensions, source pixel placement, strict/partial
+handling, output directory isolation and overwrite protection. Local Python
+tests: 22 storyboard integrity + 6 contact-sheet = **28/28 PASS**.
+Latest GitHub Actions is a separate verification and may still be queued.
