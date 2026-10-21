@@ -11,6 +11,9 @@ on:
       - "tests/test_build_fceux_smoke_rom.py"
       - "tools/build_fceux_smoke_movie.py"
       - "tests/test_build_fceux_smoke_movie.py"
+      - "tools/run_private_fm2_storyboard.py"
+      - "tools/run_private_fm2_storyboard.lua"
+      - "tests/test_run_private_fm2_storyboard.py"
   pull_request:
     paths:
       - ".github/workflows/fceux-runtime-smoke.yml"
@@ -21,6 +24,9 @@ on:
       - "tests/test_build_fceux_smoke_rom.py"
       - "tools/build_fceux_smoke_movie.py"
       - "tests/test_build_fceux_smoke_movie.py"
+      - "tools/run_private_fm2_storyboard.py"
+      - "tools/run_private_fm2_storyboard.lua"
+      - "tests/test_run_private_fm2_storyboard.py"
   workflow_dispatch:
 
 permissions:
@@ -87,6 +93,28 @@ jobs:
           echo "REAL_FCEUX_SYNTHETIC_STORYBOARD_PASS frames=8,16 original_game_proven=no"
           cleanup
           trap - EXIT
+      - name: Exercise complete private-style FM2 launcher on invented ROM and movie
+        shell: bash
+        env:
+          SDL_AUDIODRIVER: dummy
+        run: |
+          set -euo pipefail
+          # All paths are ephemeral GitHub runner files with a handmade
+          # 6502 program and handmade 64-frame movie. NO user ROM or FM2.
+          python3 tools/run_private_fm2_storyboard.py \
+            --rom "$RUNNER_TEMP/fceux_fabricated.nes" \
+            --movie "$RUNNER_TEMP/fceux_fabricated.fm2" \
+            --output "$RUNNER_TEMP/fceux_full_timeline_synthetic" \
+            --interval 8 --timeout-seconds 90
+          test -f "$RUNNER_TEMP/fceux_full_timeline_synthetic.terminal_witness.txt"
+          grep -qx 'movie_terminal_frame=63' \
+            "$RUNNER_TEMP/fceux_full_timeline_synthetic.terminal_witness.txt"
+          grep -qx 'movie_frame_count=64' \
+            "$RUNNER_TEMP/fceux_full_timeline_synthetic.terminal_witness.txt"
+          test "$(find "$RUNNER_TEMP/fceux_full_timeline_synthetic" -maxdepth 1 -name 'frame_*.meta.txt' | wc -l)" -eq 7
+          python3 tools/audit_private_fceux_storyboard.py \
+            "$RUNNER_TEMP/fceux_full_timeline_synthetic" --require-complete-window
+          echo "REAL_FCEUX_PRIVATE_RUNNER_SYNTHETIC_PASS terminal_frame=63 captured=7 original_game_proven=no"
       - name: Reject tracked ROM, FM2 and binary capture files
         shell: bash
         run: |
