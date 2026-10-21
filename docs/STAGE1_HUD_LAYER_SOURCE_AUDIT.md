@@ -4,8 +4,9 @@
 
 Real owner-private USA Vice: Project Doom ROM+read-only FM2 captures in
 FCEUX 2.6.5 were compared at original movie frames **600** and **800**.
-The unmodified scene images show a vertically scrolling overhead driving
-area above a separate bottom **score/time/stage/status HUD**.
+The unmodified scene images show an overhead driving scene
+above a separate bottom **score/time/stage/status HUD**. This observation
+alone does not establish the road's scrolling speed.
 At these particular screenshot frames, the manual image-space boundary
 between those visible areas is approximately **Y=196** in the original
 **256×240** framebuffer. Treat it as a **visual analysis/renderer
