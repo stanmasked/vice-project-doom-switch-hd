@@ -64,4 +64,24 @@ class SyntheticMovieTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,"synthetic ROM"):
             make_movie(build_rom()[:-1])
 
+    def test_long_input_patterns_have_distinct_frame_sequences(self):
+        from build_fceux_smoke_mmc3_nes2 import build_rom as mmc3_rom
+        rom=mmc3_rom()
+        pulse=make_movie(rom,frames=4096,pattern="pulse").splitlines()
+        alternating=make_movie(rom,frames=4096,pattern="alternating").splitlines()
+        bursts=make_movie(rom,frames=4096,pattern="bursts").splitlines()
+        idle=make_movie(rom,frames=4096,pattern="idle").splitlines()
+        pressed=lambda rows:sum(line=="|0|.......A|||" for line in rows)
+        self.assertEqual(pressed(pulse),12)
+        self.assertEqual(pressed(alternating),2048)
+        self.assertEqual(pressed(bursts),272)
+        self.assertEqual(pressed(idle),0)
+        self.assertNotEqual(pulse,alternating)
+        self.assertNotEqual(alternating,bursts)
+        self.assertEqual(sum(line.startswith("|") for line in alternating),4096)
+
+    def test_unknown_input_pattern_rejected(self):
+        with self.assertRaisesRegex(ValueError,"input pattern"):
+            make_movie(build_rom(),frames=64,pattern="commercial-movie")
+
 if __name__=="__main__":unittest.main()
