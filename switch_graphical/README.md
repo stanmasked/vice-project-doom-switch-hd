@@ -280,3 +280,9 @@ right/throttle, left/brake, a one-point car collision, and exit, together
 with the *unchanged* platform Simulation fingerprint.
 No NES ROM, FM2, CHR or original artwork is committed. Host controls
 alone cannot satisfy the native state-machine proof.
+A separate second NeXium launch in the runtime workflow tests this exact
+chord, both steering directions, accelerator/brake, a 5-to-4 HP collision,
+and the return to the original platform rendering. The auditor requires
+five ordered native guest records and four different actual X11 P6 frames.
+This is a gated real-emulator test: merely adding the script does not
+establish that the emulator passed it.
