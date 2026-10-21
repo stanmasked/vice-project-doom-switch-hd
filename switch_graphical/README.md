@@ -337,3 +337,22 @@ original FCEUX movie frames (600,744,800,920) across visible RGB road
 cross-sections, an executed source `$2005` write, and a *later* postframe
 `RAM $0D` sample. No camera speed, display-effective PPU scroll,
 collision geometry or exact raster scanline is inferred.
+## Stage 172 — opt-in road image-space measurement swatch
+
+With the **manually selected** ROM-free car preview active, press
+**ZL+ZR+Y** once per step to show the seven already documented original
+FCEUX roadway *numeric X-interval* examples (600, 744, 760, 784, 800,
+840, 920), then OFF. This is a **separate diagnostic** colored strip,
+not the original roadway image, NES graphics, physics or raster split.
+Its 1280px X coordinates are a simple 5x scaling of source 256px
+visible RGB measurements; the overlay's y position is invented and
+must not be used as the source measurement scanline. Unobserved
+frames are not interpolated or synthesized.
+
+The controlled car, traffic test fixture, simulated road marker speed,
+HUD and legacy platform rendering remain exactly as before when this
+mode is disabled. Native host CTest validates exact sample width/
+edge pixels, padding, HUD and player-car isolation, legacy restoration,
+selector gesture authorization, and simulation fingerprint invariance.
+A genuine NeXium driving pad gesture test of this *new* swatch is still
+a separate pending runtime-evidence gate.

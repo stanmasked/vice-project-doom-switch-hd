@@ -3,6 +3,7 @@
 #include "simulation.hpp"
 #include "driving_simulation.hpp"
 #include "driving_scene_bridge.hpp"
+#include "driving_profile_review_mode.hpp"
 #include "driving_guest_witness.hpp"
 #include "driving_raster_witness.hpp"
 #include "driving_stage_exit.hpp"
@@ -192,6 +193,7 @@ int main(int,char**) {
     vpd::HdFxRuntimeMode hd_fx_mode{};
     bool driving_preview=false; // manual-only ROM-free road/HUD visual preview
     vpd::DrivingState driving_state{}; // separate from platform Simulation
+    vpd::RoadProfileReviewMode road_profile_review{};
     vpd::DrivingGuestProof driving_proof{};
     vpd::DrivingStageExit driving_stage_exit{};
     vpd::DrivingExitProof driving_exit_proof{};
@@ -259,6 +261,7 @@ int main(int,char**) {
             (buttons&HidNpadButton_ZR);
         if(driving_preview_chord) {
             driving_preview=!driving_preview;
+            road_profile_review.reset();
             if(driving_preview) {
                 driving_state.reset();
                 driving_stage_exit.reset();
@@ -271,6 +274,15 @@ int main(int,char**) {
                                         driving_state,game.fingerprint()));
             }
         }
+        // ZL+ZR+Y cycles through 7 known source-frame numeric swatches
+        // then OFF. Does NOT change car/world speed or synthetic road mesh.
+        const bool road_review_chord=
+            driving_preview && !driving_stage_exit.active() &&
+            (pressed&HidNpadButton_Y) &&
+            (buttons&HidNpadButton_ZL) &&
+            (buttons&HidNpadButton_ZR);
+        (void)road_profile_review.cycle(
+            !demo.enabled(),driving_preview,road_review_chord);
         if(buttons&HidNpadButton_Plus){
             if(!demo.enabled())vpd::guardLiveDebugRecord(
                 has_sd,"plus",game,0);
@@ -310,6 +322,7 @@ int main(int,char**) {
             ((pressed&HidNpadButton_A) && (buttons&HidNpadButton_R));
         if(toggle_manual) {
             driving_preview=false;
+            road_profile_review.reset();
             demo.toggle(game);
             animation.reset();
             checkpoint_ok=false;
@@ -937,6 +950,8 @@ int main(int,char**) {
         view.driving_stage_preview=driving_preview && view.manual_controls;
         if(view.driving_stage_preview) {
             view.driving=vpd::makeDrivingSceneView(driving_state);
+            view.driving.observed_road_frame=
+                road_profile_review.originalFrame();
         }
         const bool hd_effects=hd_fx_mode.activeForGameplay(
             view.manual_controls);
