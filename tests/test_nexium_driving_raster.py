@@ -20,12 +20,12 @@ class TestRasterAuditor(unittest.TestCase):
             record(1,"enter",0,640,5,0),
             record(2,"right_throttle",1,642,5,0),
             record(3,"left_brake",8,634,5,0),
-            record(4,"impact",52,640,4,45),
+            record(4,"impact",48,640,4,45),
             record(5,"exit",60,640,4,37),
         ]
         self.raster=[
             raster(2,1,642,5,0,"ff3f2fa3","ff5b55d3"),
-            raster(4,52,640,4,1,"ff7ec8e8","ff271911"),
+            raster(4,48,640,4,1,"ff7ec8e8","ff271911"),
         ]
         self.write(folder)
     def write(self, folder):
@@ -44,7 +44,7 @@ class TestRasterAuditor(unittest.TestCase):
     def test_wrong_guest_frame_rejected(self):
         with tempfile.TemporaryDirectory() as tmp:
             p=Path(tmp);self.fixture(p)
-            self.raster[1]=self.raster[1].replace("frame=52", "frame=53")
+            self.raster[1]=self.raster[1].replace("frame=48", "frame=49")
             self.write(p)
             with self.assertRaises(ValueError):audit(p)
     def test_missing_guest_raster_fails(self):
