@@ -104,7 +104,7 @@ class LatePpuTests(unittest.TestCase):
 
     def test_reject_changed_cpu_cycles(self):
         with tempfile.TemporaryDirectory() as d:
-            with self.assertRaisesRegex(ValueError,"timing changed"):
+            with self.assertRaisesRegex(ValueError,"cycle offset differs"):
                 audit(*synthetic(Path(d),"cpu_offset"),start=10,stop=12)
 
     def test_reject_duplicate_cpu_instruction(self):
