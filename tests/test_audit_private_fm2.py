@@ -142,6 +142,50 @@ class FM2AuditTests(unittest.TestCase):
             self.assertFalse(report['original_stage_proven'])
             self.assertEqual(report['long_idle_periods'],[])
 
+    def test_input_window_reports_only_compact_button_runs(self):
+        with tempfile.TemporaryDirectory() as d:
+            movie,rom=fixture(Path(d))
+            report=audit_movie(movie,rom,window_start=0,window_stop=2)
+            window=report['input_window']
+            self.assertEqual(window['frames'],3)
+            self.assertEqual(window['button_runs'],[
+                {'start_frame':0,'end_frame':0,
+                 'player_one_buttons':'........','player_two_buttons':'........',
+                 'player_one_pressed':[],'player_two_pressed':[]},
+                {'start_frame':1,'end_frame':1,
+                 'player_one_buttons':'....T...','player_two_buttons':'........',
+                 'player_one_pressed':['T'],'player_two_pressed':[]},
+                {'start_frame':2,'end_frame':2,
+                 'player_one_buttons':'R......A','player_two_buttons':'........',
+                 'player_one_pressed':['R','A'],'player_two_pressed':[]}
+            ])
+            self.assertFalse(window['visual_scene_identity_proven'])
+
+    def test_input_window_run_length_encodes_held_buttons(self):
+        with tempfile.TemporaryDirectory() as d:
+            frames=['|0|R.......|........||']*4
+            movie,rom=fixture(Path(d),frames=frames)
+            report=audit_movie(movie,rom,window_start=1,window_stop=3)
+            self.assertEqual(report['input_window']['button_runs'],[
+                {'start_frame':1,'end_frame':3,
+                 'player_one_buttons':'R.......','player_two_buttons':'........',
+                 'player_one_pressed':['R'],'player_two_pressed':[]}
+            ])
+
+    def test_input_window_requires_both_bounds(self):
+        with tempfile.TemporaryDirectory() as d:
+            movie,rom=fixture(Path(d))
+            with self.assertRaisesRegex(ValueError,'together'):
+                audit_movie(movie,rom,window_start=0)
+
+    def test_input_window_rejects_reversed_or_out_of_timeline(self):
+        with tempfile.TemporaryDirectory() as d:
+            movie,rom=fixture(Path(d))
+            with self.assertRaisesRegex(ValueError,'bounds'):
+                audit_movie(movie,rom,window_start=2,window_stop=1)
+            with self.assertRaisesRegex(ValueError,'beyond'):
+                audit_movie(movie,rom,window_start=1,window_stop=3)
+
     def test_reject_symlink_movie(self):
         with tempfile.TemporaryDirectory() as d:
             root=Path(d)
