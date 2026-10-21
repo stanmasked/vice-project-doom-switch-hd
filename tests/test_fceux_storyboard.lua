@@ -1,7 +1,7 @@
 -- Synthetic FCEUX storyboard test; no original game data.
 VPD_STORYBOARD_DIRECTORY=os.tmpname()..'_storyboard'
 assert(os.execute('mkdir -p '..VPD_STORYBOARD_DIRECTORY))
-VPD_STORYBOARD_START_FRAME=8
+VPD_STORYBOARD_START_FRAME=0
 VPD_STORYBOARD_STOP_FRAME=17
 VPD_STORYBOARD_INTERVAL=8
 VPD_STORYBOARD_LIMIT=3
@@ -34,7 +34,7 @@ assert(#assert(read('frame_000016.pal.bin'))==256*240)
 local meta=assert(read('frame_000008.meta.txt'))
 assert(meta:find('frame=8\n',1,true))
 assert(meta:find('interval=8\n',1,true))
-assert(meta:find('start_frame=8\n',1,true))
+assert(meta:find('start_frame=0\n',1,true))
 assert(meta:find('stop_frame=17\n',1,true))
 local terminal_meta=assert(read('frame_000017.meta.txt'))
 assert(terminal_meta:find('frame=17\n',1,true))
