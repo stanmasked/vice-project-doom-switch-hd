@@ -129,3 +129,27 @@ Native Core CI exercises the production storyboard Lua under fabricated
 FCEUX callbacks and checks two 256x240 samples and absence of captures
 outside the configured interval. This is an API/format test only: no real
 playback, stage boundaries, PPU/CHR timings or map geometry are proven.
+
+## Stage 114 — private storyboard integrity audit
+
+Before inspecting screenshots as evidence for original stage boundaries, run:
+
+```sh
+python3 tools/audit_private_fceux_storyboard.py private/us_storyboard
+```
+
+The structural verifier checks all P6 256x240 RGB lengths/headers, per-pixel
+NES palette indices, invalid-palette sentinel count, correct pairing of the
+three output files per frame, FCEUX-reported ROM identity consistency, frame
+order, capture cadence and selected bounds, capture limit, canonical names,
+and symlink/unknown-file protection. Its report provides **only aggregate
+numbers and boolean evidence limits**, never image pixels, palette bytes,
+or the original ROM checksum.
+
+A malformed session fails closed. Passing this audit means the *files agree*
+with the capture metadata; it does **not** prove that the FM2 reached the
+ending, that FCEUX rendered an authentic game scene, or that the reference
+frames have the right stage identities. The exact Python verifier is exercised
+by **16 independent ROM-free synthetic unit tests**, included in standard
+Python CI discovery; these were also run locally with 16/16 success.
+The new tests construct invented pixel data, not original game content.
