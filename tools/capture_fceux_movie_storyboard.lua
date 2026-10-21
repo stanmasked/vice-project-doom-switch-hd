@@ -63,7 +63,9 @@ emu.registerafter(function()
   local frame=emu.framecount()
   if frame==last_frame then return end
   last_frame=frame
-  if count>=LIMIT or frame<START or frame>STOP or frame%INTERVAL~=0 then return end
+  local terminal=frame==STOP
+  if count>=LIMIT or frame<START or frame>STOP or
+     (frame%INTERVAL~=0 and not terminal) then return end
   record(frame)
   count=count+1
   if type(emu.message)=='function' then
