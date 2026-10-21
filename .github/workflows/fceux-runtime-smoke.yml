@@ -315,7 +315,7 @@ jobs:
               tail -75 "$output.fceux.log" >&2
               exit 1
             fi
-            PATTERN="$pattern" python3 - <<'PY'
+            PYTHONPATH=tools PATTERN="$pattern" python3 - <<'PY'
           import os
           from pathlib import Path
           from audit_private_fm2_terminal_witness import audit_movie_witness
