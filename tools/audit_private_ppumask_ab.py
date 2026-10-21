@@ -50,12 +50,18 @@ def _witness(directory, mode, target):
         'source_rom_unchanged': 'yes',
         'fm2_readonly': 'yes',
     }
-    if set(fields) != set(expected) | {'first_observed_frame'}:
+    normal = set(expected) | {'first_observed_frame'}
+    if set(fields) not in (normal, normal | {'accumulator_restored_before_rts'}):
         raise ValueError('incomplete or unexpected private A/B witness schema')
+    restored = fields.get('accumulator_restored_before_rts')
+    if restored is not None and restored != (
+            'yes' if mode == 'probe_bg_off' else 'not_needed'):
+        raise ValueError('private CPU accumulator restore witness invalid')
     if any(fields[key] != val for key, val in expected.items()):
         raise ValueError('private A/B capture identity or completeness mismatch')
     if fields['first_observed_frame'] not in ('0', '1'):
         raise ValueError('private playback callback was attached late')
+    return restored is not None
 
 
 def _pixel_differences(first, second, channels):
@@ -83,8 +89,8 @@ def audit(original_dir, diagnostic_dir, *, target_frame):
     diagnostic = _directory(diagnostic_dir)
     if orig.resolve() == diagnostic.resolve():
         raise ValueError('original and intervention captures cannot be the same directory')
-    _witness(orig, 'original', target_frame)
-    _witness(diagnostic, 'probe_bg_off', target_frame)
+    original_restoration_witness = _witness(orig, 'original', target_frame)
+    diagnostic_restoration_witness = _witness(diagnostic, 'probe_bg_off', target_frame)
     rows = []
     altered_frames = []
     union_min, union_max = None, None
@@ -129,6 +135,9 @@ def audit(original_dir, diagnostic_dir, *, target_frame):
         'pre_intervention_images_match': True,
         'rom_and_fm2_untouched_in_both_sessions': True,
         'diagnostic_cpu_register_modified_once': True,
+        'diagnostic_accumulator_restored_before_rts_verified':
+            diagnostic_restoration_witness,
+        'baseline_explicit_accumulator_witness': original_restoration_witness,
         'same_frame_render_latency_proven': False,
         'exact_ppu_scanline_of_cpu_write_proven': False,
         'actual_stage_camera_speed_proven': False,
