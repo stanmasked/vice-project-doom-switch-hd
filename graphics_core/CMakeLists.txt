@@ -333,3 +333,13 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
 endif()
 add_test(NAME romfree_driving_to_platform_blackout
          COMMAND vpd_driving_stage_exit_test)
+# Stage 166: 43 strict native source-owned blackout/pad transition events.
+add_executable(vpd_driving_exit_guest_test ../tests/test_driving_exit_guest.cpp)
+target_link_libraries(vpd_driving_exit_guest_test PRIVATE vpd_simulation)
+target_include_directories(vpd_driving_exit_guest_test PRIVATE
+                           ${CMAKE_CURRENT_SOURCE_DIR}/../game_core)
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+  target_compile_options(vpd_driving_exit_guest_test PRIVATE
+                         -Wall -Wextra -Wpedantic -Werror)
+endif()
+add_test(NAME romfree_driving_exit_guest_witness COMMAND vpd_driving_exit_guest_test)
