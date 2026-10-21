@@ -114,11 +114,15 @@ jobs:
           set -euo pipefail
           # All paths are ephemeral GitHub runner files with a handmade
           # 6502 program and handmade 64-frame movie. NO user ROM or FM2.
-          python3 tools/run_private_fm2_storyboard.py \
+          if ! python3 tools/run_private_fm2_storyboard.py \
             --rom "$RUNNER_TEMP/fceux_fabricated.nes" \
             --movie "$RUNNER_TEMP/fceux_fabricated.fm2" \
             --output "$RUNNER_TEMP/fceux_full_timeline_synthetic" \
-            --interval 8 --timeout-seconds 90
+            --interval 8 --timeout-seconds 30; then
+            echo "Invented ROM only: emulator diagnostic follows" >&2
+            tail -65 "$RUNNER_TEMP/fceux_full_timeline_synthetic.fceux.log" >&2
+            exit 1
+          fi
           test -f "$RUNNER_TEMP/fceux_full_timeline_synthetic.terminal_witness.txt"
           grep -qx 'movie_terminal_frame=63' \
             "$RUNNER_TEMP/fceux_full_timeline_synthetic.terminal_witness.txt"
@@ -172,11 +176,15 @@ jobs:
           trap - EXIT
           # The same private full-timeline launcher is separately checked
           # against the invented MMC3 ROM/FM2, never against user files.
-          python3 tools/run_private_fm2_storyboard.py \
+          if ! python3 tools/run_private_fm2_storyboard.py \
             --rom "$RUNNER_TEMP/fceux_invented_mmc3.nes" \
             --movie "$RUNNER_TEMP/fceux_invented_mmc3.fm2" \
             --output "$RUNNER_TEMP/fceux_mmc3_full_timeline" \
-            --interval 8 --timeout-seconds 90 --trace-chr-banks 124,125,126
+            --interval 8 --timeout-seconds 30 --trace-chr-banks 124,125,126; then
+            echo "Invented MMC3 ROM only: emulator diagnostic follows" >&2
+            tail -65 "$RUNNER_TEMP/fceux_mmc3_full_timeline.fceux.log" >&2
+            exit 1
+          fi
           grep -qx "movie_terminal_frame=63" \
             "$RUNNER_TEMP/fceux_mmc3_full_timeline.terminal_witness.txt"
           grep -qx "movie_frame_gaps=0" \
