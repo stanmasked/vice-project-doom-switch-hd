@@ -81,6 +81,7 @@ struct SceneView {
     bool exit_open=false;
     int32_t exit_x_px=0;
     int32_t exit_y_px=0;
+    bool driving_stage_preview=false; // explicit ROM-free road/HUD preview; never autoplay
 };
 constexpr int kSceneWidth=1280;
 constexpr int kSceneHeight=720;
