@@ -365,3 +365,26 @@ screen coordinates, text semantics, level order or gameplay mechanics.
 Seven tests synthesize original-made 8x8 patterns, bank shifts, zero
 tiles, mapper incompatibility and comparison bounds. A real emulator
 capture is still required to link a static pattern to an original stage.
+
+
+## Stage 128 — real FCEUX NES 2.0 MMC3 (Mapper 4) compatibility gate
+
+Previous real-FCEUX smoke tests used a wholly invented iNES Mapper 0 game.
+The owner's original American cartridge instead has 128 KiB PRG,
+128 KiB CHR, NES 2.0 header and Mapper 4 (MMC3). A new exact-layout
+**wholly original 6502 program** is generated transiently inside GitHub
+Actions by tools/build_fceux_smoke_mmc3_nes2.py. Only the standard header
+and CPU/controller protocol are comparable; this never substitutes
+commercial program code, graphics, stage resources, or original FM2 inputs.
+
+The generated FM2 is accepted only if its source ROM bytes match one of
+two explicitly handcrafted synthetic fixtures (NROM or MMC3). Real FCEUX
+must load the MMC3 synthetic ROM and play that movie read-only, witness
+controller A released at frame 8 and pressed at frame 16 from actual
+CPU reads of $4016 to RAM, produce strict frame 8 and 16 captures,
+then pass the generic full-timeline runner to terminal frame 63 with
+all seven planned 8-frame snapshots. A passing test confirms FCEUX
+MMC3/NES2 wiring but **not** the original game's movie synchronization.
+
+No owner's ROM, FM2, extracted CHR or original screens enter public CI.
+At this stage the user-owned American FM2 still requires private replay.
