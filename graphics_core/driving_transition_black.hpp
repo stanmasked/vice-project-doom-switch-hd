@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include <cstddef>
 // Actual framebuffer fill for a scene-independent blackout. No ROM pixels.
 // The alpha byte is fully opaque in native RGBA8888.
 namespace vpd {
