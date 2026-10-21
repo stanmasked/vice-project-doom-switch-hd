@@ -356,3 +356,18 @@ edge pixels, padding, HUD and player-car isolation, legacy restoration,
 selector gesture authorization, and simulation fingerprint invariance.
 A genuine NeXium driving pad gesture test of this *new* swatch is still
 a separate pending runtime-evidence gate.
+## Stage 173 — genuine native NeXium road-review pixel evidence
+
+The independent second NeXium driving process finishes and retains the
+previous five-event car/impact proof and 43-event transition proof **first**.
+It then re-enters the ROM-free car preview for a third time, sends eight
+actual ZL+ZR+Y pad edges (7 source-numeric intervals, then OFF), and
+requires eight libnx-framebuffer SD witness records with real panel/
+border pixels, unchanged car/HUD and frozen platform fingerprint.
+
+A separate Python auditor joins the original numeric frame labels to
+the source HD interval bounds, verifies pixel samples, no duplicated
+controller/guest frame, and compares three actual X11 captures
+(first image-space swatch, narrowed source 800, and OFF). Neither
+original NES sprites, source scanline scroll, physics or original game
+level completion are established by this runtime-only preview test.
