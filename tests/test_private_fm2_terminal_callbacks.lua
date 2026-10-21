@@ -17,7 +17,9 @@ local function execute_case(name,frames,opts)
     VPD_PRIVATE_FM2_HEADER_POWERON_PREFLIGHT="yes",
     VPD_PRIVATE_FRAME_COUNT="32",
     VPD_PRIVATE_CAPTURE_INTERVAL="8",
-    VPD_PRIVATE_CAPTURE_LIMIT="3"
+    VPD_PRIVATE_CAPTURE_LIMIT="4",
+    VPD_PRIVATE_CAPTURE_START_FRAME="8",
+    VPD_PRIVATE_CAPTURE_STOP_FRAME="31"
   }
   os.getenv=function(k) return env[k] end
   local frame=0
