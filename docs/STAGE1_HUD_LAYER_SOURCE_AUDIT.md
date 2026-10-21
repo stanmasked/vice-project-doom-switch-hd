@@ -138,3 +138,41 @@ original gameplay geometry and implement a distinct driving
 simulation under separate tests. Authentic road scroll/camera
 velocity, traffic collision/physics and gameplay stage-exit remain
 unverified, as does original bitmap appearance in this preview.
+
+
+## Stage 161 — independent vehicle controller and visual state
+
+Extended the Stage160 manual-only Switch graphical preview with an
+independent ROM-free, deterministic and deliberately **invented**
+car-control model `game_core/driving_simulation.hpp`. Inputs on the
+Switch (left/right, up/A accelerate, down/B brake) now change only this
+state, not the established platform `Simulation`. The driving model
+has bounded lateral steering, speed cap, road-marker motion, a single
+deterministic placeholder traffic rectangle, an AABB collision and
+45-update invulnerability period. A collision reduces its own preview
+health bar; none of these constants are claimed to match the original
+NES game's physics.
+
+`graphics_core/driving_preview.hpp` now consumes an explicit
+`DrivingPreviewView` snapshot containing car position, obstacle,
+speed, frame, road phase, and hit flash. The lower HUD remains independent
+from the scrolling road layer. `graphics_core/scene_renderer.cpp`
+forwards `SceneView.driving` only when `driving_stage_preview` was
+explicitly selected; the default platform scene and its original synthetic
+golden frame remain unaffected.
+
+`switch_graphical/source/main.cpp` maintains a separately reset
+`DrivingState`. It handles preview control inputs without delivering
+those inputs or additional simulation ticks to the platform scene,
+so the platform game is **paused during the preview** and resumes when
+the preview is toggled off. The current implementation does not add
+original camera timing, car physics, traffic assets, or a Stage1-1 stage
+transition. The original ROM/FCEUX captures remain private.
+
+Added CTest `romfree_driving_independent_vehicle_controls` plus expanded
+`romfree_driving_preview_hud_road_isolation` for driving inputs,
+deterministic repeat runs, collision cooldown, independent HUD vs road
+pixels, and switching back to the legacy scene. They use only invented
+source-free data. Actual Switch/NeXium runtime behavior must be
+independently confirmed by CI; a compiled NRO is not proof the original
+driving stage is recreated.
