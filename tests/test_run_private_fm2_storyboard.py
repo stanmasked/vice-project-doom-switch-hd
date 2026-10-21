@@ -38,6 +38,14 @@ class RunnerPlanningTests(unittest.TestCase):
         self.assertEqual(result["start_frame"],100)
         self.assertEqual(result["stop_frame"],251)
 
+    def test_zero_start_never_requires_unobservable_frame_zero(self):
+        movie={"frames":64,"rom_identity_matched":True,
+               "starts_from_power_on":True}
+        result=capture_plan(movie,interval=8,start_frame=0,stop_frame=15)
+        self.assertEqual(result["sample_count"],2)
+        self.assertEqual(result["start_frame"],0)
+        self.assertEqual(result["stop_frame"],15)
+
     def test_reject_window_outside_movie_or_reversed(self):
         movie={"frames":4096,"rom_identity_matched":True,
                "starts_from_power_on":True}
