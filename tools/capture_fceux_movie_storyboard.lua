@@ -64,7 +64,9 @@ emu.registerafter(function()
   if frame==last_frame then return end
   last_frame=frame
   local terminal=frame==STOP
-  if count>=LIMIT or frame<START or frame>STOP or
+  -- Frame 0 may have elapsed before this after-frame hook is registered.
+  -- Never plan or emit it as a reliable storyboard sample.
+  if frame==0 or count>=LIMIT or frame<START or frame>STOP or
      (frame%INTERVAL~=0 and not terminal) then return end
   record(frame)
   count=count+1
