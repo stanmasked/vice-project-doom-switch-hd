@@ -116,13 +116,13 @@ int main() {
     const auto legacyRoad=hashRows(legacy,stride,0,split);
     const auto legacyHud=hashRows(legacy,stride,split,h);
     scene.driving_stage_preview=true;
+    scene.driving.frame=scene.frame;
+    scene.driving.road_phase=static_cast<int>(scene.frame%72u);
+    scene.driving.ticks=scene.frame;
+    scene.driving.health=scene.player_health;
     require(vpd::drawScene(legacy.data(),w,h,stride,scene),
             "opt-in shared SceneView driving draw failed");
-    vpd::DrivingPreviewView reference{};
-    reference.frame=scene.frame;
-    reference.road_phase=static_cast<int>(scene.frame%72u);
-    reference.ticks=scene.frame;
-    reference.health=scene.player_health;
+    vpd::DrivingPreviewView reference=scene.driving;
     require(vpd::drawDrivingPreview(same.data(),w,h,stride,reference),
             "direct driving preview reference failed");
     require(hashRows(legacy,stride,0,split)==hashRows(same,stride,0,split) &&
