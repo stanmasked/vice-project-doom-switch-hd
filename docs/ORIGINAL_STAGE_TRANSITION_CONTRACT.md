@@ -363,3 +363,25 @@ PPU state, or that the original road-camera velocity is recovered.
 Reproducible strictly private tools and synthetic CI tests are documented
 in [PPUMASK_AB_CONTROLLED_EXPERIMENT.md](PPUMASK_AB_CONTROLLED_EXPERIMENT.md).
 The source ROM, FM2, RGB, indexed palette and raw emulator logs remain local.
+
+
+## Stage 158 — original CHR register A/B graphic sensitivity
+
+In independent controlled **private original FCEUX** playback, a single
+one-frame CHR register #1 write substitution (CPU PC $E387, 02→00,
+A restored at $E38A) produced **0 changed screen pixels and 0 changed
+palette indices** over frames 599–602 and 799–802.
+
+By contrast a one-frame CHR register #0 substitution (CPU PC $E380,
+00→02, X restored before $E383) produced **3,042 changed pixels at frame
+601** and **3,039 at frame 801**, with exactly matching NES palette masks.
+Both experiments affected output rows Y=196–207, 209–223, 228–231 and
+236–239; other captured control frames were byte-identical.
+
+This proves localized **counterfactual visible sensitivity** to one MMC3
+CHR register #0 bank write in the sampled scenes, but does not prove
+absolute PPU raster timing, original camera speed or original Switch-stage
+rendering. Full reproduction rules, private witness limitations and source
+tests are detailed in
+[CHR_BANK_AB_CONTROLLED_EXPERIMENT.md](CHR_BANK_AB_CONTROLLED_EXPERIMENT.md).
+Original ROM, FM2, RGB/PAL and unabridged CPU traces remain private.
