@@ -2,6 +2,7 @@
 #include <cstdint>
 #include <array>
 #include "decor_layout.hpp"
+#include "driving_preview.hpp"
 namespace vpd {
 struct SpriteAtlas;
 struct GuardView {
@@ -82,6 +83,7 @@ struct SceneView {
     int32_t exit_x_px=0;
     int32_t exit_y_px=0;
     bool driving_stage_preview=false; // explicit ROM-free road/HUD preview; never autoplay
+    DrivingPreviewView driving{}; // explicit isolated car-state snapshot
 };
 constexpr int kSceneWidth=1280;
 constexpr int kSceneHeight=720;
