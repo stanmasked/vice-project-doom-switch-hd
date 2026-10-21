@@ -335,3 +335,31 @@ register state takes effect, its intended HUD/road/camera role, authentic
 driving physics or collision geometry, and Switch gameplay integration.
 Although these are frame-synchronized CPU writes, they alone do **not**
 establish which pixels were rendered under which PPU state.
+
+
+## Stage 156 — original PPUMASK controlled pixel-response experiment
+
+FCEUX 2.6.5 ran two paired experiments on the owner's original USA ROM +
+read-only matching FM2 at frames 600 and 800. Each compared unmodified
+playback against a *single-frame diagnostic CPU A intervention* at original
+PC $E38E, changing the imminent PPUMASK $2001 write from $0E to $06.
+
+The first pixel change appears in the emulator's **next numbered screenshot**
+(frame 601 or 801), **only at Y=201–223**: 1,607 and 1,619 differing RGB
+pixels respectively, with matching NES palette-index differences. The
+pre-intervention, target, and second-after frames are byte-identical across
+both branches. Original baseline frames 600/800 separately match an earlier
+real original Stage 1-1 FCEUX capture, RGB and palette bytes.
+
+A stricter controlled repeat restored accumulator A to the unmodified value
+$0E at the actual next RTS instruction, $E391, preventing persistent CPU A
+divergence. Both independent frame-600 and frame-800 repeats produced **the
+identical pixel difference counts and affected rows** after restoration.
+
+This is experimental evidence of a **causal framebuffer-region response**
+to a temporally targeted late PPUMASK write, NOT a proof that the original
+CPU instruction executes on scanline Y=201, that all row pixels have known
+PPU state, or that the original road-camera velocity is recovered.
+Reproducible strictly private tools and synthetic CI tests are documented
+in [PPUMASK_AB_CONTROLLED_EXPERIMENT.md](PPUMASK_AB_CONTROLLED_EXPERIMENT.md).
+The source ROM, FM2, RGB, indexed palette and raw emulator logs remain local.
