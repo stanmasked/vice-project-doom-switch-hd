@@ -21,8 +21,14 @@ SCRIPT_DIR=Path(__file__).resolve().parent
 
 
 def private_target(directory):
-    directory=Path(directory).expanduser().resolve(strict=False)
-    if directory.is_symlink() or directory.exists():
+    requested=Path(directory).expanduser()
+    # Check the caller's path before resolving it. resolve() erases the
+    # lexical symlink, including a dangling symlink to a not-yet-created
+    # directory, which would otherwise silently redirect private captures.
+    if requested.is_symlink():
+        raise ValueError("private capture destination must not be a symlink")
+    directory=requested.resolve(strict=False)
+    if directory.exists():
         raise ValueError("private capture destination must be a NEW directory")
     parent=directory.parent
     if not parent.is_dir() or parent.is_symlink():
@@ -73,11 +79,13 @@ def launch(rom,movie,directory,fceux="fceux",timeout_seconds=1800,
     for source in (storyboard,wrapper):
         if not source.is_file():
             raise ValueError("missing public source-only FCEUX Lua script")
-    target.mkdir(mode=0o700)
     witness=target.parent/(target.name+".terminal_witness.txt")
     logfile=target.parent/(target.name+".fceux.log")
+    # Validate all destinations before creating the capture folder. A stale
+    # witness must not cause a partial or ambiguous new private session.
     if witness.exists() or logfile.exists() or witness.is_symlink() or logfile.is_symlink():
         raise ValueError("private witness or log filename already exists")
+    target.mkdir(mode=0o700)
     env=os.environ.copy()
     env.update({
         "VPD_PRIVATE_OUTPUT_DIR":str(target),

@@ -42,6 +42,38 @@ class RunnerPlanningTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             self.assertEqual(private_target(Path(d)/"capture"),Path(d)/"capture")
 
+    def test_reject_dangling_output_symlink_before_resolve(self):
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d)
+            linked=root/"capture-link"
+            try:
+                linked.symlink_to(root/"not-created",target_is_directory=True)
+            except OSError as exc:
+                self.skipTest(str(exc))
+            with self.assertRaisesRegex(ValueError,"symlink"):
+                private_target(linked)
+            self.assertFalse((root/"not-created").exists())
+
+    def test_existing_terminal_witness_does_not_create_capture_dir(self):
+        from unittest.mock import patch
+        from build_fceux_smoke_rom import build_rom
+        from build_fceux_smoke_movie import make_movie
+        from run_private_fm2_storyboard import launch
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d)
+            rom=root/"synthetic.nes"
+            movie=root/"synthetic.fm2"
+            rom.write_bytes(build_rom())
+            movie.write_text(make_movie(rom.read_bytes()),encoding="ascii")
+            capture=root/"capture"
+            witness=root/"capture.terminal_witness.txt"
+            witness.write_text("stale",encoding="ascii")
+            with patch("run_private_fm2_storyboard.shutil.which",return_value="/usr/games/fceux"):
+                with self.assertRaisesRegex(ValueError,"witness"):
+                    launch(rom,movie,capture,interval=8,timeout_seconds=5)
+            self.assertFalse(capture.exists())
+            self.assertEqual(witness.read_text(),"stale")
+
     def test_reject_checkout_directory(self):
         with tempfile.TemporaryDirectory() as d:
             base=Path(d)
