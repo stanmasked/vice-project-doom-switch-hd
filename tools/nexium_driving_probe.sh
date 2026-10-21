@@ -115,5 +115,35 @@ await_exit 42 platform
 sleep 0.16
 capture screen-exit-platform
 cp "$exit_file" "$out/guest-driving-exit-witness.txt"
+# Stage 173: a third deliberate driving entry in the SAME independent
+# NeXium process, AFTER all earlier driving+blackout evidence was copied.
+# The new ZL+ZR+Y chord must produce eight actual libnx framebuffer events.
+toggle_drive
+sleep 0.24
+review_file="$XDG_CONFIG_HOME/NeXium/sdmc/switch/vice_project_doom/road_review_guest.txt"
+xdotool keydown --clearmodifiers r
+xdotool keydown --clearmodifiers t
+for (( sample=1; sample<=8; ++sample )); do
+  xdotool key --clearmodifiers --delay 140 z
+  found=no
+  for (( attempt=0; attempt<180; ++attempt )); do
+    if [[ -f "$review_file" ]] &&
+       grep -q "^VPD_ROAD_REVIEW_V1 seq=$sample " "$review_file"; then
+      found=yes
+      break
+    fi
+    sleep 0.04
+  done
+  echo "native_review_sample_$sample=$found" >> "$out/host-input.txt"
+  [[ "$found" == yes ]]
+  if [[ "$sample" -eq 1 || "$sample" -eq 5 || "$sample" -eq 8 ]]; then
+    sleep 0.12
+    capture "screen-review-$sample"
+  fi
+  sleep 0.13
+done
+xdotool keyup t
+xdotool keyup r
+cp "$review_file" "$out/guest-road-review-witness.txt"
 xdotool key --clearmodifiers --delay 130 m
 echo "host_probe=completed guest_five_events=yes" >> "$out/host-input.txt"

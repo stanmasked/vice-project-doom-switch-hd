@@ -381,3 +381,4 @@ cp "$XDG_CONFIG_HOME/NeXium/sdmc/switch/vice_project_doom/driving_raster_guest.t
   "$out/driving-run/guest-driving-raster-witness.txt"
 python3 tools/audit_nexium_driving_raster.py --evidence "$out/driving-run"
 python3 tools/audit_nexium_driving_blackout.py --evidence "$out/driving-run"
+python3 tools/audit_nexium_road_review.py --evidence "$out/driving-run"

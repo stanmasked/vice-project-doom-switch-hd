@@ -377,3 +377,17 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
 endif()
 add_test(NAME romfree_driving_exact_image_interval_review
          COMMAND vpd_driving_road_review_test)
+# Stage 173: source-owned NeXium guest evidence for all seven exact numeric
+# reference swatches and the eighth OFF image, never original NES art.
+add_executable(vpd_driving_road_review_guest_test
+               ../tests/test_driving_road_review_guest.cpp)
+target_link_libraries(vpd_driving_road_review_guest_test PRIVATE vpd_simulation)
+target_include_directories(vpd_driving_road_review_guest_test PRIVATE
+                           ${CMAKE_CURRENT_SOURCE_DIR}
+                           ${CMAKE_CURRENT_SOURCE_DIR}/../game_core)
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+  target_compile_options(vpd_driving_road_review_guest_test PRIVATE
+                         -Wall -Wextra -Wpedantic -Werror)
+endif()
+add_test(NAME romfree_driving_road_reference_guest_witness
+         COMMAND vpd_driving_road_review_guest_test)
