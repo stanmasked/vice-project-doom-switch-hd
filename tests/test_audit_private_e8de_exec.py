@@ -46,6 +46,28 @@ def fixture(root,*,bad=None):
     return execution,counts,events,witness
 
 
+def instruction_fixture(root):
+    paths=fixture(root)
+    observed=root/"invented_pc_events.tsv"
+    finished=root/"invented_pc_complete.txt"
+    lines=["frame\tcycle\tpc"]
+    for i,frame in enumerate(range(10,13)):
+        cycle=1000+i*1000
+        for pc,offset in (("E8DE",0),("E8E4",9),("E8E7",13),
+                          ("E8EC",20),("E8F1",27)):
+            lines.append(f"{frame}\t{cycle+offset}\t{pc}")
+    observed.write_text("\n".join(lines)+"\n",encoding="ascii")
+    finished.write_text(
+        "format=private_e8de_instruction_trace_v1\n"
+        "first_observed_frame=1\n"
+        "last_observed_frame=12\n"
+        "frame_gaps=0\n"
+        "total_instruction_callbacks=15\n"
+        "rom_identity_verified=yes\n"
+        "movie_readonly_verified=yes\n",encoding="ascii")
+    return (*paths,observed,finished)
+
+
 class E8DEExecutionTests(unittest.TestCase):
     def test_exact_cycle_offsets_and_ram_correspondence(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -58,6 +80,49 @@ class E8DEExecutionTests(unittest.TestCase):
             self.assertEqual(report["observed_later_zero_scroll_write_frames"],3)
             self.assertFalse(report["display_effective_scroll_verified"])
             self.assertFalse(report["car_camera_speed_verified"])
+
+    def test_verified_2002_read_opcode_instruction_execution(self):
+        with tempfile.TemporaryDirectory() as directory:
+            paths=instruction_fixture(Path(directory))
+            report=audit(*paths[:4],start=10,stop=12,
+                         instruction_trace=paths[4],
+                         instruction_witness=paths[5])
+            self.assertTrue(report["runtime_executed_opcode_at_e8e7"])
+            self.assertEqual(report["instruction_callbacks_verified"],15)
+            self.assertEqual(
+                report["relative_instruction_execution_cpu_cycles"],
+                [0,9,13,20,27])
+            self.assertFalse(report["direct_lua_2002_read_callback_claimed"])
+            self.assertFalse(report["display_effective_scroll_verified"])
+
+    def test_reject_missing_2002_read_instruction_callback(self):
+        with tempfile.TemporaryDirectory() as directory:
+            paths=instruction_fixture(Path(directory))
+            trace=paths[4]
+            lines=trace.read_text("ascii").splitlines()
+            trace.write_text("\n".join(s for s in lines
+                 if s!="11\t2013\tE8E7")+"\n",encoding="ascii")
+            with self.assertRaisesRegex(ValueError,"incomplete"):
+                audit(*paths[:4],start=10,stop=12,
+                      instruction_trace=trace,instruction_witness=paths[5])
+
+    def test_reject_swapped_instruction_order(self):
+        with tempfile.TemporaryDirectory() as directory:
+            paths=instruction_fixture(Path(directory))
+            trace=paths[4]
+            data=trace.read_text("ascii").replace("11\t2013\tE8E7",
+                                                   "11\t2013\tE8EC")
+            trace.write_text(data,encoding="ascii")
+            with self.assertRaisesRegex(ValueError,"PC chain"):
+                audit(*paths[:4],start=10,stop=12,
+                      instruction_trace=trace,instruction_witness=paths[5])
+
+    def test_reject_trace_without_witness(self):
+        with tempfile.TemporaryDirectory() as directory:
+            paths=instruction_fixture(Path(directory))
+            with self.assertRaisesRegex(ValueError,"together"):
+                audit(*paths[:4],start=10,stop=12,
+                      instruction_trace=paths[4])
 
     def test_reject_duplicate_execution_callback(self):
         with tempfile.TemporaryDirectory() as directory:
