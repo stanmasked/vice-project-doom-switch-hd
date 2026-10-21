@@ -1,0 +1,33 @@
+"""Wholly original FM2 fixture: do not use user ROM or movie."""
+import base64
+import hashlib
+import sys
+import unittest
+from pathlib import Path
+sys.path.insert(0,str(Path(__file__).resolve().parents[1]/"tools"))
+from build_fceux_smoke_rom import build_rom
+from build_fceux_smoke_movie import make_movie,MOVIE_FRAMES
+
+class SyntheticMovieTests(unittest.TestCase):
+    def test_rom_identity_matches_payload_md5(self):
+        rom=build_rom()
+        movie=make_movie(rom)
+        checksum=next(x.split("base64:",1)[1] for x in movie.splitlines()
+                      if x.startswith("romChecksum "))
+        self.assertEqual(base64.b64decode(checksum),hashlib.md5(rom[16:]).digest())
+        self.assertNotEqual(base64.b64decode(checksum),hashlib.md5(rom).digest())
+
+    def test_64_frames_and_single_controller(self):
+        txt=make_movie(build_rom())
+        frames=[line for line in txt.splitlines() if line.startswith("|")]
+        self.assertEqual(len(frames),MOVIE_FRAMES)
+        self.assertEqual(sum(x=="|0|.......A|||" for x in frames),12)
+        self.assertTrue(all(len(x.split("|"))==6 and x.endswith("|||") for x in frames))
+        self.assertIn("port1 0",txt)
+        self.assertIn("guid ",txt)
+
+    def test_mismatched_source_refused(self):
+        with self.assertRaisesRegex(ValueError,"synthetic NROM"):
+            make_movie(build_rom()[:-1])
+
+if __name__=="__main__":unittest.main()
