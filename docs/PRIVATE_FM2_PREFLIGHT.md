@@ -322,3 +322,21 @@ Nine ROM-free, entirely invented fixtures test header variants, aligned
 bank comparisons and fail-closed behavior on incompatible layouts, linked
 files and malformed inputs. No actual commercial ROM is used by CI.
 Original cartridge images and the private audit report are not committed.
+
+### Private CHR difference atlas (Stage 126)
+
+If inspection is authorized on a local copy of both ROM variants, produce
+an exact grayscale 2-bit planar CHR **pattern** comparison with:
+
+    python3 tools/render_private_nes_variant_chr_diff.py \
+      --first-rom /private/vice_us.nes --second-rom /private/gun_dec_jp.nes \
+      --private-output /private/chr_differences.png
+
+This draws only nonidentical 1KB CHR banks, preserving the original
+NES bitplane arrangement. The tones are invented visualization colors:
+without PPU palette/attribute/scroll evidence, the resulting tiles
+cannot be called in-game screen frames, backgrounds or stage geometry.
+Never upload the resulting proprietary-pattern image to GitHub.
+Output is refused inside any Git checkout, if an image already exists,
+or if more than 16 differing banks would exceed the comparison layout.
+Eight wholly invented ROM-free tests exercise rendering and guards.
