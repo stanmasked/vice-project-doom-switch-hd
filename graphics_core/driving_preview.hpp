@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
+#include "driving_road_reference.hpp"
 
 // Original-STYLE ROM-free driving-stage rendering *prototype*.
 // The Y=196 boundary is a manual classification of private 256x240
@@ -30,6 +31,9 @@ struct DrivingPreviewView {
     bool show_obstacle=false; // invented traffic fixture
     bool impact_flash=false;
     uint8_t speed=3;
+    // 0 = default invented road. A known original frame enables a standalone
+    // overlay of ONE measured median X interval, not source road geometry.
+    uint16_t observed_road_frame=0;
 };
 
 namespace driving_detail {
@@ -116,6 +120,24 @@ inline void drawRoad(Canvas& road,const DrivingPreviewView& view) {
         road.rect(x-30,y+74,60,8,rgba(226,179,101));
         road.rect(x-51,y+21,12,25,rgba(23,26,33));
         road.rect(x+39,y+21,12,25,rgba(23,26,33));
+    }
+    // Explicitly opt-in, source-free measurement swatch. Its vertical
+    // position is arbitrary and has NO source Y/scanline interpretation.
+    // It visualizes one median source RGB X-interval at fivefold horizontal
+    // display scale. No collision/scroll/camera/car state uses these values.
+    if(const auto* observed=
+           road_reference::atExactFrame(view.observed_road_frame)) {
+        const auto band=road_reference::toHdImageSpace(*observed);
+        constexpr uint32_t panel=rgba(14,24,34);
+        constexpr uint32_t fill=rgba(98,143,132);
+        constexpr uint32_t edge=rgba(233,190,117);
+        road.rect(0,116,kDrivingPreviewWidth,105,panel);
+        road.rect(band.left,139,band.width,56,fill);
+        road.rect(band.left,139,5,56,edge);
+        road.rect(band.right_inclusive-4,139,5,56,edge);
+        number(road,40,153,observed->frame,4,edge);
+        road.rect(0,116,kDrivingPreviewWidth,3,kRoadEdge);
+        road.rect(0,218,kDrivingPreviewWidth,3,kRoadEdge);
     }
 }
 inline void drawHud(Canvas& hud,const DrivingPreviewView& view) {

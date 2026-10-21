@@ -363,3 +363,17 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
 endif()
 add_test(NAME romfree_original_road_ppu_exact_frame_alignment
          COMMAND vpd_road_ppu_alignment_test)
+# Stage 172: optional manual-only exact-frame roadway median X-interval
+# swatch. Original sprite/collision/PPU data never enter the renderer.
+add_executable(vpd_driving_road_review_test ../tests/test_driving_road_review.cpp)
+target_link_libraries(vpd_driving_road_review_test PRIVATE
+                      vpd_scene_renderer vpd_simulation)
+target_include_directories(vpd_driving_road_review_test PRIVATE
+                           ${CMAKE_CURRENT_SOURCE_DIR}
+                           ${CMAKE_CURRENT_SOURCE_DIR}/../game_core)
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+  target_compile_options(vpd_driving_road_review_test PRIVATE
+                         -Wall -Wextra -Wpedantic -Werror)
+endif()
+add_test(NAME romfree_driving_exact_image_interval_review
+         COMMAND vpd_driving_road_review_test)
