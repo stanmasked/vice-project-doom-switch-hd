@@ -5,6 +5,8 @@
 #include "driving_scene_bridge.hpp"
 #include "driving_guest_witness.hpp"
 #include "driving_raster_witness.hpp"
+#include "driving_stage_exit.hpp"
+#include "driving_transition_black.hpp"
 #include "manual_retry.hpp"
 #include "manual_retry_guest_witness.hpp"
 #include "live_defeat_retry_witness.hpp"
@@ -189,6 +191,7 @@ int main(int,char**) {
     bool driving_preview=false; // manual-only ROM-free road/HUD visual preview
     vpd::DrivingState driving_state{}; // separate from platform Simulation
     vpd::DrivingGuestProof driving_proof{};
+    vpd::DrivingStageExit driving_stage_exit{};
     unsigned hd_fx_guest_seq=0;
     unsigned hd_fx_combat_seq=0;
     unsigned hd_fx_sentry_seq=0;
@@ -236,9 +239,18 @@ int main(int,char**) {
         padUpdate(&pad);
         const u64 buttons=padGetButtons(&pad);
         const u64 pressed=padGetButtonsDown(&pad);
+        // Exactly one timeline presentation per native loop. The exit request
+        // is intentionally armed only *after* the last drawn road frame.
+        const auto driving_present=driving_stage_exit.present();
+        if(driving_present==vpd::stage_transition::Scene::Platform &&
+           driving_preview) {
+            driving_preview=false;
+            driving_stage_exit.reset();
+        }
         unsigned driving_raster_event_seq=0;
         // Deliberately uncommon debug chord preserves all approved autoplay.
         const bool driving_preview_chord=!demo.enabled() &&
+            !driving_stage_exit.active() &&
             (pressed&HidNpadButton_X) &&
             (buttons&HidNpadButton_ZL) &&
             (buttons&HidNpadButton_ZR);
@@ -246,6 +258,7 @@ int main(int,char**) {
             driving_preview=!driving_preview;
             if(driving_preview) {
                 driving_state.reset();
+                driving_stage_exit.reset();
                 (void)vpd::appendDrivingGuestProof(has_sd,
                     driving_proof.enter(!demo.enabled(),true,
                                         driving_state,game.fingerprint()));
@@ -289,7 +302,7 @@ int main(int,char**) {
             fourth_stage_seq==2;
         // Left-stick click switches between 200-frame demo and manual play.
         // StickL+Y still performs the independent development-art reset.
-        const bool toggle_manual=
+        const bool toggle_manual=!driving_stage_exit.active() &&
             ((pressed&HidNpadButton_StickL) && !(buttons&HidNpadButton_Y)) ||
             ((pressed&HidNpadButton_A) && (buttons&HidNpadButton_R));
         if(toggle_manual) {
@@ -403,6 +416,9 @@ int main(int,char**) {
         if(!demo.enabled() && (buttons&HidNpadButton_ZR) &&
            !(buttons&HidNpadButton_StickL))
             input|=vpd::Dash;
+        const bool request_driving_exit=
+            driving_preview && !driving_stage_exit.active() &&
+            (pressed&HidNpadButton_Minus) != 0;
         if(demo.enabled()) {
             if(demo.tick(game)) animation.reset();
         } else {
@@ -433,7 +449,8 @@ int main(int,char**) {
             if(driving_preview) {
                 // The road prototype updates only its own invented simulation.
                 // Keep the established platform game/fingerprint unchanged.
-                if(!driving_preview_chord) {
+                if(!driving_preview_chord && !driving_stage_exit.active() &&
+                   !request_driving_exit) {
                     const vpd::DriveInput drive_input{
                         (buttons&(HidNpadButton_Left|HidNpadButton_StickLLeft))!=0,
                         (buttons&(HidNpadButton_Right|HidNpadButton_StickLRight))!=0,
@@ -1078,8 +1095,11 @@ int main(int,char**) {
             fx_other=vpd::fingerprintHdFxVisual(
                 pixels,vpd::kSceneWidth,vpd::kSceneHeight,pixels_per_row);
         }
-        const bool drawn=vpd::drawScene(
-            pixels,vpd::kSceneWidth,vpd::kSceneHeight,pixels_per_row,view);
+        const bool drawn=driving_present==vpd::stage_transition::Scene::Black
+            ? vpd::drawDrivingBlackout(
+                pixels,vpd::kSceneWidth,vpd::kSceneHeight,pixels_per_row)
+            : vpd::drawScene(
+                pixels,vpd::kSceneWidth,vpd::kSceneHeight,pixels_per_row,view);
         if(drawn && view.driving_stage_preview &&
            driving_raster_event_seq!=0) {
             (void)vpd::appendDrivingRasterProof(
@@ -1105,6 +1125,8 @@ int main(int,char**) {
                 pixels_per_row,hostile_x,hostile_y);
         framebufferEnd(&fb);
         if(!drawn)break;
+        if(request_driving_exit && view.driving_stage_preview)
+            (void)driving_stage_exit.requestAfterDrivingFrame(true,true);
         if(hd_fx_sentry_edge && drawn && has_sd &&
            fx_other.pixels==414000 && fx_presented.pixels==414000 &&
            fx_other.hash!=fx_presented.hash &&
