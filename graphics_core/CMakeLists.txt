@@ -266,6 +266,8 @@ add_test(NAME hd_impact_lighting_bounds
 # separately bounded HUD. Opt-in only; approved platform golden unchanged.
 add_executable(vpd_driving_preview_test ../tests/test_driving_preview.cpp)
 target_link_libraries(vpd_driving_preview_test PRIVATE vpd_scene_renderer)
+target_include_directories(vpd_driving_preview_test PRIVATE
+                           ${CMAKE_CURRENT_SOURCE_DIR}/../game_core)
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
   target_compile_options(vpd_driving_preview_test PRIVATE
                          -Wall -Wextra -Wpedantic -Werror)
