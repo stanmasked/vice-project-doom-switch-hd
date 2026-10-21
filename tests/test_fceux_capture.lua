@@ -12,13 +12,13 @@ memory={
  readbyterange=function(addr,n)assert(addr==0 and n==2048);return string.rep(string.char(0x42),n)end,
  readbyte=function(addr)return (addr*3)%256 end
 }
-if without_read then memory.registerread=nil end
 ppu={readbyterange=function(addr,n)assert(addr==0 and n==16384);return string.rep(string.char(0x5A),n)end}
 rom={gethash=function(which)assert(which=='md5');return 'abcd1234' end}
 local sampled_pixels=0
 local cpu_clock=100000
 local without_clock=arg and arg[1]=='--no-clock'
 local without_read=arg and arg[1]=='--no-read'
+if without_read then memory.registerread=nil end
 local dense=arg and arg[1]=='--dense'
 if dense then
   VPD_CAPTURE_INTERVAL=8
