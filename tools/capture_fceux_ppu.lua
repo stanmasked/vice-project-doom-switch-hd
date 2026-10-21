@@ -41,6 +41,9 @@ local dropped_writes = 0
 local buffered = {}
 local timed_buffered = {}
 local clock_available = type(debugger)=='table' and type(debugger.getcyclescount)=='function'
+-- Genuine FCEUX 2.6.5 may not expose memory.registerread to Lua.
+-- Do not crash or invent $2002 read markers when this hook is absent.
+local status_read_hook_available = type(memory)=='table' and type(memory.registerread)=='function'
 local chr_reg = {}
 local invalid_screen_palette_values = 0
 local mmc3_select, ppuctrl, ppumask = nil, nil, nil
@@ -119,7 +122,9 @@ for _, addr in ipairs({0x2000,0x2001,0x2005,0x2006,0x2007,
 end
 -- Reads of $2002 reset the $2005/$2006 shared PPU write latch.
 -- Capture these as address=2002/value=00 markers in the event TSV.
-memory.registerread(0x2002, on_status_read)
+if status_read_hook_available then
+    memory.registerread(0x2002, on_status_read)
+end
 
 local function flush()
     if #buffered > 0 then
@@ -139,6 +144,7 @@ local function capture_metadata(frame)
     local result = {
         'format=fceux_ppu_snapshot_v4',
         'cycle_trace_available='..(clock_available and 'yes' or 'no'),
+        'ppu_status_read_hook='..(status_read_hook_available and 'available' or 'unavailable'),
         'cycle_trace_counter_epoch=debugger_since_reset',
         'screen_reference='..(CAPTURE_SCREEN and 'yes' or 'no'),
         'screen_size=256x240',
