@@ -47,6 +47,7 @@ jobs:
           lua5.4 tests/test_private_late_ppu_routine.lua
           lua5.4 tests/test_private_ppumask_ab.lua
           lua5.4 tests/test_private_chr_bank_ab.lua
+          lua5.4 tests/test_private_chr0_bank_ab.lua
       - name: Trace real FCEUX Lua execution hooks under synthetic emulator callbacks
         run: |
           lua5.4 tests/test_fceux_dispatch.lua
