@@ -9,6 +9,8 @@ on:
       - "tools/capture_fceux_movie_storyboard.lua"
       - "tools/audit_private_fceux_storyboard.py"
       - "tests/test_build_fceux_smoke_rom.py"
+      - "tools/build_fceux_smoke_movie.py"
+      - "tests/test_build_fceux_smoke_movie.py"
   pull_request:
     paths:
       - ".github/workflows/fceux-runtime-smoke.yml"
@@ -17,6 +19,8 @@ on:
       - "tools/capture_fceux_movie_storyboard.lua"
       - "tools/audit_private_fceux_storyboard.py"
       - "tests/test_build_fceux_smoke_rom.py"
+      - "tools/build_fceux_smoke_movie.py"
+      - "tests/test_build_fceux_smoke_movie.py"
   workflow_dispatch:
 
 permissions:
@@ -39,6 +43,8 @@ jobs:
           set -euo pipefail
           python3 -m unittest discover -s tests -p test_build_fceux_smoke_rom.py -v
           python3 tools/build_fceux_smoke_rom.py --output "$RUNNER_TEMP/fceux_fabricated.nes"
+          python3 -m unittest discover -s tests -p test_build_fceux_smoke_movie.py -v
+          python3 tools/build_fceux_smoke_movie.py --rom "$RUNNER_TEMP/fceux_fabricated.nes" --output "$RUNNER_TEMP/fceux_fabricated.fm2"
           mkdir -p "$RUNNER_TEMP/fceux_fabricated_frames"
       - name: Run real FCEUX Lua screen hooks on that invented ROM
         shell: bash
@@ -48,6 +54,8 @@ jobs:
           set -euo pipefail
           export VPD_SMOKE_DIRECTORY="$RUNNER_TEMP/fceux_fabricated_frames"
           export VPD_STORYBOARD_SCRIPT="$GITHUB_WORKSPACE/tools/capture_fceux_movie_storyboard.lua"
+          export VPD_SMOKE_MOVIE="$RUNNER_TEMP/fceux_fabricated.fm2"
+          export VPD_SMOKE_WITNESS="$RUNNER_TEMP/fceux_movie_verified.txt"
           logfile="$RUNNER_TEMP/fceux_smoke.log"
           timeout 55s xvfb-run -a -s '-screen 0 1024x768x24' \
             fceux --no-config 1 --sound 0 \
@@ -68,6 +76,11 @@ jobs:
           fi
           python3 tools/audit_private_fceux_storyboard.py \
             "$VPD_SMOKE_DIRECTORY" --require-complete-window
+          test -f "$VPD_SMOKE_WITNESS"
+          grep -qx "movie_loaded=yes" "$VPD_SMOKE_WITNESS"
+          grep -qx "movie_mode=playback" "$VPD_SMOKE_WITNESS"
+          grep -qx "movie_readonly=yes" "$VPD_SMOKE_WITNESS"
+          grep -qx "movie_frames=64" "$VPD_SMOKE_WITNESS"
           echo "REAL_FCEUX_SYNTHETIC_STORYBOARD_PASS frames=8,16 original_game_proven=no"
           cleanup
           trap - EXIT
