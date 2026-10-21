@@ -248,6 +248,25 @@ Public test fixtures are entirely synthetic; they exercise continuity,
 monotone CPU clock, all-four writer origin, cross-run epoch consistency,
 stability bounds and negative cases without including original traces.
 
+### Additional late-writer register sequence observed
+
+The private CPU register-event log independently shows that after
+the fourth $2005 writer at $E36C (value 00), the following CPU writes
+occur with the **same relative timing on all 321 Stage 1-1 frames**:
+
+| After executed $E36C | CPU register | Value |
+|---:|---|---:|
+| +0 cycles | $2005 | 00 |
+| +8 cycles | $2006 | 0F |
+| +12 cycles | $2006 | 00 |
+
+No CPU writes to mapper IRQ-control registers $C000, $C001, $E000 or
+$E001 were captured in frames 600–920 (**0 observed in this window**).
+This does not rule out IRQ state configured before frame 600,
+an interrupt already enabled earlier, or unrelated interrupt behavior.
+The fixed phase of the late writes remains established; their
+effect on visible PPU scanlines is **not**.
+
 ### Still unproven
 
 1. The exact visible scanline/dot where late $E369/$E36C writes take effect.
