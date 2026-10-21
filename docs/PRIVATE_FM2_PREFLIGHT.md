@@ -213,3 +213,16 @@ tests validate PNG dimensions, source pixel placement, strict/partial
 handling, output directory isolation and overwrite protection. Local Python
 tests: 22 storyboard integrity + 6 contact-sheet = **28/28 PASS**.
 Latest GitHub Actions is a separate verification and may still be queued.
+
+## Stage 122 — CPU-confirmed controller input in real FCEUX
+
+The synthetic, run-only NROM 6502 program now polls controller A through
+`$4016` and stores the hardware bit in invented zero-page `$0000`. The
+fabricated 64-frame FM2 presses A on frames 12–23. The live FCEUX Lua
+callback must observe `$0000 = 0` on frame 8 and `$0000 = 1` on frame 16,
+while the movie stays read-only in playback mode. The CI witness must contain
+both results and an explicit CPU controller-provenance field; the separate
+storyboard frames remain subject to strict audit. This verifies playback
+input effects on an invented NES CPU program, not original Vice: Project Doom
+input, scene geometry, or movie synchronization. Original ROM/FM2 never
+enter GitHub Actions. Recheck exact-head CI before treating this as proven.

@@ -16,7 +16,11 @@ class InventedRomTests(unittest.TestCase):
 
     def test_safe_infinite_cpu_loop(self):
         rom=build_rom()
-        self.assertEqual(rom[16+28:16+31],b"\x4c\x1c\x80")
+        program=rom[16:16+PRG_SIZE]
+        self.assertEqual(program[28:33],b"\xa9\x01\x8d\x16\x40")
+        self.assertEqual(program[33:38],b"\xa9\x00\x8d\x16\x40")
+        self.assertEqual(program[38:46],b"\xad\x16\x40\x29\x01\x8d\x00\x00")
+        self.assertEqual(program[46:49],b"\x4c\x1c\x80")
 
     def test_byte_identical_rebuild(self):
         self.assertEqual(build_rom(),build_rom())

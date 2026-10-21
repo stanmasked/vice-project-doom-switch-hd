@@ -81,6 +81,9 @@ jobs:
           grep -qx "movie_mode=playback" "$VPD_SMOKE_WITNESS"
           grep -qx "movie_readonly=yes" "$VPD_SMOKE_WITNESS"
           grep -qx "movie_frames=64" "$VPD_SMOKE_WITNESS"
+          grep -qx "cpu_ram_a_at_frame_8=0" "$VPD_SMOKE_WITNESS"
+          grep -qx "cpu_ram_a_at_frame_16=1" "$VPD_SMOKE_WITNESS"
+          grep -qx "controller_evidence=cpu_4016_to_zero_page" "$VPD_SMOKE_WITNESS"
           echo "REAL_FCEUX_SYNTHETIC_STORYBOARD_PASS frames=8,16 original_game_proven=no"
           cleanup
           trap - EXIT
