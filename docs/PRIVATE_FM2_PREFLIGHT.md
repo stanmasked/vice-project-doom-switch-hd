@@ -437,3 +437,20 @@ Inspecting the upstream `TASEmulators/fceux/src/lua-engine.cpp` movie_ispoweron 
 ## Stage 134 — realistic 1,803-frame snapshot interval in genuine FCEUX
 
 A new push-only real emulator smoke exercises a wholly invented 4,096-frame FM2 on an entirely synthetic NES 2.0 MMC3 (Mapper 4) game. The full private-style Python/Lua runner must reach terminal frame 4,095 with no callback gaps, verify loaded ROM identity and stable synthetic source files, and pass strict 3/3 captures at **frames 1,803, 3,606, and terminal frame 4,095**. The capture plan preserves the regular 1,803-frame cadence while adding an exact terminal image whenever the movie length is not cadence-aligned. For the original 43,652-frame American recording, that means 24 regular samples plus the terminal sample (25 total). The ordinary shorter 64/256-frame tests remain. The long synthetic test runs only once per branch push to conserve runner time, not redundantly on pull-request events. Its success confirms long-interval capture integration on **invented input only**; it cannot prove any original screen, level, movie synchronization or full 43,652-frame replay.
+
+
+## Stage 142 — bounded private capture windows for transition analysis
+
+The private FM2 runner now accepts inclusive global `--start-frame` and `--stop-frame` screenshot bounds. Playback still runs from the verified power-on movie start through the actual final FM2 frame; only saved screenshots are limited to the selected window. The configured cadence remains aligned to the global FCEUX frame counter, and a non-aligned stop frame is always captured as an additional terminal image for that window. The strict storyboard auditor verifies the complete selected window and the separate terminal witness verifies the full movie replay.
+
+For the previously observed Stage 1-1 / Stage 2-1 transition bracket, the next private inspection can capture frames 3,500–3,800 at an 8-frame cadence (38 images, from frame 3,504 through frame 3,800), keeping all original ROM, FM2 and screenshots outside GitHub:
+
+```sh
+python3 tools/run_private_fm2_storyboard.py \\
+  --rom "/path/to/Vice Project Doom.nes" \\
+  --movie "/path/to/taotao-viceprojectdoom.fm2" \\
+  --output "/tmp/vpd-transition-window" \\
+  --interval 8 --start-frame 3500 --stop-frame 3800
+```
+
+The real-FCEUX PR smoke adds a 256-frame synthetic focused-window test with a non-aligned stop frame; this verifies the capture contract without uploading or exposing original-game material. Passing this synthetic test does not itself identify the original stage transition.
