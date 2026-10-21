@@ -220,6 +220,17 @@ class StoryboardAuditTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,'window incomplete'):
                 audit(root,require_complete=True)
 
+    def test_zero_start_does_not_require_unobservable_frame_zero(self):
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d)
+            capture(root,8,interval=8,start=0,stop=15,limit=2)
+            capture(root,15,interval=8,start=0,stop=15,limit=2)
+            report=audit(root,require_complete=True)
+            self.assertTrue(report['complete_window_verified'])
+            self.assertEqual(report['expected_sample_count'],2)
+            self.assertEqual(report['first_frame'],8)
+            self.assertEqual(report['last_frame'],15)
+
     def test_complete_window_non_aligned_start(self):
         with tempfile.TemporaryDirectory() as d:
             root=Path(d)
