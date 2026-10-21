@@ -15,7 +15,7 @@ int main(){
  check(proof.enter(true,true,car,baseline).seq==1,"entry missing");
  check(run({false,true,true,false})==2,"right+throttle missing");
  bool left=false;
- for(int i=0;i<16;++i)left=run({true,false,false,true})==3 || left;
+ for(int i=0;i<8;++i)left=run({true,false,false,true})==3 || left;
  check(left,"left+brake missing");
  bool impact=false;
  for(int i=0;i<9;++i)impact=run({false,false,true,false})==4 || impact;
@@ -28,7 +28,7 @@ int main(){
  check(proof.enter(true,true,car,baseline).seq==1,"fresh entry missing");
  check(run({false,true,true,false})==2,"second right missing");
  left=false;
- for(int i=0;i<16;++i)left=run({true,false,false,true})==3 || left;
+ for(int i=0;i<8;++i)left=run({true,false,false,true})==3 || left;
  check(left,"second left missing");
  impact=false;
  for(int i=0;i<9;++i)impact=run({false,false,true,false})==4 || impact;
