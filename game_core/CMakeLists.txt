@@ -219,3 +219,14 @@ add_test(NAME romfree_combat_full_trace
          COMMAND ${Python3_EXECUTABLE}
                  ${CMAKE_CURRENT_SOURCE_DIR}/../tools/audit_romfree_combat_trace.py
                  --binary $<TARGET_FILE:vpd_combat_replay>)
+
+# Opt-in source-only Stage 1-1 to Stage 2-1 blackout timing contract.
+# Reference timing is based on local FCEUX evidence; this is not Switch
+# runtime integration and carries no original ROM, graphics or FM2.
+add_executable(vpd_stage_transition_test ../tests/test_stage_transition.cpp)
+target_include_directories(vpd_stage_transition_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+  target_compile_options(vpd_stage_transition_test PRIVATE
+                         -Wall -Wextra -Wpedantic -Werror)
+endif()
+add_test(NAME romfree_exact_stage_transition COMMAND vpd_stage_transition_test)
