@@ -472,7 +472,7 @@ This input-only view helps correlate player actions with private FCEUX screensho
 
 ## Stage 148 — original USA FM2 transition verified in private FCEUX
 
-The owner re-uploaded \`taotao-viceprojectdoom.fm2\` locally on 21 October 2026. A
+The owner re-uploaded `taotao-viceprojectdoom.fm2` locally on 21 October 2026. A
 checksum of the original US iNES PRG+CHR payload matched the FM2's recorded ROM MD5.
 The private FCEUX 2.6.5 emulator executed the actual ROM and FM2 pair. **Neither
 source ROM, FM2, gameplay screenshots, nor palette arrays were added to GitHub.**
@@ -492,7 +492,7 @@ Seven frames common to both independent runs — **3600, 3608, 3616, 3624,
 transition segment* under the recorded local emulator conditions, not a proof
 of every gameplay event or of the full movie's terminal frame in these runs.
 
-The new \`tools/audit_private_fceux_transition.py\` analyzes a fully validated
+The new `tools/audit_private_fceux_transition.py` analyzes a fully validated
 private 1-frame-cadence window, verifies the exact bounded blackout and can
 cross-check image+palette bytes from another private capture. It emits only
 numeric transition evidence. It **cannot name game stages by itself**: the
@@ -501,12 +501,12 @@ frames, not inferring a stage identifier from the black-screen sequence.
 
 Example private usage, without uploading the source files:
 
-\`\`\`sh
+```sh
 python3 tools/audit_private_fceux_transition.py \
   "/private/transition_precision" \
   --compare-private-capture "/private/transition_captures" \
   --min-black-frames 40
-\`\`\`
+```
 
 The new runs were intentionally stopped after their respective inspection
 windows; a contiguous replay through all **43,652** movie frames is not
