@@ -14,7 +14,8 @@ local function run(mode)
     VPD_PRIVATE_ROM_PAYLOAD_MD5=string.rep('f',32)
   }
   os.getenv=function(key)return env[key] or original_getenv(key)end
-  local frame,after,handler,accumulator,mutated=0,nil,nil,0,false
+  local frame,after,accumulator,mutated=0,nil,0,false
+  local handlers={}
   rom={gethash=function(key)assert(key=='md5');return string.rep('f',32)end}
   movie={
     play=function(file,readonly)
@@ -24,7 +25,10 @@ local function run(mode)
     length=function()return 604 end
   }
   memory={
-    registerexec=function(pc,cb)assert(pc==0xE38E);handler=cb end,
+    registerexec=function(pc,cb)
+      assert(pc==0xE38E or pc==0xE391)
+      assert(handlers[pc]==nil);handlers[pc]=cb
+    end,
     getregister=function(key)assert(key=='a');return accumulator end,
     setregister=function(key,val)
       assert(key=='a' and val==0x06)
@@ -43,10 +47,16 @@ local function run(mode)
     end
   }
   dofile('tools/capture_private_ppumask_ab.lua')
-  assert(type(handler)=='function' and type(after)=='function')
+  assert(type(handlers[0xE38E])=='function' and
+         type(handlers[0xE391])=='function' and type(after)=='function')
   for value=0,602 do
     frame=value
-    if frame==600 then accumulator=14;handler() end
+    if frame==600 then
+      accumulator=14
+      handlers[0xE38E]()
+      handlers[0xE391]()
+      assert(accumulator==14,'accumulator not restored before RTS')
+    end
     after()
   end
   local function read(name)
@@ -56,6 +66,8 @@ local function run(mode)
   local witness=read('COMPLETE.txt')
   assert(witness:find('mode='..mode,1,true))
   assert(witness:find('target_instruction_hits=1',1,true))
+  assert(witness:find('accumulator_restored_before_rts='..
+         (mode=='probe_bg_off' and 'yes' or 'not_needed'),1,true))
   assert(witness:find('frame_gaps=0',1,true))
   assert(witness:find('source_rom_unchanged=yes',1,true))
   assert(witness:find('fm2_readonly=yes',1,true))
