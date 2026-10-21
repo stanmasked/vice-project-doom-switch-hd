@@ -1,4 +1,5 @@
 #include "driving_simulation.hpp"
+#include "simulation.hpp"
 #include <cstdint>
 #include <iostream>
 #include <stdexcept>
@@ -15,6 +16,8 @@ static bool equal(const vpd::DrivingState& a,const vpd::DrivingState& b) {
         a.last_impact==b.last_impact;
 }
 int main() {
+    vpd::Simulation platform;
+    const uint64_t platformFingerprintBefore=platform.fingerprint();
     vpd::DrivingState drive;
     check(drive.car_x==640 && drive.health==5 && drive.speed==3,
           "invented car initial state");
@@ -74,6 +77,8 @@ int main() {
     for(int i=0;i<10;++i)stopped.tick({false,true,true,false});
     check(stopped.speed==0 && stopped.car_x==car,
           "vehicle still responding after health=0");
+    check(platform.fingerprint()==platformFingerprintBefore,
+          "independent driving model changed legacy platform simulation");
     std::cout<<"VPD_ROMFREE_DRIVING_CONTROL_PASS"
              <<" deterministic=1 steering=1 speed=1"
              <<" road_bounds=1 obstacle_collision=1 reset=1"
