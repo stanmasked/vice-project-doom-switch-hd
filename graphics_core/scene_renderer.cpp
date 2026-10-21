@@ -158,12 +158,8 @@ bool drawScene(uint32_t* target,int width,int height,int stride_pixels,
     if(view.driving_stage_preview) {
         // Opt-in visual-only diagnostic: never modify the original
         // platform prototype or its source gameplay/simulation state.
-        DrivingPreviewView driving{};
-        driving.frame=view.frame;
-        driving.road_phase=static_cast<int>(view.frame%72u);
-        driving.ticks=view.frame;
-        driving.health=view.player_health;
-        return drawDrivingPreview(target,width,height,stride_pixels,driving);
+        return drawDrivingPreview(target,width,height,stride_pixels,
+                                  view.driving);
     }
     Surface s{target,width,height,stride_pixels};
     for(int y=0;y<height;++y){
