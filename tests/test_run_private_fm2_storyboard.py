@@ -12,13 +12,13 @@ class RunnerPlanningTests(unittest.TestCase):
                   "starts_from_power_on":True}
         result=capture_plan(invented,interval=1803)
         self.assertEqual(result["interval"],1803)
-        self.assertEqual(result["sample_count"],2)
+        self.assertEqual(result["sample_count"],3)
         self.assertEqual(result["last_frame"],4095)
 
-    def test_us_length_requires_24_reliable_samples(self):
+    def test_us_length_requires_25_samples_including_terminal(self):
         movie={"frames":43652,"rom_identity_matched":True,
                "starts_from_power_on":True}
-        self.assertEqual(capture_plan(movie)["sample_count"],24)
+        self.assertEqual(capture_plan(movie)["sample_count"],25)
         self.assertEqual(capture_plan(movie)["last_frame"],43651)
 
     def test_reject_too_short_movie_for_first_capture(self):
@@ -172,7 +172,7 @@ class RunnerPlanningTests(unittest.TestCase):
             (root/"frame_000008.pal.bin").write_bytes(bytes([16])*PAL_SIZE)
             (root/"frame_000008.meta.txt").write_text("\n".join([
                 "format=private_fceux_storyboard_v1","frame=8","rom_md5="+"a"*32,
-                "interval=8","start_frame=8","stop_frame=63","capture_limit=7",
+                "interval=8","start_frame=8","stop_frame=63","capture_limit=8",
                 "invalid_palette_values=0","screen_size=256x240",
                 "source=emu.getscreenpixel",""]),encoding="ascii")
         def fake_popen(command,env,stdout,stderr):
