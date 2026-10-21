@@ -41,6 +41,18 @@ class SyntheticMovieTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,"synthetic ROM"):
             make_movie(modified)
 
+    def test_256_frame_extended_movie(self):
+        from build_fceux_smoke_mmc3_nes2 import build_rom as mmc3_rom
+        lines=make_movie(mmc3_rom(),frames=256).splitlines()
+        self.assertEqual(sum(x.startswith("|") for x in lines),256)
+        self.assertEqual(sum(x=="|0|.......A|||" for x in lines),12)
+
+    def test_invalid_extended_movie_bounds(self):
+        for count in (0,31,2049,64.5,True):
+            with self.subTest(count=count):
+                with self.assertRaisesRegex(ValueError,"frame count"):
+                    make_movie(build_rom(),frames=count)
+
     def test_mismatched_source_refused(self):
         with self.assertRaisesRegex(ValueError,"synthetic ROM"):
             make_movie(build_rom()[:-1])
