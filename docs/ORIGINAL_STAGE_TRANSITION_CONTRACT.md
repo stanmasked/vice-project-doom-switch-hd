@@ -131,7 +131,64 @@ still collects supported write evidence but must **not invent PPUSTATUS read
 markers or assert that the scroll latch is synchronized**. A fully invented
 Lua negative test and CI workflow invocation cover that situation.
 
-The next step is to observe the exact execution of the known $E8DE emitter
-with CPU-cycle timing, investigate raster/IRQ split state, and compare an
-independent PPU rendering trace to the visible road before setting authentic
-driving-stage camera parameters in the Switch remake.
+## Stage 153 — executed original scroll emitter, proven in real FCEUX
+
+A third and fourth **private genuine FCEUX 2.6.5** run of the same
+owner-provided USA ROM+FM2 established CPU execution provenance for the
+previously source-audited fixed-bank routine at **$E8DE**. Both replayed
+contiguously from the movie start through the requested frame **920**,
+with **zero callback gaps**. All source ROM/FM2, CPU-cycle traces and rendered
+game pixels remain private.
+
+The first run observed exactly **321 execution callbacks at $E8DE**, one per
+frame 600–920 inclusive. An independent comparison with the already captured
+CPU video-write trace found **321/321 exact matches** between RAM $0B/$0D
+at execution and the first two subsequent $2005 write values.
+
+A second FCEUX session registered separate CPU execution callbacks at
+five known original instructions. It recorded **1,605 execution events**
+(5 per frame, 321 frames), with the following **identical CPU-cycle offsets
+on every checked frame**:
+
+| Fixed-bank CPU instruction address | Prior verified opcode | Cycles after $E8DE |
+|---|---|---:|
+| $E8DE | LDA $0C | 0 |
+| $E8E4 | STA $2000 | +9 |
+| $E8E7 | LDA $2002 | +13 |
+| $E8EC | STA $2005 | +20 |
+| $E8F1 | STA $2005 | +27 |
+
+The actual register-write callbacks independently agree: $2000 occurs at +9,
+while $2005 writes occur at +20 and +27 with **precisely the values of
+RAM $0B and $0D captured at $E8DE**. This proves that the original
+scroll-emitter instruction path actually executes during Stage 1-1, and
+provides direct callback evidence that the **$E8E7 instruction (LDA $2002)**
+executes as part of it.
+
+The FCEUX Lua build still lacks a direct memory.registerread API for
+$2002, so the claim is **executed read instruction, not directly
+instrumented bus-read callback**. The separate static ROM anchor audit
+identifies that executed opcode as LDA $2002. PPUSTATUS read semantics
+reset the PPU scroll write latch, but this observation still does **not**
+prove what scroll remains effective on visible raster lines: later
+per-frame $2005/$2006 writes, mapper IRQ/raster splits, CHR changes and
+screen composition need independent analysis.
+
+The reusable, **source-only** private research tooling now includes
+tools/capture_private_e8de_instructions.lua and
+tools/audit_private_e8de_exec.py with synthetic positive/negative tests.
+The audit distinguishes executed PC provenance from register writes
+and explicitly reports display-effective scroll and camera speed as
+**unverified**. Neither original traces nor game assets belong in GitHub.
+
+### Remaining Stage 1-1 blockers
+
+1. Measure later $2005/$2006 writers and their effective raster timing,
+   including MMC3 IRQ/raster state.
+2. Correlate source-backed video scroll with actual roadway image motion;
+   do **not** equate the $2005 Y source with camera velocity.
+3. Restore authentic car physics, collisions, opponent patterns and level
+   geometry using separately verified original-game references.
+4. Keep the 41-frame transition model opt-in until Switch renderer and
+   actual driving-stage exit integration have been independently proven.
+
