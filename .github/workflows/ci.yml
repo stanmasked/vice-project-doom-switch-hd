@@ -42,6 +42,7 @@ jobs:
           lua5.4 tests/test_fceux_storyboard.lua
           lua5.4 tests/test_private_fm2_terminal_callbacks.lua
           lua5.4 tests/test_private_e8de_instruction_callbacks.lua
+          lua5.4 tests/test_private_ppuscroll_writer_pcs.lua
       - name: Trace real FCEUX Lua execution hooks under synthetic emulator callbacks
         run: |
           lua5.4 tests/test_fceux_dispatch.lua
