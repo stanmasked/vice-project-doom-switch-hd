@@ -23,7 +23,7 @@ assert(type(emu.getscreenpixel)=='function' and type(emu.registerafter)=='functi
 assert(rom.gethash('md5'):lower()==identity)
 assert(movie.play(fm2,true) and movie.readonly() and movie.length()==frames)
 if type(emu.speedmode)=='function' then pcall(emu.speedmode,'turbo') end
-local first,last,hit,done=nil,nil,0,false
+local first,last,hit,restore_hits,done=nil,nil,0,0,false
 
 local function new_file(name,bytes)
   local path=directory..'/'..name
@@ -42,6 +42,20 @@ memory.registerexec(0xE38E,function()
     -- Local counterfactual: only the imminent STA $2001 receives A=0x06.
     -- No ROM/FM2 bytes are changed; downstream CPU state may differ.
     memory.setregister('a',0x06)
+  end
+end)
+
+-- The original next instruction is RTS at $E391. Restore A before the
+-- return so the diagnostic branch differs solely in the earlier STA $2001.
+memory.registerexec(0xE391,function()
+  if emu.framecount()~=target then return end
+  assert(hit==1,'PPUMASK writer must precede RTS')
+  if mode=='probe_bg_off' then
+    assert(memory.getregister('a')==0x06,'intervention unexpectedly altered')
+    memory.setregister('a',0x0E)
+    restore_hits=restore_hits+1
+  else
+    assert(memory.getregister('a')==0x0E,'original A unexpectedly changed')
   end
 end)
 
@@ -80,6 +94,8 @@ emu.registerafter(function()
   if frame>=target-1 and frame<=target+2 then capture(frame) end
   if frame==target+2 then
     assert(hit==1,'target original CPU instruction not observed once')
+    assert(restore_hits==(mode=='probe_bg_off' and 1 or 0),
+           'CPU accumulator was not restored before RTS')
     assert(movie.readonly() and movie.length()==frames and
            rom.gethash('md5'):lower()==identity,'ROM or FM2 changed')
     new_file('COMPLETE.txt','format=private_ppumask_one_write_ab_v1\n'..
@@ -87,6 +103,7 @@ emu.registerafter(function()
       'first_observed_frame='..first..'\n'..
       'last_observed_frame='..frame..'\nframe_gaps=0\n'..
       'target_instruction_hits='..hit..'\n'..
+      'accumulator_restored_before_rts='..(mode=='probe_bg_off' and 'yes' or 'not_needed')..'\n'..
       'source_rom_unchanged=yes\nfm2_readonly=yes\n')
     done=true
     if type(emu.exit)=='function' then emu.exit() end
