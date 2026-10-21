@@ -51,7 +51,15 @@ def rom_payload(path):
     return hashlib.md5(raw).digest(), mapper
 
 
-def audit_movie(path, rom=None, threshold=1200, interval=8, frames_per_window=96):
+def audit_movie(path, rom=None, threshold=1200, interval=8, frames_per_window=96,
+                window_start=None, window_stop=None):
+    if (window_start is None)!=(window_stop is None):
+        raise ValueError("both input-window frame bounds must be supplied together")
+    if window_start is not None:
+        if (not isinstance(window_start,int) or isinstance(window_start,bool)
+            or not isinstance(window_stop,int) or isinstance(window_stop,bool)
+            or window_start<0 or window_stop<window_start):
+            raise ValueError("invalid input-window frame bounds")
     path=Path(path)
     if path.is_symlink() or not path.is_file() or not 0<path.stat().st_size<=MAX_SIZE:
         raise ValueError("missing, linked or oversized private FM2")
@@ -70,6 +78,7 @@ def audit_movie(path, rom=None, threshold=1200, interval=8, frames_per_window=96
     quiet_from=0
     port1_active=0
     candidates=[]
+    input_window_runs=[]
     with path.open('r',encoding='ascii',newline='') as source:
         for line in source:
             line=line.rstrip('\r\n')
@@ -95,9 +104,31 @@ def audit_movie(path, rom=None, threshold=1200, interval=8, frames_per_window=96
                     commands[str(total)]=command
                 if any(c not in '. ' for c in p2):
                     port1_active+=1
+                normalized_p1=''.join('.' if c in '. ' else c for c in p1)
+                normalized_p2=''.join('.' if c in '. ' else c for c in p2)
                 pressed=[ch for i,ch in enumerate(BUTTONS) if p1[i] not in '. ']
+                pressed_p2=[ch for i,ch in enumerate(BUTTONS) if p2 and p2[i] not in '. ']
                 if pressed:
                     keys.update(pressed)
+                if window_start is not None and window_start<=total<=window_stop:
+                    last_run=input_window_runs[-1] if input_window_runs else None
+                    if (last_run is not None
+                        and last_run['end_frame']==total-1
+                        and last_run['player_one_buttons']==normalized_p1
+                        and last_run['player_two_buttons']==normalized_p2):
+                        last_run['end_frame']=total
+                    else:
+                        input_window_runs.append({
+                            'start_frame':total,'end_frame':total,
+                            'player_one_buttons':normalized_p1,
+                            'player_two_buttons':normalized_p2,
+                            'player_one_pressed':[
+                                ch for i,ch in enumerate(BUTTONS)
+                                if normalized_p1[i]!='.'],
+                            'player_two_pressed':[
+                                ch for i,ch in enumerate(BUTTONS)
+                                if normalized_p2 and normalized_p2[i]!='.']
+                        })
                 if 'T' in pressed and not prev_t:
                     start_edges.append(total)
                 prev_t='T' in pressed
@@ -129,6 +160,8 @@ def audit_movie(path, rom=None, threshold=1200, interval=8, frames_per_window=96
                     if k!='comment':header[k]=v
     if not total:
         raise ValueError("empty FM2 input log")
+    if window_start is not None and window_stop>=total:
+        raise ValueError("input window extends beyond the FM2 timeline")
     required={"version":"3","fourscore":"0","port0":"1","port2":"0","FDS":"0"}
     for name,expected in required.items():
         if header.get(name)!=expected:
@@ -198,6 +231,15 @@ def audit_movie(path, rom=None, threshold=1200, interval=8, frames_per_window=96
         "video_or_ppu_captured":False,
         "next_step":"Replay exact private ROM+FM2 read-only in FCEUX, capture stage screenshots/PPU/RAM privately and validate stage identities."
     }
+    if window_start is not None:
+        result["input_window"]={
+            "start_frame":window_start,
+            "stop_frame":window_stop,
+            "frames":window_stop-window_start+1,
+            "button_runs":input_window_runs,
+            "visual_scene_identity_proven":False
+        }
+    return result
 
 
 def main():
@@ -206,9 +248,15 @@ def main():
     p.add_argument('--rom',type=Path,help='private owned ROM used only for in-memory digest verification')
     p.add_argument('--summary',type=Path,help='save aggregate JSON in a PRIVATE/ignored location')
     p.add_argument('--idle-threshold',type=int,default=1200)
+    p.add_argument('--window-start-frame',type=int,
+                   help='optional inclusive frame for a private input-only button timeline')
+    p.add_argument('--window-stop-frame',type=int,
+                   help='optional inclusive final frame for the private input-only timeline')
     a=p.parse_args()
     try:
-        result=audit_movie(a.movie,rom=a.rom,threshold=a.idle_threshold)
+        result=audit_movie(a.movie,rom=a.rom,threshold=a.idle_threshold,
+                           window_start=a.window_start_frame,
+                           window_stop=a.window_stop_frame)
     except (OSError,ValueError,UnicodeError) as exc:
         p.exit(1,'PRIVATE_FM2_INCONCLUSIVE: '+str(exc)+'\n')
     if a.summary:
