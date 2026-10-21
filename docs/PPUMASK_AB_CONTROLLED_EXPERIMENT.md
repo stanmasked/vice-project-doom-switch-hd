@@ -97,3 +97,85 @@ visible raster timing using an independent PPU dot/scanline source or
 cycle-calibrated subframe trace, and determine which background/CHR states
 apply during the driving road's display. Do not infer exact scanline
 activation or world velocity just from the row-diff region.
+
+
+## Stage 157 — four-frame PPUMASK response repeatability
+
+New **owner-local original ROM + matching read-only FM2** tests were run in
+FCEUX 2.6.5 with the same one-instruction diagnostic PPUMASK intervention
+and CPU accumulator restoration before original RTS $E391 as Stage 156.
+Two additional control/probe pairs targeted original movie frames **700 and
+900**. Each run produced a valid private completion marker and all four
+256×240 RGB/PAL frames; the emulator GUI remained open in this FCEUX build
+after the finished capture, so the completion markers and actual files, not
+the GUI process exit code, were treated as the capture witnesses.
+
+Across all four original Stage 1-1 frame targets:
+
+| Target CPU frame | First modified screenshot | Changed RGB pixels | Changed palette pixels |
+|---:|---:|---:|---:|
+| 600 | 601 | 1,607 | 1,607 |
+| 700 | 701 | 1,630 | 1,630 |
+| 800 | 801 | 1,619 | 1,619 |
+| 900 | 901 | 1,618 | 1,618 |
+
+In each case, screenshots N−1, N and N+2 were **byte-identical** between
+unmodified and diagnostic captures. RGB and NES indexed-palette **pixel
+change masks coincide at every pixel**, not merely by total counts.
+The changed **row set is identical in all four independent cases**:
+
+    Y = 201,202,203,204,205,206,207,209,210,211,212,213,
+        214,215,216,217,218,219,220,221,222,223
+
+This is a 22-row observed response extending over Y=201–223, with **row
+208 unaffected** in every captured frame. This does not mean that the
+original PPUMASK write occurs on row 201 or that it cannot affect other
+pixels in different scenes.
+
+### Independent CPU-clock correlation
+
+Private original-game PC execution records, aligned with independently
+captured after-frame CPU timestamps, locate original instruction **$E38E**
+at the following *CPU-cycle phase relative to the previous FCEUX
+after-frame callback*:
+
+| Target frame | Cycles after preceding frame callback |
+|---:|---:|
+| 600 | 24,333 |
+| 700 | 24,332 |
+| 800 | 24,333 |
+| 900 | 24,332 |
+
+The spread is **one CPU cycle** across these samples. This demonstrates
+stable callback-relative CPU timing and stable image response, **not an
+absolute PPU scanline**: no independently calibrated PPU dot or scanline
+origin for emu.registerafter was established. The CPU timestamps are from
+separate genuine-ROM replay sessions, assuming the same CPU-cycle reset
+epoch; exact cross-session alignment is checked numerically.
+
+### Automated checks and evidence quality
+
+New source-only tools/audit_private_ppumask_series.py reads a private JSON
+manifest of three to twenty A/B capture pairs and runs the existing
+single-pair witness/size/difference validator on every pair. It then
+compares exact RGB and palette changed-pixel masks, enforces one changed
+next-frame screenshot and an identical changed-row set, and optionally
+joins private frame-clock and original-PC execution traces. Its public
+output contains **no raw pixels, capture paths, ROM, FM2 or palettes**.
+
+Synthetic-only tests/test_audit_private_ppumask_series.py exercises four
+independent invented captures, optional CPU clocks and error cases for
+different row sets, mismatched RGB/palette masks, target-frame errors,
+invalid CPU epochs, missing witnesses and reused folders.
+
+**Witness distinction:** the older private capture harness used for these
+four completed sessions included a runtime assertion restoring CPU A before
+RTS, but its completion marker did **not explicitly encode the restoration
+field** now emitted by the newer reusable GitHub script. Consequently the
+multi-case auditor does not mark restoration as explicitly witnessed for
+these legacy captures unless the actual new witness field is present.
+The published source-free numerical report distinguishes these claims.
+
+Still required: an independent PPU dot/scanline timestamp source, exact
+visible effect of CHR updates, original road scroll/camera reconstruction,
+and actual integration of the driving mode into the Switch renderer.
