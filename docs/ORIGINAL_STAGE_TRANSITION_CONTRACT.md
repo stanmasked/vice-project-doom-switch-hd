@@ -211,3 +211,48 @@ and explicitly reports display-effective scroll and camera speed as
 4. Keep the 41-frame transition model opt-in until Switch renderer and
    actual driving-stage exit integration have been independently proven.
 
+
+
+## Stage 154 — independent FCEUX frame-clock anchors
+
+A separate actual original USA ROM+FM2 playback in FCEUX 2.6.5 captured
+**336 consecutive after-frame CPU clock anchors, frames 590–925**, with zero
+callback gaps. The ROM hash and read-only playback were rechecked privately.
+This trace is independent from the already confirmed original CPU writer-PC
+capture for frames 600–920. All raw traces and game assets stay private.
+
+Cross-session comparison on frames 600–920 establishes *frame-relative CPU
+timing*, without claiming an exact PPU scanline:
+
+| Observed original timing | Result |
+|---|---:|
+| FCEUX frame-to-frame period, mean | 29,780.49 CPU cycles |
+| Previous-frame callback → first $2005 ($E8EC) | 793–2,212 CPU cycles |
+| Previous-frame callback → late $2005 ($E369) | 24,283–24,291 CPU cycles |
+| Late writer phase spread across 321 frames | 8 CPU cycles |
+| Late $E369 → $E36C | Exactly 4 CPU cycles |
+| Late $E369 → current after-frame callback | 5,489–5,500 CPU cycles |
+
+This shows a large difference between the *variable* earlier writer
+position and the highly *stable* late writer phase (the latter differs by
+only eight CPU cycles). That supports a **frame-synchronized CPU operation**;
+it does not, by itself, establish an NMI, an MMC3 IRQ or a sprite-zero split.
+FCEUX's emu.registerafter clock is not a calibrated PPU dot/scanline
+origin. Do **not** turn ~24,286 CPU cycles into an asserted display line or
+treat an observed $2005 write as the camera's world coordinate.
+
+The private-only, ROM-free source tools
+tools/capture_private_fceux_frame_anchors.lua and
+tools/audit_private_stage1_frame_phase.py reproduce these checks.
+Public test fixtures are entirely synthetic; they exercise continuity,
+monotone CPU clock, all-four writer origin, cross-run epoch consistency,
+stability bounds and negative cases without including original traces.
+
+### Still unproven
+
+1. The exact visible scanline/dot where late $E369/$E36C writes take effect.
+2. Whether this late operation is driven by NMI, MMC3 IRQ, polling or another
+   mechanism; tracing callback PCs and CPU timing does not prove IRQ origin.
+3. Which road/background pixels depend on each PPU scroll state.
+4. World camera velocity, physics, collisions, and actual HD Switch
+   reproduction of Stage 1-1.
