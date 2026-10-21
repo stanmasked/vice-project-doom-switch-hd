@@ -68,6 +68,28 @@ def instruction_fixture(root):
     return (*paths,observed,finished)
 
 
+def writer_fixture(root):
+    paths=fixture(root)
+    writer=root/"invented_writer_pcs.tsv"
+    witness=root/"invented_writer_complete.txt"
+    rows=["frame\tcycle\tpc"]
+    for i,frame in enumerate(range(10,13)):
+        cycle=1000+i*1000
+        for pc,delta in (("E8EC",20),("E8F1",27),
+                         ("E369",150),("E36C",154)):
+            rows.append(f"{frame}\t{cycle+delta}\t{pc}")
+    writer.write_text("\n".join(rows)+"\n",encoding="ascii")
+    witness.write_text(
+        "format=private_ppuscroll_writer_pc_v1\n"
+        "first_observed_frame=1\n"
+        "last_observed_frame=12\n"
+        "frame_gaps=0\n"
+        "writer_pc_hits=12\n"
+        "rom_identity_verified=yes\n"
+        "movie_readonly_verified=yes\n",encoding="ascii")
+    return (*paths,writer,witness)
+
+
 class E8DEExecutionTests(unittest.TestCase):
     def test_exact_cycle_offsets_and_ram_correspondence(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -123,6 +145,48 @@ class E8DEExecutionTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,"together"):
                 audit(*paths[:4],start=10,stop=12,
                       instruction_trace=paths[4])
+
+    def test_all_four_writer_pc_cycle_matches(self):
+        with tempfile.TemporaryDirectory() as directory:
+            paths=writer_fixture(Path(directory))
+            report=audit(*paths[:4],start=10,stop=12,
+                         writer_trace=paths[4],writer_witness=paths[5])
+            self.assertEqual(report["writer_callbacks_verified"],12)
+            self.assertEqual(report["frames_with_four_matched_writers"],3)
+            self.assertEqual(report["verified_2005_instruction_addresses"],
+                             ["$E8EC","$E8F1","$E369","$E36C"])
+            self.assertTrue(report["all_four_write_pc_cycles_matched"])
+            self.assertFalse(report["later_raster_effect_verified"])
+
+    def test_reject_modified_late_writer_pc(self):
+        with tempfile.TemporaryDirectory() as directory:
+            paths=writer_fixture(Path(directory))
+            writer=paths[4]
+            writer.write_text(writer.read_text("ascii").replace(
+                "11\t2150\tE369","11\t2150\tE36C"),encoding="ascii")
+            with self.assertRaisesRegex(ValueError,"did not match"):
+                audit(*paths[:4],start=10,stop=12,
+                      writer_trace=writer,writer_witness=paths[5])
+
+    def test_reject_modified_late_writer_cycle(self):
+        with tempfile.TemporaryDirectory() as directory:
+            paths=writer_fixture(Path(directory))
+            writer=paths[4]
+            writer.write_text(writer.read_text("ascii").replace(
+                "12\t2154\tE36C","12\t2155\tE36C"),encoding="ascii")
+            # Mutate the real frame-12 row instead of a non-matching string.
+            writer.write_text(writer.read_text("ascii").replace(
+                "12\t3154\tE36C","12\t3155\tE36C"),encoding="ascii")
+            with self.assertRaisesRegex(ValueError,"did not match"):
+                audit(*paths[:4],start=10,stop=12,
+                      writer_trace=writer,writer_witness=paths[5])
+
+    def test_reject_missing_writer_witness(self):
+        with tempfile.TemporaryDirectory() as directory:
+            paths=writer_fixture(Path(directory))
+            with self.assertRaisesRegex(ValueError,"together"):
+                audit(*paths[:4],start=10,stop=12,
+                      writer_trace=paths[4])
 
     def test_reject_duplicate_execution_callback(self):
         with tempfile.TemporaryDirectory() as directory:
