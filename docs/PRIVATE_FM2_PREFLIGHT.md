@@ -388,3 +388,26 @@ MMC3/NES2 wiring but **not** the original game's movie synchronization.
 
 No owner's ROM, FM2, extracted CHR or original screens enter public CI.
 At this stage the user-owned American FM2 still requires private replay.
+
+
+## Stage 129 — MMC3 mapping-write candidate audit (not PPU rendering proof)
+
+After a private FCEUX PPU capture produces `mmc3_video_writes.tsv`, run:
+
+    python3 tools/audit_private_mmc3_chr_mapping.py \
+      /private/capture/mmc3_video_writes.tsv \
+      --private-rom /private/ViceProjectDoom.nes \
+      --target-banks 124,125,126 --frame-interval 1803
+
+Uses existing fail-closed strict `video_events` parser to reconstruct
+MMC3 $8000 selection and subsequent $8001 data for CHR R0..R5.
+R0/R1 map a 2KiB pair (low bit ignored); R2..R5 map single 1KiB
+bank; inversion mode is counted. Report includes only numeric mapped
+bank candidates and frame intervals. No raw trace, original ROM hash,
+tile bytes, sprites or artwork are serialized.
+
+A *mapper register selection* is NOT proof the corresponding CHR data
+was fetched by PPU or visible in a rendered frame. Separate original
+gameplay and PPU data are necessary. Twelve synthetic tests include
+non-CHR register exclusion, unresolved data writes, pairing, inversion,
+out-of-order events, invalid headers, and linked-file rejection.
