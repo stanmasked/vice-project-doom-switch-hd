@@ -102,7 +102,7 @@ def audit(root, require_complete=False):
         stop=decimal(data,'stop_frame',0,999999999)
         limit=decimal(data,'capture_limit',1,64)
         unavailable=decimal(data,'invalid_palette_values',0,PAL_SIZE)
-        if not start<=frame<=stop or frame%interval!=0:
+        if not start<=frame<=stop or (frame%interval!=0 and frame!=stop):
             raise ValueError('storyboard frame outside configured cadence or window')
         if session is None:
             session=(data['rom_md5'].lower(),interval,start,stop,limit)
@@ -140,6 +140,13 @@ def audit(root, require_complete=False):
         if frame>stop:
             break
         expected_frames.append(frame)
+    # The terminal image is required even when the last movie frame falls
+    # between regular cadence samples. This makes the visual audit cover the
+    # actual end of the recording instead of stopping up to interval-1 frames early.
+    if start<=stop and stop%interval!=0 and (not expected_frames or expected_frames[-1]!=stop):
+        expected_frames.append(stop)
+    if len(expected_frames)>limit:
+        raise ValueError('storyboard schedule exceeds configured capture limit')
     complete=sampled_frames==expected_frames
     if require_complete and not complete:
         raise ValueError('storyboard window incomplete or missing scheduled frames')
