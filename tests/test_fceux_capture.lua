@@ -12,11 +12,13 @@ memory={
  readbyterange=function(addr,n)assert(addr==0 and n==2048);return string.rep(string.char(0x42),n)end,
  readbyte=function(addr)return (addr*3)%256 end
 }
+if without_read then memory.registerread=nil end
 ppu={readbyterange=function(addr,n)assert(addr==0 and n==16384);return string.rep(string.char(0x5A),n)end}
 rom={gethash=function(which)assert(which=='md5');return 'abcd1234' end}
 local sampled_pixels=0
 local cpu_clock=100000
 local without_clock=arg and arg[1]=='--no-clock'
+local without_read=arg and arg[1]=='--no-read'
 local dense=arg and arg[1]=='--dense'
 if dense then
   VPD_CAPTURE_INTERVAL=8
@@ -39,10 +41,11 @@ emu={framecount=function()return frame end,
 dofile('tools/capture_fceux_ppu.lua')
 assert(type(after)=='function' and type(exit)=='function')
 assert(hooks[0x8000] and hooks[0x8001] and hooks[0x2000])
-assert(type(read_hooks[0x2002])=='function')
+if without_read then assert(read_hooks[0x2002]==nil)
+else assert(type(read_hooks[0x2002])=='function') end
 local function write(addr,value) assert(hooks[addr]);hooks[addr](addr,1,value)end
 write(0x8000,0x80);write(0x8001,0x14);write(0x2000,0x10)
-read_hooks[0x2002](0x2002,1,0x80)
+if not without_read then read_hooks[0x2002](0x2002,1,0x80) end
 after()
 frame=1
 for n=1,12005 do write(0x2007,n%256) end
@@ -73,6 +76,7 @@ assert(read(p..'/frame_000000.screen.rgb.bin'):sub(1,3)==string.char(0,0,42))
 assert(read(p..'/frame_000000.screen.pal.bin'):byte(1)==254)
 local text=read(p..'/frame_000120.meta.txt')
 assert(text:find('format=fceux_ppu_snapshot_v4',1,true))
+assert(text:find('ppu_status_read_hook='..(without_read and 'unavailable' or 'available'),1,true),text)
 assert(text:find('dropped_register_writes=5',1,true),text)
 assert(text:find('register_log_complete=no',1,true),text)
 assert(text:find('chr_r0=06',1,true),text)
@@ -100,13 +104,16 @@ if without_clock then
 else
   local times=read(p..'/mmc3_ppu_cycles.tsv')
   assert(times:find('frame\tcpu_cycle\taddress\tvalue\tkind',1,true))
-  assert(times:find('0\t100012\t2002\t00\tR',1,true),times:sub(1,240))
+  if not without_read then
+   assert(times:find('0\t100012\t2002\t00\tR',1,true),times:sub(1,240))
+  end
   assert(times:find('\t8001\t06\tW',1,true))
 end
 local log=read(p..'/mmc3_video_writes.tsv')
 assert(log:find('frame\taddress\tvalue',1,true))
 assert(log:find('0\t8001\t14',1,true))
-assert(log:find('0\t2002\t00',1,true))
+if without_read then assert(not log:find('0\t2002\t00',1,true),log)
+else assert(log:find('0\t2002\t00',1,true)) end
 assert(log:find('120\t8001\t06',1,true))
 print('PASS: FCEUX capture (CPU clock '..(without_clock and 'absent' or 'present')..'), register writes, overflow, PPUSTATUS marker')
 assert(os.execute('rm -rf '..VPD_CAPTURE_DIRECTORY))
