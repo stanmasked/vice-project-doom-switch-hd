@@ -77,9 +77,10 @@ def verify_trace_alignment(root,samples,cycle_available):
         raise ValueError("trace provenance requires capture schema v4")
     video_path=root/"mmc3_video_writes.tsv"
     cycles_path=root/"mmc3_ppu_cycles.tsv"
-    # Validate ordering and syntax of the entire bounded event sequence
-    # before reconciling snapshot counters; otherwise malformed chronology
-    # can be masked by an earlier cumulative-count mismatch.
+    # Fully validate ordering, syntax and event budget before checking
+    # sampled cumulative counters. Otherwise an out-of-order trace can
+    # produce a misleading count mismatch before the regression is detected.
+    # video_events is bounded to 250000 rows, already held for cycle matching.
     observed=list(video_events(video_path))
     seen=0
     sample_index=0
