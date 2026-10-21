@@ -26,8 +26,23 @@ class SyntheticMovieTests(unittest.TestCase):
         self.assertIn("port1 0",txt)
         self.assertIn("guid ",txt)
 
+    def test_mmc3_nes2_fm2_checksum_valid(self):
+        from build_fceux_smoke_mmc3_nes2 import build_rom as mmc3_rom
+        rom=mmc3_rom()
+        payload=make_movie(rom)
+        checksum=next(x.split("base64:",1)[1] for x in payload.splitlines()
+                      if x.startswith("romChecksum "))
+        self.assertEqual(base64.b64decode(checksum),hashlib.md5(rom[16:]).digest())
+        self.assertEqual(sum(x.startswith("|") for x in payload.splitlines()),64)
+
+    def test_same_sized_mutated_rom_refused(self):
+        modified=bytearray(build_rom())
+        modified[16]=modified[16]^1
+        with self.assertRaisesRegex(ValueError,"synthetic ROM"):
+            make_movie(modified)
+
     def test_mismatched_source_refused(self):
-        with self.assertRaisesRegex(ValueError,"synthetic NROM"):
+        with self.assertRaisesRegex(ValueError,"synthetic ROM"):
             make_movie(build_rom()[:-1])
 
 if __name__=="__main__":unittest.main()

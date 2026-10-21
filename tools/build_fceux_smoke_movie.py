@@ -5,11 +5,17 @@ import base64
 import hashlib
 from pathlib import Path
 
+from build_fceux_smoke_rom import build_rom as build_nrom
+from build_fceux_smoke_mmc3_nes2 import build_rom as build_mmc3
+
 MOVIE_FRAMES=64
 
 def make_movie(rom):
-    if len(rom)!=16+32768+8192 or rom[:8]!=b"NES\x1a"+bytes([2,1,0,0]):
-        raise ValueError("not the synthetic NROM fixture")
+    # Whitelist exact handcrafted ROM bytes. Never generate a public-runner
+    # FM2 from an arbitrary external/commercial ROM merely because its
+    # iNES header happens to have the correct dimensions.
+    if rom!=build_nrom() and rom!=build_mmc3():
+        raise ValueError("not an exact wholly synthetic ROM fixture")
     digest=base64.b64encode(hashlib.md5(rom[16:]).digest()).decode("ascii")
     header=[
         "version 3","emuVersion 26500","rerecordCount 0","palFlag 0",
