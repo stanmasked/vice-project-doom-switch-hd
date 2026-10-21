@@ -4,6 +4,7 @@
 #include "backdrop_source.hpp"
 #include "decor_source.hpp"
 #include "impact_lighting.hpp"
+#include "driving_preview.hpp"
 #include <cstdint>
 #include <algorithm>
 
@@ -154,6 +155,16 @@ bool drawScene(uint32_t* target,int width,int height,int stride_pixels,
                const SceneView& view) {
     if(!target||width!=kSceneWidth||height!=kSceneHeight||stride_pixels<width)
         return false;
+    if(view.driving_stage_preview) {
+        // Opt-in visual-only diagnostic: never modify the original
+        // platform prototype or its source gameplay/simulation state.
+        DrivingPreviewView driving{};
+        driving.frame=view.frame;
+        driving.road_phase=static_cast<int>(view.frame%72u);
+        driving.ticks=view.frame;
+        driving.health=view.player_health;
+        return drawDrivingPreview(target,width,height,stride_pixels,driving);
+    }
     Surface s{target,width,height,stride_pixels};
     for(int y=0;y<height;++y){
         int t=y*255/height;
