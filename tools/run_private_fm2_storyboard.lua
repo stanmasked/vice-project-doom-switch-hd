@@ -24,12 +24,20 @@ check_rom()
 local frames=tonumber(required_env("VPD_PRIVATE_FRAME_COUNT"))
 local interval=tonumber(required_env("VPD_PRIVATE_CAPTURE_INTERVAL"))
 local limit=tonumber(required_env("VPD_PRIVATE_CAPTURE_LIMIT"))
+local capture_start=tonumber(required_env("VPD_PRIVATE_CAPTURE_START_FRAME"))
+local capture_stop=tonumber(required_env("VPD_PRIVATE_CAPTURE_STOP_FRAME"))
 assert(frames and frames==math.floor(frames) and frames>=2 and frames<=100000000,
        "private frame count outside supported range")
 assert(interval and interval==math.floor(interval) and interval>=1 and interval<=120000,
        "private interval outside supported range")
 assert(limit and limit==math.floor(limit) and limit>=1 and limit<=64,
        "private sample count outside supported range")
+assert(capture_start and capture_start==math.floor(capture_start) and
+       capture_start>=0 and capture_start<frames,
+       "private capture start frame outside movie timeline")
+assert(capture_stop and capture_stop==math.floor(capture_stop) and
+       capture_stop>=capture_start and capture_stop<frames,
+       "private capture stop frame outside movie timeline")
 assert(source:sub(1,1)=="/" and movie_path:sub(1,1)=="/",
        "source script and movie paths must be absolute")
 assert(type(movie)=="table" and type(movie.play)=="function" and
@@ -49,8 +57,8 @@ if trace_script~=nil and #trace_script>0 then
   dofile(trace_script)
 end
 VPD_STORYBOARD_DIRECTORY=directory
-VPD_STORYBOARD_START_FRAME=interval
-VPD_STORYBOARD_STOP_FRAME=frames-1
+VPD_STORYBOARD_START_FRAME=capture_start
+VPD_STORYBOARD_STOP_FRAME=capture_stop
 VPD_STORYBOARD_INTERVAL=interval
 VPD_STORYBOARD_LIMIT=limit
 local seen_movie=false
