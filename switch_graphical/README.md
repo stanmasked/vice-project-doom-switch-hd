@@ -371,3 +371,24 @@ controller/guest frame, and compares three actual X11 captures
 (first image-space swatch, narrowed source 800, and OFF). Neither
 original NES sprites, source scanline scroll, physics or original game
 level completion are established by this runtime-only preview test.
+## Stage 174 — independent actual X11 road-swatch geometry audit
+
+After the existing Stage173 eight-event native SD witness succeeds,
+`audit_nexium_road_x11_shape.py` examines **the three real 1280x720
+X11 RGB24 captures** from the SAME NeXium run. It finds pure authored
+swatch-fill RGB pixels over four central screen rows and independently
+measures the width of source frame 600 versus source frame 800. Source
+numerical widths 123 and 56 yield an expected 5x-review swatch ratio
+of `(123*5-10)/(56*5-10)`, with a small host display-scale tolerance.
+
+It verifies adjacent authored border/background colors, uninterrupted
+fill across multiple actual raster rows, approximately equal centers
+for these two samples, and *absence* of the measurement fill on the
+eighth OFF frame. It does not assume the NeXium window starts at X=0
+or that the source NES image has an independently measured Y boundary.
+
+The three captures remain **experimental NRO screen images**, not
+original NES graphics, original ROM screenshots or actual game
+collision geometry. Nearest-neighbor RGB colors are intentional;
+changes to NeXium filtering/window presentation must be detected,
+not silently reinterpreted as authentic original-game road geometry.
