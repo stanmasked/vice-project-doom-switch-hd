@@ -70,7 +70,9 @@ def audit(frame_anchor,frame_witness,writer_pcs,writer_witness,
         type(late_spread_limit)is not int or not 1<=late_spread_limit<=128):
         raise ValueError("invalid frame-phase audit bounds")
     _witness(frame_witness,"private_original_fceux_frame_anchor_v1",stop,None)
-    _witness(writer_witness,"private_ppuscroll_writer_pc_v1",stop,"writer_pc_hits")
+    if (_witness(writer_witness,"private_ppuscroll_writer_pc_v1",stop,
+                 "writer_pc_hits") != 4*(stop-start+1)):
+        raise ValueError("private writer callback witness count mismatch")
     anchors={}
     last_frame=-1
     last_cycle=-1
