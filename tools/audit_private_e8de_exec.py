@@ -123,8 +123,67 @@ def _audit_instruction_chain(path,witness_path,selected,start,stop):
     }
 
 
+WRITER_FIELDS=["frame","cycle","pc"]
+WRITER_SEQUENCE=["E8EC","E8F1","E369","E36C"]
+
+
+def _audit_writer_pc_sources(writer_path,witness_path,event_path,start,stop):
+    n=stop-start+1
+    rows=_rows(writer_path,WRITER_FIELDS,2*1024*1024,4*n+1)
+    if len(rows)!=4*n:
+        raise ValueError("incomplete CPU $2005 writer instruction trace")
+    metadata={}
+    for line in _file(witness_path,4096).read_text("ascii").splitlines():
+        if "=" not in line:raise ValueError("malformed private writer witness")
+        key,value=line.split("=",1)
+        if key in metadata:raise ValueError("duplicate private writer witness key")
+        metadata[key]=value
+    required={"format","first_observed_frame","last_observed_frame",
+              "frame_gaps","writer_pc_hits","rom_identity_verified",
+              "movie_readonly_verified"}
+    if (metadata.keys()!=required or
+        metadata["format"]!="private_ppuscroll_writer_pc_v1" or
+        metadata["rom_identity_verified"]!="yes" or
+        metadata["movie_readonly_verified"]!="yes"):
+        raise ValueError("private writer instruction identity not verified")
+    if (_num(metadata["first_observed_frame"],"first writer frame") not in (0,1)
+        or _num(metadata["last_observed_frame"],"last writer frame")!=stop
+        or _num(metadata["frame_gaps"],"writer frame gaps")!=0
+        or _num(metadata["writer_pc_hits"],"writer PC hit count")!=len(rows)):
+        raise ValueError("writer callback timeline incomplete")
+    writes={f:[] for f in range(start,stop+1)}
+    previous=-1
+    for row in _rows(event_path,EVENT_FIELDS,64*1024*1024,500000):
+        frame=_num(row["frame"],"event frame")
+        if frame<previous:raise ValueError("CPU register events out of frame order")
+        previous=frame
+        if start<=frame<=stop and row["address"].upper()=="2005" and row["kind"]=="W":
+            writes[frame].append((_num(row["cycles"],"write cycle"),
+                                  _hex(row["value"],HEX2,"scroll value")))
+    for i,frame in enumerate(range(start,stop+1)):
+        if len(writes[frame])!=4:raise ValueError("CPU $2005 write count mismatch")
+        for j,pc in enumerate(WRITER_SEQUENCE):
+            row=rows[i*4+j]
+            if (_num(row["frame"],"PC frame")!=frame or
+                row["pc"].upper()!=pc or
+                _num(row["cycle"],"PC cycle")!=writes[frame][j][0]):
+                raise ValueError("CPU $2005 write did not match executing PC and cycle")
+        if writes[frame][2][1]!=0 or writes[frame][3][1]!=0:
+            raise ValueError("late $2005 write values differ from observed zero pair")
+    return {
+        "verified_2005_instruction_addresses":["$"+p for p in WRITER_SEQUENCE],
+        "all_four_write_pc_cycles_matched":True,
+        "writer_callbacks_verified":len(rows),
+        "frames_with_four_matched_writers":n,
+        "late_zero_pair_sources":["$E369","$E36C"],
+        "later_raster_effect_verified":False,
+        "display_effective_scroll_verified_by_writer_pc":False
+    }
+
+
 def audit(execs,counts,events,witness,*,start=600,stop=920,
-          instruction_trace=None,instruction_witness=None):
+          instruction_trace=None,instruction_witness=None,
+          writer_trace=None,writer_witness=None):
     if (type(start)is not int or type(stop)is not int or start<1 or
         stop<start or stop-start>1200):
         raise ValueError("invalid private frame window")
@@ -209,6 +268,11 @@ def audit(execs,counts,events,witness,*,start=600,stop=920,
         "full_movie_terminal_verified":False,
         "original_rom_or_graphics_in_report":False
     }
+    if (writer_trace is None)!=(writer_witness is None):
+        raise ValueError("writer trace and witness must be supplied together")
+    if writer_trace is not None:
+        result.update(_audit_writer_pc_sources(writer_trace,writer_witness,
+                                                events,start,stop))
     if instruction_report is not None:
         result.update(instruction_report)
     return result
@@ -224,13 +288,17 @@ def main():
     parser.add_argument("--stop",type=int,default=920)
     parser.add_argument("--private-instruction-trace",type=Path)
     parser.add_argument("--private-instruction-witness",type=Path)
+    parser.add_argument("--private-writer-pc-trace",type=Path)
+    parser.add_argument("--private-writer-witness",type=Path)
     args=parser.parse_args()
     try:
         result=audit(args.private_execution_tsv,args.private_count_tsv,
                      args.private_cpu_video_tsv,args.private_terminal_witness,
                      start=args.start,stop=args.stop,
                      instruction_trace=args.private_instruction_trace,
-                     instruction_witness=args.private_instruction_witness)
+                     instruction_witness=args.private_instruction_witness,
+                     writer_trace=args.private_writer_pc_trace,
+                     writer_witness=args.private_writer_witness)
     except (OSError,ValueError,UnicodeError) as exc:
         parser.exit(1,"PRIVATE_E8DE_PROVENANCE_INCONCLUSIVE: "+str(exc)+"\n")
     print("PRIVATE_E8DE_RUNTIME_PROVENANCE_PASS")
