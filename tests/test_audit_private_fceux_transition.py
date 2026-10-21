@@ -49,6 +49,20 @@ class ExactTransitionTests(unittest.TestCase):
             self.assertEqual(report["overlapping_frames_verified"], 4)
             self.assertTrue(report["rgb_palette_pairs_identical"])
 
+    def test_reject_different_rom_identity_between_sessions(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = make_window(root / "source")
+            comparison = root / "comparison"
+            comparison.mkdir()
+            capture(comparison, 2, interval=2, start=2, stop=2, limit=1,
+                    rom="a" * 32)
+            for ext in (".ppm", ".pal.bin"):
+                name = "frame_000002" + ext
+                (comparison / name).write_bytes((source / name).read_bytes())
+            with self.assertRaisesRegex(ValueError, "ROM identity"):
+                audit_transition(source, compare=comparison)
+
     def test_reject_modified_second_session(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
