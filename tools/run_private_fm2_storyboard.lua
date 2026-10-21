@@ -43,7 +43,8 @@ assert(type(movie)=="table" and type(movie.play)=="function" and
 assert(movie.play(movie_path,true),"FCEUX refused private FM2 read-only playback")
 assert(movie.length()==frames,"FCEUX loaded a different FM2 frame count")
 assert(movie.readonly(),"private FM2 was not opened read-only")
-check_origin()
+-- FCEUX may not have initialized its movie start-state flag until the
+-- first actual emulated callback. Verify origin in playback callbacks.
 check_rom()
 local trace_script=os.getenv("VPD_PRIVATE_MMC3_TRACE_SCRIPT")
 if trace_script~=nil and #trace_script>0 then
