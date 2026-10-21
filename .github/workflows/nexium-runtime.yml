@@ -90,6 +90,8 @@ on:
       - "tests/test_nexium_driving_live.py"
       - "tools/audit_nexium_driving_raster.py"
       - "tests/test_nexium_driving_raster.py"
+      - "tools/audit_nexium_driving_blackout.py"
+      - "tests/test_nexium_driving_blackout.py"
       - "game_core/**"
       - "switch_graphical/**"
       - "graphics_core/**"
@@ -149,6 +151,7 @@ jobs:
           bash -n tools/nexium_driving_probe.sh
           python3 tests/test_nexium_driving_live.py
           python3 tests/test_nexium_driving_raster.py
+          python3 tests/test_nexium_driving_blackout.py
           python3 tests/test_nexium_hd_fx_guest.py
           python3 tests/test_nexium_hd_fx_combat.py
           python3 tests/test_nexium_hd_fx_sentry.py
