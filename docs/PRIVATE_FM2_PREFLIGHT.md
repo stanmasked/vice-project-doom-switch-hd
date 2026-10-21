@@ -340,3 +340,28 @@ Never upload the resulting proprietary-pattern image to GitHub.
 Output is refused inside any Git checkout, if an image already exists,
 or if more than 16 differing banks would exceed the comparison layout.
 Eight wholly invented ROM-free tests exercise rendering and guards.
+
+
+## Stage 127 — per-tile CHR origin and reuse audit
+
+The source-only `tools/audit_private_nes_variant_chr_tiles.py` computes
+precise 16-byte planar 8x8 tile identities between two privately owned
+NES cartridges. In addition to the same-index tile changes, it counts
+changed tile patterns that are completely absent in the other ROM's
+entire CHR. This distinguishes a genuinely novel static tile pattern
+from an unchanged/reordered pattern copied elsewhere. For each changed
+1KiB bank it reports changed global tile indices and the number of
+all-zero tiles on each side.
+
+Example: python3 tools/audit_private_nes_variant_chr_tiles.py
+  --first-rom /private/vice_us.nes --second-rom /private/gun_dec_jp.nes
+
+Never upload original ROMs or optional private reports to public CI.
+All output fields are numeric provenance plus explicit `false` evidence
+limits; no raw graphics, patterns, hashes, image pixels, or game art.
+The analysis does not determine CHR selection timing, PPU compositing,
+screen coordinates, text semantics, level order or gameplay mechanics.
+
+Seven tests synthesize original-made 8x8 patterns, bank shifts, zero
+tiles, mapper incompatibility and comparison bounds. A real emulator
+capture is still required to link a static pattern to an original stage.
