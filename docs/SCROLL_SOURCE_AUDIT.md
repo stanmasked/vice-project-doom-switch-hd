@@ -93,3 +93,36 @@ API in CI, **not a live recording of the game**.
 **Neither original first-stage geometry nor an authentic Switch remake
 is established by this milestone.** No new NRO is required to test
 this research-only code.
+
+
+## Stage 153 — real emitter execution validation
+
+On 21 October 2026, actual local FCEUX 2.6.5 playback of the user's matching
+USA ROM+FM2 confirmed this previously static instruction chain at runtime.
+Independent execution callbacks observed PC addresses $E8DE, $E8E4, $E8E7,
+$E8EC, $E8F1 **321 times each** over original frames 600–920. Each of those
+321 ordered groups had CPU-cycle offsets **0, 9, 13, 20, 27** from $E8DE.
+
+A separate real-FCEUX CPU-write log confirmed the $2000 write at +9 cycles
+and both $2005 writes at +20/+27 cycles. All 321 first/second scroll writes
+matched RAM $0B/$0D read at the emitter's execution callback. Zero source
+ROM/graphics bytes were copied to GitHub. See
+[ORIGINAL_STAGE_TRANSITION_CONTRACT.md](ORIGINAL_STAGE_TRANSITION_CONTRACT.md).
+
+This **supersedes the older "static but not executed" status above only for
+this specific instruction path and this original movie interval**. The Lua
+API has no direct memory.registerread callback in the current FCEUX package;
+instead we observed execution of the separately source-verified
+LDA $2002 instruction at $E8E7 (+13 cycles). This provides CPU instruction
+execution evidence for the status read, but not a measured PPU scroll latch
+trace at every pixel or scanline. Effective displayed scroll and camera
+motion remain unverified, as do other possible writers and raster splits.
+
+Reproducible source-only private tools:
+- tools/capture_private_e8de_instructions.lua
+- tools/audit_private_e8de_exec.py
+- tests/test_audit_private_e8de_exec.py
+- tests/test_private_e8de_instruction_callbacks.lua
+
+Only invented-data tests are suitable for public CI. Keep all genuine
+CPU-event and instruction traces, the ROM, the FM2 and screenshots private.
