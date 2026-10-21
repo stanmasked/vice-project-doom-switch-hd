@@ -1,5 +1,6 @@
 #include "driving_preview.hpp"
 #include "scene_renderer.hpp"
+#include "driving_simulation.hpp"
 #include <cstdint>
 #include <iostream>
 #include <stdexcept>
@@ -128,6 +129,41 @@ int main() {
     require(hashRows(legacy,stride,0,split)==hashRows(same,stride,0,split) &&
             hashRows(legacy,stride,split,h)==hashRows(same,stride,split,h),
             "shared SceneView did not select isolated driving renderer");
+    // A real (invented) input-driven model must change only the road pixels
+    // under steering and speed, while scene status stays HUD-only.
+    vpd::DrivingState drivingState{};
+    const vpd::DrivingPreviewView originalDriving=view;
+    vpd::DrivingPreviewView moving=originalDriving;
+    moving.show_obstacle=true;
+    moving.obstacle_x=drivingState.obstacle_x;
+    moving.obstacle_y=drivingState.obstacle_y;
+    moving.car_x=drivingState.car_x;
+    moving.speed=static_cast<uint8_t>(drivingState.speed);
+    require(vpd::drawDrivingPreview(same.data(),w,h,stride,moving),
+            "input-driven baseline preview failed");
+    const auto movementHud=hashRows(same,stride,split,h);
+    const auto movementRoad=hashRows(same,stride,0,split);
+    for(int n=0;n<15;++n)drivingState.tick({false,true,true,false});
+    moving.frame=drivingState.frame;
+    moving.road_phase=drivingState.road_phase;
+    moving.ticks=originalDriving.ticks; // fixed HUD timer source
+    moving.car_x=drivingState.car_x;
+    moving.obstacle_x=drivingState.obstacle_x;
+    moving.obstacle_y=drivingState.obstacle_y;
+    moving.speed=static_cast<uint8_t>(drivingState.speed);
+    require(vpd::drawDrivingPreview(same.data(),w,h,stride,moving),
+            "steered car and obstacle raster failed");
+    require(hashRows(same,stride,0,split)!=movementRoad,
+            "steering/speed/traffic did not affect road");
+    require(hashRows(same,stride,split,h)!=movementHud,
+            "speed HUD did not reflect acceleration");
+    const auto acceleratedRoad=hashRows(same,stride,0,split);
+    moving.health=2;
+    require(vpd::drawDrivingPreview(same.data(),w,h,stride,moving),
+            "independent damage-HUD redraw failed");
+    require(hashRows(same,stride,0,split)==acceleratedRoad,
+            "vehicle HUD health altered roadway pixels");
+
     scene.driving_stage_preview=false;
     require(vpd::drawScene(legacy.data(),w,h,stride,scene),
             "legacy rendering after toggle failed");
