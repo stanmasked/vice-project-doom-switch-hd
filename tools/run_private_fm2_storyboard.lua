@@ -61,6 +61,10 @@ local consecutive_unique_frames=0
 local after=emu.registerafter
 emu.registerafter=function(capture)
   return after(function()
+    -- FCEUX can deliver additional callbacks after the last movie frame.
+    -- The sealed terminal witness remains valid; never turn a completed
+    -- private replay into a false error on the following free-running tick.
+    if timeline_end then return end
     capture()
     local current=emu.framecount()
     assert(type(current)=="number" and current==math.floor(current) and
