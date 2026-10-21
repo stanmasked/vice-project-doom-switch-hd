@@ -15,11 +15,26 @@ PIXELS = SIZE_X * SIZE_Y
 HEADER = b"P6\n256 240\n255\n"
 RGB_BYTES = len(HEADER) + 3 * PIXELS
 PAL_BYTES = PIXELS
-WITNESS_KEYS = {
+BANK_SPECS = {
+    0: {
+        "format": "private_chr_bank0_one_write_ab_v1",
+        "probe_mode": "probe_chr0_two",
+        "restore_key": "cpu_x_restored_before_e383",
+        "pc": "$E380", "restoration_pc": "$E383",
+        "original_value": "$00", "probe_value": "$02",
+    },
+    1: {
+        "format": "private_chr_bank1_one_write_ab_v1",
+        "probe_mode": "probe_chr1_zero",
+        "restore_key": "accumulator_restored_before_e38a",
+        "pc": "$E387", "restoration_pc": "$E38A",
+        "original_value": "$02", "probe_value": "$00",
+    },
+}
+COMMON_WITNESS_KEYS = {
     "format", "mode", "target_frame", "first_observed_frame",
     "last_observed_frame", "frame_gaps", "writer_pc_hits",
-    "next_instruction_hits", "accumulator_restored_before_e38a",
-    "rom_payload_md5", "fm2_readonly",
+    "next_instruction_hits", "rom_payload_md5", "fm2_readonly",
 }
 
 
@@ -36,7 +51,7 @@ def _read(path, size):
     return path.read_bytes()
 
 
-def _witness(path, target, mode):
+def _witness(path, target, mode, bank):
     path = _dir(path)
     file = path / "COMPLETE.txt"
     if file.is_symlink() or not file.is_file() or not 1 <= file.stat().st_size <= 4096:
@@ -49,18 +64,19 @@ def _witness(path, target, mode):
         if key in fields:
             raise ValueError("duplicate witness metadata")
         fields[key] = value
-    if set(fields) != WITNESS_KEYS:
+    spec = BANK_SPECS[bank]
+    if set(fields) != COMMON_WITNESS_KEYS | {spec["restore_key"]}:
         raise ValueError("private CHR witness schema mismatch")
     expected = {
-        "format": "private_chr_bank1_one_write_ab_v1",
+        "format": spec["format"],
         "mode": mode,
         "target_frame": str(target),
         "last_observed_frame": str(target + 2),
         "frame_gaps": "0",
         "writer_pc_hits": "1",
         "next_instruction_hits": "1",
-        "accumulator_restored_before_e38a":
-            "yes" if mode == "probe_chr1_zero" else "not_needed",
+        spec["restore_key"]:
+            "yes" if mode == spec["probe_mode"] else "not_needed",
         "fm2_readonly": "yes",
     }
     if any(fields[k] != v for k, v in expected.items()):
@@ -86,15 +102,18 @@ def _pixel_masks(original, probe, channels):
     return counts
 
 
-def audit(control_dir, diagnostic_dir, *, frame):
+def audit(control_dir, diagnostic_dir, *, frame, bank_register=1):
     if type(frame) is not int or frame < 300 or frame > 100000:
         raise ValueError("invalid original movie target frame")
+    if type(bank_register) is not int or bank_register not in BANK_SPECS:
+        raise ValueError("unsupported MMC3 CHR register")
+    spec = BANK_SPECS[bank_register]
     control = _dir(control_dir)
     diagnostic = _dir(diagnostic_dir)
     if control.resolve() == diagnostic.resolve():
         raise ValueError("control and diagnostic folders cannot be identical")
-    original_id = _witness(control, frame, "original")
-    probe_id = _witness(diagnostic, frame, "probe_chr1_zero")
+    original_id = _witness(control, frame, "original", bank_register)
+    probe_id = _witness(diagnostic, frame, spec["probe_mode"], bank_register)
     if original_id != probe_id:
         raise ValueError("private CHR captures came from different original ROMs")
     results = []
@@ -127,10 +146,11 @@ def audit(control_dir, diagnostic_dir, *, frame):
     return {
         "schema": "vpd_private_chr_register_counterfactual_v1",
         "classification": "private single-write CHR bank counterfactual; no original assets",
-        "cpu_write_pc": "$E387",
-        "original_mmc3_register_1_value": "$02",
-        "counterfactual_mmc3_register_1_value": "$00",
-        "cpu_accumulator_restored_at": "$E38A",
+        "cpu_write_pc": spec["pc"],
+        "mmc3_chr_register_number": bank_register,
+        "original_mmc3_register_value": spec["original_value"],
+        "counterfactual_mmc3_register_value": spec["probe_value"],
+        "cpu_register_restored_at": spec["restoration_pc"],
         "original_frame_target": frame,
         "frames": results,
         "visible_rgb_difference_observed": any_rgb_change,
@@ -153,11 +173,12 @@ def main():
     parser.add_argument("private_unmodified_dir", type=Path)
     parser.add_argument("private_chr_probe_dir", type=Path)
     parser.add_argument("--frame", type=int, required=True)
+    parser.add_argument("--chr-register", type=int, choices=(0, 1), default=1)
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
     try:
         report = audit(args.private_unmodified_dir, args.private_chr_probe_dir,
-                       frame=args.frame)
+                       frame=args.frame, bank_register=args.chr_register)
         if args.output is not None:
             out = args.output
             if out.is_symlink() or out.exists() or not out.parent.is_dir():
