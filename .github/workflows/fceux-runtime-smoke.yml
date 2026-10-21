@@ -62,7 +62,7 @@ jobs:
           : > "$RUNNER_TEMP/fceux-runtime-package/package-info.txt"
           for package in "$RUNNER_TEMP"/fceux-runtime-package/*.deb; do
             dpkg-deb -f "$package" Package Version Architecture >> "$RUNNER_TEMP/fceux-runtime-package/package-info.txt"
-            printf '\\n' >> "$RUNNER_TEMP/fceux-runtime-package/package-info.txt"
+            printf '\n' >> "$RUNNER_TEMP/fceux-runtime-package/package-info.txt"
           done
           (cd "$RUNNER_TEMP/fceux-runtime-package" && sha256sum ./*.deb > SHA256SUMS)
       - name: Export emulator package for private local replay
