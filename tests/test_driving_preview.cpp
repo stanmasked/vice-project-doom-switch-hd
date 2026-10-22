@@ -1,6 +1,7 @@
 #include "driving_preview.hpp"
 #include "scene_renderer.hpp"
 #include "driving_simulation.hpp"
+#include "driving_scene_bridge.hpp"
 #include <cstdint>
 #include <iostream>
 #include <stdexcept>
@@ -132,6 +133,10 @@ int main() {
     // A real (invented) input-driven model must change only the road pixels
     // under steering and speed, while scene status stays HUD-only.
     vpd::DrivingState drivingState{};
+    drivingState.obstacles_passed=4;
+    const auto bridgedProgress=vpd::makeDrivingSceneView(drivingState);
+    require(bridgedProgress.obstacles_passed==4,
+            "shared driving bridge dropped obstacle progress");
     const vpd::DrivingPreviewView originalDriving=view;
     vpd::DrivingPreviewView moving=originalDriving;
     moving.show_obstacle=true;
