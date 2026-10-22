@@ -40,5 +40,17 @@ def main():
         try: module.analyze(bad,1)
         except ValueError: pass
         else: raise AssertionError("invalid schema was accepted")
+        duplicate=root/"duplicate.csv"
+        duplicate.write_text("frame,ram_000f,ram_000f,ram_0011,ram_0016,ram_0017,ram_0094,ram_013a,ram_013c\\n1,0,0,0,0,0,0,0,0\\n",encoding="utf-8")
+        try: module.analyze(duplicate,1)
+        except ValueError: pass
+        else: raise AssertionError("duplicate headers were accepted")
+        out_of_range=root/"range.csv"
+        write_csv(out_of_range,[1])
+        content=out_of_range.read_text(encoding="utf-8").replace("1,0,1,2,3,4,5,6","1,256,1,2,3,4,5,6")
+        out_of_range.write_text(content,encoding="utf-8")
+        try: module.analyze(out_of_range,1)
+        except ValueError: pass
+        else: raise AssertionError("non-byte RAM value was accepted")
     print("VPD_PRIVATE_RAM_VALIDATOR_TEST_PASS valid=321 gaps_rejected=yes short_rejected=yes schema_rejected=yes")
 if __name__=="__main__": main()
