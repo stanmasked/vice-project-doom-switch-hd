@@ -9,9 +9,14 @@ namespace vpd {
 // does not pretend that the private reference frame number is a proven trigger.
 class DrivingStageOneSession {
 public:
+    // Default route length is a tunable prototype value, not original-game data.
+    static constexpr std::uint32_t kPrototypeRouteFrames=1800;
     DrivingStageOneSession() noexcept = default;
-    explicit DrivingStageOneSession(const DrivingState& initial) noexcept
-        : state_(initial) {}
+    explicit DrivingStageOneSession(std::uint32_t routeFrames) noexcept
+        : route_frames_(routeFrames ? routeFrames : 1) {}
+    explicit DrivingStageOneSession(const DrivingState& initial,
+                                    std::uint32_t routeFrames=kPrototypeRouteFrames) noexcept
+        : state_(initial), route_frames_(routeFrames ? routeFrames : 1) {}
 
     enum class Mode : unsigned char { Driving, Defeated, Transition, Platform };
 
@@ -27,7 +32,7 @@ public:
             mode_=Mode::Defeated;
             return;
         }
-        if (finishConfirmed &&
+        if ((finishConfirmed || state_.frame>=route_frames_) &&
             exit_.requestAfterDrivingFrame(true,true)) {
             mode_=Mode::Transition;
         }
@@ -56,6 +61,7 @@ public:
 private:
     DrivingState state_{};
     DrivingStageExit exit_{};
+    std::uint32_t route_frames_=kPrototypeRouteFrames;
     Mode mode_=Mode::Driving;
 };
 
