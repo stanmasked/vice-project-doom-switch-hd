@@ -38,12 +38,10 @@ public:
             mode_=Mode::Defeated;
             return;
         }
-        const bool routeProgressComplete=route_frames_==kPrototypeRouteFrames &&
-            required_obstacles_==kPrototypeRequiredObstacles
-            ? DrivingStageOneConfig::routeProgressComplete(
-                  state_.frame,state_.obstacles_passed)
-            : state_.frame>=route_frames_ &&
-              state_.obstacles_passed>=required_obstacles_;
+        const bool routeProgressComplete=
+            DrivingStageOneConfig::routeProgressComplete(
+                state_.frame,state_.obstacles_passed,
+                route_frames_,required_obstacles_);
         if ((finishConfirmed || routeProgressComplete) &&
             exit_.requestAfterDrivingFrame(true,true)) {
             mode_=Mode::Transition;
