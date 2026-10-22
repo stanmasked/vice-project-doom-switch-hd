@@ -459,3 +459,23 @@ establishes only actual NeXium SD read of a synthetic 37-slot
 observation file, **not** successful real-pad R3 selection or the
 identity of an owner-private ROM/FM2 session. Those require separate
 evidence.
+## Stage 179 — real NeXium R3 selection of 37 synthetic SD intervals
+
+The emulator's upstream `nexium-gui/src/controller_config.rs`
+binds right-stick click (R3) to **keyboard G** by default.
+The existing independent driving probe now sends 38 separate real
+R3 events **after** the prior 7+OFF Y-reference test and after
+all earlier impact, blackout, car and HUD proofs.
+
+The Switch NRO itself records, for each event, the exact selected
+source numeric frame, correct 5x interval pixels, visible small
+`37` badge, normal car/HUD pixels and unchanged platform fingerprint.
+The host requires all 37 sequential private-SD synthetic records plus
+OFF (38 total) and samples four actual X11 screens (frames 600,800,
+920 and OFF), independently checking image width and lateral shift.
+
+All 30 non-anchor source intervals are invented; the binary is
+generated on the runner, never committed. No original full 37-frame
+data, NES imagery, ROM or FM2 enters the public CI. This only
+proves the independent numeric-image review pipeline, **not** original
+gameplay speed, real source scroll or road collision geometry.

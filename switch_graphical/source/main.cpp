@@ -7,6 +7,7 @@
 #include "driving_road_private_bundle.hpp"
 #include "driving_private_review_mode.hpp"
 #include "driving_private_road_sd_witness.hpp"
+#include "driving_private_road_r3_witness.hpp"
 #include "driving_road_review_witness.hpp"
 #include "driving_guest_witness.hpp"
 #include "driving_raster_witness.hpp"
@@ -95,6 +96,7 @@ int main(int,char**) {
     vpd::resetDrivingGuestProof(has_sd);
     vpd::resetDrivingRasterProof(has_sd);
     vpd::resetRoadReviewGuest(has_sd);
+    vpd::resetPrivateRoadR3Guest(has_sd);
     vpd::resetDrivingExitWitness(has_sd);
     (void)vpd::guardProofReset(has_sd);
     (void)vpd::guardCombatProofReset(has_sd);
@@ -205,6 +207,7 @@ int main(int,char**) {
     vpd::RoadProfileReviewMode road_profile_review{};
     vpd::PrivateRoadReviewMode private_road_review{};
     vpd::RoadReviewGuestProof road_review_guest_proof{};
+    vpd::PrivateRoadR3GuestProof private_road_r3_proof{};
     vpd::DrivingGuestProof driving_proof{};
     vpd::DrivingStageExit driving_stage_exit{};
     vpd::DrivingExitProof driving_exit_proof{};
@@ -1170,6 +1173,13 @@ int main(int,char**) {
             (void)vpd::appendDrivingExitWitness(
                 has_sd,driving_exit_proof.platform(game.fingerprint()));
         }
+        if(drawn && view.driving_stage_preview && private_road_chord)
+            (void)vpd::appendPrivateRoadR3Guest(
+                has_sd,private_road_r3_proof.observe(
+                    view.manual_controls,view.driving_stage_preview,
+                    private_road_chord,private_road_data,
+                    private_road_review,view.driving,
+                    pixels,pixels_per_row,game.fingerprint()));
         if(drawn && view.driving_stage_preview && road_review_chord)
             (void)vpd::appendRoadReviewGuest(
                 has_sd,road_review_guest_proof.observe(
