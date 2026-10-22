@@ -31,6 +31,7 @@ struct DrivingPreviewView {
     bool show_obstacle=false; // invented traffic fixture
     bool impact_flash=false;
     uint8_t speed=3;
+    uint32_t obstacles_passed=0; // prototype progress counter; not original HUD data
     // 0 = default invented road. A known original frame enables a standalone
     // overlay of ONE measured median X interval, not source road geometry.
     uint16_t observed_road_frame=0;
