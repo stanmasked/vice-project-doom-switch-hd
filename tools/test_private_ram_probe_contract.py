@@ -14,7 +14,7 @@ def main():
     assert 'os.rename("probe.csv.pending", "probe.csv")' in lua
     assert "out:flush()" in lua
     assert "memory.readbyte(address)" in lua
-    for name,frames in (("../unsafe.csv",321),("probe.csv",0)):
+    for name,frames in (("../unsafe.csv",321),("bad\\\"name.csv",321),("bad\\\\name.csv",321),("probe.csv",0)):
         try: module.make_lua(name,frames)
         except ValueError: pass
         else: raise AssertionError("unsafe probe configuration accepted")
