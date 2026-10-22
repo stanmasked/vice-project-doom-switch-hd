@@ -30,6 +30,10 @@ jobs:
         run: ctest --test-dir build/native_core --output-on-failure
       - name: Run synthetic ROM tests
         run: python -m unittest discover -s tests -p 'test_*.py' -v
+      - name: Test private RAM probe generator and CSV validator contracts
+        run: |
+          python tools/test_private_ram_probe_contract.py
+          python tools/test_private_ram_probe_validate.py
       - name: Install Lua 5.4 for FCEUX capture mock
         run: sudo apt-get update -qq && sudo apt-get install -y lua5.4
       - name: Exercise FCEUX Lua capture with and without CPU clock
