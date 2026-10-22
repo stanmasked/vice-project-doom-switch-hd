@@ -56,6 +56,15 @@ int main() {
     view=vpd::makeDrivingSessionView(session);
     check(!view.show_car && !view.show_obstacle,
           "platform session still exposed driving sprites");
+    check(session.blackFramesPresented()==41,
+          "platform view did not retain completed blackout count");
+    session.reset();
+    view=vpd::makeDrivingSessionView(session);
+    check(session.mode()==Session::Mode::Driving &&
+          session.blackFramesPresented()==0 && view.frame==0 &&
+          view.health==5 && view.obstacles_passed==0 && view.show_car &&
+          view.show_obstacle,
+          "reset after platform handoff retained stale view or blackout state");
 
     vpd::DrivingState fragile;
     fragile.health=1;
