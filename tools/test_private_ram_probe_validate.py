@@ -1,0 +1,71 @@
+#!/usr/bin/env python3
+"""Synthetic tests for private RAM CSV validator; no original ROM or capture required."""
+import csv
+import importlib.util
+import tempfile
+from pathlib import Path
+
+HERE=Path(__file__).parent
+spec=importlib.util.spec_from_file_location("ram_validator",HERE/"private_ram_probe_validate.py")
+module=importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+FIELDS=("ram_000f","ram_0011","ram_0016","ram_0017","ram_0094","ram_013a","ram_013c")
+
+def write_csv(path, frames):
+    with path.open("w",newline="",encoding="utf-8") as stream:
+        writer=csv.DictWriter(stream,fieldnames=("frame",*FIELDS))
+        writer.writeheader()
+        for frame in frames:
+            writer.writerow({"frame":frame,**{field:str((frame+i)%256) for i,field in enumerate(FIELDS)}})
+
+def main():
+    with tempfile.TemporaryDirectory() as directory:
+        root=Path(directory)
+        valid=root/"valid.csv"
+        write_csv(valid,range(1,322))
+        result=module.analyze(valid,321)
+        assert result["continuous"] and result["frames"]==321
+        for invalid_count in (0,-1,10001,True,1.5):
+            try: module.analyze(valid,invalid_count)
+            except ValueError: pass
+            else: raise AssertionError("invalid expected frame count was accepted")
+        gap=root/"gap.csv"
+        write_csv(gap,[*range(1,160),*range(161,322)])
+        try: module.analyze(gap,321)
+        except ValueError: pass
+        else: raise AssertionError("frame gap was accepted")
+        short=root/"short.csv"
+        write_csv(short,range(1,321))
+        try: module.analyze(short,321)
+        except ValueError: pass
+        else: raise AssertionError("short capture was accepted")
+        bad=root/"bad.csv"
+        bad.write_text("frame,unexpected\n1,0\n",encoding="utf-8")
+        try: module.analyze(bad,1)
+        except ValueError: pass
+        else: raise AssertionError("invalid schema was accepted")
+        duplicate=root/"duplicate.csv"
+        duplicate.write_text("frame,ram_000f,ram_000f,ram_0011,ram_0016,ram_0017,ram_0094,ram_013a,ram_013c\n1,0,0,0,0,0,0,0,0\n",encoding="utf-8")
+        try: module.analyze(duplicate,1)
+        except ValueError: pass
+        else: raise AssertionError("duplicate headers were accepted")
+        out_of_range=root/"range.csv"
+        write_csv(out_of_range,[1])
+        content=out_of_range.read_text(encoding="utf-8").replace("1,0,1,2,3,4,5,6","1,256,1,2,3,4,5,6")
+        out_of_range.write_text(content,encoding="utf-8")
+        try: module.analyze(out_of_range,1)
+        except ValueError: pass
+        else: raise AssertionError("non-byte RAM value was accepted")
+        negative=root/"negative.csv"
+        write_csv(negative,[-1])
+        try: module.analyze(negative,1)
+        except ValueError: pass
+        else: raise AssertionError("negative frame was accepted")
+        extra=root/"extra.csv"
+        write_csv(extra,[1])
+        with extra.open("a",encoding="utf-8") as stream: stream.write("2,0,0,0,0,0,0,0,0,extra\n")
+        try: module.analyze(extra,2)
+        except ValueError: pass
+        else: raise AssertionError("extra CSV field was accepted")
+    print("VPD_PRIVATE_RAM_VALIDATOR_TEST_PASS valid=321 gaps_rejected=yes short_rejected=yes schema_rejected=yes")
+if __name__=="__main__": main()

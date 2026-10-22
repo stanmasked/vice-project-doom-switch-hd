@@ -1,0 +1,90 @@
+name: Vice FCEUX Executable Toolchain (Synthetic Only)
+
+on:
+  push:
+    paths:
+      - ".github/workflows/fceux-executable-toolchain.yml"
+      - "tools/install_local_fceux.py"
+      - "tools/verify_real_fceux_runtime.py"
+      - "tools/test_fceux_witness_contract.py"
+      - "tools/generate_private_ram_probe.py"
+      - "tools/test_private_ram_probe_contract.py"
+      - "tools/private_ram_probe_validate.py"
+      - "tools/test_private_ram_probe_validate.py"
+      - "tools/test_private_ram_probe_runtime.py"
+  pull_request:
+    paths:
+      - ".github/workflows/fceux-executable-toolchain.yml"
+      - "tools/install_local_fceux.py"
+      - "tools/verify_real_fceux_runtime.py"
+      - "tools/test_fceux_witness_contract.py"
+      - "tools/generate_private_ram_probe.py"
+      - "tools/test_private_ram_probe_contract.py"
+      - "tools/private_ram_probe_validate.py"
+      - "tools/test_private_ram_probe_validate.py"
+      - "tools/test_private_ram_probe_runtime.py"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  genuine-fceux-runtime:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check guest-host Lua witness contract
+        run: python3 tools/test_fceux_witness_contract.py
+      - name: Test private RAM probe contract
+        run: python3 tools/test_private_ram_probe_contract.py
+      - name: Test private RAM capture validator with synthetic CSV
+        run: python3 tools/test_private_ram_probe_validate.py
+      - name: Install native FCEUX and Xvfb from Ubuntu
+        run: |
+          set -euo pipefail
+          sudo timeout 180s apt-get -o Acquire::Retries=2 update -qq
+          sudo timeout 240s env DEBIAN_FRONTEND=noninteractive apt-get -o DPkg::Lock::Timeout=30 -o Acquire::Retries=2 install -y fceux xvfb xauth zip
+          /usr/games/fceux --help >/dev/null 2>&1 || { echo 'FCEUX executable failed its help smoke' >&2; exit 1; }
+          test -x /usr/games/fceux
+      - name: Run generated RAM probe in real FCEUX on synthetic ROM
+        run: python3 tools/test_private_ram_probe_runtime.py --fceux /usr/games/fceux --frames 321
+      - name: Verify genuine native emulator and Lua execution on fabricated NES
+        run: |
+          set -euo pipefail
+          python3 tools/verify_real_fceux_runtime.py --fceux /usr/games/fceux
+      - name: Run genuine 321-frame synthetic 6502 soak
+        run: |
+          set -euo pipefail
+          python3 tools/verify_real_fceux_runtime.py --fceux /usr/games/fceux --min-frames 321 --timeout 90
+      - name: Package offline DEBs and test full reinstall
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/fceux-rehydrate-debs"
+          cd "$RUNNER_TEMP/fceux-rehydrate-debs"
+          apt-get download fceux liblua5.1-0
+          sha256sum ./*.deb > SHA256SUMS
+          printf 'Artifact generated in ROM-free GitHub Actions.\n' > package-info.txt
+          zip -q "$RUNNER_TEMP/fceux-rehydrate.zip" ./*.deb SHA256SUMS package-info.txt
+          cd "$GITHUB_WORKSPACE"
+          python3 tools/install_local_fceux.py \
+            --artifact-zip "$RUNNER_TEMP/fceux-rehydrate.zip" \
+            --prefix "$RUNNER_TEMP/offline-fceux-install" \
+            --bin-dir "$RUNNER_TEMP/offline-fceux-bin"
+          python3 tools/verify_real_fceux_runtime.py \
+            --fceux "$RUNNER_TEMP/offline-fceux-bin/fceux"
+      - name: Ensure ROMs, FM2 movies and original pixels absent
+        run: |
+          set -euo pipefail
+          if git ls-files | grep -E -i '\\.(nes|fm2|nro|bin|zip|7z|chd|iso)$'; then
+            echo 'Original game or emulator binary must not enter source Git' >&2
+            exit 1
+          fi
+          echo "VPD_FCEUX_LOCAL_INSTALL_AND_REINSTALL_PASS original_assets=no"
+      - name: Publish emulator-only offline package for private workspace restoration
+        uses: actions/upload-artifact@v4
+        with:
+          name: fceux-2.6.5-linux-amd64-offline-packages
+          path: ${{ runner.temp }}/fceux-rehydrate.zip
+          if-no-files-found: error
+          retention-days: 3

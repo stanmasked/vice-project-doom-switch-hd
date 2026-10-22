@@ -1,0 +1,87 @@
+#!/usr/bin/env python3
+"""Run generated RAM probe in native FCEUX against a fabricated ROM only."""
+import argparse
+import csv
+import os
+from pathlib import Path
+import shutil
+import subprocess
+import tempfile
+import time
+
+from build_fceux_smoke_rom import build_rom
+from generate_private_ram_probe import make_lua
+from private_ram_probe_validate import analyze
+
+FIELDS=("ram_000f","ram_0011","ram_0016","ram_0017","ram_0094","ram_013a","ram_013c")
+
+def run(fceux, frames=321, timeout=60):
+    if not 1 <= frames <= 10000:
+        raise ValueError("frames must be between 1 and 10000")
+    xvfb=shutil.which("xvfb-run")
+    if not xvfb:
+        raise ValueError("xvfb-run is required")
+    exe=shutil.which(str(fceux)) or str(Path(fceux).expanduser())
+    if not Path(exe).is_file():
+        raise ValueError("FCEUX executable not found")
+    with tempfile.TemporaryDirectory(prefix="vpd-ram-probe-synthetic-") as td:
+        root=Path(td)
+        rom=root/"synthetic.nes"
+        lua=root/"probe.lua"
+        csv_path=root/"capture.csv"
+        pending=root/"capture.csv.pending"
+        rom.write_bytes(build_rom())
+        lua.write_text(make_lua(csv_path.name,frames),encoding="ascii")
+        env={**os.environ,"SDL_AUDIODRIVER":"dummy","QT_QPA_PLATFORM":"xcb"}
+        log_path=root/"fceux.log"
+        with log_path.open("wb") as log:
+            proc=subprocess.Popen([xvfb,"-a","-s","-screen 0 1024x768x24",exe,
+                                   "--no-config","1","--sound","0","--loadlua",str(lua),str(rom)],
+                                  stdout=log,stderr=subprocess.STDOUT,env=env,cwd=root)
+            try:
+                deadline=time.monotonic()+timeout
+                report=None
+                def diagnostic_tail():
+                    try:
+                        return log_path.read_text(encoding="utf-8",errors="replace")[-4000:]
+                    except OSError:
+                        return "<FCEUX log unavailable>"
+                while time.monotonic()<deadline:
+                    if csv_path.is_file() and not pending.exists():
+                        try:
+                            report=analyze(csv_path,frames)
+                            break
+                        except (ValueError, OSError):
+                            pass
+                    if proc.poll() is not None:
+                        raise RuntimeError("FCEUX exited before a complete RAM probe was validated; log tail:\\n"+diagnostic_tail())
+                    time.sleep(0.1)
+                if report is None:
+                    raise TimeoutError("RAM probe did not produce a complete validated CSV; log tail:\\n"+diagnostic_tail())
+                with csv_path.open(newline="",encoding="utf-8") as stream:
+                    rows=list(csv.DictReader(stream))
+                if len(rows)!=frames or len(rows[0])!=8:
+                    raise AssertionError("CSV row count or field count mismatch")
+                if list(rows[0])!=["frame",*FIELDS]:
+                    raise AssertionError("CSV header does not match candidate address schema")
+                if pending.exists():
+                    raise AssertionError("pending output remained after completion")
+            finally:
+                if proc.poll() is None:
+                    proc.terminate()
+                    try:
+                        proc.wait(timeout=5)
+                    except subprocess.TimeoutExpired:
+                        proc.kill()
+                        proc.wait(timeout=5)
+        return {"frames":report["frames"],"first_frame":report["first_frame"],
+                "last_frame":report["last_frame"],"addresses":len(report["signals"]),
+                "synthetic_rom_only":True}
+
+if __name__=="__main__":
+    parser=argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--fceux",required=True)
+    parser.add_argument("--frames",type=int,default=321)
+    parser.add_argument("--timeout",type=int,default=60)
+    args=parser.parse_args()
+    print("VPD_PRIVATE_RAM_NATIVE_PROBE_PASS "+str(run(args.fceux,args.frames,args.timeout)))
