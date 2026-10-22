@@ -206,6 +206,12 @@ int main() {
           saturated.obstacles_passed==UINT32_MAX &&
           saturated.obstacle_serial==UINT32_MAX,
           "long-running driving counters wrapped instead of saturating");
+    vpd::DrivingState saturatedImpact;
+    saturatedImpact.impacts=UINT32_MAX;
+    saturatedImpact.obstacle_y=426;
+    saturatedImpact.tick({});
+    check(saturatedImpact.impacts==UINT32_MAX && saturatedImpact.health==4,
+          "impact counter wrapped instead of saturating on collision");
 
     check(platform.fingerprint()==platformFingerprintBefore,
           "independent driving model changed legacy platform simulation");
