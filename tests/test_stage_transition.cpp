@@ -49,6 +49,26 @@ int main() {
         require(sequence.present() == Scene::Black);
     require(sequence.present() == Scene::Platform);
 
+    // Reset in the middle of a blackout must discard the pending transition
+    // and all timing counters, not resume a stale partial blackout.
+    Timeline interrupted;
+    require(interrupted.requestExit());
+    for (std::uint32_t n = 0; n < 10; ++n)
+        require(interrupted.present() == Scene::Black);
+    require(interrupted.presentedBlackFrames() == 10);
+    require(interrupted.remainingBlackFrames() == kBlackFrames - 10);
+    interrupted.reset();
+    require(interrupted.nextScene() == Scene::Driving);
+    require(interrupted.presentedBlackFrames() == 0);
+    require(interrupted.remainingBlackFrames() == 0);
+    require(interrupted.present() == Scene::Driving);
+    require(interrupted.requestExit());
+    for (std::uint32_t n = 0; n < kBlackFrames; ++n) {
+        require(interrupted.present() == Scene::Black);
+        require(interrupted.presentedBlackFrames() == n + 1);
+    }
+    require(interrupted.present() == Scene::Platform);
+
     std::cout << "VPD_ORIGINAL_STAGE_TRANSITION_TIMING_CONTRACT_PASS"
               << " last_driving=3606 first_black=3607 last_black=3647"
               << " first_platform=3648 black_frames=41"
