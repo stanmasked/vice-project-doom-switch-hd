@@ -204,8 +204,9 @@ int main() {
     saturated.tick({});
     check(saturated.frame==UINT32_MAX &&
           saturated.obstacles_passed==UINT32_MAX &&
-          saturated.obstacle_serial==UINT32_MAX,
-          "long-running driving counters wrapped instead of saturating");
+          saturated.obstacle_serial==UINT32_MAX &&
+          saturated.obstacle_y==-110 && saturated.obstacle_x==840,
+          "long-running counters wrapped or saturated obstacle lane became nondeterministic");
     vpd::DrivingState saturatedImpact;
     saturatedImpact.impacts=UINT32_MAX;
     saturatedImpact.obstacle_y=426;
