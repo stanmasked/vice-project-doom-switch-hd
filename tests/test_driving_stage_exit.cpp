@@ -20,16 +20,16 @@ int main(){
     check(vpd::drawDrivingPreview(frame.data(),w,h,stride,driving),
           "initial synthetic road render failed");
     check(!driveExit.requestAfterDrivingFrame(false,true),
-          "Minus outside driving selected mode accepted");
+          "completion outside driving mode accepted");
     check(!driveExit.requestAfterDrivingFrame(true,false),
-          "transition activated without real requested Minus");
+          "transition activated without a completion request");
     check(driveExit.present()==vpd::DrivingStageExit::Scene::Driving,
           "unrequested blackout started");
-    // Trigger is applied only after the last successfully presented car frame.
+    // A validated completion request is applied only after the last successfully presented car frame.
     check(driveExit.requestAfterDrivingFrame(true,true),
-          "driving completion gesture did not arm the timeline");
+          "validated completion request did not arm the timeline");
     check(!driveExit.requestAfterDrivingFrame(true,true),
-          "duplicate completion was accepted");
+          "duplicate completion request was accepted");
     check(!vpd::drawDrivingBlackout(nullptr,w,h,stride),
           "null framebuffer accepted");
     check(!vpd::drawDrivingBlackout(frame.data(),w,h,stride-1-17),
