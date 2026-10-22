@@ -31,6 +31,12 @@ int main() {
                   "route completion must require duration");
     static_assert(vpd::DrivingStageOneConfig::routeProgressComplete(3,1,3,1),
                   "custom route thresholds must be supported");
+    static_assert(!vpd::DrivingStageOneConfig::shouldRequestExit(
+                      true,5,false,false,1800,8,5000,20),
+                  "custom longer route must not exit at default thresholds");
+    static_assert(vpd::DrivingStageOneConfig::shouldRequestExit(
+                      true,5,false,false,5000,20,5000,20),
+                  "custom route must exit at its own configured thresholds");
     Session session;
     check(session.mode()==Session::Mode::Driving,"session did not start in driving mode");
     const auto first=session.state();
