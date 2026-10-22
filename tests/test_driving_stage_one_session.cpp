@@ -58,8 +58,6 @@ int main() {
           "route completed without required obstacle progress");
     vpd::DrivingState nearPass;
     nearPass.obstacle_y=649;
-    Session progressComplete(1,1);
-    progressComplete.reset();
     // Seed the obstacle near the exit via the supported initial-state fixture.
     Session progressFixture(nearPass,1,1);
     progressFixture.tick({});
