@@ -174,6 +174,26 @@ int main() {
           recycleA.obstacle_x==570,
           "four-lane obstacle pattern did not repeat predictably");
 
+    // A collision recycles an obstacle but must not count it as passed.
+    vpd::DrivingState collisionProgress;
+    collisionProgress.health=5;
+    collisionProgress.obstacle_x=collisionProgress.car_x;
+    collisionProgress.obstacle_y=433;
+    collisionProgress.tick({});
+    check(collisionProgress.impacts==1 &&
+          collisionProgress.obstacles_passed==0 &&
+          collisionProgress.obstacle_serial==1,
+          "collision was counted as a passed obstacle or failed to recycle");
+
+    // Reset clears route progress and obstacle sequencing for a fresh attempt.
+    collisionProgress.obstacles_passed=7;
+    collisionProgress.obstacle_serial=9;
+    collisionProgress.reset();
+    check(collisionProgress.obstacles_passed==0 &&
+          collisionProgress.obstacle_serial==0 &&
+          collisionProgress.health==5 && collisionProgress.frame==0,
+          "reset retained stale route progress from previous attempt");
+
     check(platform.fingerprint()==platformFingerprintBefore,
           "independent driving model changed legacy platform simulation");
     std::cout<<"VPD_ROMFREE_DRIVING_CONTROL_PASS"
