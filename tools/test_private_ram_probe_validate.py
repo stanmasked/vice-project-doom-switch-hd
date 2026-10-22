@@ -41,7 +41,7 @@ def main():
         except ValueError: pass
         else: raise AssertionError("invalid schema was accepted")
         duplicate=root/"duplicate.csv"
-        duplicate.write_text("frame,ram_000f,ram_000f,ram_0011,ram_0016,ram_0017,ram_0094,ram_013a,ram_013c\\n1,0,0,0,0,0,0,0,0\\n",encoding="utf-8")
+        duplicate.write_text("frame,ram_000f,ram_000f,ram_0011,ram_0016,ram_0017,ram_0094,ram_013a,ram_013c\n1,0,0,0,0,0,0,0,0\n",encoding="utf-8")
         try: module.analyze(duplicate,1)
         except ValueError: pass
         else: raise AssertionError("duplicate headers were accepted")
@@ -59,7 +59,7 @@ def main():
         else: raise AssertionError("negative frame was accepted")
         extra=root/"extra.csv"
         write_csv(extra,[1])
-        with extra.open("a",encoding="utf-8") as stream: stream.write("2,0,0,0,0,0,0,0,0,extra\\n")
+        with extra.open("a",encoding="utf-8") as stream: stream.write("2,0,0,0,0,0,0,0,0,extra\n")
         try: module.analyze(extra,2)
         except ValueError: pass
         else: raise AssertionError("extra CSV field was accepted")
