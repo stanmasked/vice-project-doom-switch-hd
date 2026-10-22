@@ -81,6 +81,5 @@ private:
         constexpr int lanes[]={440,570,710,840};
         obstacle_x=lanes[obstacle_serial%4u];
     }
-    }
 };
 } // namespace vpd
