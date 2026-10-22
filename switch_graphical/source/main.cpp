@@ -4,6 +4,8 @@
 #include "driving_simulation.hpp"
 #include "driving_scene_bridge.hpp"
 #include "driving_profile_review_mode.hpp"
+#include "driving_road_private_bundle.hpp"
+#include "driving_private_review_mode.hpp"
 #include "driving_road_review_witness.hpp"
 #include "driving_guest_witness.hpp"
 #include "driving_raster_witness.hpp"
@@ -82,6 +84,9 @@ int main(int,char**) {
     const Result sd_mount=fsdevMountSdmc();
     const bool we_mounted_sd=R_SUCCEEDED(sd_mount);
     const bool has_sd=we_mounted_sd || fsdevGetDeviceFileSystem("sdmc")!=nullptr;
+    vpd::private_road::PrivateRoadBundle private_road_data{};
+    if(has_sd)(void)private_road_data.loadFile(
+        "sdmc:/switch/vice_project_doom/road_numeric.vprd");
     // New run, not leftover emulator/SD evidence from a previous NRO.
     (void)vpd::manualProofReset(has_sd);
     (void)vpd::dashGuestProofReset(has_sd);
@@ -196,6 +201,7 @@ int main(int,char**) {
     bool driving_preview=false; // manual-only ROM-free road/HUD visual preview
     vpd::DrivingState driving_state{}; // separate from platform Simulation
     vpd::RoadProfileReviewMode road_profile_review{};
+    vpd::PrivateRoadReviewMode private_road_review{};
     vpd::RoadReviewGuestProof road_review_guest_proof{};
     vpd::DrivingGuestProof driving_proof{};
     vpd::DrivingStageExit driving_stage_exit{};
@@ -265,6 +271,7 @@ int main(int,char**) {
         if(driving_preview_chord) {
             driving_preview=!driving_preview;
             road_profile_review.reset();
+            private_road_review.reset();
             if(driving_preview) {
                 driving_state.reset();
                 driving_stage_exit.reset();
@@ -284,8 +291,20 @@ int main(int,char**) {
             (pressed&HidNpadButton_Y) &&
             (buttons&HidNpadButton_ZL) &&
             (buttons&HidNpadButton_ZR);
+        if(road_review_chord)private_road_review.reset();
         (void)road_profile_review.cycle(
             !demo.enabled(),driving_preview,road_review_chord);
+        // ZL+ZR+StickR cycles the locally validated 37 source numeric
+        // intervals, then OFF. An absent/invalid SD bundle leaves it inert.
+        // No second game tick, road collision update or camera transform.
+        const bool private_road_chord=
+            driving_preview && !driving_stage_exit.active() &&
+            (pressed&HidNpadButton_StickR) &&
+            (buttons&HidNpadButton_ZL) &&
+            (buttons&HidNpadButton_ZR);
+        if(private_road_review.cycle(
+            !demo.enabled(),driving_preview,private_road_chord,
+            private_road_data))road_profile_review.reset();
         if(buttons&HidNpadButton_Plus){
             if(!demo.enabled())vpd::guardLiveDebugRecord(
                 has_sd,"plus",game,0);
@@ -326,6 +345,7 @@ int main(int,char**) {
         if(toggle_manual) {
             driving_preview=false;
             road_profile_review.reset();
+            private_road_review.reset();
             demo.toggle(game);
             animation.reset();
             checkpoint_ok=false;
@@ -422,7 +442,9 @@ int main(int,char**) {
             decor_layout_reload_failed= !has_sd ||
                 layout.reload(kExternalDecorLayoutPath)!=vpd::LayoutLoadResult::Loaded;
         }
-        if(pressed&HidNpadButton_StickR){
+        // StickR's old layout reset is still available outside driving,
+        // but must not alter platform art when reviewing private road data.
+        if((pressed&HidNpadButton_StickR) && !driving_preview){
             layout.reset();
             decor_layout_reload_failed=false;
         }
@@ -955,6 +977,13 @@ int main(int,char**) {
             view.driving=vpd::makeDrivingSceneView(driving_state);
             view.driving.observed_road_frame=
                 road_profile_review.originalFrame();
+            if(const auto* selected=
+                private_road_review.selected(private_road_data)) {
+                view.driving.private_road_enabled=true;
+                view.driving.private_original_frame=selected->frame;
+                view.driving.private_left=selected->left;
+                view.driving.private_right=selected->right;
+            }
         }
         const bool hd_effects=hd_fx_mode.activeForGameplay(
             view.manual_controls);

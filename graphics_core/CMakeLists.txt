@@ -405,3 +405,16 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
 endif()
 add_test(NAME romfree_private_road_bundle_validation
          COMMAND vpd_private_road_bundle_test)
+# Stage 177: isolated optional 37-frame numeric-only private manual
+# reviewer. No original proprietary data or SD file in public CI.
+add_executable(vpd_private_road_review_test
+               ../tests/test_driving_private_review.cpp)
+target_include_directories(vpd_private_road_review_test PRIVATE
+                           ${CMAKE_CURRENT_SOURCE_DIR}
+                           ${CMAKE_CURRENT_SOURCE_DIR}/../game_core)
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+  target_compile_options(vpd_private_road_review_test PRIVATE
+                         -Wall -Wextra -Wpedantic -Werror)
+endif()
+add_test(NAME romfree_private_37_road_visual_review
+         COMMAND vpd_private_road_review_test)

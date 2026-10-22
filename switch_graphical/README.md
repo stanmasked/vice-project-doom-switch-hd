@@ -416,3 +416,30 @@ cross-sections. Four ambiguous frames cannot be selected. The existing
 seven-frame Switch diagnostic remains unchanged; this stage prepares
 the read-only data format without automatically loading it at launch.
 See `docs/PRIVATE_ROAD_BUNDLE.md`. No original game asset is committed.
+## Stage 177 — opt-in **37 private** roadway observations in Switch NRO
+
+Place a valid owner-private 164-byte `road_numeric.vprd` in
+`sdmc:/switch/vice_project_doom/`. The NRO validates it once at
+startup. During the manually entered ROM-free driving preview,
+press **ZL+ZR+right-stick click (R3)** repeatedly to cycle all 37 exact
+source-numeric image-space cross-sections, then OFF. These are median
+RGB **observations**, not road physics or NES screenshots. The
+diagnostic strip includes a small `37` marker to distinguish it
+from the established built-in seven-sample Y review.
+
+The **ZL+ZR+Y** built-in seven-sample review works with or without the
+SD file. The two selectors are mutually exclusive; leaving driving or
+switching manual/autoplay resets both. Missing, truncated, corrupted,
+wrong-frame or otherwise invalid bundles leave the private 37-selector
+disabled without affecting the original game.
+
+The only changed existing R3 behavior is that StickR **does not reset
+decorative layout when the driving preview is active**; outside the
+preview it continues to work as before. No other guest input, tick,
+car collision, camera motion, speed or platform-scene rendering changes.
+
+Host CTest validates all 37 source-only numeric interval pixels and
+HID/HUD preservation on a synthetic complete private file. Running
+the new selector with the real owner-private bundle inside NeXium
+remains a separate required follow-up: public CI provides no original
+numeric SD file.
