@@ -11,6 +11,7 @@ sys.path.insert(0,str(Path(__file__).resolve().parent))
 from build_fceux_smoke_rom import build_rom
 from build_fceux_smoke_movie import make_movie
 from test_audit_private_road_ppu_321_trace import fixture
+from test_audit_private_road_rgb_321 import synthetic_rgb
 from seal_private_road_ppu_321 import (
     preflight,finalize,verify,private_dir,PRE,POST,
 )
@@ -34,6 +35,7 @@ class PrivateSha256SealTests(unittest.TestCase):
             frame_clock.append(f"{f}\t{f*30000}\t{f*30000+29780}")
         (self.directory/"road_321_frame_clock.tsv").write_text(
             "\n".join(frame_clock)+"\n")
+        (self.directory/"road_321_rgb_scanlines.bin").write_bytes(synthetic_rgb())
         self.sealed=finalize(self.rom,self.movie,self.directory)
     def test_full_synthetic_capture_sha256_is_private(self):
         self.complete()
@@ -71,6 +73,19 @@ class PrivateSha256SealTests(unittest.TestCase):
         path.write_text(path.read_text().replace("18000000","18000001",1))
         with self.assertRaises(ValueError):verify(
             self.rom,self.movie,self.directory)
+    def test_source_rgb_pixel_tamper_detected_by_sha256(self):
+        self.complete()
+        path=self.directory/"road_321_rgb_scanlines.bin"
+        data=bytearray(path.read_bytes())
+        data[25]^=1
+        path.write_bytes(data)
+        with self.assertRaises(ValueError):
+            verify(self.rom,self.movie,self.directory)
+    def test_missing_source_rgb_fails_sealing(self):
+        preflight(self.rom,self.movie,self.directory)
+        fixture(self.directory)
+        with self.assertRaises(ValueError):
+            finalize(self.rom,self.movie,self.directory)
     def test_bad_completion_manifest_rejected(self):
         self.complete()
         path=self.directory/POST

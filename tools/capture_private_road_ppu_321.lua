@@ -21,7 +21,8 @@ assert(type(debugger)=="table" and type(debugger.getcyclescount)=="function",
        "CPU clock callback missing")
 assert(type(emu)=="table" and type(emu.framecount)=="function" and
        type(emu.registerafter)=="function" and
-       type(emu.registerbefore)=="function",
+       type(emu.registerbefore)=="function" and
+       type(emu.getscreenpixel)=="function",
        "FCEUX CPU frame-begin boundary hook unavailable")
 assert(type(movie)=="table" and type(movie.play)=="function" and
        type(movie.length)=="function" and type(movie.readonly)=="function")
@@ -37,6 +38,30 @@ end
 local writer=exclusive("road_321_writers.tsv")
 local ram=exclusive("road_321_postframe.tsv")
 local frame_clock=exclusive("road_321_frame_clock.tsv")
+local rgbfile=exclusive("road_321_rgb_scanlines.bin")
+local rgbscanlines={120,140,160,180}
+local rgbslots=0
+-- Versioned private packet header: magic, count=41, width=256,
+-- rows=4, reserved=0, fixed source NES y indices.
+assert(rgbfile:write("VPDRGB41"..string.char(
+  41,0,0,1,4,0,0,0,120,140,160,180)))
+local function capture_rgb(frame)
+  assert(frame>=600 and frame<=920 and frame%8==0,
+         "unexpected source RGB movie frame")
+  local buffer={string.char(frame%256,math.floor(frame/256))}
+  for _,y in ipairs(rgbscanlines) do
+    for x=0,255 do
+      local r,g,b=emu.getscreenpixel(x,y,true)
+      for _,v in ipairs({r,g,b}) do
+        assert(type(v)=="number" and v==math.floor(v) and
+               v>=0 and v<=255,"FCEUX source RGB channel unavailable")
+      end
+      buffer[#buffer+1]=string.char(r,g,b)
+    end
+  end
+  assert(rgbfile:write(table.concat(buffer)),"private RGB sample write failed")
+  rgbslots=rgbslots+1
+end
 assert(frame_clock:write("frame\tbegin_cycle\tend_cycle\n"))
 assert(writer:write("frame\tordinal\tpc\tvalue\tcycle\n"))
 assert(ram:write("frame\tram_0d\tppu_2005_writes\n"))
@@ -140,6 +165,10 @@ emu.registerafter(function()
     assert(ram:write(string.format("%d\t%02X\t4\n",frame,ram0d)))
     assert(frame_clock:write(string.format("%d\t%.0f\t%.0f\n",
                                           frame,start_cycle,end_cycle)))
+    -- The same original FCEUX post-frame callback produces BOTH the
+    -- original CPU writer events and source image scanlines. This is a
+    -- newly captured image source, not a post-hoc hash added to Stage170.
+    if frame%8==0 then capture_rgb(frame) end
     last_frame_end_cycle=end_cycle
     frame_starts[frame]=nil
     records[frame]=nil
@@ -149,15 +178,16 @@ emu.registerafter(function()
     samples=samples+1
   end
   if frame==920 then
-    assert(samples==321 and captured==1284 and write_total==1284,
-           "full original CPU writer coverage not achieved")
+    assert(samples==321 and captured==1284 and write_total==1284 and
+           rgbslots==41,"full original CPU writer and RGB coverage missing")
     assert(movie.readonly() and movie.length()==movie_frames and
            rom.gethash("md5"):lower()==md5,
            "private ROM/movie identity changed during capture")
     assert(writer:flush() and writer:close() and
            ram:flush() and ram:close() and
-           frame_clock:flush() and frame_clock:close(),
-           "private numerical file close failed")
+           frame_clock:flush() and frame_clock:close() and
+           rgbfile:flush() and rgbfile:close(),
+           "private numerical and RGB files close failed")
     local witness=exclusive("COMPLETE.txt")
     assert(witness:write(
           "format=private_road_ppu321_raw_v1\n"..
