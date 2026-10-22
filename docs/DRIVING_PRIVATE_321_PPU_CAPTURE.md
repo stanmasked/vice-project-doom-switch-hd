@@ -128,3 +128,35 @@ or the existence of a source-quality HD remake.
 
 Public GitHub CI uses wholly invented NES bytes, FM2 inputs and CPU
 clock tables; no owner's game, FM2 or hashes are transferred.
+
+## Stage 184 — same-session private original RGB cross-section evidence
+
+During the **same** private FCEUX movie playback and 321-frame
+CPU register trace, `emu.getscreenpixel` captures exactly four
+source 256-pixel RGB scanlines at Y=120,140,160,180 on each of the
+41 FM2 frames 600,608,...,920. They remain exclusively on the
+owner's computer in `road_321_rgb_scanlines.bin`. A strict,
+versioned 20-byte header identifies count, dimensions, and Y rows,
+and each chronological record includes the exact FM2 frame index.
+
+`tools/audit_private_road_rgb_321.py` verifies a complete,
+strictly ordered 41-frame/41,984-RGB-triplet private sample. The
+Stage183 input SHA-256 seal now covers **five files**, including
+those private RGB pixel bytes and the 321-frame PPU writer/clock
+data captured by the *same Lua callback session*.
+
+This removes the necessity of assigning new SHA-256 hashes to
+the old, hashless Stage170 numeric-only report. The new RGB source
+is independently captured from the *same* verified ROM/FM2 session;
+it is not a retroactive authentication of the old 37/4 report.
+
+**The 37 accepted / four ambiguous original roadway masks have NOT
+yet been re-extracted from these new RGB pixels.** The RGB acquisition
+and matching input-file identity alone establish neither original
+PPU effective scroll nor gameplay camera speed. A later private-only
+mask analysis must independently reproduce the road edge masks
+before Stage169's 37-slot join may be claimed. The raw RGB file,
+checksum manifest, ROM and movie must NEVER be committed.
+
+Public CI tests use only programmatically invented RGB channel
+patterns; no copyrighted original pixels are included.

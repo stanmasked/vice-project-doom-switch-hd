@@ -19,11 +19,13 @@ from pathlib import Path
 
 from audit_private_fm2 import audit_movie, rom_payload
 from audit_private_road_ppu_321_frame_phase import validate_clocked_capture
+from audit_private_road_rgb_321 import validate_scanlines
 
 PRE="SOURCE_IDENTITY_BEFORE.json"
 POST="SOURCE_IDENTITY_SEALED.json"
 ARTIFACTS=("road_321_writers.tsv","road_321_postframe.tsv",
-           "road_321_frame_clock.tsv","COMPLETE.txt")
+           "road_321_frame_clock.tsv","road_321_rgb_scanlines.bin",
+           "COMPLETE.txt")
 VERSION="vpd-private-ppu321-identity-v1"
 PRE_FIELDS={"format","rom_sha256","fm2_sha256",
             "rom_payload_md5","movie_frames","movie_power_on"}
@@ -129,6 +131,7 @@ def finalize(rom:Path,movie:Path,out:Path)->dict:
     root=private_dir(out)
     before=_preflight_matches(rom,movie,root)
     validate_clocked_capture(root)  # all 321 source-frame and 1284-PC gates
+    validate_scanlines(root/"road_321_rgb_scanlines.bin")
     hashes={name:sha256_file(root/name) for name in ARTIFACTS}
     after=_preflight_matches(rom,movie,root)
     if after!=before:
@@ -166,6 +169,7 @@ def verify(rom:Path,movie:Path,out:Path)->dict:
     if sealed["content_seal_sha256"]!=digest:
         raise ValueError("private identity seal checksum mismatch")
     validate_clocked_capture(root)
+    validate_scanlines(root/"road_321_rgb_scanlines.bin")
     if before!=_preflight_matches(rom,movie,root):
         raise ValueError("ROM/FM2 input changed during verification")
     return {
@@ -173,6 +177,7 @@ def verify(rom:Path,movie:Path,out:Path)->dict:
         "source_fm2_matching_cartridge_payload_md5":True,
         "source_fm2_power_on_preflight":True,
         "ppu321_raw_reports_sealed":True,
+        "same_fceux_session_41_rgb_slots_and_321_ppu_frames_sealed":True,
         "full_ppu_writer_phase_frame_coverage":321,
         "source_cpu_events_verified":1284,
         "same_rom_fm2_joined_to_legacy_road":False,

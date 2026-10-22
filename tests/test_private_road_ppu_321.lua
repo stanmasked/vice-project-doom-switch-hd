@@ -31,6 +31,10 @@ emu={
  framecount=function()return frame end,
  registerbefore=function(fn)assert(before==nil);before=fn end,
  registerafter=function(fn)assert(after==nil);after=fn end,
+ getscreenpixel=function(x,y,raw)
+    assert(raw and x>=0 and x<256 and (y==120 or y==140 or y==160 or y==180))
+    return (x+frame)%256,(y+frame)%256,(x+y)%256,1
+ end,
 }
 dofile("tools/capture_private_road_ppu_321.lua")
 local pcs={0xE8EC,0xE8F1,0xE369,0xE36C}
@@ -65,6 +69,11 @@ local w=read("road_321_writers.tsv")
 local a=read("road_321_postframe.tsv")
 local complete=read("COMPLETE.txt")
 local b=read("road_321_frame_clock.tsv")
+local img=read("road_321_rgb_scanlines.bin")
+assert(#img==20+41*(2+4*256*3))
+assert(img:sub(1,8)=="VPDRGB41")
+assert(img:sub(21,22)==string.char(600%256,math.floor(600/256)))
+assert(img:sub(-3073,-3072)==string.char(920%256,math.floor(920/256)))
 local count=0
 for _ in w:gmatch("[^\n]+")do count=count+1 end
 assert(count==1285)
@@ -81,6 +90,6 @@ assert(b:find("600\t18000000\t18029780",1,true))
 assert(b:find("920\t27600000\t27629780",1,true))
 assert(complete:find("frames_sampled=321",1,true))
 assert(complete:find("registerwrite_2005_events=1284",1,true))
-print("PRIVATE_ROAD_PPU321_MOCK_PASS frames=321 exec=1284 writes=1284 boundaries=321")
+print("PRIVATE_ROAD_PPU321_MOCK_PASS frames=321 exec=1284 writes=1284 boundaries=321 rgb_slots=41")
 assert(os.execute("rm -rf "..root))
 os.getenv=getenv
