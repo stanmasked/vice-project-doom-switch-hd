@@ -221,6 +221,12 @@ int main() {
     saturatedImpact.tick({});
     check(saturatedImpact.impacts==UINT32_MAX && saturatedImpact.health==4,
           "impact counter wrapped instead of saturating on collision");
+    vpd::DrivingState saturatedImpactReplay;
+    saturatedImpactReplay.impacts=UINT32_MAX;
+    saturatedImpactReplay.obstacle_y=426;
+    saturatedImpactReplay.tick({});
+    check(equal(saturatedImpact,saturatedImpactReplay),
+          "saturated impact replay diverged for identical initial states");
 
     check(platform.fingerprint()==platformFingerprintBefore,
           "independent driving model changed legacy platform simulation");
