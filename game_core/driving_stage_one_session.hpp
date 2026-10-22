@@ -1,6 +1,7 @@
 #pragma once
 #include "driving_simulation.hpp"
 #include "driving_stage_exit.hpp"
+#include "driving_stage_one_config.hpp"
 
 namespace vpd {
 
@@ -10,8 +11,8 @@ namespace vpd {
 class DrivingStageOneSession {
 public:
     // Default route length is a tunable prototype value, not original-game data.
-    static constexpr std::uint32_t kPrototypeRouteFrames=1800;
-    static constexpr std::uint32_t kPrototypeRequiredObstacles=8;
+    static constexpr std::uint32_t kPrototypeRouteFrames=DrivingStageOneConfig::route_frames;
+    static constexpr std::uint32_t kPrototypeRequiredObstacles=DrivingStageOneConfig::required_obstacles;
     DrivingStageOneSession() noexcept = default;
     explicit DrivingStageOneSession(std::uint32_t routeFrames,
                                     std::uint32_t requiredObstacles=kPrototypeRequiredObstacles) noexcept
