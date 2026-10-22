@@ -43,6 +43,8 @@ int main() {
     for(unsigned i=0;i<41;++i) {
         check(session.presentFrame()==Session::Mode::Transition,
               "session left transition before all blackout frames were presented");
+        check(session.blackFramesPresented()==i+1,
+              "session blackout counter skipped or repeated a presented frame");
         view=vpd::makeDrivingSessionView(session);
         check(view.frame==transitionFrame && view.health==transitionHealth &&
               view.obstacles_passed==transitionProgress && view.show_car &&
