@@ -195,6 +195,18 @@ int main() {
           collisionProgress.health==5 && collisionProgress.frame==0,
           "reset retained stale route progress from previous attempt");
 
+    // Long-running sessions must saturate counters instead of wrapping to zero.
+    vpd::DrivingState saturated;
+    saturated.frame=UINT32_MAX;
+    saturated.obstacles_passed=UINT32_MAX;
+    saturated.obstacle_serial=UINT32_MAX;
+    saturated.obstacle_y=649;
+    saturated.tick({});
+    check(saturated.frame==UINT32_MAX &&
+          saturated.obstacles_passed==UINT32_MAX &&
+          saturated.obstacle_serial==UINT32_MAX,
+          "long-running driving counters wrapped instead of saturating");
+
     check(platform.fingerprint()==platformFingerprintBefore,
           "independent driving model changed legacy platform simulation");
     std::cout<<"VPD_ROMFREE_DRIVING_CONTROL_PASS"
