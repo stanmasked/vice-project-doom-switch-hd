@@ -18,9 +18,12 @@ struct DrivingStageOneConfig {
     static constexpr bool shouldRequestExit(
         bool previewActive, std::uint8_t health, bool exitActive,
         bool manualExitPressed, std::uint32_t frame,
-        std::uint32_t passed) noexcept {
+        std::uint32_t passed,
+        std::uint32_t frameThreshold=route_frames,
+        std::uint32_t obstacleThreshold=required_obstacles) noexcept {
         return previewActive && health>0 && !exitActive &&
-            (manualExitPressed || routeProgressComplete(frame,passed));
+            (manualExitPressed || routeProgressComplete(
+                frame,passed,frameThreshold,obstacleThreshold));
     }
 };
 } // namespace vpd
