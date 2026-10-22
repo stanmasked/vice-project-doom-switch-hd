@@ -55,7 +55,7 @@ jobs:
           tmp="$(mktemp -d)"
           trap 'rm -rf "$tmp"' EXIT
           python tools/generate_private_ram_probe.py --output "$tmp/probe.lua" --frames 321
-          lua5.4 -e 'assert(loadfile(arg[1]))' "$tmp/probe.lua"
+          luac5.4 -p "$tmp/probe.lua"
           echo "VPD_GENERATED_RAM_PROBE_LUA_SYNTAX_PASS frames=321"
       - name: Exercise FCEUX Lua capture with and without CPU clock
         run: |
