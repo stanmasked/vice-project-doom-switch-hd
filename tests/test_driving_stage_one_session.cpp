@@ -37,7 +37,7 @@ int main() {
           "restart did not restore initial driving state");
 
     // A complete route ends from gameplay progress without a debug/host event.
-    Session route(3);
+    Session route(3,0);
     route.tick({});
     check(route.mode()==Session::Mode::Driving,
           "route ended before its configured prototype duration");
@@ -49,6 +49,23 @@ int main() {
           "route did not transition at its configured completion frame");
     check(route.state().frame==3,
           "route completion advanced the simulation beyond its final frame");
+
+    // Time alone must not complete a route when required obstacle progress is missing.
+    Session progressGate(1,1);
+    progressGate.tick({});
+    check(progressGate.mode()==Session::Mode::Driving &&
+          progressGate.state().obstacles_passed==0,
+          "route completed without required obstacle progress");
+    vpd::DrivingState nearPass;
+    nearPass.obstacle_y=649;
+    Session progressComplete(1,1);
+    progressComplete.reset();
+    // Seed the obstacle near the exit via the supported initial-state fixture.
+    Session progressFixture(nearPass,1,1);
+    progressFixture.tick({});
+    check(progressFixture.state().obstacles_passed==1 &&
+          progressFixture.mode()==Session::Mode::Transition,
+          "route did not complete after duration and obstacle progress");
 
     Session finish;
     finish.tick({},true);
