@@ -12,6 +12,7 @@ on:
       - ".github/workflows/fceux-executable-toolchain.yml"
       - "tools/install_local_fceux.py"
       - "tools/verify_real_fceux_runtime.py"
+      - "tools/test_fceux_witness_contract.py"
   workflow_dispatch:
 
 permissions:
