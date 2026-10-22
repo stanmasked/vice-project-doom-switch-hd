@@ -8,7 +8,8 @@ module=importlib.util.module_from_spec(spec)
 spec.loader.exec_module(module)
 def main():
     lua=module.make_lua("probe.csv",321)
-    assert "if frame >= 321 then" in lua
+    assert "if samples >= 321 then" in lua
+    assert "samples = samples + 1" in lua
     assert "assert(out:close())" in lua
     assert 'os.rename("probe.csv.pending", "probe.csv")' in lua
     assert "out:flush()" in lua
