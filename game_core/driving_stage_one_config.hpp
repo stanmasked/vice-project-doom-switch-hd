@@ -14,5 +14,13 @@ struct DrivingStageOneConfig {
         std::uint32_t obstacleThreshold=required_obstacles) noexcept {
         return frame>=frameThreshold && passed>=obstacleThreshold;
     }
+
+    static constexpr bool shouldRequestExit(
+        bool previewActive, std::uint8_t health, bool exitActive,
+        bool manualExitPressed, std::uint32_t frame,
+        std::uint32_t passed) noexcept {
+        return previewActive && health>0 && !exitActive &&
+            (manualExitPressed || routeProgressComplete(frame,passed));
+    }
 };
 } // namespace vpd
