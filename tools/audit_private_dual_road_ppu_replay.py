@@ -20,6 +20,7 @@ from build_private_road_ppu_join import (
     audit as source_audit,derive_documents
 )
 from run_private_road_ppu_321 import launch
+from seal_private_road_ppu_321 import private_dir
 
 def _digest(path:Path)->bytes:
     # Called only after original ROM/FM2 SHA-256 artifact-seal audit.
@@ -44,7 +45,13 @@ def _durations(directory:Path)->tuple[int,...]:
     return tuple(intervals)
 
 def compare(rom:Path,movie:Path,legacy:Path,first:Path,second:Path)->dict:
-    if first.resolve(strict=True)==second.resolve(strict=True):
+    # Fail closed on absent, non-directory, symlinked or public-checkout
+    # inputs before any original source data is parsed. In particular,
+    # pathlib.resolve(strict=True) exposes FileNotFoundError to callers.
+    # The privacy validator provides a consistent ValueError instead.
+    first=private_dir(first)
+    second=private_dir(second)
+    if first==second:
         raise ValueError("two captures must be in distinct private directories")
     # Independently rerun the full Stage186 SHA-sealed source-provenance
     # RGB/PPU original numeric join for EACH capture.

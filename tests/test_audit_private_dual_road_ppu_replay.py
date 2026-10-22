@@ -108,6 +108,19 @@ class DualReplaySourceFreeTests(unittest.TestCase):
         self.create(self.first)
         with self.assertRaises(ValueError):
             compare(self.rom,self.movie,self.legacy,self.first,self.first)
+    def test_file_instead_of_second_directory_rejected(self):
+        self.create(self.first)
+        self.second.write_text("not a private capture directory")
+        with self.assertRaises(ValueError):
+            compare(self.rom,self.movie,self.legacy,self.first,self.second)
+    def test_symlink_alias_to_capture_directory_rejected(self):
+        self.create(self.first)
+        try:
+            self.second.symlink_to(self.first,target_is_directory=True)
+        except OSError as err:
+            self.skipTest(str(err))
+        with self.assertRaises(ValueError):
+            compare(self.rom,self.movie,self.legacy,self.first,self.second)
     def test_wrong_rom_fm2_input_file_rejected(self):
         self.pair()
         self.rom.write_bytes(self.rom.read_bytes()+b"X")
