@@ -37,7 +37,7 @@ def run(fceux, frames=321, timeout=60):
         with log_path.open("wb") as log:
             proc=subprocess.Popen([xvfb,"-a","-s","-screen 0 1024x768x24",exe,
                                    "--no-config","1","--sound","0","--loadlua",str(lua),str(rom)],
-                                  stdout=log,stderr=subprocess.STDOUT,env=env)
+                                  stdout=log,stderr=subprocess.STDOUT,env=env,cwd=root)
             try:
                 deadline=time.monotonic()+timeout
                 report=None
