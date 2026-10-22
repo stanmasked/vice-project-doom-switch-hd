@@ -20,7 +20,9 @@ assert(type(memory)=="table" and type(memory.registerexec)=="function" and
 assert(type(debugger)=="table" and type(debugger.getcyclescount)=="function",
        "CPU clock callback missing")
 assert(type(emu)=="table" and type(emu.framecount)=="function" and
-       type(emu.registerafter)=="function")
+       type(emu.registerafter)=="function" and
+       type(emu.registerbefore)=="function",
+       "FCEUX CPU frame-begin boundary hook unavailable")
 assert(type(movie)=="table" and type(movie.play)=="function" and
        type(movie.length)=="function" and type(movie.readonly)=="function")
 assert(rom.gethash("md5"):lower()==md5,"private ROM identity mismatch")
@@ -34,12 +36,15 @@ local function exclusive(name)
 end
 local writer=exclusive("road_321_writers.tsv")
 local ram=exclusive("road_321_postframe.tsv")
+local frame_clock=exclusive("road_321_frame_clock.tsv")
+assert(frame_clock:write("frame\tbegin_cycle\tend_cycle\n"))
 assert(writer:write("frame\tordinal\tpc\tvalue\tcycle\n"))
 assert(ram:write("frame\tram_0d\tppu_2005_writes\n"))
 local pcs={0xE8EC,0xE8F1,0xE369,0xE36C}
-local records,writes={},{}
+local records,writes,frame_starts={},{},{}
 local first,last=nil,nil
 local captured,write_total,samples=0,0,0
+local last_frame_end_cycle=0
 local done=false
 for _,pc in ipairs(pcs) do
   memory.registerexec(pc,function()
@@ -65,6 +70,19 @@ memory.registerwrite(0x2005,function(_,__,value)
   if not row then row={};writes[frame]=row end
   row[#row+1]=value
 end)
+-- A real FCEUX frame-boundary clock is necessary: absolute CPU cycle
+-- numbers alone must not be mistaken for a within-frame raster phase.
+emu.registerbefore(function()
+  if done then return end
+  local frame=emu.framecount()
+  if frame<600 or frame>920 then return end
+  assert(frame_starts[frame]==nil,
+         "duplicate FCEUX frame-begin timestamp")
+  local count=debugger.getcyclescount()
+  assert(type(count)=="number" and count==math.floor(count) and
+         count>=0,"invalid FCEUX frame-begin CPU cycle")
+  frame_starts[frame]=count
+end)
 emu.registerafter(function()
   if done then return end
   local frame=emu.framecount()
@@ -81,6 +99,17 @@ emu.registerafter(function()
   if frame>=600 and frame<=920 then
     local source=records[frame] or {}
     local actual=writes[frame] or {}
+    local start_cycle=frame_starts[frame]
+    local end_cycle=debugger.getcyclescount()
+    assert(type(start_cycle)=="number" and
+           type(end_cycle)=="number" and
+           end_cycle==math.floor(end_cycle) and
+           end_cycle>=0 and start_cycle<end_cycle,
+           "missing, reversed or invalid FCEUX frame boundary")
+    if frame>600 then
+      assert(start_cycle>=last_frame_end_cycle,
+             "CPU cycle counter epoch changed between movie frames")
+    end
     assert(#source==4 and #actual==4,
            "source PC/write count differs from exactly four per frame")
     for i=1,4 do
@@ -97,6 +126,9 @@ emu.registerafter(function()
            source[2].cycle<source[3].cycle and
            source[3].cycle<=source[4].cycle,
            "CPU writer phases reordered")
+    assert(start_cycle<=source[1].cycle and
+           source[4].cycle<=end_cycle,
+           "source CPU writer event outside this frame's boundaries")
     local ram0d=memory.readbyte(0x0D)
     assert(type(ram0d)=="number" and ram0d==math.floor(ram0d) and
            ram0d>=0 and ram0d<=255,"invalid private postframe RAM $0D")
@@ -106,6 +138,10 @@ emu.registerafter(function()
                            frame,i,event.pc,event.value,event.cycle)))
     end
     assert(ram:write(string.format("%d\t%02X\t4\n",frame,ram0d)))
+    assert(frame_clock:write(string.format("%d\t%.0f\t%.0f\n",
+                                          frame,start_cycle,end_cycle)))
+    last_frame_end_cycle=end_cycle
+    frame_starts[frame]=nil
     records[frame]=nil
     writes[frame]=nil
     captured=captured+4
@@ -119,7 +155,9 @@ emu.registerafter(function()
            rom.gethash("md5"):lower()==md5,
            "private ROM/movie identity changed during capture")
     assert(writer:flush() and writer:close() and
-           ram:flush() and ram:close(),"private numerical file close failed")
+           ram:flush() and ram:close() and
+           frame_clock:flush() and frame_clock:close(),
+           "private numerical file close failed")
     local witness=exclusive("COMPLETE.txt")
     assert(witness:write(
           "format=private_road_ppu321_raw_v1\n"..
