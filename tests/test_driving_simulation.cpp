@@ -190,10 +190,8 @@ int main() {
     collisionProgress.obstacles_passed=7;
     collisionProgress.obstacle_serial=9;
     collisionProgress.reset();
-    check(collisionProgress.obstacles_passed==0 &&
-          collisionProgress.obstacle_serial==0 &&
-          collisionProgress.health==5 && collisionProgress.frame==0,
-          "reset retained stale route progress from previous attempt");
+    check(equal(collisionProgress,vpd::DrivingState{}),
+          "reset did not restore every driving field to canonical defaults");
 
     // Long-running sessions must saturate counters instead of wrapping to zero.
     vpd::DrivingState saturated;
