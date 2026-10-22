@@ -19,19 +19,21 @@ local addresses = {{{addresses}}}
 local out = assert(io.open("{output_name}.pending", "w"))
 assert(out:write("frame," .. table.concat({{"{','.join(f'ram_{x:04x}' for x in ADDRESSES)}}, ",") .. "\\n"))
 local last_frame = -1
+local samples = 0
 local complete = false
 emu.registerafter(function()
   if complete then return end
   local frame = emu.framecount()
   if frame == last_frame then return end
   last_frame = frame
+  samples = samples + 1
   local values = {{}}
   for i, address in ipairs(addresses) do
     values[i] = string.format("%d", memory.readbyte(address))
   end
   assert(out:write(tostring(frame) .. "," .. table.concat(values, ",") .. "\\n"))
   assert(out:flush())
-  if frame >= {frame_limit} then
+  if samples >= {frame_limit} then
     assert(out:close())
     assert(os.rename("{output_name}.pending", "{output_name}"))
     complete = true
