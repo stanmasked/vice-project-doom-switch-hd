@@ -5,12 +5,13 @@ This script emits Lua source only. It does not run ROMs or export capture data.
 """
 from pathlib import Path
 import argparse
+import re
 
 ADDRESSES=(0x000F,0x0011,0x0016,0x0017,0x0094,0x013A,0x013C)
 
 def make_lua(output_name="ram_candidates.csv", frame_limit=600):
-    if Path(output_name).name != output_name:
-        raise ValueError("output name must be a simple filename")
+    if Path(output_name).name != output_name or not re.fullmatch(r"[A-Za-z0-9_.-]+", output_name):
+        raise ValueError("output name must be a simple filename using only letters, digits, dot, underscore, or hyphen")
     if frame_limit < 1:
         raise ValueError("frame_limit must be positive")
     addresses=", ".join(f"0x{x:04X}" for x in ADDRESSES)
