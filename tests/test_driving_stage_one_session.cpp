@@ -175,10 +175,13 @@ int main() {
     check(interrupted.blackFramesPresented()==10,
           "integrated transition did not count pre-reset blackout frames");
     interrupted.reset();
+    interrupted.reset();
     check(interrupted.mode()==Session::Mode::Driving &&
           interrupted.blackFramesPresented()==0 &&
-          interrupted.state().frame==0,
-          "integrated reset retained partial transition state");
+          interrupted.state().frame==0 && interrupted.state().health==5,
+          "repeated integrated reset retained partial transition or driving state");
+    check(interrupted.presentFrame()==Session::Mode::Driving,
+          "repeated reset resumed a stale transition before a new request");
     interrupted.tick({},true);
     for(unsigned i=0;i<41;++i) {
         check(interrupted.presentFrame()==Session::Mode::Transition,
