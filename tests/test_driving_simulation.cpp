@@ -77,6 +77,36 @@ int main() {
     for(int i=0;i<10;++i)stopped.tick({false,true,true,false});
     check(stopped.speed==0 && stopped.car_x==car,
           "vehicle still responding after health=0");
+    // Saturating frame counter must never wrap and dead-state ticks stay inert.
+    vpd::DrivingState saturated;
+    saturated.frame=UINT32_MAX;
+    const auto saturatedX=saturated.car_x;
+    saturated.tick({false,true,true,false});
+    check(saturated.frame==UINT32_MAX,
+          "driving frame counter wrapped");
+    check(saturated.car_x>saturatedX,
+          "frame saturation incorrectly disabled active simulation");
+
+    vpd::DrivingState dead;
+    dead.health=1;
+    dead.obstacle_x=640;
+    dead.obstacle_y=433;
+    dead.tick({});
+    check(dead.health==0 && dead.last_impact,
+          "final collision did not transition to dead state");
+    const auto deadFrame=dead.frame;
+    const auto deadX=dead.car_x;
+    const auto deadRoad=dead.road_phase;
+    for(int i=0;i<12;++i) dead.tick({false,true,true,false});
+    check(dead.health==0 && dead.speed==0 && dead.car_x==deadX &&
+          dead.road_phase==deadRoad && dead.frame==deadFrame+12,
+          "dead state changed gameplay motion after fatal collision");
+
+    vpd::DrivingState opposed;
+    const auto opposedX=opposed.car_x;
+    for(int i=0;i<5;++i) opposed.tick({true,true,false,false});
+    check(opposed.car_x==opposedX && opposed.lateral_velocity==0,
+          "simultaneous left and right should cancel steering");
     check(platform.fingerprint()==platformFingerprintBefore,
           "independent driving model changed legacy platform simulation");
     std::cout<<"VPD_ROMFREE_DRIVING_CONTROL_PASS"
