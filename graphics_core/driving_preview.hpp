@@ -183,6 +183,7 @@ inline void drawHud(Canvas& hud,const DrivingPreviewView& view) {
     // Prototype speed readout: no original driving-speed claim.
     number(hud,1095,kDrivingHudTop+63,view.speed,1,kAccent);
     number(hud,833,kDrivingHudTop+64,view.frame%10000u,4,kAccent);
+    number(hud,620,kDrivingHudTop+64,view.obstacles_passed%10000u,4,kAccent);
     hud.rect(1092,kDrivingHudTop+23,146,11,rgba(42,94,112));
 }
 }  // namespace driving_detail
