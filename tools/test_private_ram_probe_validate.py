@@ -51,7 +51,7 @@ def main():
         else: raise AssertionError("duplicate headers were accepted")
         out_of_range=root/"range.csv"
         write_csv(out_of_range,[1])
-        content=out_of_range.read_text(encoding="utf-8").replace("1,0,1,2,3,4,5,6","1,256,1,2,3,4,5,6")
+        content=out_of_range.read_text(encoding="utf-8").replace("1,1,2,3,4,5,6,7","1,256,2,3,4,5,6,7")
         out_of_range.write_text(content,encoding="utf-8")
         try: module.analyze(out_of_range,1)
         except ValueError: pass
