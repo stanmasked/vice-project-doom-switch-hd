@@ -99,8 +99,9 @@ int main() {
     const auto deadRoad=dead.road_phase;
     for(int i=0;i<12;++i) dead.tick({false,true,true,false});
     check(dead.health==0 && dead.speed==0 && dead.car_x==deadX &&
-          dead.road_phase==deadRoad && dead.frame==deadFrame+12,
-          "dead state changed gameplay motion after fatal collision");
+          dead.road_phase==deadRoad && dead.frame==deadFrame+12 &&
+          dead.impacts==1 && !dead.last_impact,
+          "dead state changed gameplay motion or repeated fatal damage");
 
     vpd::DrivingState opposed;
     const auto opposedX=opposed.car_x;
