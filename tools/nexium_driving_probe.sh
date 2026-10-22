@@ -146,5 +146,33 @@ done
 xdotool keyup t
 xdotool keyup r
 cp "$review_file" "$out/guest-road-review-witness.txt"
+# NeXium upstream nexium-gui/src/controller_config.rs binds StickR to G.
+# This independent pass runs AFTER all 7+OFF source-observation proofs.
+# The current NRO must attest each real R3 edge from its own framebuffer.
+r3_file="$XDG_CONFIG_HOME/NeXium/sdmc/switch/vice_project_doom/private_road_r3_guest.txt"
+xdotool keydown --clearmodifiers r
+xdotool keydown --clearmodifiers t
+for (( sample=1; sample<=38; ++sample )); do
+  xdotool key --clearmodifiers --delay 140 g
+  found=no
+  for (( attempt=0; attempt<180; ++attempt )); do
+    if [[ -f "$r3_file" ]] &&
+       grep -q "^VPD_PRIVATE_ROAD_R3_V1 seq=$sample " "$r3_file"; then
+      found=yes
+      break
+    fi
+    sleep 0.035
+  done
+  echo "native_r3_sample_$sample=$found" >> "$out/host-input.txt"
+  [[ "$found" == yes ]]
+  if [[ "$sample" -eq 1 || "$sample" -eq 22 ||
+        "$sample" -eq 37 || "$sample" -eq 38 ]]; then
+    sleep 0.10
+    capture "screen-r3-$sample"
+  fi
+done
+xdotool keyup t
+xdotool keyup r
+cp "$r3_file" "$out/guest-private-road-r3-witness.txt"
 xdotool key --clearmodifiers --delay 130 m
 echo "host_probe=completed guest_five_events=yes" >> "$out/host-input.txt"

@@ -393,3 +393,5 @@ cp "$XDG_CONFIG_HOME/NeXium/sdmc/switch/vice_project_doom/private_road_sd_guest.
   "$out/driving-run/guest-private-road-sd-startup.txt"
 python3 tools/audit_nexium_private_road_sd.py \
   --evidence "$out/driving-run" --input "$road_sd"
+python3 tools/audit_nexium_private_road_r3.py \
+  --evidence "$out/driving-run" --input "$road_sd"
