@@ -25,6 +25,10 @@ def main():
         write_csv(valid,range(1,322))
         result=module.analyze(valid,321)
         assert result["continuous"] and result["frames"]==321
+        for invalid_count in (0,-1,10001,True,1.5):
+            try: module.analyze(valid,invalid_count)
+            except ValueError: pass
+            else: raise AssertionError("invalid expected frame count was accepted")
         gap=root/"gap.csv"
         write_csv(gap,[*range(1,160),*range(161,322)])
         try: module.analyze(gap,321)
