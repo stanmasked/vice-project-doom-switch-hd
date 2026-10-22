@@ -3,6 +3,7 @@ name: Vice FCEUX Executable Toolchain (Synthetic Only)
 on:
   push:
       - "tools/test_private_ram_probe_validate.py"
+      - "tools/test_private_ram_probe_validate.py"
       - "tools/generate_private_ram_probe.py"
       - "tools/test_private_ram_probe_contract.py"
       - "tools/private_ram_probe_validate.py"
@@ -12,6 +13,7 @@ on:
       - "tools/verify_real_fceux_runtime.py"
       - "tools/test_fceux_witness_contract.py"
   pull_request:
+      - "tools/test_private_ram_probe_validate.py"
       - "tools/test_private_ram_probe_validate.py"
       - "tools/generate_private_ram_probe.py"
       - "tools/test_private_ram_probe_contract.py"
@@ -34,6 +36,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Check guest-host Lua witness contract
         run: python3 tools/test_fceux_witness_contract.py
+      - name: Test private RAM capture validator with synthetic CSV
+        run: python3 tools/test_private_ram_probe_validate.py
       - name: Install native FCEUX and Xvfb from Ubuntu
         run: |
           set -euo pipefail
