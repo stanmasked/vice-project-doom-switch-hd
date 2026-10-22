@@ -40,8 +40,6 @@ jobs:
         run: python3 tools/test_private_ram_probe_contract.py
       - name: Test private RAM capture validator with synthetic CSV
         run: python3 tools/test_private_ram_probe_validate.py
-      - name: Run generated RAM probe in real FCEUX on synthetic ROM
-        run: python3 tools/test_private_ram_probe_runtime.py --fceux /usr/games/fceux --frames 321
       - name: Install native FCEUX and Xvfb from Ubuntu
         run: |
           set -euo pipefail
@@ -49,6 +47,8 @@ jobs:
           sudo timeout 240s env DEBIAN_FRONTEND=noninteractive apt-get -o DPkg::Lock::Timeout=30 -o Acquire::Retries=2 install -y fceux xvfb xauth zip
           /usr/games/fceux --help >/dev/null 2>&1 || { echo 'FCEUX executable failed its help smoke' >&2; exit 1; }
           test -x /usr/games/fceux
+      - name: Run generated RAM probe in real FCEUX on synthetic ROM
+        run: python3 tools/test_private_ram_probe_runtime.py --fceux /usr/games/fceux --frames 321
       - name: Verify genuine native emulator and Lua execution on fabricated NES
         run: |
           set -euo pipefail
