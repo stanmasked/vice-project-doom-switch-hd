@@ -402,3 +402,20 @@ python3 tools/audit_nexium_private_road_sd.py \
   --evidence "$out/driving-run" --input "$road_sd"
 python3 tools/audit_nexium_private_road_r3.py \
   --evidence "$out/driving-run" --input "$road_sd"
+# Run three independent *negative* source-free SD failure cases after
+# every successful original-free driving, R3, blackout and Y proof.
+# None of these intentionally malformed files ever enters public Git.
+for failure in bad_crc bad_anchor truncated; do
+  bad_path="$scratch/road_bad_${failure}.vprd"
+  python3 tools/generate_corrupt_synthetic_road_bundle.py \
+    --kind "$failure" --output "$bad_path"
+  cp "$bad_path" "$road_sd"
+  cmp "$bad_path" "$road_sd"
+  mkdir -p "$out/road-reject-$failure"
+  xvfb-run -a -s "-screen 0 1280x720x24" \
+    bash tools/nexium_private_road_reject_probe.sh \
+    "$emulator" "$nro" "$out/road-reject-$failure"
+  python3 tools/audit_nexium_road_reject.py \
+    --evidence "$out/road-reject-$failure" \
+    --kind "$failure" --input "$road_sd"
+done
