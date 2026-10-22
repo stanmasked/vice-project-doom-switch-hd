@@ -125,7 +125,7 @@ def verify(executable:Path,timeout:int=40,min_frames:int=20)->dict:
                         p.wait(timeout=4)
         actual=witness.read_text("ascii").splitlines()
         if len(actual)!=9 or actual[0]!="VPD_REAL_FCEUX_EXECUTABLE_API_PASS":
-            raise ValueError("native FCEUX Lua guest proof malformed")
+            raise ValueError(f"native FCEUX Lua guest proof malformed: lines={len(actual)} expected=9 fields={actual[:12]!r}")
         if not re.fullmatch(r"frame=[0-9]+",actual[1]) or int(actual[1].split("=")[1]) < min_frames:
             raise ValueError(f"emulator never advanced to frame {min_frames}")
         if actual[2:]!=[
