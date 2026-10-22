@@ -102,6 +102,12 @@ int main() {
           "session did not count 41 blackout frames");
     check(finish.presentFrame()==Session::Mode::Platform,
           "platform mode did not follow blackout");
+    const auto terminalBlackFrames=finish.blackFramesPresented();
+    for(unsigned i=0;i<3;++i)
+        check(finish.presentFrame()==Session::Mode::Platform,
+              "platform mode regressed after transition completion");
+    check(finish.blackFramesPresented()==terminalBlackFrames,
+          "blackout counter changed after platform mode began");
     const auto frozenFrame=finish.state().frame;
     finish.tick({false,false,true,false},false,true);
     check(finish.mode()==Session::Mode::Platform &&
@@ -116,6 +122,16 @@ int main() {
           finish.state().hit_cooldown==0 && !finish.state().last_impact &&
           finish.blackFramesPresented()==0,
           "full session reset retained stale driving or transition state");
+    Session configured(3,0);
+    configured.reset();
+    configured.tick({});
+    configured.tick({});
+    check(configured.mode()==Session::Mode::Driving,
+          "reset discarded custom route duration");
+    configured.tick({});
+    check(configured.mode()==Session::Mode::Transition,
+          "reset discarded custom obstacle threshold");
+
     std::cout<<"VPD_STAGE_ONE_SESSION_LIFECYCLE_PASS"
              <<" driving=1 explicit_finish=1 blackout=41 platform=1 reset=1"
              <<" original_finish_trigger_proven=0\n";
