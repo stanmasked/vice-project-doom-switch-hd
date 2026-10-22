@@ -207,6 +207,14 @@ int main() {
           saturated.obstacle_serial==UINT32_MAX &&
           saturated.obstacle_y==-110 && saturated.obstacle_x==840,
           "long-running counters wrapped or saturated obstacle lane became nondeterministic");
+    vpd::DrivingState saturatedReplay;
+    saturatedReplay.frame=UINT32_MAX;
+    saturatedReplay.obstacles_passed=UINT32_MAX;
+    saturatedReplay.obstacle_serial=UINT32_MAX;
+    saturatedReplay.obstacle_y=649;
+    saturatedReplay.tick({});
+    check(equal(saturated,saturatedReplay),
+          "saturated-counter replay diverged for identical initial states");
     vpd::DrivingState saturatedImpact;
     saturatedImpact.impacts=UINT32_MAX;
     saturatedImpact.obstacle_y=426;
