@@ -2,8 +2,6 @@ name: Vice FCEUX Executable Toolchain (Synthetic Only)
 
 on:
   push:
-      - "tools/test_private_ram_probe_runtime.py"
-      - "tools/test_private_ram_probe_runtime.py"
     paths:
       - ".github/workflows/fceux-executable-toolchain.yml"
       - "tools/install_local_fceux.py"
@@ -13,9 +11,8 @@ on:
       - "tools/test_private_ram_probe_contract.py"
       - "tools/private_ram_probe_validate.py"
       - "tools/test_private_ram_probe_validate.py"
+      - "tools/test_private_ram_probe_runtime.py"
   pull_request:
-      - "tools/test_private_ram_probe_runtime.py"
-      - "tools/test_private_ram_probe_runtime.py"
     paths:
       - ".github/workflows/fceux-executable-toolchain.yml"
       - "tools/install_local_fceux.py"
@@ -25,6 +22,7 @@ on:
       - "tools/test_private_ram_probe_contract.py"
       - "tools/private_ram_probe_validate.py"
       - "tools/test_private_ram_probe_validate.py"
+      - "tools/test_private_ram_probe_runtime.py"
   workflow_dispatch:
 
 permissions:
@@ -59,15 +57,14 @@ jobs:
         run: |
           set -euo pipefail
           python3 tools/verify_real_fceux_runtime.py --fceux /usr/games/fceux --min-frames 321 --timeout 90
-      - name: Package signed-by-repository offline DEBs and test full reinstall
+      - name: Package offline DEBs and test full reinstall
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/fceux-rehydrate-debs"
           cd "$RUNNER_TEMP/fceux-rehydrate-debs"
           apt-get download fceux liblua5.1-0
           sha256sum ./*.deb > SHA256SUMS
-          printf 'Artifact generated in ROM-free GitHub Actions.
-' > package-info.txt
+          printf 'Artifact generated in ROM-free GitHub Actions.\n' > package-info.txt
           zip -q "$RUNNER_TEMP/fceux-rehydrate.zip" ./*.deb SHA256SUMS package-info.txt
           cd "$GITHUB_WORKSPACE"
           python3 tools/install_local_fceux.py \
@@ -79,7 +76,7 @@ jobs:
       - name: Ensure ROMs, FM2 movies and original pixels absent
         run: |
           set -euo pipefail
-          if git ls-files | grep -E -i '\.(nes|fm2|nro|bin|zip|7z|chd|iso)$'; then
+          if git ls-files | grep -E -i '\\.(nes|fm2|nro|bin|zip|7z|chd|iso)$'; then
             echo 'Original game or emulator binary must not enter source Git' >&2
             exit 1
           fi
