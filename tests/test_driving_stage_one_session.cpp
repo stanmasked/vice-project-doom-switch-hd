@@ -8,6 +8,14 @@ static void check(bool ok,const char* why) {
 
 int main() {
     using Session=vpd::DrivingStageOneSession;
+    static_assert(vpd::DrivingStageOneConfig::routeProgressComplete(1800,8),
+                  "default route completion predicate should accept complete progress");
+    static_assert(!vpd::DrivingStageOneConfig::routeProgressComplete(1800,7),
+                  "route completion must require obstacle progress");
+    static_assert(!vpd::DrivingStageOneConfig::routeProgressComplete(1799,8),
+                  "route completion must require duration");
+    static_assert(vpd::DrivingStageOneConfig::routeProgressComplete(3,1,3,1),
+                  "custom route thresholds must be supported");
     Session session;
     check(session.mode()==Session::Mode::Driving,"session did not start in driving mode");
     const auto first=session.state();
