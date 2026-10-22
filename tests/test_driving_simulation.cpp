@@ -108,6 +108,28 @@ int main() {
     for(int i=0;i<5;++i) opposed.tick({true,true,false,false});
     check(opposed.car_x==opposedX && opposed.lateral_velocity==0,
           "simultaneous left and right should cancel steering");
+    // Reset after a fatal collision must restore every gameplay field.
+    dead.reset();
+    check(equal(dead,vpd::DrivingState{}),
+          "reset after fatal collision did not restore canonical state");
+
+    // Invulnerability cooldown must prevent repeated damage from one overlap.
+    vpd::DrivingState cooldown;
+    cooldown.health=5;
+    cooldown.car_x=640;
+    cooldown.obstacle_x=640;
+    cooldown.obstacle_y=433;
+    cooldown.tick({});
+    const auto healthAfterImpact=cooldown.health;
+    check(healthAfterImpact==4 && cooldown.impacts==1,
+          "collision fixture did not register exactly one initial impact");
+    for(int i=0;i<20;++i) {
+        cooldown.obstacle_x=cooldown.car_x;
+        cooldown.obstacle_y=433;
+        cooldown.tick({});
+    }
+    check(cooldown.health==healthAfterImpact && cooldown.impacts==1,
+          "collision cooldown allowed repeated damage during invulnerability");
     check(platform.fingerprint()==platformFingerprintBefore,
           "independent driving model changed legacy platform simulation");
     std::cout<<"VPD_ROMFREE_DRIVING_CONTROL_PASS"
