@@ -32,6 +32,10 @@ jobs:
         run: |
           set -euo pipefail
           python3 tools/verify_real_fceux_runtime.py --fceux /usr/games/fceux
+      - name: Run genuine 321-frame synthetic 6502 soak
+        run: |
+          set -euo pipefail
+          python3 tools/verify_real_fceux_runtime.py --fceux /usr/games/fceux --min-frames 321 --timeout 90
       - name: Package signed-by-repository offline DEBs and test full reinstall
         run: |
           set -euo pipefail
