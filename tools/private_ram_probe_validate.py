@@ -8,8 +8,10 @@ from pathlib import Path
 FIELDS=("ram_000f","ram_0011","ram_0016","ram_0017","ram_0094","ram_013a","ram_013c")
 
 def analyze(path, expected_frames=321):
-    if expected_frames < 1:
-        raise ValueError("expected_frames must be positive")
+    if isinstance(expected_frames, bool) or not isinstance(expected_frames, int):
+        raise ValueError("expected_frames must be an integer")
+    if not 1 <= expected_frames <= 10000:
+        raise ValueError("expected_frames must be between 1 and 10000")
     with Path(path).open(newline="",encoding="utf-8") as stream:
         reader=csv.DictReader(stream)
         if reader.fieldnames is None or len(reader.fieldnames)!=len(set(reader.fieldnames)):
