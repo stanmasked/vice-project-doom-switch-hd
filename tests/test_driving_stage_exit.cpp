@@ -97,6 +97,14 @@ int main(){
     }
     check(driveExit.present()==vpd::DrivingStageExit::Scene::Platform,
           "restarted gate failed to reach platform after 41 frames");
+    driveExit.reset();
+    driveExit.reset();
+    check(driveExit.present()==vpd::DrivingStageExit::Scene::Driving &&
+          driveExit.blackFramesPresented()==0,
+          "repeated idle reset was not idempotent");
+    check(!driveExit.requestAfterDrivingFrame(false,true) &&
+          driveExit.present()==vpd::DrivingStageExit::Scene::Driving,
+          "invalid mode request changed gate after repeated reset");
     std::cout<<"VPD_DRIVING_TO_PLATFORM_BLACKOUT_PASS black_frames=41"
              <<" real_original_frame_alignment_proven=no"
              <<" platform_state_unchanged=yes source_assets=none\n";
