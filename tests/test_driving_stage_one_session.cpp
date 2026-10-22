@@ -41,8 +41,13 @@ int main() {
           "defeated session advanced without restart");
     defeated.tick({},false,true);
     check(defeated.mode()==Session::Mode::Driving &&
-          defeated.state().health==5 && defeated.state().frame==0,
-          "restart did not restore initial driving state");
+          defeated.state().health==5 && defeated.state().frame==0 &&
+          defeated.state().obstacles_passed==0 &&
+          defeated.state().obstacle_serial==0 &&
+          defeated.state().impacts==0 &&
+          defeated.state().hit_cooldown==0 &&
+          !defeated.state().last_impact,
+          "restart did not restore canonical driving state and clear stale progress");
 
     // A complete route ends from gameplay progress without a debug/host event.
     Session route(3,0);
