@@ -11,12 +11,17 @@ class DrivingStageOneSession {
 public:
     // Default route length is a tunable prototype value, not original-game data.
     static constexpr std::uint32_t kPrototypeRouteFrames=1800;
+    static constexpr std::uint32_t kPrototypeRequiredObstacles=8;
     DrivingStageOneSession() noexcept = default;
-    explicit DrivingStageOneSession(std::uint32_t routeFrames) noexcept
-        : route_frames_(routeFrames ? routeFrames : 1) {}
+    explicit DrivingStageOneSession(std::uint32_t routeFrames,
+                                    std::uint32_t requiredObstacles=kPrototypeRequiredObstacles) noexcept
+        : route_frames_(routeFrames ? routeFrames : 1),
+          required_obstacles_(requiredObstacles) {}
     explicit DrivingStageOneSession(const DrivingState& initial,
-                                    std::uint32_t routeFrames=kPrototypeRouteFrames) noexcept
-        : state_(initial), route_frames_(routeFrames ? routeFrames : 1) {}
+                                    std::uint32_t routeFrames=kPrototypeRouteFrames,
+                                    std::uint32_t requiredObstacles=kPrototypeRequiredObstacles) noexcept
+        : state_(initial), route_frames_(routeFrames ? routeFrames : 1),
+          required_obstacles_(requiredObstacles) {}
 
     enum class Mode : unsigned char { Driving, Defeated, Transition, Platform };
 
