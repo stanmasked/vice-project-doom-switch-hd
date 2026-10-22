@@ -73,7 +73,7 @@ local img=read("road_321_rgb_scanlines.bin")
 assert(#img==20+41*(2+4*256*3))
 assert(img:sub(1,8)=="VPDRGB41")
 assert(img:sub(21,22)==string.char(600%256,math.floor(600/256)))
-assert(img:sub(-3073,-3072)==string.char(920%256,math.floor(920/256)))
+assert(img:sub(-3074,-3073)==string.char(920%256,math.floor(920/256)))
 local count=0
 for _ in w:gmatch("[^\n]+")do count=count+1 end
 assert(count==1285)
