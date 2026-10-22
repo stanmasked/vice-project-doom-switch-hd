@@ -41,6 +41,11 @@ def run(fceux, frames=321, timeout=60):
             try:
                 deadline=time.monotonic()+timeout
                 report=None
+                def diagnostic_tail():
+                    try:
+                        return log_path.read_text(encoding="utf-8",errors="replace")[-4000:]
+                    except OSError:
+                        return "<FCEUX log unavailable>"
                 while time.monotonic()<deadline:
                     if csv_path.is_file() and not pending.exists():
                         try:
@@ -49,10 +54,10 @@ def run(fceux, frames=321, timeout=60):
                         except (ValueError, OSError):
                             pass
                     if proc.poll() is not None:
-                        raise RuntimeError("FCEUX exited before a complete RAM probe was validated")
+                        raise RuntimeError("FCEUX exited before a complete RAM probe was validated; log tail:\\n"+diagnostic_tail())
                     time.sleep(0.1)
                 if report is None:
-                    raise TimeoutError("RAM probe did not produce a complete validated CSV")
+                    raise TimeoutError("RAM probe did not produce a complete validated CSV; log tail:\\n"+diagnostic_tail())
                 with csv_path.open(newline="",encoding="utf-8") as stream:
                     rows=list(csv.DictReader(stream))
                 if len(rows)!=frames or len(rows[0])!=8:
