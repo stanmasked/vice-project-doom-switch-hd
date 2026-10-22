@@ -55,7 +55,7 @@ emu.registerafter(function()
  assert(r>=0 and r<=255 and g>=0 and g<=255 and b>=0 and b<=255)
  local rom_md5=rom.gethash("md5")
  assert(type(rom_md5)=="string" and #rom_md5==32)
- local file=assert(io.open(output,"wb"))
+ local temporary=output..".pending"\n local file=assert(io.open(temporary,"wb"))
  assert(file:write(
   "VPD_REAL_FCEUX_EXECUTABLE_API_PASS\n"..
   "frame="..frame.."\n"..
@@ -64,6 +64,7 @@ emu.registerafter(function()
   "real_ppu_rgb_api=yes\n"..
   "source=synthetic_rom_only\n"))
  assert(file:close())
+ assert(os.rename(temporary,output),"unable to publish atomic guest witness")
  complete=true
 end)
 '''
