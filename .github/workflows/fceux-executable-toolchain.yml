@@ -28,8 +28,9 @@ jobs:
       - name: Install native FCEUX and Xvfb from Ubuntu
         run: |
           set -euo pipefail
-          sudo apt-get update -qq
-          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y fceux xvfb xauth zip
+          sudo timeout 180s apt-get -o Acquire::Retries=2 update -qq
+          sudo timeout 240s env DEBIAN_FRONTEND=noninteractive apt-get -o DPkg::Lock::Timeout=30 -o Acquire::Retries=2 install -y fceux xvfb xauth zip
+          /usr/games/fceux --help >/dev/null 2>&1 || { echo 'FCEUX executable failed its help smoke' >&2; exit 1; }
           test -x /usr/games/fceux
       - name: Verify genuine native emulator and Lua execution on fabricated NES
         run: |
