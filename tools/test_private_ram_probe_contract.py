@@ -14,6 +14,9 @@ def main():
     assert 'os.rename("probe.csv.pending", "probe.csv")' in lua
     assert "out:flush()" in lua
     assert "memory.readbyte(address)" in lua
+    assert 'out:write("frame,ram_000f,ram_0011,ram_0016,ram_0017,ram_0094,ram_013a,ram_013c\\\\n")' in lua
+    for address in ("0x000F","0x0011","0x0016","0x0017","0x0094","0x013A","0x013C"):
+        assert address in lua
     for name,frames in (("../unsafe.csv",321),("bad\\\"name.csv",321),("bad\\\\name.csv",321),("probe.csv",0)):
         try: module.make_lua(name,frames)
         except ValueError: pass
