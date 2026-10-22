@@ -407,3 +407,12 @@ frames 600/744 and 840/920, narrowing through 760/784/800, widening
 at 840, and measured lateral X shift to 920. Checks do not interpolate
 unobserved original movie frames or infer source PPU scroll/camera
 velocity, opponent behavior, collision geometry or original NES art.
+## Stage 176 — optional source-private 37-frame numeric loader
+
+The cross-platform header `game_core/driving_road_private_bundle.hpp`
+and private-only packer `tools/pack_private_road_bundle.py` validate a
+164-byte binary with exactly 37 accepted numeric image-space
+cross-sections. Four ambiguous frames cannot be selected. The existing
+seven-frame Switch diagnostic remains unchanged; this stage prepares
+the read-only data format without automatically loading it at launch.
+See `docs/PRIVATE_ROAD_BUNDLE.md`. No original game asset is committed.

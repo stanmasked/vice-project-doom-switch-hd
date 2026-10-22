@@ -393,3 +393,15 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
 endif()
 add_test(NAME romfree_driving_road_reference_guest_witness
          COMMAND vpd_driving_road_review_guest_test)
+# Stage 176: private-only binary numeric road bundle parser. All fixtures
+# synthetic, no original ROM/FM2/media or report rows in the repository.
+add_executable(vpd_private_road_bundle_test
+               ../tests/test_driving_road_private_bundle.cpp)
+target_include_directories(vpd_private_road_bundle_test PRIVATE
+                           ${CMAKE_CURRENT_SOURCE_DIR}/../game_core)
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+  target_compile_options(vpd_private_road_bundle_test PRIVATE
+                         -Wall -Wextra -Wpedantic -Werror)
+endif()
+add_test(NAME romfree_private_road_bundle_validation
+         COMMAND vpd_private_road_bundle_test)
