@@ -36,15 +36,20 @@ end)
 local complete=false
 local after_calls=0
 local midpoint_seen=false
+local previous_frame=nil
+local discontinuities=0
 local min_frames=tonumber(assert(os.getenv("VPD_SYNTHETIC_MIN_FRAMES")))
 local midpoint=math.floor(min_frames/2)
 emu.registerafter(function()
  if complete then return end
  local frame=emu.framecount()
  after_calls=after_calls+1
- if frame>=midpoint then midpoint_seen=true end
+ if previous_frame~=nil and frame~=previous_frame+1 then discontinuities=discontinuities+1 end
+ previous_frame=frame
+ if frame==midpoint then midpoint_seen=true end
  if frame<min_frames then return end
- assert(midpoint_seen,"midpoint frame was not observed")
+ assert(midpoint_seen,"exact midpoint frame was not observed")
+ assert(discontinuities==0,"frame counter discontinuity detected")
  assert(before_calls>=2 and after_calls>=2,"both frame hooks must execute repeatedly")
  assert(executed>=1,"6502 source execution at 0x8000 missing")
  assert(type(first_cycle)=="number")
@@ -116,14 +121,15 @@ def verify(executable:Path,timeout:int=40,min_frames:int=20)->dict:
                         p.kill()
                         p.wait(timeout=4)
         actual=witness.read_text("ascii").splitlines()
-        if len(actual)!=8 or actual[0]!="VPD_REAL_FCEUX_EXECUTABLE_API_PASS":
+        if len(actual)!=9 or actual[0]!="VPD_REAL_FCEUX_EXECUTABLE_API_PASS":
             raise ValueError("native FCEUX Lua guest proof malformed")
         if not re.fullmatch(r"frame=[0-9]+",actual[1]) or int(actual[1].split("=")[1]) < min_frames:
             raise ValueError(f"emulator never advanced to frame {min_frames}")
         if actual[2:]!=[
             "real_cpu_exec=yes","real_cpu_cycle_clock=yes",
             "real_ppu_rgb_api=yes","repeated_frame_hooks=yes",
-            "midpoint_frame_observed=yes","source=synthetic_rom_only"
+            "midpoint_frame_observed=yes","continuous_frame_sequence=yes",
+            "source=synthetic_rom_only"
         ]:
             raise ValueError("actual original-free FCEUX APIs not proven")
         return {"real_fceux_executable":True,
@@ -132,6 +138,7 @@ def verify(executable:Path,timeout:int=40,min_frames:int=20)->dict:
                 "real_ppu_rgb_lua_api":True,
                 "repeated_frame_hooks":True,
                 "midpoint_frame_observed":True,
+                "continuous_frame_sequence":True,
                 "original_ROM_or_FM2_used":False}
 
 if __name__=="__main__":
