@@ -9,7 +9,7 @@ local env={
 }
 local getenv=os.getenv
 os.getenv=function(key)return env[key] or getenv(key)end
-local exec,write,after={},nil,nil
+local exec,write,before,after={},nil,nil,nil
 local frame,cycle,acc,ram0d=0,0,0,0
 rom={gethash=function(kind)assert(kind=="md5");return string.rep("f",32)end}
 movie={
@@ -29,6 +29,7 @@ memory={
 }
 emu={
  framecount=function()return frame end,
+ registerbefore=function(fn)assert(before==nil);before=fn end,
  registerafter=function(fn)assert(after==nil);after=fn end,
 }
 dofile("tools/capture_private_road_ppu_321.lua")
@@ -38,6 +39,8 @@ local anchor_second={[600]=79,[744]=136,[800]=144,[920]=24}
 local anchor_ram={[600]=79,[744]=134,[800]=139,[920]=19}
 for f=0,920 do
   frame=f
+  cycle=30000*f
+  before()
   if f>=600 then
     local second=anchor_second[f] or 42
     local values={0,second,0,0}
@@ -50,6 +53,7 @@ for f=0,920 do
     end
     ram0d=anchor_ram[f] or 18
   end
+  cycle=30000*f+29780
   after()
 end
 after()
@@ -60,6 +64,7 @@ end
 local w=read("road_321_writers.tsv")
 local a=read("road_321_postframe.tsv")
 local complete=read("COMPLETE.txt")
+local b=read("road_321_frame_clock.tsv")
 local count=0
 for _ in w:gmatch("[^\n]+")do count=count+1 end
 assert(count==1285)
@@ -69,8 +74,13 @@ local ramcount=0
 for _ in a:gmatch("[^\n]+")do ramcount=ramcount+1 end
 assert(ramcount==322)
 assert(a:find("800\t8B\t4",1,true))
+local boundarycount=0
+for _ in b:gmatch("[^\n]+") do boundarycount=boundarycount+1 end
+assert(boundarycount==322)
+assert(b:find("600\t18000000\t18029780",1,true))
+assert(b:find("920\t27600000\t27629780",1,true))
 assert(complete:find("frames_sampled=321",1,true))
 assert(complete:find("registerwrite_2005_events=1284",1,true))
-print("PRIVATE_ROAD_PPU321_MOCK_PASS frames=321 exec=1284 writes=1284")
+print("PRIVATE_ROAD_PPU321_MOCK_PASS frames=321 exec=1284 writes=1284 boundaries=321")
 assert(os.execute("rm -rf "..root))
 os.getenv=getenv

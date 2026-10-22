@@ -49,3 +49,37 @@ is still required before the Stage169 complete 321-frame PPU/image
 joining gate can be claimed. No original execution of this new script
 is yet confirmed; public CI uses only fabricated Lua hooks and Python
 event tables.
+## Stage 182 — FCEUX frame-begin cycle boundary and source phase
+
+The same FCEUX Lua session now also records
+`road_321_frame_clock.tsv`: exactly **321** lines containing movie
+frame label, source `debugger.getcyclescount()` at
+`emu.registerbefore`, and the source count at `emu.registerafter`.
+
+Both hooks exist in upstream FCEUX; this stage deliberately **does not
+approximate** a 29.8k CPU frame duration or infer one from the two
+writer-PC groups. The validator compares each of the **1,284** CPU
+writer callback timestamps against the observed boundaries for the
+same 321 frames. It rejects mismatched frames, resets in the counter
+epoch, missing/duplicate boundaries, event timestamps outside a
+frame, and incompatible early/late source-phase ranges. It still
+checks the previously established 7-cycle and 4-cycle write-pair
+gaps and 4 previously published original raw-RAM anchor pairs.
+
+After the original owner-private capture, run **both** audit commands:
+
+```bash
+python3 tools/audit_private_road_ppu_321_trace.py \
+  --private-dir /private/road_321_capture \
+  --summary /private/new_raw_summary.json
+python3 tools/audit_private_road_ppu_321_frame_phase.py \
+  --private-dir /private/road_321_capture \
+  --summary /private/new_frame_phase_summary.json
+```
+
+All raw CPU cycle counts, private paths and full source values stay
+outside GitHub. Outputs contain counts and booleans only.
+Successfully evaluating **relative CPU phase** is **not** evidence of
+the effective on-screen PPU scroll, collision or original NES camera
+speed. A jointly verified ROM/FM2 SHA-256 from separately captured
+image-road data is also still required for Stage169's full join.
