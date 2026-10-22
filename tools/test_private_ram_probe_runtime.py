@@ -26,8 +26,12 @@ def run(fceux, frames=321, timeout=60):
     with tempfile.TemporaryDirectory(prefix="vpd-ram-probe-synthetic-") as td:
         root=Path(td); rom=root/"synthetic.nes"; lua=root/"probe.lua"
         csv_path=root/"capture.csv"; pending=root/"capture.csv.pending"
+        witness=root/"probe-complete.txt"
         rom.write_bytes(build_rom())
-        lua.write_text(make_lua(csv_path.name,frames),encoding="ascii")
+        lua_source=make_lua(csv_path.name,frames)
+        lua_source=lua_source.replace("local complete = false", "local complete = false\\nlocal witness = assert(io.open(\\"probe-complete.txt\\", \\"w\\"))")
+        lua_source=lua_source.replace("complete = true", "assert(witness:write(\\"RAM_PROBE_COMPLETE\\\\nframes={frames}\\\"))\\n    assert(witness:close())\\n    complete = true")
+        lua.write_text(lua_source,encoding="ascii")
         env={**os.environ,"SDL_AUDIODRIVER":"dummy","QT_QPA_PLATFORM":"xcb"}
         log_path=root/"fceux.log"
         with log_path.open("wb") as log:
@@ -37,13 +41,13 @@ def run(fceux, frames=321, timeout=60):
             try:
                 deadline=time.monotonic()+timeout
                 while time.monotonic()<deadline:
-                    if csv_path.exists(): break
+                    if witness.exists(): break
                     if proc.poll() is not None:
                         raise RuntimeError("FCEUX exited before completing RAM probe")
                     time.sleep(0.1)
                 else:
                     raise TimeoutError("RAM probe did not finish before timeout")
-                report=analyze(csv_path,frames)
+                if not witness.is_file() or f"frames={frames}" not in witness.read_text(encoding="ascii"):\n                    raise AssertionError("guest Lua completion witness missing or incorrect")\n                report=analyze(csv_path,frames)
                 if report["frames"] != frames:
                     raise AssertionError("unexpected sample count")
                 with csv_path.open(newline="",encoding="utf-8") as stream:
