@@ -9,6 +9,10 @@ namespace vpd {
 // does not pretend that the private reference frame number is a proven trigger.
 class DrivingStageOneSession {
 public:
+    DrivingStageOneSession() noexcept = default;
+    explicit DrivingStageOneSession(const DrivingState& initial) noexcept
+        : state_(initial) {}
+
     enum class Mode : unsigned char { Driving, Defeated, Transition, Platform };
 
     void tick(const DriveInput& input, bool finishConfirmed=false,
