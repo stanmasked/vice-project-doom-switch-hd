@@ -203,13 +203,14 @@ int main() {
     check(configured.mode()==Session::Mode::Transition,
           "reset discarded custom obstacle threshold");
     configured.reset();
+    configured.reset();
     configured.tick({});
     configured.tick({});
     check(configured.mode()==Session::Mode::Driving,
-          "reset after transition discarded custom route duration");
+          "repeated reset after transition discarded custom route duration");
     configured.tick({});
     check(configured.mode()==Session::Mode::Transition,
-          "reset after transition discarded custom route thresholds");
+          "repeated reset after transition discarded custom route thresholds");
 
     std::cout<<"VPD_STAGE_ONE_SESSION_LIFECYCLE_PASS"
              <<" driving=1 explicit_finish=1 blackout=41 platform=1 reset=1"
