@@ -465,9 +465,15 @@ int main(int,char**) {
         if(!demo.enabled() && (buttons&HidNpadButton_ZR) &&
            !(buttons&HidNpadButton_StickL))
             input|=vpd::Dash;
+        // Prototype route duration: auto-request the transition after the
+        // final completed road frame. This is a tunable placeholder, not a
+        // recovered original-game clear condition. Minus remains a manual QA
+        // escape hatch for early transition tests.
+        constexpr std::uint32_t kDrivingPrototypeRouteFrames=1800;
         const bool request_driving_exit=
             driving_preview && !driving_stage_exit.active() &&
-            (pressed&HidNpadButton_Minus) != 0;
+            (((pressed&HidNpadButton_Minus) != 0) ||
+             driving_state.frame>=kDrivingPrototypeRouteFrames);
         if(demo.enabled()) {
             if(demo.tick(game)) animation.reset();
         } else {
