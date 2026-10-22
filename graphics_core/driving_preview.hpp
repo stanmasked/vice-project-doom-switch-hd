@@ -34,6 +34,10 @@ struct DrivingPreviewView {
     // 0 = default invented road. A known original frame enables a standalone
     // overlay of ONE measured median X interval, not source road geometry.
     uint16_t observed_road_frame=0;
+    // Separate private numerical SD observations. No NES pixels/physics.
+    bool private_road_enabled=false;
+    uint16_t private_original_frame=0;
+    uint8_t private_left=0, private_right=0;
 };
 
 namespace driving_detail {
@@ -125,8 +129,23 @@ inline void drawRoad(Canvas& road,const DrivingPreviewView& view) {
     // position is arbitrary and has NO source Y/scanline interpretation.
     // It visualizes one median source RGB X-interval at fivefold horizontal
     // display scale. No collision/scroll/camera/car state uses these values.
-    if(const auto* observed=
-           road_reference::atExactFrame(view.observed_road_frame)) {
+    const road_reference::CrossSection private_sample{
+        view.private_original_frame,view.private_left,view.private_right};
+    const road_reference::CrossSection* observed=
+        road_reference::atExactFrame(view.observed_road_frame);
+    if(view.private_road_enabled) {
+        // Even a malformed/untrusted raster view cannot manufacture a
+        // sample outside the documented exact 8-frame movie cadence.
+        observed=(private_sample.frame>=600 &&
+                  private_sample.frame<=920 &&
+                  (private_sample.frame-600)%8==0 &&
+                  private_sample.left<=private_sample.right &&
+                  private_sample.right<255 &&
+                  private_sample.width()>=30 &&
+                  private_sample.width()<=200)
+                  ? &private_sample:nullptr;
+    }
+    if(observed) {
         const auto band=road_reference::toHdImageSpace(*observed);
         constexpr uint32_t panel=rgba(14,24,34);
         constexpr uint32_t fill=rgba(98,143,132);
@@ -136,6 +155,9 @@ inline void drawRoad(Canvas& road,const DrivingPreviewView& view) {
         road.rect(band.left,139,5,56,edge);
         road.rect(band.right_inclusive-4,139,5,56,edge);
         number(road,40,153,observed->frame,4,edge);
+        // 37 identifies the optional full private numeric set, not a
+        // recovered NES renderer. Never applied to default 7-sample mode.
+        if(view.private_road_enabled)number(road,184,153,37,2,edge);
         road.rect(0,116,kDrivingPreviewWidth,3,kRoadEdge);
         road.rect(0,218,kDrivingPreviewWidth,3,kRoadEdge);
     }
