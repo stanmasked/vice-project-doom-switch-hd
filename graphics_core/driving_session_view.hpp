@@ -12,6 +12,7 @@ inline DrivingPreviewView makeDrivingSessionView(
                   session.mode()==DrivingStageOneSession::Mode::Transition;
     view.show_obstacle=session.mode()==DrivingStageOneSession::Mode::Driving &&
                        session.state().health>0;
+    view.obstacles_passed=session.state().obstacles_passed;
     return view;
 }
 } // namespace vpd
