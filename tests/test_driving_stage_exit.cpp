@@ -75,6 +75,28 @@ int main(){
           "reset did not restore driving selection");
     check(driveExit.blackFramesPresented()==0,
           "reset retained old blackout count");
+    check(driveExit.requestAfterDrivingFrame(true,true),
+          "fresh transition request rejected after completed reset");
+    for(unsigned i=0;i<10;++i) {
+        check(driveExit.present()==vpd::DrivingStageExit::Scene::Black,
+              "fresh transition did not begin with blackout");
+    }
+    check(driveExit.blackFramesPresented()==10,
+          "fresh transition did not count ten presented frames");
+    driveExit.reset();
+    check(driveExit.present()==vpd::DrivingStageExit::Scene::Driving &&
+          driveExit.blackFramesPresented()==0,
+          "mid-transition reset retained stale gate or frame count");
+    check(driveExit.requestAfterDrivingFrame(true,true),
+          "transition could not restart after mid-blackout reset");
+    for(unsigned i=0;i<41;++i) {
+        check(driveExit.present()==vpd::DrivingStageExit::Scene::Black,
+              "restarted gate ended before all 41 frames");
+        check(driveExit.blackFramesPresented()==i+1,
+              "restarted gate skipped or repeated a black frame");
+    }
+    check(driveExit.present()==vpd::DrivingStageExit::Scene::Platform,
+          "restarted gate failed to reach platform after 41 frames");
     std::cout<<"VPD_DRIVING_TO_PLATFORM_BLACKOUT_PASS black_frames=41"
              <<" real_original_frame_alignment_proven=no"
              <<" platform_state_unchanged=yes source_assets=none\n";
