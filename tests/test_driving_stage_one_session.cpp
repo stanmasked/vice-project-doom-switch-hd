@@ -49,6 +49,17 @@ int main() {
           !defeated.state().last_impact,
           "restart did not restore canonical driving state and clear stale progress");
 
+    // A fatal collision takes precedence over an explicit finish request.
+    vpd::DrivingState fatalFinish;
+    fatalFinish.health=1;
+    fatalFinish.obstacle_x=fatalFinish.car_x;
+    fatalFinish.obstacle_y=433;
+    Session fatalFinishSession(fatalFinish,1,0);
+    fatalFinishSession.tick({},true);
+    check(fatalFinishSession.mode()==Session::Mode::Defeated &&
+          fatalFinishSession.blackFramesPresented()==0,
+          "fatal collision incorrectly entered stage transition");
+
     // A complete route ends from gameplay progress without a debug/host event.
     Session route(3,0);
     route.tick({});
