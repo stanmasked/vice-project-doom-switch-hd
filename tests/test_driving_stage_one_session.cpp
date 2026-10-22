@@ -55,6 +55,10 @@ int main() {
     defeated.tick({});
     check(defeated.mode()==Session::Mode::Defeated,
           "fatal collision did not enter defeated mode");
+    defeated.tick({},true,false);
+    check(defeated.mode()==Session::Mode::Defeated &&
+          defeated.blackFramesPresented()==0,
+          "finish request bypassed defeated mode without an explicit restart");
     const auto deadFrame=defeated.state().frame;
     defeated.tick({false,true,true,false});
     check(defeated.state().frame==deadFrame &&
