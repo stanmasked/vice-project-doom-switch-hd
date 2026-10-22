@@ -20,6 +20,8 @@ struct DrivingState {
     int road_phase=0;
     int obstacle_x=640;
     int obstacle_y=20;
+    std::uint32_t obstacles_passed=0;
+    std::uint32_t obstacle_serial=0;
     uint8_t health=5;
     uint8_t hit_cooldown=0;
     uint32_t impacts=0;
@@ -62,14 +64,23 @@ struct DrivingState {
             hit_cooldown=45;
             last_impact=true;
             speed=std::max(0,speed-2);
-            // Remove the hit obstacle to make damage one-shot.
-            obstacle_y=-110;
-            obstacle_x=(frame%2u==0u)?520:760;
+            // Recycle the hit obstacle with a deterministic lane sequence.
+            recycleObstacle();
+        } else if(obstacle_y>650) {
+            if(obstacles_passed!=UINT32_MAX)++obstacles_passed;
+            recycleObstacle();
         }
-        if(obstacle_y>650) {
-            obstacle_y=-110;
-            obstacle_x=(frame%2u==0u)?520:760;
-        }
+    }
+
+private:
+    void recycleObstacle() noexcept {
+        obstacle_y=-110;
+        if(obstacle_serial!=UINT32_MAX)++obstacle_serial;
+        // Four-lane deterministic pattern avoids immediate left/right
+        // alternation and remains reproducible across identical replays.
+        constexpr int lanes[]={440,570,710,840};
+        obstacle_x=lanes[obstacle_serial%4u];
+    }
     }
 };
 } // namespace vpd
