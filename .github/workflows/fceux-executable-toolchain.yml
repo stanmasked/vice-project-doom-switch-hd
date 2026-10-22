@@ -57,6 +57,13 @@ jobs:
             --bin-dir "$RUNNER_TEMP/offline-fceux-bin"
           python3 tools/verify_real_fceux_runtime.py \
             --fceux "$RUNNER_TEMP/offline-fceux-bin/fceux"
+      - name: Publish emulator-only offline package for private workspace restoration
+        uses: actions/upload-artifact@v4
+        with:
+          name: fceux-2.6.5-linux-amd64-offline-packages
+          path: ${{ runner.temp }}/fceux-rehydrate.zip
+          if-no-files-found: error
+          retention-days: 3
       - name: Ensure ROMs, FM2 movies and original pixels absent
         run: |
           set -euo pipefail
