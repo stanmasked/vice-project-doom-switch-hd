@@ -13,6 +13,7 @@
 #include "driving_guest_witness.hpp"
 #include "driving_raster_witness.hpp"
 #include "driving_stage_exit.hpp"
+#include "driving_stage_one_config.hpp"
 #include "driving_exit_witness.hpp"
 #include "driving_transition_black.hpp"
 #include "manual_retry.hpp"
@@ -469,8 +470,8 @@ int main(int,char**) {
         // final completed road frame. This is a tunable placeholder, not a
         // recovered original-game clear condition. Minus remains a manual QA
         // escape hatch for early transition tests.
-        constexpr std::uint32_t kDrivingPrototypeRouteFrames=1800;
-        constexpr std::uint32_t kDrivingPrototypeRequiredObstacles=8;
+        constexpr auto kDrivingPrototypeRouteFrames=\n            vpd::DrivingStageOneConfig::route_frames;
+        constexpr auto kDrivingPrototypeRequiredObstacles=\n            vpd::DrivingStageOneConfig::required_obstacles;
         const bool driving_retry_pressed=driving_preview &&
             driving_state.health==0 && (pressed&HidNpadButton_X) &&
             !driving_preview_chord;
