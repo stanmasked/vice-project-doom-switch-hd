@@ -11,7 +11,7 @@ static bool equal(const vpd::DrivingState& a,const vpd::DrivingState& b) {
     return a.frame==b.frame && a.car_x==b.car_x &&
         a.lateral_velocity==b.lateral_velocity && a.speed==b.speed &&
         a.road_phase==b.road_phase && a.obstacle_x==b.obstacle_x &&
-        a.obstacle_y==b.obstacle_y && a.health==b.health &&
+        a.obstacle_y==b.obstacle_y && a.obstacles_passed==b.obstacles_passed &&\n        a.obstacle_serial==b.obstacle_serial && a.health==b.health &&
         a.hit_cooldown==b.hit_cooldown && a.impacts==b.impacts &&
         a.last_impact==b.last_impact;
 }
