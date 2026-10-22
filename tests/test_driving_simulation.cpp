@@ -157,8 +157,22 @@ int main() {
     check(recycleA.obstacle_y==-110 && recycleA.obstacle_x==recycleB.obstacle_x &&
           recycleA.obstacle_y==recycleB.obstacle_y,
           "off-screen obstacle was not recycled deterministically");
+    check(recycleA.obstacle_x==570 && recycleA.obstacle_serial==1 &&
+          recycleA.obstacles_passed==1,
+          "first passed obstacle did not advance to deterministic lane two");
     check(equal(recycleA,recycleB),
           "obstacle recycling diverged for identical states");
+    for(int i=0;i<4;++i) {
+        recycleA.obstacle_y=649;
+        recycleB.obstacle_y=649;
+        recycleA.tick({});
+        recycleB.tick({});
+        check(equal(recycleA,recycleB),
+              "multi-obstacle sequence diverged for identical replays");
+    }
+    check(recycleA.obstacle_serial==5 && recycleA.obstacles_passed==5 &&
+          recycleA.obstacle_x==570,
+          "four-lane obstacle pattern did not repeat predictably");
 
     check(platform.fingerprint()==platformFingerprintBefore,
           "independent driving model changed legacy platform simulation");
