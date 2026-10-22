@@ -470,6 +470,7 @@ int main(int,char**) {
         // recovered original-game clear condition. Minus remains a manual QA
         // escape hatch for early transition tests.
         constexpr std::uint32_t kDrivingPrototypeRouteFrames=1800;
+        constexpr std::uint32_t kDrivingPrototypeRequiredObstacles=8;
         const bool driving_retry_pressed=driving_preview &&
             driving_state.health==0 && (pressed&HidNpadButton_X) &&
             !driving_preview_chord;
@@ -484,7 +485,8 @@ int main(int,char**) {
             driving_preview && driving_state.health>0 &&
             !driving_stage_exit.active() &&
             (((pressed&HidNpadButton_Minus) != 0) ||
-             driving_state.frame>=kDrivingPrototypeRouteFrames);
+             (driving_state.frame>=kDrivingPrototypeRouteFrames &&
+              driving_state.obstacles_passed>=kDrivingPrototypeRequiredObstacles));
         if(demo.enabled()) {
             if(demo.tick(game)) animation.reset();
         } else {
