@@ -28,6 +28,13 @@ jobs:
         run: cmake --build build/native_core --parallel 2
       - name: Run C++ tests
         run: ctest --test-dir build/native_core --output-on-failure
+      - name: Build and run complete Stage 1-1 session lifecycle test
+        run: |
+          set -euo pipefail
+          c++ -std=c++17 -Wall -Wextra -Wpedantic -Werror \
+            -Igame_core tests/test_driving_stage_one_session.cpp \
+            -o build/driving_stage_one_session_test
+          build/driving_stage_one_session_test
       - name: Run synthetic ROM tests
         run: python -m unittest discover -s tests -p 'test_*.py' -v
       - name: Test private RAM probe generator and CSV validator contracts
