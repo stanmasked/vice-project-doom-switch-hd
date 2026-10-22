@@ -95,9 +95,14 @@ int main() {
           "explicit finish event did not start transition");
     check(finish.presentFrame()==Session::Mode::Transition,
           "first transition frame was not blackout");
-    for(unsigned i=1;i<41;++i)
+    const frameAtTransition=finish.state().frame;
+    for(unsigned i=1;i<41;++i) {
+        finish.tick({false,false,true,false},false,true);
+        check(finish.state().frame==frameAtTransition,
+              "driving simulation advanced during blackout");
         check(finish.presentFrame()==Session::Mode::Transition,
               "blackout ended before 41 presented frames");
+    }
     check(finish.blackFramesPresented()==41,
           "session did not count 41 blackout frames");
     check(finish.presentFrame()==Session::Mode::Platform,
