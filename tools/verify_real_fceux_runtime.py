@@ -35,7 +35,7 @@ local complete=false
 emu.registerafter(function()
  if complete then return end
  local frame=emu.framecount()
- if frame<20 then return end
+ if frame<tonumber(assert(os.getenv("VPD_SYNTHETIC_MIN_FRAMES"))) then return end
  assert(executed>=1,"6502 source execution at 0x8000 missing")
  assert(type(first_cycle)=="number")
  local last_cycle=debugger.getcyclescount()
@@ -58,7 +58,9 @@ emu.registerafter(function()
 end)
 '''
 
-def verify(executable:Path,timeout:int=40)->dict:
+def verify(executable:Path,timeout:int=40,min_frames:int=20)->dict:
+    if not 20 <= min_frames <= 10000:
+        raise ValueError("min_frames must be between 20 and 10000")
     if shutil.which("xvfb-run") is None:
         raise ValueError("xvfb-run is required for headless native FCEUX")
     exe=executable.expanduser()
@@ -76,7 +78,8 @@ def verify(executable:Path,timeout:int=40)->dict:
         lua.write_text(LUA,encoding="ascii")
         env={**os.environ,"SDL_AUDIODRIVER":"dummy",
              "QT_QPA_PLATFORM":"xcb",
-             "VPD_SYNTHETIC_REAL_FCEUX_WITNESS":str(witness)}
+             "VPD_SYNTHETIC_REAL_FCEUX_WITNESS":str(witness),
+             "VPD_SYNTHETIC_MIN_FRAMES":str(min_frames)}
         command=["xvfb-run","-a","-s","-screen 0 1024x768x24",
                  str(exe),"--no-config","1","--sound","0",
                  "--loadlua",str(lua),str(rom)]
@@ -103,8 +106,8 @@ def verify(executable:Path,timeout:int=40)->dict:
         actual=witness.read_text("ascii").splitlines()
         if len(actual)!=6 or actual[0]!="VPD_REAL_FCEUX_EXECUTABLE_API_PASS":
             raise ValueError("native FCEUX Lua guest proof malformed")
-        if not re.fullmatch(r"frame=[2-9][0-9]+",actual[1]):
-            raise ValueError("emulator never advanced to frame 20")
+        if not re.fullmatch(r"frame=[0-9]+",actual[1]) or int(actual[1].split("=")[1]) < min_frames:
+            raise ValueError(f"emulator never advanced to frame {min_frames}")
         if actual[2:]!=[
             "real_cpu_exec=yes","real_cpu_cycle_clock=yes",
             "real_ppu_rgb_api=yes","source=synthetic_rom_only"
@@ -120,8 +123,9 @@ if __name__=="__main__":
     cli=argparse.ArgumentParser(description=__doc__)
     cli.add_argument("--fceux",default="fceux",type=Path)
     cli.add_argument("--timeout",default=40,type=int)
+    cli.add_argument("--min-frames",default=20,type=int)
     args=cli.parse_args()
-    result=verify(args.fceux,args.timeout)
+    result=verify(args.fceux,args.timeout,args.min_frames)
     print("VPD_REAL_FCEUX_EXECUTABLE_API_PASS"
           " frame_count="+str(result["actual_cpu_frame_count"])+
           " cpu_6502_execution=yes native_lua_hooks=yes"
