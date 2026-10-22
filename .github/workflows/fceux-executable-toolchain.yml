@@ -1,0 +1,58 @@
+name: Vice FCEUX Executable Toolchain (Synthetic Only)
+
+on:
+  push:
+    paths:
+      - ".github/workflows/fceux-executable-toolchain.yml"
+      - "tools/install_local_fceux.py"
+      - "tools/verify_real_fceux_runtime.py"
+  pull_request:
+    paths:
+      - ".github/workflows/fceux-executable-toolchain.yml"
+      - "tools/install_local_fceux.py"
+      - "tools/verify_real_fceux_runtime.py"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  genuine-fceux-runtime:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install native FCEUX and Xvfb from Ubuntu
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y fceux xvfb xauth zip
+          test -x /usr/games/fceux
+      - name: Verify genuine native emulator and Lua execution on fabricated NES
+        run: |
+          set -euo pipefail
+          python3 tools/verify_real_fceux_runtime.py --fceux /usr/games/fceux
+      - name: Package signed-by-repository offline DEBs and test full reinstall
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/fceux-rehydrate-debs"
+          cd "$RUNNER_TEMP/fceux-rehydrate-debs"
+          apt-get download fceux liblua5.1-0
+          sha256sum ./*.deb > SHA256SUMS
+          printf 'Artifact generated in ROM-free GitHub Actions.\n' > package-info.txt
+          zip -q "$RUNNER_TEMP/fceux-rehydrate.zip" ./*.deb SHA256SUMS package-info.txt
+          cd "$GITHUB_WORKSPACE"
+          python3 tools/install_local_fceux.py \
+            --artifact-zip "$RUNNER_TEMP/fceux-rehydrate.zip" \
+            --prefix "$RUNNER_TEMP/offline-fceux-install" \
+            --bin-dir "$RUNNER_TEMP/offline-fceux-bin"
+          python3 tools/verify_real_fceux_runtime.py \
+            --fceux "$RUNNER_TEMP/offline-fceux-bin/fceux"
+      - name: Ensure ROMs, FM2 movies and original pixels absent
+        run: |
+          set -euo pipefail
+          if git ls-files | grep -E -i '\.(nes|fm2|nro|bin|zip|7z|chd|iso)$'; then
+            echo 'Original game or emulator binary must not enter source Git' >&2
+            exit 1
+          fi
+          echo "VPD_FCEUX_LOCAL_INSTALL_AND_REINSTALL_PASS original_assets=no"
