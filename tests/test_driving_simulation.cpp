@@ -146,6 +146,20 @@ int main() {
     check(cooldown.health==healthAfterImpact-1 && cooldown.impacts==2 &&
           cooldown.last_impact,
           "collision cooldown did not permit a new hit after expiry");
+    // An obstacle leaving the bottom of the scene is recycled deterministically.
+    vpd::DrivingState recycleA,recycleB;
+    recycleA.obstacle_y=649;
+    recycleB.obstacle_y=649;
+    recycleA.obstacle_x=640;
+    recycleB.obstacle_x=640;
+    recycleA.tick({});
+    recycleB.tick({});
+    check(recycleA.obstacle_y==-110 && recycleA.obstacle_x==recycleB.obstacle_x &&
+          recycleA.obstacle_y==recycleB.obstacle_y,
+          "off-screen obstacle was not recycled deterministically");
+    check(equal(recycleA,recycleB),
+          "obstacle recycling diverged for identical states");
+
     check(platform.fingerprint()==platformFingerprintBefore,
           "independent driving model changed legacy platform simulation");
     std::cout<<"VPD_ROMFREE_DRIVING_CONTROL_PASS"
