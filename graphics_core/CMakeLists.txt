@@ -456,3 +456,14 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
 endif()
 add_test(NAME romfree_private_road_invalid_sd_rejection
          COMMAND vpd_private_road_sd_rejection_test)
+
+# Stage 1-1 lifecycle-to-renderer integration, sharing one authoritative state.
+add_executable(vpd_driving_session_view_test ../tests/test_driving_session_view.cpp)
+target_include_directories(vpd_driving_session_view_test PRIVATE
+                           ${CMAKE_CURRENT_SOURCE_DIR}
+                           ${CMAKE_CURRENT_SOURCE_DIR}/../game_core)
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+  target_compile_options(vpd_driving_session_view_test PRIVATE
+                         -Wall -Wextra -Wpedantic -Werror)
+endif()
+add_test(NAME romfree_driving_session_view COMMAND vpd_driving_session_view_test)
