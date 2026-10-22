@@ -1,0 +1,40 @@
+#include "driving_session_view.hpp"
+#include <iostream>
+#include <stdexcept>
+
+static void check(bool ok,const char* why) {
+    if(!ok) throw std::runtime_error(why);
+}
+
+int main() {
+    using Session=vpd::DrivingStageOneSession;
+    Session session;
+    auto view=vpd::makeDrivingSessionView(session);
+    check(view.frame==session.state().frame &&
+          view.car_x==session.state().car_x &&
+          view.road_phase==session.state().road_phase &&
+          view.health==session.state().health && view.show_car &&
+          view.show_obstacle,
+          "initial renderer view diverged from driving session");
+
+    session.tick({false,false,true,false});
+    view=vpd::makeDrivingSessionView(session);
+    check(view.frame==1 && view.ticks==1 && view.speed==4 &&
+          view.car_x==session.state().car_x,
+          "renderer view did not reflect the latest simulation tick");
+
+    session.tick({},true);
+    view=vpd::makeDrivingSessionView(session);
+    check(session.mode()==Session::Mode::Transition && view.show_car &&
+          !view.show_obstacle,
+          "transition presentation did not suppress obstacle while retaining car");
+
+    for(unsigned i=0;i<41;++i) session.presentFrame();
+    check(session.presentFrame()==Session::Mode::Platform,
+          "session did not hand off to platform scene after blackout");
+    view=vpd::makeDrivingSessionView(session);
+    check(!view.show_car && !view.show_obstacle,
+          "platform session still exposed driving sprites");
+
+    std::cout<<"VPD_STAGE_ONE_RENDER_VIEW_PASS shared_state=1 transition=1 platform_handoff=1\n";
+}
