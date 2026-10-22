@@ -38,7 +38,9 @@ public:
             mode_=Mode::Defeated;
             return;
         }
-        if ((finishConfirmed || state_.frame>=route_frames_) &&
+        const bool routeProgressComplete=state_.frame>=route_frames_ &&
+            state_.obstacles_passed>=required_obstacles_;
+        if ((finishConfirmed || routeProgressComplete) &&
             exit_.requestAfterDrivingFrame(true,true)) {
             mode_=Mode::Transition;
         }
@@ -68,6 +70,7 @@ private:
     DrivingState state_{};
     DrivingStageExit exit_{};
     std::uint32_t route_frames_=kPrototypeRouteFrames;
+    std::uint32_t required_obstacles_=kPrototypeRequiredObstacles;
     Mode mode_=Mode::Driving;
 };
 
