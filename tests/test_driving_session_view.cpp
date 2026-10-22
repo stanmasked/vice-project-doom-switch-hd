@@ -9,11 +9,19 @@ static void check(bool ok,const char* why) {
 int main() {
     using Session=vpd::DrivingStageOneSession;
     Session session;
+    vpd::DrivingState progressState;
+    progressState.obstacles_passed=7;
+    Session progressSession(progressState,100,1);
+    const auto progressView=vpd::makeDrivingSessionView(progressSession);
+    check(progressView.obstacles_passed==7,
+          "HUD progress did not reflect seeded session counter");
+
     auto view=vpd::makeDrivingSessionView(session);
     check(view.frame==session.state().frame &&
           view.car_x==session.state().car_x &&
           view.road_phase==session.state().road_phase &&
-          view.health==session.state().health &&\n          view.obstacles_passed==session.state().obstacles_passed && view.show_car &&
+          view.health==session.state().health &&
+          view.obstacles_passed==session.state().obstacles_passed && view.show_car &&
           view.show_obstacle,
           "initial renderer view diverged from driving session");
 
