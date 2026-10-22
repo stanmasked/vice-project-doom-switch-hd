@@ -482,11 +482,11 @@ int main(int,char**) {
                                     driving_state,game.fingerprint()));
         }
         const bool request_driving_exit=
-            driving_preview && driving_state.health>0 &&
-            !driving_stage_exit.active() &&
-            (((pressed&HidNpadButton_Minus) != 0) ||
-             vpd::DrivingStageOneConfig::routeProgressComplete(
-                 driving_state.frame,driving_state.obstacles_passed));
+            vpd::DrivingStageOneConfig::shouldRequestExit(
+                driving_preview,driving_state.health,
+                driving_stage_exit.active(),
+                (pressed&HidNpadButton_Minus)!=0,
+                driving_state.frame,driving_state.obstacles_passed);
         if(demo.enabled()) {
             if(demo.tick(game)) animation.reset();
         } else {
