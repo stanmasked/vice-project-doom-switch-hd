@@ -479,3 +479,16 @@ generated on the runner, never committed. No original full 37-frame
 data, NES imagery, ROM or FM2 enters the public CI. This only
 proves the independent numeric-image review pipeline, **not** original
 gameplay speed, real source scroll or road collision geometry.
+## Stage 180 — negative NeXium guest test for malformed numeric SD files
+
+After successful existing driving combat, 41-frame blackout,
+seven-frame built-in Y and 37+OFF R3 tests, the runner starts three
+new independent NeXium guest processes with synthetic invalid SD
+files: wrong CRC, wrong original numeric anchor with *valid* CRC, and
+truncated file. The guest must explicitly attest a physical R3 edge
+**did not enable the private data**; real X11 must show no source
+measurement band. The independent built-in Y key must then still show
+the original reference frame 600, verified with NRO-authored event
+and X11 screenshot. No owner ROM, FM2, original full numeric source
+or original graphics are included. This is a fail-closed SD privacy
+and renderer-isolation test, NOT NES roadway physics restoration.

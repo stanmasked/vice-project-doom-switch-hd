@@ -443,3 +443,16 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
 endif()
 add_test(NAME romfree_private_37_road_real_guest_r3_witness
          COMMAND vpd_private_road_r3_guest_test)
+# Stage 180: a genuine invalid-SD R3 edge must not enable proprietary
+# road data and must preserve independently tested seven-frame Y review.
+add_executable(vpd_private_road_sd_rejection_test
+               ../tests/test_driving_private_road_reject.cpp)
+target_include_directories(vpd_private_road_sd_rejection_test PRIVATE
+                           ${CMAKE_CURRENT_SOURCE_DIR}
+                           ${CMAKE_CURRENT_SOURCE_DIR}/../game_core)
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+  target_compile_options(vpd_private_road_sd_rejection_test PRIVATE
+                         -Wall -Wextra -Wpedantic -Werror)
+endif()
+add_test(NAME romfree_private_road_invalid_sd_rejection
+         COMMAND vpd_private_road_sd_rejection_test)
