@@ -95,7 +95,7 @@ int main() {
           "explicit finish event did not start transition");
     check(finish.presentFrame()==Session::Mode::Transition,
           "first transition frame was not blackout");
-    const frameAtTransition=finish.state().frame;
+    const auto frameAtTransition=finish.state().frame;
     for(unsigned i=1;i<41;++i) {
         finish.tick({false,false,true,false},false,true);
         check(finish.state().frame==frameAtTransition,
