@@ -130,6 +130,22 @@ int main() {
     }
     check(cooldown.health==healthAfterImpact && cooldown.impacts==1,
           "collision cooldown allowed repeated damage during invulnerability");
+
+    // Cooldown boundary is deterministic: no hit while one tick remains,
+    // then a new overlap may damage the car on the following tick.
+    for(int i=0;i<24;++i) {
+        cooldown.obstacle_x=cooldown.car_x;
+        cooldown.obstacle_y=433;
+        cooldown.tick({});
+    }
+    check(cooldown.health==healthAfterImpact && cooldown.hit_cooldown==1,
+          "collision cooldown expired one frame too early");
+    cooldown.obstacle_x=cooldown.car_x;
+    cooldown.obstacle_y=433;
+    cooldown.tick({});
+    check(cooldown.health==healthAfterImpact-1 && cooldown.impacts==2 &&
+          cooldown.last_impact,
+          "collision cooldown did not permit a new hit after expiry");
     check(platform.fingerprint()==platformFingerprintBefore,
           "independent driving model changed legacy platform simulation");
     std::cout<<"VPD_ROMFREE_DRIVING_CONTROL_PASS"
