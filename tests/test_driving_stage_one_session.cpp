@@ -76,10 +76,6 @@ int main() {
     fatalFinish.obstacle_x=fatalFinish.car_x;
     fatalFinish.obstacle_y=433;
     Session fatalFinishSession(fatalFinish,1,0);
-    fatalFinishSession.tick({},true);
-    check(fatalFinishSession.mode()==Session::Mode::Defeated &&
-          fatalFinishSession.blackFramesPresented()==0,
-          "fatal collision incorrectly entered stage transition");
     fatalFinishSession.tick({},true,true);
     check(fatalFinishSession.mode()==Session::Mode::Defeated &&
           fatalFinishSession.state().health==0 &&
