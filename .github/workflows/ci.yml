@@ -35,6 +35,12 @@ jobs:
             -Igame_core tests/test_driving_stage_one_session.cpp \
             -o build/driving_stage_one_session_test
           build/driving_stage_one_session_test
+      - name: Configure, build, and run graphics-core tests
+        run: |
+          set -euo pipefail
+          cmake -S graphics_core -B build/graphics_core -DCMAKE_BUILD_TYPE=Release
+          cmake --build build/graphics_core --parallel 2
+          ctest --test-dir build/graphics_core --output-on-failure
       - name: Run synthetic ROM tests
         run: python -m unittest discover -s tests -p 'test_*.py' -v
       - name: Test private RAM probe generator and CSV validator contracts
