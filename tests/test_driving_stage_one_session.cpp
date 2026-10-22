@@ -110,9 +110,12 @@ int main() {
 
     finish.reset();
     check(finish.mode()==Session::Mode::Driving &&
-          finish.state().frame==0 &&
+          finish.state().frame==0 && finish.state().health==5 &&
+          finish.state().obstacles_passed==0 &&
+          finish.state().obstacle_serial==0 && finish.state().impacts==0 &&
+          finish.state().hit_cooldown==0 && !finish.state().last_impact &&
           finish.blackFramesPresented()==0,
-          "full session reset failed");
+          "full session reset retained stale driving or transition state");
     std::cout<<"VPD_STAGE_ONE_SESSION_LIFECYCLE_PASS"
              <<" driving=1 explicit_finish=1 blackout=41 platform=1 reset=1"
              <<" original_finish_trigger_proven=0\n";
