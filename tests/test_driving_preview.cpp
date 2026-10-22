@@ -163,6 +163,19 @@ int main() {
             "independent damage-HUD redraw failed");
     require(hashRows(same,stride,0,split)==acceleratedRoad,
             "vehicle HUD health altered roadway pixels");
+    // Passed-obstacle progress is a separate HUD source, not a road animation input.
+    moving.obstacles_passed=1;
+    require(vpd::drawDrivingPreview(same.data(),w,h,stride,moving),
+            "obstacle progress HUD redraw failed");
+    require(hashRows(same,stride,0,split)==acceleratedRoad,
+            "obstacle progress changed roadway pixels");
+    const auto oneObstacleHud=hashRows(same,stride,split,h);
+    moving.obstacles_passed=2;
+    require(vpd::drawDrivingPreview(same.data(),w,h,stride,moving),
+            "updated obstacle progress HUD redraw failed");
+    require(hashRows(same,stride,0,split)==acceleratedRoad &&
+            hashRows(same,stride,split,h)!=oneObstacleHud,
+            "obstacle progress was not isolated to the HUD");
 
     scene.driving_stage_preview=false;
     require(vpd::drawScene(legacy.data(),w,h,stride,scene),
