@@ -52,5 +52,16 @@ def main():
         try: module.analyze(out_of_range,1)
         except ValueError: pass
         else: raise AssertionError("non-byte RAM value was accepted")
+        negative=root/"negative.csv"
+        write_csv(negative,[-1])
+        try: module.analyze(negative,1)
+        except ValueError: pass
+        else: raise AssertionError("negative frame was accepted")
+        extra=root/"extra.csv"
+        write_csv(extra,[1])
+        with extra.open("a",encoding="utf-8") as stream: stream.write("2,0,0,0,0,0,0,0,0,extra\\n")
+        try: module.analyze(extra,2)
+        except ValueError: pass
+        else: raise AssertionError("extra CSV field was accepted")
     print("VPD_PRIVATE_RAM_VALIDATOR_TEST_PASS valid=321 gaps_rejected=yes short_rejected=yes schema_rejected=yes")
 if __name__=="__main__": main()
