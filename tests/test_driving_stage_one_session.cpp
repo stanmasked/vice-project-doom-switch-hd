@@ -148,6 +148,23 @@ int main() {
           finish.state().hit_cooldown==0 && !finish.state().last_impact &&
           finish.blackFramesPresented()==0,
           "full session reset retained stale driving or transition state");
+    vpd::DrivingState restartInitial;
+    restartInitial.health=1;
+    restartInitial.obstacle_x=restartInitial.car_x;
+    restartInitial.obstacle_y=433;
+    Session configuredRestart(restartInitial,3,0);
+    configuredRestart.tick({});
+    check(configuredRestart.mode()==Session::Mode::Defeated,
+          "configured session did not enter defeated mode");
+    configuredRestart.tick({},false,true);
+    configuredRestart.tick({});
+    configuredRestart.tick({});
+    check(configuredRestart.mode()==Session::Mode::Driving,
+          "restart lost custom route duration before its threshold");
+    configuredRestart.tick({});
+    check(configuredRestart.mode()==Session::Mode::Transition,
+          "restart lost custom route thresholds");
+
     Session configured(3,0);
     configured.reset();
     configured.tick({});
