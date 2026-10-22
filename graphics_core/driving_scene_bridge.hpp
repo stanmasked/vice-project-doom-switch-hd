@@ -19,6 +19,7 @@ inline DrivingPreviewView makeDrivingSceneView(const DrivingState& drive) {
     view.impact_flash=drive.hit_cooldown>0 &&
                       (drive.frame/4u)%2u==0u;
     view.speed=static_cast<uint8_t>(drive.speed);
+    view.obstacles_passed=drive.obstacles_passed;
     return view;
 }
 } // namespace vpd
