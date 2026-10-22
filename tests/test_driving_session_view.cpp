@@ -44,5 +44,23 @@ int main() {
     check(!view.show_car && !view.show_obstacle,
           "platform session still exposed driving sprites");
 
+    vpd::DrivingState fragile;
+    fragile.health=1;
+    fragile.obstacle_x=fragile.car_x;
+    fragile.obstacle_y=433;
+    Session retrySession(fragile,100,1);
+    retrySession.tick({});
+    check(retrySession.mode()==Session::Mode::Defeated,
+          "session view fixture did not reach defeated state");
+    view=vpd::makeDrivingSessionView(retrySession);
+    check(!view.show_obstacle && view.health==0,
+          "HUD/renderer view exposed a live obstacle after defeat");
+    retrySession.tick({},false,true);
+    view=vpd::makeDrivingSessionView(retrySession);
+    check(retrySession.mode()==Session::Mode::Driving && view.show_car &&
+          view.show_obstacle && view.health==5 && view.frame==0 &&
+          view.obstacles_passed==0,
+          "renderer view retained stale state after retry");
+
     std::cout<<"VPD_STAGE_ONE_RENDER_VIEW_PASS shared_state=1 transition=1 platform_handoff=1\n";
 }
