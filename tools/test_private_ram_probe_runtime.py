@@ -46,6 +46,12 @@ def run(fceux, frames=321, timeout=60):
                 report=analyze(csv_path,frames)
                 if report["frames"] != frames:
                     raise AssertionError("unexpected sample count")
+                with csv_path.open(newline="",encoding="utf-8") as stream:
+                    rows=list(csv.DictReader(stream))
+                if len(rows) != frames or len(rows[0]) != 8:
+                    raise AssertionError("CSV must contain exactly one header and requested data rows")
+                if list(rows[0]) != ["frame",*FIELDS]:
+                    raise AssertionError("CSV header does not match candidate address schema")
                 if pending.exists():
                     raise AssertionError("pending output remained after completion")
             finally:
