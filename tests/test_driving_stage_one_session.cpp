@@ -8,6 +8,21 @@ static void check(bool ok,const char* why) {
 
 int main() {
     using Session=vpd::DrivingStageOneSession;
+    static_assert(vpd::DrivingStageOneConfig::shouldRequestExit(
+                      true,5,false,false,1800,8),
+                  "complete healthy preview should request route exit");
+    static_assert(!vpd::DrivingStageOneConfig::shouldRequestExit(
+                      true,0,false,true,1800,8),
+                  "dead vehicle must not request route exit");
+    static_assert(!vpd::DrivingStageOneConfig::shouldRequestExit(
+                      true,5,true,true,1800,8),
+                  "active transition must not be requested twice");
+    static_assert(!vpd::DrivingStageOneConfig::shouldRequestExit(
+                      false,5,false,true,1800,8),
+                  "route preview exit must be disabled outside preview");
+    static_assert(vpd::DrivingStageOneConfig::shouldRequestExit(
+                      true,5,false,true,0,0),
+                  "manual QA escape hatch should work before route completion");
     static_assert(vpd::DrivingStageOneConfig::routeProgressComplete(1800,8),
                   "default route completion predicate should accept complete progress");
     static_assert(!vpd::DrivingStageOneConfig::routeProgressComplete(1800,7),
