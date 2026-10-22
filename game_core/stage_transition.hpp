@@ -4,7 +4,8 @@
 // ROM-free scene-transition timing contract. Stage labels and absolute reference
 // frame numbers come from private original FCEUX frame observation; no game
 // artwork, source ROM, original FM2, or reconstructed NES code is embedded.
-// This stand-alone state machine is not wired into a Switch NRO yet.
+// The same state machine drives the manual-only road/HUD preview transition
+// in the Switch NRO; the preview trigger and route thresholds remain prototypes.
 namespace vpd {
 namespace stage_transition {
 constexpr std::uint32_t kOriginalLastDrivingFrame = 3606;
