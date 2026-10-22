@@ -83,3 +83,48 @@ Successfully evaluating **relative CPU phase** is **not** evidence of
 the effective on-screen PPU scroll, collision or original NES camera
 speed. A jointly verified ROM/FM2 SHA-256 from separately captured
 image-road data is also still required for Stage169's full join.
+
+## Stage 183 — complete file SHA-256 provenance and local FCEUX runner
+
+`tools/run_private_road_ppu_321.py` now supports a **single local
+command** that validates the owned NES ROM and FM2 before launch,
+verifies that the FM2 begins from power-on and matches the cartridge
+payload checksum, and computes SHA-256 over **entire ROM and FM2 files**.
+It starts the original-only FCEUX 321-frame Lua script in a new
+private directory, waits for the complete original 321-frame witness,
+verifies all 1,284 writer CPU events and actual within-frame timing,
+and then compares the exact ROM/FM2 SHA-256 digests again.
+
+For a successful session the private directory contains two additional
+**strictly local** manifests: `SOURCE_IDENTITY_BEFORE.json`
+and `SOURCE_IDENTITY_SEALED.json`. The latter seals SHA-256 of all
+four raw report files (including `COMPLETE.txt`) to the complete
+ROM+FM2 file identities; any input or capture tampering fails the
+independent audit. Neither manifest, SHA-256 values nor raw source
+reports are printed or committed to GitHub.
+
+Example (replace with your personally owned private files):
+
+```bash
+python3 tools/run_private_road_ppu_321.py \
+  --rom /private/game.nes --movie /private/movie.fm2 \
+  --output /private/new_road_ppu321_capture \
+  --timeout-seconds 1800
+python3 tools/seal_private_road_ppu_321.py verify \
+  --rom /private/game.nes --movie /private/movie.fm2 \
+  --capture-dir /private/new_road_ppu321_capture
+```
+
+Pre- and postflight input hashes come from actual file bytes, while
+FCEUX independently checks its *cartridge payload* MD5 through
+`rom.gethash("md5")`. These are **different digest scopes**.
+The existing older road-image numeric report lacks matching SHA-256
+metadata, so this **does not verify cross-session source identity with
+that road report**. An independent road capture with the same input
+manifest is required before the complete Stage169 joint PPU/image
+audit. This proves a private trace's integrity only, not original
+NES camera motion, effective PPU raster scroll, physical collisions
+or the existence of a source-quality HD remake.
+
+Public GitHub CI uses wholly invented NES bytes, FM2 inputs and CPU
+clock tables; no owner's game, FM2 or hashes are transferred.
