@@ -3,6 +3,7 @@ name: Vice FCEUX Executable Toolchain (Synthetic Only)
 on:
   push:
       - "tools/test_private_ram_probe_runtime.py"
+      - "tools/test_private_ram_probe_runtime.py"
     paths:
       - ".github/workflows/fceux-executable-toolchain.yml"
       - "tools/install_local_fceux.py"
@@ -13,6 +14,7 @@ on:
       - "tools/private_ram_probe_validate.py"
       - "tools/test_private_ram_probe_validate.py"
   pull_request:
+      - "tools/test_private_ram_probe_runtime.py"
       - "tools/test_private_ram_probe_runtime.py"
     paths:
       - ".github/workflows/fceux-executable-toolchain.yml"
