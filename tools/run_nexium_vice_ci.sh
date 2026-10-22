@@ -378,7 +378,14 @@ mkdir -p "$out/driving-run"
 # immediately before this isolated final driving process. All previous
 # four guest smoke sessions remain untouched and prove existing behavior.
 road_sd="$XDG_CONFIG_HOME/NeXium/sdmc/switch/vice_project_doom/road_numeric.vprd"
-python3 tools/generate_synthetic_road_bundle.py --output "$road_sd"
+# Generate ONLY in mktemp outside the public checkout. Previous setup
+# places emulator-evidence/xdg-config beneath the checkout; that must
+# not be used as the generator's output, even for invented data.
+private_ci_bundle="$scratch/road_numeric_synthetic.vprd"
+python3 tools/generate_synthetic_road_bundle.py --output "$private_ci_bundle"
+mkdir -p "$(dirname "$road_sd")"
+cp "$private_ci_bundle" "$road_sd"
+cmp "$private_ci_bundle" "$road_sd"
 xvfb-run -a -s "-screen 0 1280x720x24" \
   bash tools/nexium_driving_probe.sh "$emulator" "$nro" "$out/driving-run"
 python3 tools/audit_nexium_driving_live.py --evidence "$out/driving-run"
