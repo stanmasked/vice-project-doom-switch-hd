@@ -27,8 +27,9 @@ static void checkBridge(const vpd::DrivingState& state) {
     require(view.frame==state.frame && view.ticks==state.frame,
             "driving frame/timer bridge drift");
     require(view.road_phase==state.road_phase &&
-            view.health==state.health && view.speed==state.speed,
-            "driving scroll/status bridge drift");
+            view.health==state.health && view.speed==state.speed &&
+            view.obstacles_passed==state.obstacles_passed,
+            "driving scroll/status/progress bridge drift");
     require(view.car_x==state.car_x &&
             view.obstacle_x==state.obstacle_x &&
             view.obstacle_y==state.obstacle_y,
@@ -48,6 +49,8 @@ int main() {
     vpd::Simulation platform;
     const auto platformBefore=platform.fingerprint();
     vpd::DrivingState drive;
+    checkBridge(drive);
+    drive.obstacles_passed=4;
     checkBridge(drive);
 
     // A single state powers both actual SceneView and the standalone
