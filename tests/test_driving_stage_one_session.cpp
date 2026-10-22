@@ -80,6 +80,16 @@ int main() {
     check(fatalFinishSession.mode()==Session::Mode::Defeated &&
           fatalFinishSession.blackFramesPresented()==0,
           "fatal collision incorrectly entered stage transition");
+    fatalFinishSession.tick({},true,true);
+    check(fatalFinishSession.mode()==Session::Mode::Defeated &&
+          fatalFinishSession.state().health==0 &&
+          fatalFinishSession.blackFramesPresented()==0,
+          "finish/restart inputs bypassed defeat state on the collision frame");
+    fatalFinishSession.tick({},false,true);
+    check(fatalFinishSession.mode()==Session::Mode::Driving &&
+          fatalFinishSession.state().health==5 &&
+          fatalFinishSession.blackFramesPresented()==0,
+          "restart after simultaneous finish request retained stale transition state");
 
     // A complete route ends from gameplay progress without a debug/host event.
     Session route(3,0);
