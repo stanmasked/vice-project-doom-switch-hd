@@ -28,14 +28,24 @@ local executed=0
 memory.registerexec(0x8000,function() executed=executed+1 end)
 memory.registerwrite(0x2005,function()end)
 local first_cycle=nil
+local before_calls=0
 emu.registerbefore(function()
+ before_calls=before_calls+1
  if first_cycle==nil then first_cycle=debugger.getcyclescount() end
 end)
 local complete=false
+local after_calls=0
+local midpoint_seen=false
+local min_frames=tonumber(assert(os.getenv("VPD_SYNTHETIC_MIN_FRAMES")))
+local midpoint=math.floor(min_frames/2)
 emu.registerafter(function()
  if complete then return end
  local frame=emu.framecount()
- if frame<tonumber(assert(os.getenv("VPD_SYNTHETIC_MIN_FRAMES"))) then return end
+ after_calls=after_calls+1
+ if frame>=midpoint then midpoint_seen=true end
+ if frame<min_frames then return end
+ assert(midpoint_seen,"midpoint frame was not observed")
+ assert(before_calls>=2 and after_calls>=2,"both frame hooks must execute repeatedly")
  assert(executed>=1,"6502 source execution at 0x8000 missing")
  assert(type(first_cycle)=="number")
  local last_cycle=debugger.getcyclescount()
@@ -104,19 +114,22 @@ def verify(executable:Path,timeout:int=40,min_frames:int=20)->dict:
                         p.kill()
                         p.wait(timeout=4)
         actual=witness.read_text("ascii").splitlines()
-        if len(actual)!=6 or actual[0]!="VPD_REAL_FCEUX_EXECUTABLE_API_PASS":
+        if len(actual)!=8 or actual[0]!="VPD_REAL_FCEUX_EXECUTABLE_API_PASS":
             raise ValueError("native FCEUX Lua guest proof malformed")
         if not re.fullmatch(r"frame=[0-9]+",actual[1]) or int(actual[1].split("=")[1]) < min_frames:
             raise ValueError(f"emulator never advanced to frame {min_frames}")
         if actual[2:]!=[
             "real_cpu_exec=yes","real_cpu_cycle_clock=yes",
-            "real_ppu_rgb_api=yes","source=synthetic_rom_only"
+            "real_ppu_rgb_api=yes","repeated_frame_hooks=yes",
+            "midpoint_frame_observed=yes","source=synthetic_rom_only"
         ]:
             raise ValueError("actual original-free FCEUX APIs not proven")
         return {"real_fceux_executable":True,
                 "actual_cpu_frame_count":int(actual[1].split("=")[1]),
                 "actual_6502_cpu_execution":True,
                 "real_ppu_rgb_lua_api":True,
+                "repeated_frame_hooks":True,
+                "midpoint_frame_observed":True,
                 "original_ROM_or_FM2_used":False}
 
 if __name__=="__main__":
