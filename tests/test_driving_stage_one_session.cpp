@@ -165,6 +165,31 @@ int main() {
     check(configuredRestart.mode()==Session::Mode::Transition,
           "restart lost custom route thresholds");
 
+    // Reset the integrated session midway through blackout, then prove a fresh
+    // explicit finish request receives its own complete 41 presented frames.
+    Session interrupted;
+    interrupted.tick({},true);
+    for(unsigned i=0;i<10;++i)
+        check(interrupted.presentFrame()==Session::Mode::Transition,
+              "integrated transition ended before interrupted reset fixture");
+    check(interrupted.blackFramesPresented()==10,
+          "integrated transition did not count pre-reset blackout frames");
+    interrupted.reset();
+    check(interrupted.mode()==Session::Mode::Driving &&
+          interrupted.blackFramesPresented()==0 &&
+          interrupted.state().frame==0,
+          "integrated reset retained partial transition state");
+    interrupted.tick({},true);
+    for(unsigned i=0;i<41;++i) {
+        check(interrupted.presentFrame()==Session::Mode::Transition,
+              "restarted integrated transition ended before 41 frames");
+        check(interrupted.blackFramesPresented()==i+1,
+              "restarted integrated transition counter skipped a frame");
+    }
+    check(interrupted.presentFrame()==Session::Mode::Platform &&
+          interrupted.blackFramesPresented()==41,
+          "restarted integrated transition failed to hand off after 41 frames");
+
     Session configured(3,0);
     configured.reset();
     configured.tick({});
