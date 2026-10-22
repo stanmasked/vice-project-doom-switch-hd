@@ -128,7 +128,7 @@ int main() {
           "first transition frame was not blackout");
     const auto frameAtTransition=finish.state().frame;
     for(unsigned i=1;i<41;++i) {
-        finish.tick({false,false,true,false},false,true);
+        finish.tick({false,false,true,false},true,true);
         check(finish.state().frame==frameAtTransition,
               "driving simulation advanced during blackout");
         check(finish.presentFrame()==Session::Mode::Transition,
@@ -145,9 +145,10 @@ int main() {
     check(finish.blackFramesPresented()==terminalBlackFrames,
           "blackout counter changed after platform mode began");
     const auto frozenFrame=finish.state().frame;
-    finish.tick({false,false,true,false},false,true);
+    finish.tick({false,false,true,false},true,true);
     check(finish.mode()==Session::Mode::Platform &&
-          finish.state().frame==frozenFrame,
+          finish.state().frame==frozenFrame &&
+          finish.blackFramesPresented()==terminalBlackFrames,
           "platform mode accepted driving input");
 
     finish.reset();
