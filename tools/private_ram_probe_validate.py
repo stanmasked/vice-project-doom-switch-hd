@@ -17,7 +17,11 @@ def analyze(path, expected_frames=321):
         expected={"frame",*FIELDS}
         if set(reader.fieldnames)!=expected:
             raise ValueError("unexpected candidate RAM CSV schema")
-        rows=list(reader)
+        rows=[]
+        for row in reader:
+            if None in row or any(value is None for value in row.values()):
+                raise ValueError("CSV row has extra or missing fields")
+            rows.append(row)
     if not rows:
         raise ValueError("empty candidate RAM CSV")
     try:
@@ -32,6 +36,8 @@ def analyze(path, expected_frames=321):
                 raise ValueError(f"{field} values must be integers") from exc
             if not 0 <= value <= 255:
                 raise ValueError(f"{field} values must be bytes")
+    if any(frame < 0 for frame in frames):
+        raise ValueError("frame values must be non-negative")
     if frames!=list(range(frames[0],frames[0]+len(frames))):
         raise ValueError("frame sequence is not continuous")
     if len(rows)!=expected_frames:
