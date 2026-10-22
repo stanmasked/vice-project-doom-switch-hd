@@ -230,3 +230,16 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
                          -Wall -Wextra -Wpedantic -Werror)
 endif()
 add_test(NAME romfree_exact_stage_transition COMMAND vpd_stage_transition_test)
+
+# Complete ROM-free Stage 1-1 session lifecycle: driving, defeat/retry,
+# explicit completion, 41-frame blackout, and platform handoff.
+add_executable(vpd_driving_stage_one_session_test
+               ../tests/test_driving_stage_one_session.cpp)
+target_include_directories(vpd_driving_stage_one_session_test
+                           PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+  target_compile_options(vpd_driving_stage_one_session_test
+                         PRIVATE -Wall -Wextra -Wpedantic -Werror)
+endif()
+add_test(NAME romfree_driving_stage_one_session
+         COMMAND vpd_driving_stage_one_session_test)
