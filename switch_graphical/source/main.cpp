@@ -6,6 +6,7 @@
 #include "driving_profile_review_mode.hpp"
 #include "driving_road_private_bundle.hpp"
 #include "driving_private_review_mode.hpp"
+#include "driving_private_road_sd_witness.hpp"
 #include "driving_road_review_witness.hpp"
 #include "driving_guest_witness.hpp"
 #include "driving_raster_witness.hpp"
@@ -87,6 +88,7 @@ int main(int,char**) {
     vpd::private_road::PrivateRoadBundle private_road_data{};
     if(has_sd)(void)private_road_data.loadFile(
         "sdmc:/switch/vice_project_doom/road_numeric.vprd");
+    (void)vpd::writeRoadSdStartup(has_sd,private_road_data);
     // New run, not leftover emulator/SD evidence from a previous NRO.
     (void)vpd::manualProofReset(has_sd);
     (void)vpd::dashGuestProofReset(has_sd);

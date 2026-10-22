@@ -443,3 +443,19 @@ HID/HUD preservation on a synthetic complete private file. Running
 the new selector with the real owner-private bundle inside NeXium
 remains a separate required follow-up: public CI provides no original
 numeric SD file.
+## Stage 178 — isolated NeXium SD startup evidence with invented data
+
+In a separate final NeXium driving process, the CI runner creates a
+164-byte **synthetic** VPDROAD1 file at the guest's SD root *before
+launch*. The NRO alone reports an SD loader result once on startup:
+`VPD_PRIVATE_ROAD_SD_V1`. Its report contains only mounted/loaded,
+count and first/last movie labels. The host independently checks the
+synthetic CRC and known anchors; no owner-private original numeric
+bundle or screenshot enters GitHub or CI.
+
+The preceding full platform/demo, steering/impact, 41-blackout and
+seven-frame road X11 proof runs are unaffected. A successful report
+establishes only actual NeXium SD read of a synthetic 37-slot
+observation file, **not** successful real-pad R3 selection or the
+identity of an owner-private ROM/FM2 session. Those require separate
+evidence.

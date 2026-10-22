@@ -418,3 +418,15 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
 endif()
 add_test(NAME romfree_private_37_road_visual_review
          COMMAND vpd_private_road_review_test)
+# Stage 178: optional private numeric SD startup witness, built on
+# completely invented synthetic data, never owner ROM or picture bytes.
+add_executable(vpd_private_road_sd_guest_test
+               ../tests/test_driving_private_road_sd_guest.cpp)
+target_include_directories(vpd_private_road_sd_guest_test PRIVATE
+                           ${CMAKE_CURRENT_SOURCE_DIR}/../game_core)
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+  target_compile_options(vpd_private_road_sd_guest_test PRIVATE
+                         -Wall -Wextra -Wpedantic -Werror)
+endif()
+add_test(NAME romfree_private_road_sd_nro_startup
+         COMMAND vpd_private_road_sd_guest_test)

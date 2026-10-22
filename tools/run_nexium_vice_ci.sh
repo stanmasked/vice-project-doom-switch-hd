@@ -374,6 +374,11 @@ python3 tools/audit_nexium_hd_fx_guest.py --evidence "$out"
 # Stage 163 is intentionally a SEPARATE emulator process after every prior
 # gameplay/fx witness. It cannot silently change the established four runs.
 mkdir -p "$out/driving-run"
+# Source-only invented 37-slot data, staged in NeXium's private SD
+# immediately before this isolated final driving process. All previous
+# four guest smoke sessions remain untouched and prove existing behavior.
+road_sd="$XDG_CONFIG_HOME/NeXium/sdmc/switch/vice_project_doom/road_numeric.vprd"
+python3 tools/generate_synthetic_road_bundle.py --output "$road_sd"
 xvfb-run -a -s "-screen 0 1280x720x24" \
   bash tools/nexium_driving_probe.sh "$emulator" "$nro" "$out/driving-run"
 python3 tools/audit_nexium_driving_live.py --evidence "$out/driving-run"
@@ -384,3 +389,7 @@ python3 tools/audit_nexium_driving_blackout.py --evidence "$out/driving-run"
 python3 tools/audit_nexium_road_review.py --evidence "$out/driving-run"
 python3 tools/audit_nexium_road_x11_shape.py --evidence "$out/driving-run"
 python3 tools/audit_nexium_road_x11_sweep.py --evidence "$out/driving-run"
+cp "$XDG_CONFIG_HOME/NeXium/sdmc/switch/vice_project_doom/private_road_sd_guest.txt" \
+  "$out/driving-run/guest-private-road-sd-startup.txt"
+python3 tools/audit_nexium_private_road_sd.py \
+  --evidence "$out/driving-run" --input "$road_sd"
