@@ -6,6 +6,7 @@ on:
       - ".github/workflows/fceux-executable-toolchain.yml"
       - "tools/install_local_fceux.py"
       - "tools/verify_real_fceux_runtime.py"
+      - "tools/test_fceux_witness_contract.py"
   pull_request:
     paths:
       - ".github/workflows/fceux-executable-toolchain.yml"
@@ -22,6 +23,8 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+      - name: Check guest-host Lua witness contract
+        run: python3 tools/test_fceux_witness_contract.py
       - name: Install native FCEUX and Xvfb from Ubuntu
         run: |
           set -euo pipefail
