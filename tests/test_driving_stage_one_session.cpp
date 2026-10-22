@@ -36,6 +36,20 @@ int main() {
           defeated.state().health==5 && defeated.state().frame==0,
           "restart did not restore initial driving state");
 
+    // A complete route ends from gameplay progress without a debug/host event.
+    Session route(3);
+    route.tick({});
+    check(route.mode()==Session::Mode::Driving,
+          "route ended before its configured prototype duration");
+    route.tick({});
+    check(route.mode()==Session::Mode::Driving,
+          "route ended one frame before its configured prototype duration");
+    route.tick({});
+    check(route.mode()==Session::Mode::Transition,
+          "route did not transition at its configured completion frame");
+    check(route.state().frame==3,
+          "route completion advanced the simulation beyond its final frame");
+
     Session finish;
     finish.tick({},true);
     check(finish.mode()==Session::Mode::Transition,
