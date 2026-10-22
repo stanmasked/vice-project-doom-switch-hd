@@ -47,7 +47,7 @@ def run(fceux, frames=321, timeout=60):
                     time.sleep(0.1)
                 else:
                     raise TimeoutError("RAM probe did not finish before timeout")
-                if not witness.is_file() or f"frames={frames}" not in witness.read_text(encoding="ascii"):\n                    raise AssertionError("guest Lua completion witness missing or incorrect")\n                report=analyze(csv_path,frames)
+                if not witness.is_file() or f"frames={frames}" not in witness.read_text(encoding="ascii"):
                 if report["frames"] != frames:
                     raise AssertionError("unexpected sample count")
                 with csv_path.open(newline="",encoding="utf-8") as stream:
