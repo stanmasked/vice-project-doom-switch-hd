@@ -68,6 +68,9 @@ emu.registerafter(function()
   "real_cpu_exec=yes\n"..
   "real_cpu_cycle_clock=yes\n"..
   "real_ppu_rgb_api=yes\n"..
+  "repeated_frame_hooks=yes\n"..
+  "midpoint_frame_observed=yes\n"..
+  "continuous_frame_sequence=yes\n"..
   "source=synthetic_rom_only\n"))
  assert(file:close())
  assert(os.rename(temporary,output),"unable to publish atomic guest witness")
