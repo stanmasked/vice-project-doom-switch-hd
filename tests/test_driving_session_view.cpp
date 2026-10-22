@@ -53,8 +53,10 @@ int main() {
     check(retrySession.mode()==Session::Mode::Defeated,
           "session view fixture did not reach defeated state");
     view=vpd::makeDrivingSessionView(retrySession);
-    check(!view.show_obstacle && view.health==0,
-          "HUD/renderer view exposed a live obstacle after defeat");
+    check(!view.show_car && !view.show_obstacle && view.health==0 &&
+          view.frame==retrySession.state().frame &&
+          view.obstacles_passed==retrySession.state().obstacles_passed,
+          "HUD/renderer view exposed driving sprites or stale progress after defeat");
     retrySession.tick({},false,true);
     view=vpd::makeDrivingSessionView(retrySession);
     check(retrySession.mode()==Session::Mode::Driving && view.show_car &&
