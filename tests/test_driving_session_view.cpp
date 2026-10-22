@@ -37,7 +37,18 @@ int main() {
           !view.show_obstacle,
           "transition presentation did not suppress obstacle while retaining car");
 
-    for(unsigned i=0;i<41;++i) session.presentFrame();
+    const auto transitionFrame=view.frame;
+    const auto transitionHealth=view.health;
+    const auto transitionProgress=view.obstacles_passed;
+    for(unsigned i=0;i<41;++i) {
+        check(session.presentFrame()==Session::Mode::Transition,
+              "session left transition before all blackout frames were presented");
+        view=vpd::makeDrivingSessionView(session);
+        check(view.frame==transitionFrame && view.health==transitionHealth &&
+              view.obstacles_passed==transitionProgress && view.show_car &&
+              !view.show_obstacle,
+              "HUD/session view changed during blackout");
+    }
     check(session.presentFrame()==Session::Mode::Platform,
           "session did not hand off to platform scene after blackout");
     view=vpd::makeDrivingSessionView(session);
