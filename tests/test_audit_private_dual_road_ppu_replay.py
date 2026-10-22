@@ -6,6 +6,7 @@ import re
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/"tools"))
 sys.path.insert(0,str(Path(__file__).resolve().parent))
@@ -15,7 +16,7 @@ from test_audit_private_legacy_road_geometry import synthetic as old_numeric
 from test_audit_private_road_mask_reproduction import fabricated_rgb
 from test_audit_private_road_ppu_321_trace import fixture as fake_trace
 from seal_private_road_ppu_321 import preflight,finalize
-from audit_private_dual_road_ppu_replay import compare
+from audit_private_dual_road_ppu_replay import compare,run_and_compare
 
 class DualReplaySourceFreeTests(unittest.TestCase):
     def setUp(self):
@@ -121,6 +122,43 @@ class DualReplaySourceFreeTests(unittest.TestCase):
             self.skipTest(str(err))
         with self.assertRaises(ValueError):
             compare(self.rom,self.movie,self.legacy,self.first,self.second)
+    def test_execute_triggers_two_independent_capture_launches(self):
+        called=[]
+        def fake_launch(rom,movie,output,fceux,timeout_seconds):
+            called.append((output,fceux,timeout_seconds))
+            self.create(output)
+        with patch("audit_private_dual_road_ppu_replay.launch",
+                   side_effect=fake_launch) as run:
+            result=run_and_compare(
+                self.rom,self.movie,self.legacy,
+                self.first,self.second,executable="fceux",
+                watchdog=600)
+        self.assertEqual(run.call_count,2)
+        self.assertEqual([x[0] for x in called],
+                         [self.first,self.second])
+        self.assertTrue(
+            result["two_separate_fceux_processes_launched_by_this_command"])
+        self.assertFalse(result["original_effective_ppu_scroll_proven"])
+    def test_execute_rejects_same_target_before_any_launch(self):
+        with patch("audit_private_dual_road_ppu_replay.launch") as run:
+            with self.assertRaises(ValueError):
+                run_and_compare(
+                    self.rom,self.movie,self.legacy,
+                    self.first,self.first)
+            run.assert_not_called()
+    def test_execute_second_launch_failure_never_reports_success(self):
+        calls=[]
+        def fake_launch(rom,movie,output,fceux,timeout_seconds):
+            calls.append(output)
+            if len(calls)==2:
+                raise ValueError("second private process did not finish")
+            self.create(output)
+        with patch("audit_private_dual_road_ppu_replay.launch",
+                   side_effect=fake_launch):
+            with self.assertRaises(ValueError):
+                run_and_compare(self.rom,self.movie,self.legacy,
+                                self.first,self.second)
+        self.assertEqual(calls,[self.first,self.second])
     def test_wrong_rom_fm2_input_file_rejected(self):
         self.pair()
         self.rom.write_bytes(self.rom.read_bytes()+b"X")
