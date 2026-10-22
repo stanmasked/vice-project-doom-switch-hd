@@ -17,23 +17,24 @@ int main() {
     check(session.presentFrame()==Session::Mode::Driving,
           "session left driving mode without a completion event");
 
-    // Defeat must freeze gameplay motion until an explicit restart.
-    Session defeated;
-    auto fatal=defeated.state();
+    // A known collision fixture must enter defeat, freeze, and restart cleanly.
+    vpd::DrivingState fatal;
     fatal.health=1;
     fatal.obstacle_x=fatal.car_x;
     fatal.obstacle_y=433;
-    // Set the fixture through a short deterministic input sequence is not
-    // exposed as mutable state; use normal driving until collision is reached.
-    bool died=false;
-    for(int i=0;i<100 && !died;++i) {
-        defeated.tick({});
-        died=defeated.mode()==Session::Mode::Defeated;
-    }
-    // Default health is five, so this also confirms collision handling does
-    // not spuriously enter defeat when the route is only briefly simulated.
-    check(!died,"session unexpectedly defeated on default obstacle path");
-    check(defeated.mode()==Session::Mode::Driving,"driving session state drift");
+    Session defeated(fatal);
+    defeated.tick({});
+    check(defeated.mode()==Session::Mode::Defeated,
+          "fatal collision did not enter defeated mode");
+    const auto deadFrame=defeated.state().frame;
+    defeated.tick({false,true,true,false});
+    check(defeated.state().frame==deadFrame &&
+          defeated.state().health==0,
+          "defeated session advanced without restart");
+    defeated.tick({},false,true);
+    check(defeated.mode()==Session::Mode::Driving &&
+          defeated.state().health==5 && defeated.state().frame==0,
+          "restart did not restore initial driving state");
 
     Session finish;
     finish.tick({},true);
