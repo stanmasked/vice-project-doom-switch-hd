@@ -2,27 +2,25 @@ name: Vice FCEUX Executable Toolchain (Synthetic Only)
 
 on:
   push:
-      - "tools/test_private_ram_probe_validate.py"
-      - "tools/test_private_ram_probe_validate.py"
-      - "tools/generate_private_ram_probe.py"
-      - "tools/test_private_ram_probe_contract.py"
-      - "tools/private_ram_probe_validate.py"
     paths:
       - ".github/workflows/fceux-executable-toolchain.yml"
       - "tools/install_local_fceux.py"
       - "tools/verify_real_fceux_runtime.py"
       - "tools/test_fceux_witness_contract.py"
+      - "tools/generate_private_ram_probe.py"
+      - "tools/test_private_ram_probe_contract.py"
+      - "tools/private_ram_probe_validate.py"
+      - "tools/test_private_ram_probe_validate.py"
   pull_request:
-      - "tools/test_private_ram_probe_validate.py"
-      - "tools/test_private_ram_probe_validate.py"
-      - "tools/generate_private_ram_probe.py"
-      - "tools/test_private_ram_probe_contract.py"
-      - "tools/private_ram_probe_validate.py"
     paths:
       - ".github/workflows/fceux-executable-toolchain.yml"
       - "tools/install_local_fceux.py"
       - "tools/verify_real_fceux_runtime.py"
       - "tools/test_fceux_witness_contract.py"
+      - "tools/generate_private_ram_probe.py"
+      - "tools/test_private_ram_probe_contract.py"
+      - "tools/private_ram_probe_validate.py"
+      - "tools/test_private_ram_probe_validate.py"
   workflow_dispatch:
 
 permissions:
@@ -36,6 +34,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Check guest-host Lua witness contract
         run: python3 tools/test_fceux_witness_contract.py
+      - name: Test private RAM probe contract
+        run: python3 tools/test_private_ram_probe_contract.py
       - name: Test private RAM capture validator with synthetic CSV
         run: python3 tools/test_private_ram_probe_validate.py
       - name: Install native FCEUX and Xvfb from Ubuntu
@@ -60,7 +60,8 @@ jobs:
           cd "$RUNNER_TEMP/fceux-rehydrate-debs"
           apt-get download fceux liblua5.1-0
           sha256sum ./*.deb > SHA256SUMS
-          printf 'Artifact generated in ROM-free GitHub Actions.\n' > package-info.txt
+          printf 'Artifact generated in ROM-free GitHub Actions.
+' > package-info.txt
           zip -q "$RUNNER_TEMP/fceux-rehydrate.zip" ./*.deb SHA256SUMS package-info.txt
           cd "$GITHUB_WORKSPACE"
           python3 tools/install_local_fceux.py \
