@@ -65,6 +65,18 @@ int main() {
           view.health==5 && view.obstacles_passed==0 && view.show_car &&
           view.show_obstacle,
           "reset after platform handoff retained stale view or blackout state");
+    session.tick({},true);
+    check(session.mode()==Session::Mode::Transition &&
+          session.blackFramesPresented()==0,
+          "second route could not begin a fresh transition after reset");
+    for(unsigned i=0;i<41;++i) {
+        check(session.presentFrame()==Session::Mode::Transition &&
+              session.blackFramesPresented()==i+1,
+              "second transition did not present exactly 41 blackout frames");
+    }
+    check(session.presentFrame()==Session::Mode::Platform &&
+          session.blackFramesPresented()==41,
+          "second transition failed to hand off after its 41st blackout frame");
 
     vpd::DrivingState fragile;
     fragile.health=1;
