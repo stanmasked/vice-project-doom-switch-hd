@@ -470,8 +470,19 @@ int main(int,char**) {
         // recovered original-game clear condition. Minus remains a manual QA
         // escape hatch for early transition tests.
         constexpr std::uint32_t kDrivingPrototypeRouteFrames=1800;
+        const bool driving_retry_pressed=driving_preview &&
+            driving_state.health==0 && (pressed&HidNpadButton_X) &&
+            !driving_preview_chord;
+        if(driving_retry_pressed) {
+            driving_state.reset();
+            driving_stage_exit.reset();
+            (void)vpd::appendDrivingGuestProof(has_sd,
+                driving_proof.enter(!demo.enabled(),true,
+                                    driving_state,game.fingerprint()));
+        }
         const bool request_driving_exit=
-            driving_preview && !driving_stage_exit.active() &&
+            driving_preview && driving_state.health>0 &&
+            !driving_stage_exit.active() &&
             (((pressed&HidNpadButton_Minus) != 0) ||
              driving_state.frame>=kDrivingPrototypeRouteFrames);
         if(demo.enabled()) {
@@ -504,7 +515,8 @@ int main(int,char**) {
             if(driving_preview) {
                 // The road prototype updates only its own invented simulation.
                 // Keep the established platform game/fingerprint unchanged.
-                if(!driving_preview_chord && !driving_stage_exit.active() &&
+                if(!driving_preview_chord && !driving_retry_pressed &&
+                   driving_state.health>0 && !driving_stage_exit.active() &&
                    !request_driving_exit) {
                     const vpd::DriveInput drive_input{
                         (buttons&(HidNpadButton_Left|HidNpadButton_StickLLeft))!=0,
