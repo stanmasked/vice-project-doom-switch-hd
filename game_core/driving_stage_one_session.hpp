@@ -39,11 +39,14 @@ public:
             mode_=Mode::Defeated;
             return;
         }
+        const bool requestExit=DrivingStageOneConfig::shouldRequestExit(
+            true,state_.health,exit_.active(),finishConfirmed,
+            state_.frame,state_.obstacles_passed);
         const bool routeProgressComplete=
             DrivingStageOneConfig::routeProgressComplete(
                 state_.frame,state_.obstacles_passed,
                 route_frames_,required_obstacles_);
-        if ((finishConfirmed || routeProgressComplete) &&
+        if ((requestExit || routeProgressComplete) &&
             exit_.requestAfterDrivingFrame(true,true)) {
             mode_=Mode::Transition;
         }
