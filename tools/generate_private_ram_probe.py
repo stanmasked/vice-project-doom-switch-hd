@@ -15,10 +15,11 @@ def make_lua(output_name="ram_candidates.csv", frame_limit=600):
     if frame_limit < 1:
         raise ValueError("frame_limit must be positive")
     addresses=", ".join(f"0x{x:04X}" for x in ADDRESSES)
+    header=",".join(f"ram_{x:04x}" for x in ADDRESSES)
     return f'''-- Generated private diagnostic probe; never commit its output.
 local addresses = {{{addresses}}}
 local out = assert(io.open("{output_name}.pending", "w"))
-assert(out:write("frame," .. table.concat({{"{','.join(f'ram_{x:04x}' for x in ADDRESSES)}}, ",") .. "\\n"))
+assert(out:write("frame,{header}\\n"))
 local last_frame = -1
 local samples = 0
 local complete = false
