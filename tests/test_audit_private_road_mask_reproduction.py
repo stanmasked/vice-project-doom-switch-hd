@@ -72,11 +72,13 @@ class SameSessionRoadMaskTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             compare_to_legacy(self.extract(),wrong)
     def test_non_source_gray_color_not_accepted(self):
-        # First pixel in frame600, first original ROI row. One wrong RGB
-        # sample will shift the newly measured left edge.
-        first_gray_offset=SCHEMA.size+2+3*66
-        self.fail_file(lambda b:b.__setitem__(
-            slice(first_gray_offset,first_gray_offset+3),bytes((116,117,117))))
+        # Three of the four independent source scanlines must shift;
+        # changing only one intentionally does NOT affect the median.
+        def corrupt(b):
+            for row in range(3):
+                first=SCHEMA.size+2+row*256*3+3*66
+                b[first:first+3]=bytes((116,117,117))
+        self.fail_file(corrupt)
     def test_truncated_original_free_rgb_file_rejected(self):
         raw=self.file.read_bytes()
         self.file.write_bytes(raw[:-1])
