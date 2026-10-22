@@ -13,7 +13,7 @@ int main() {
     check(view.frame==session.state().frame &&
           view.car_x==session.state().car_x &&
           view.road_phase==session.state().road_phase &&
-          view.health==session.state().health && view.show_car &&
+          view.health==session.state().health &&\n          view.obstacles_passed==session.state().obstacles_passed && view.show_car &&
           view.show_obstacle,
           "initial renderer view diverged from driving session");
 
