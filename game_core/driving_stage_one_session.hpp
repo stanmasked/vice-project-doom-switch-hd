@@ -6,8 +6,9 @@
 namespace vpd {
 
 // ROM-free lifecycle controller for the Stage 1-1 driving prototype.
-// Completion is accepted only as an explicit host/gameplay event; this class
-// does not pretend that the private reference frame number is a proven trigger.
+// Prototype completion may use configurable progress thresholds or an explicit
+// host/gameplay event. Thresholds remain placeholders until reference evidence
+// establishes the original game's authentic clear condition.
 class DrivingStageOneSession {
 public:
     // Default route length is a tunable prototype value, not original-game data.
