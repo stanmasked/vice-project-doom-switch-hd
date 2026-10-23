@@ -73,3 +73,8 @@ python3 tools/audit_private_dual_road_ppu_replay.py \
 Add `--execute` to have the command launch two separate local FCEUX processes into two new private directories. The output explicitly states that the legacy report was not compared and that no legacy-exact-match claim is made. This path does not replace the strict legacy-gated replay mode.
 
 Local original-source investigation has now run two independent FCEUX 2.6.5 processes and observed byte-identical RGB payloads, CPU writer values, RAM samples and frame-relative phases. The old hashless road report still differs in three complete records, so the strict legacy replay gate remains blocked. Effective PPU scroll, camera speed and collision geometry are not proven.
+
+
+## Stage 321 — PPU write-latch trace
+
+A new owner-local capture records actual writes to PPUCTRL, PPUMASK, PPUSCROLL and PPUADDR, plus direct PPUSTATUS read-instruction candidates, with 321 source-frame clocks. The auditor reconstructs the shared write toggle and compares all 1,284 actual PPUSCROLL port values against the sealed CPU writer trace. See `docs/DRIVING_PRIVATE_PPU_LATCH_TRACE.md`. The candidate-read limitation, unchanged strict legacy gate, and unproven effective raster scroll are explicit.
