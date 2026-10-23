@@ -1,0 +1,14 @@
+{
+  "effective_raster_scroll_proven": false,
+  "format": "vpd_stage338_ppu_dot_witness_readiness_v1",
+  "next_required_witness": "independently observed PPU scanline/dot and internal v (or renderer-matched pixel evidence)",
+  "private_register_values_disclosed": false,
+  "raster_model_independently_unit_tested": true,
+  "raster_witness_authenticated": false,
+  "source_cpu_event_rows": 21398,
+  "source_has_cpu_cycles": true,
+  "source_has_internal_v_witness": false,
+  "source_has_ppu_scanline_dot": false,
+  "source_window_frames": 261,
+  "stage335_cpu_bus_baseline_matches": true
+}
