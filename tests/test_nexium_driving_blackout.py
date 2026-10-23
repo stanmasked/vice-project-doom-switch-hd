@@ -45,6 +45,11 @@ class SourceBlackoutAuditTests(unittest.TestCase):
         lines=self.fixture()
         lines[25]=lines[25].replace("road_frame=20","road_frame=21")
         with self.assertRaises(ValueError):verify_records(lines)
+    def test_original_stage_clear_claim_rejected(self):
+        lines=self.fixture()
+        lines[42]=lines[42].replace("original_stage_clear_proven=0",
+                                    "original_stage_clear_proven=1")
+        with self.assertRaises(ValueError):verify_records(lines)
     def test_forged_host_source_rejected(self):
         lines=self.fixture()
         lines[31]=lines[31].replace("source=libnx_frame","source=host_input")
