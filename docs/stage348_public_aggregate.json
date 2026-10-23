@@ -1,0 +1,30 @@
+{
+  "format": "vpd_stage348_original_wide_rgb_exception_public_v1",
+  "stage": 348,
+  "original_source_frame_window": [
+    470,
+    494
+  ],
+  "source_anomalous_adjacent_pairs_verified": 1,
+  "independent_non_hud_rgb_regions": 4,
+  "signed_shift_candidates_per_region": 49,
+  "tested_shift_bounds_pixels": [
+    -24,
+    24
+  ],
+  "true_best_screen_shift_pixels": 2,
+  "all_four_regions_best_rgb_mismatch_zero": true,
+  "all_four_regions_unique_best_shift": true,
+  "alternate_plus18_shift_rgb_mismatch_fraction_range_rounded": [
+    0.2944,
+    0.4382
+  ],
+  "first_y_register_signed_step_for_exception": -18,
+  "universal_first_y_to_pixel_delta_hypothesis_supported": false,
+  "source_archive_original_sha256_verified": true,
+  "prior_stage335_cpu_and_stage341_classic_ppu_source_identity_verified": true,
+  "vehicle_speed_or_camera_speed_proven": false,
+  "exact_hardware_ppu_dot_proven": false,
+  "root_cause_of_register_jump_proven": false,
+  "original_rom_fm2_frames_or_register_values_in_public_repo": false
+}
