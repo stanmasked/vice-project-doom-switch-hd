@@ -1,6 +1,7 @@
 name: Deterministic native simulation
 on:
   push:
+    branches: [main]
     paths:
       - 'game_core/**'
       - 'tests/test_simulation.cpp'
@@ -13,6 +14,11 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+
+concurrency:
+  group: vice-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref_name }}-${{ github.event_name }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   simulation:
     runs-on: ubuntu-latest
