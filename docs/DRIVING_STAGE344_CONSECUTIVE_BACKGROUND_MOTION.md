@@ -38,6 +38,8 @@ Create an owner-private SHA manifest in format `vpd_stage344_original_consecutiv
 ```
 python tools/audit_private_stage344_motion.py --root "$OWNER_PRIVATE_STAGE344_ROOT" \
   --manifest "$OWNER_PRIVATE_STAGE344_MANIFEST" \
+  --sealed-cpu-sha256 "$OWNER_PINNED_STAGE335_SHA256" \
+  --sealed-native-sha256 "$OWNER_PINNED_STAGE341_SHA256" \
   --output "$OWNER_PRIVATE_STAGE344_REPORT"
 python -m unittest discover -s tests -p 'test_stage344_*.py' -v
 ```
@@ -47,3 +49,9 @@ Backup the raw pixel/witness archive, manifest and report to the existing **owne
 ## Next
 
 Stage 345: investigate the true rendering start and finer road pixel displacement across additional original consecutive windows, and independently compare feature movement to the classic PPU scroll registers and RAM `$0D` *without assuming they are the same physical quantity*. Require a new authenticated source window before inferring a more general motion law. No original source data in public GitHub Actions.
+
+## Stage 345 prerequisite — independent sealed-source identity gate
+
+The initial Stage344 auditor authenticated every file against the capture session manifest, but a mistakenly replaced CPU/PPU trace **and the manifest rewritten together** would remain self-consistent. The auditor now also **requires independent Stage335 and Stage341 SHA-256 pins**, supplied from prior owner-private sealed records via CLI. A SHA copied from the new Stage344 manifest is **not** an independent seal. The two external values are compared to capture hashes **before** pixel analysis; malformed, missing, or mismatched pins fail closed.
+
+The ROM-free synthetic suite adds two regressions for a jointly rewritten native trace/manifest and an invalid pin. This is a *reproducibility and provenance correction*, not new original-game capture. It does not extend the measured frame window, establish an exact NES PPU dot, or prove camera/vehicle mechanics. New source conclusions require a fresh owner-private authenticated execution and Drive-verified archive.
