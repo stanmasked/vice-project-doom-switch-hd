@@ -93,7 +93,8 @@ def verify_frame_anchors(path:Path,field:str,event:str,first:int,last:int)->None
         raise ValueError('original same-session CPU/PPU frame coverage incomplete')
 
 
-def audit(root:Path,manifest:Path,*,first:int=FIRST,last:int=LAST)->dict:
+def audit(root:Path,manifest:Path,*,sealed_cpu_sha256:str,sealed_native_sha256:str,
+          first:int=FIRST,last:int=LAST)->dict:
     if first>last or last-first>32 or not 380<=first<=last<=640:
         raise ValueError('unsupported original source frame interval')
     if root.is_symlink() or manifest.is_symlink() or not root.is_dir() or not manifest.is_file():
@@ -104,6 +105,18 @@ def audit(root:Path,manifest:Path,*,first:int=FIRST,last:int=LAST)->dict:
     if m.get('original_readonly') is not True or m.get('newppu')!=0 or m.get('frames')!=list(range(first,last+1)):
         raise ValueError('original FM2 playback mode/source frame selection differs')
     expected=m.get('sha256',{})
+    # These independently owner-pinned Stage335/341 digests MUST come from the
+    # previous private seal, not this session's (self-consistent) manifest.
+    # Without them, a substituted CPU/PPU TSV plus rewritten manifest would
+    # incorrectly appear to reproduce the previous original capture.
+    for pin in (sealed_cpu_sha256,sealed_native_sha256):
+        if not isinstance(pin,str) or len(pin)!=64 or any(ch not in '0123456789abcdef' for ch in pin):
+            raise ValueError('independent prior-stage SHA-256 pins required')
+    if not isinstance(expected,dict):
+        raise ValueError('private file digests missing')
+    if (expected.get('stage335_ppu_latch_ram0d_events.tsv')!=sealed_cpu_sha256 or
+        expected.get('stage341_classic_refreshaddr.tsv')!=sealed_native_sha256):
+        raise ValueError('independent prior-stage seal mismatch')
     cpu=root/'stage335_ppu_latch_ram0d_events.tsv'
     native=root/'stage341_classic_refreshaddr.tsv'
     checked(cpu,expected['stage335_ppu_latch_ram0d_events.tsv'])
@@ -188,10 +201,15 @@ def audit(root:Path,manifest:Path,*,first:int=FIRST,last:int=LAST)->dict:
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--root',type=Path,required=True);p.add_argument('--manifest',type=Path,required=True)
+    p.add_argument('--sealed-cpu-sha256',required=True,
+                   help='Owner-private independent Stage335 SHA-256, never from this manifest')
+    p.add_argument('--sealed-native-sha256',required=True,
+                   help='Owner-private independent Stage341 SHA-256, never from this manifest')
     p.add_argument('--output',type=Path)
     a=p.parse_args()
     try:
-        result=audit(a.root,a.manifest)
+        result=audit(a.root,a.manifest,sealed_cpu_sha256=a.sealed_cpu_sha256,
+                     sealed_native_sha256=a.sealed_native_sha256)
         payload=json.dumps(result,indent=2,sort_keys=True)+'\n'
         if a.output:
             if a.output.exists() or a.output.is_symlink():raise ValueError('do not overwrite owner-private report')
