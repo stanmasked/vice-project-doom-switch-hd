@@ -1,0 +1,22 @@
+{
+  "actual_ppu_v_observed": false,
+  "effective_raster_scroll_proven": false,
+  "exact_upstream_source_blob_located": true,
+  "experimental_newppu_source": false,
+  "fceux_upstream_tag": "v2.6.5",
+  "fm2_format_v3": true,
+  "format": "vpd_stage339_owner_fm2_ppu_mode_gate_v1",
+  "input_records": 43652,
+  "legacy_ppu_source": true,
+  "legacy_ppu_witness_instrumented": false,
+  "ntsc_source": true,
+  "ppu_scanline_dot_observed": false,
+  "private_bytes_or_hashes_disclosed": false,
+  "private_inputs_committed": false,
+  "rendered_scroll_proven": false,
+  "scanline_dot_internally_observed": false,
+  "source_free_local_tests_passed": 16,
+  "source_trace_compatibility_check_completed": true,
+  "stage": 339,
+  "upstream_ppu_source_contract_documented": true
+}
