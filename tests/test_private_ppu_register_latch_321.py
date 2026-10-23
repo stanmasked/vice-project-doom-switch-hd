@@ -25,6 +25,8 @@ class PrivatePpuRegisterLatchTests(unittest.TestCase):
 
         for frame in range(600, 921):
             begin = frame * 30000
+            if mutation == "boundary-gap" and frame >= 601:
+                begin += 2
             clocks.append({"frame": frame, "begin_cycle": begin, "end_cycle": begin + 30000})
             add(frame, "W2000", 0x2000, "88", 0xE69A, begin + 20, a=0x88)
             add(frame, "W2001", 0x2001, "1E", 0xE6A1, begin + 30, a=0x1E)
@@ -98,6 +100,11 @@ class PrivatePpuRegisterLatchTests(unittest.TestCase):
         self.assertEqual(result["cpu_port_values_matched"], 1284)
         self.assertEqual(result["scroll_latch_roles_per_frame"], "0,1,0,1")
         self.assertEqual(result["interrupted_scroll_pairs"], 0)
+
+    def test_small_nonoverlapping_callback_boundary_gap_is_allowed(self):
+        result = self.run_bundle("boundary-gap")
+        self.assertEqual(result["frames"], 321)
+        self.assertEqual(result["cpu_port_values_matched"], 1284)
 
     def test_status_read_between_scroll_pair_rejected(self):
         with self.assertRaises(ValueError):

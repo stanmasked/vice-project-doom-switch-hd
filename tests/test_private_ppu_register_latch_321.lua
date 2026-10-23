@@ -47,12 +47,22 @@ os.getenv=old_getenv
 local exec_count,write_count=0,0
 for _ in pairs(exec_hooks) do exec_count=exec_count+1 end
 for _ in pairs(write_hooks) do write_count=write_count+1 end
-assert(exec_count==68,"all PRG-slot direct PPUSTATUS candidates must be hooked")
+assert(exec_count==72,"68 PPUSTATUS candidates and four CPU scroll writers must be hooked")
 assert(write_count==5,"PPUCTRL, PPUMASK, PPUSTATUS, PPUSCROLL and PPUADDR writes must be observed")
 assert(type(before_callback)=="function" and type(after_callback)=="function")
 instruction_bytes[0xE8E7]=0xAD
 instruction_bytes[0xE8E8]=0x02
 instruction_bytes[0xE8E9]=0x20
+for _,pc in ipairs({0xE8EC,0xE8F1}) do
+ instruction_bytes[pc]=0x8D
+ instruction_bytes[pc+1]=0x05
+ instruction_bytes[pc+2]=0x20
+end
+for _,pc in ipairs({0xE369,0xE36C}) do
+ instruction_bytes[pc]=0x8E
+ instruction_bytes[pc+1]=0x05
+ instruction_bytes[pc+2]=0x20
+end
 for frame=0,920 do
  current_frame=frame
  current_cycle=frame*30000
@@ -66,10 +76,23 @@ for frame=0,920 do
   exec_hooks[0xE8E7]()
   write(0x2006,0x23,0xE6A2,frame*30000+200)
   write(0x2006,0x00,0xE6A5,frame*30000+204)
-  write(0x2005,0x00,0xE8EF,frame*30000+800)
-  write(0x2005,frame%256,0xE8F4,frame*30000+807)
-  write(0x2005,0x00,0xE36C,frame*30000+24283)
-  write(0x2005,0x00,0xE36F,frame*30000+24287)
+  local writer_specs={
+   {0xE8EC,0xE8EF,"a",0,800},
+   {0xE8F1,0xE8F4,"a",frame%256,807},
+   {0xE369,0xE36C,"x",0,24283},
+   {0xE36C,0xE36F,"x",0,24287},
+  }
+  for _,spec in ipairs(writer_specs) do
+   local before_pc,after_pc,reg,value,offset=spec[1],spec[2],spec[3],spec[4],spec[5]
+   current_pc,current_cycle=before_pc,frame*30000+offset-3
+   regs.pc=before_pc
+   regs.a=(reg=="a") and value or 0x55
+   regs.x=(reg=="x") and value or 0
+   regs.y=0
+   assert(type(exec_hooks[before_pc])=="function")
+   exec_hooks[before_pc]()
+   write(0x2005,value,after_pc,frame*30000+offset)
+  end
   write(0x2006,0x23,0xE6A2,frame*30000+25000)
   write(0x2006,0x00,0xE6A5,frame*30000+25004)
  end
@@ -97,4 +120,4 @@ for _ in events:gmatch("\n") do event_rows=event_rows+1 end
 assert(event_rows==3532,"header plus all 3531 events required")
 assert(read_all("COMPLETE.txt"):find("frame_clock_rows=321",1,true))
 os.execute("rm -rf "..root)
-print("PRIVATE_PPU_LATCH_CAPTURE_LUA_MOCK_PASS frames=321 hooks=68 status_reads=321 scroll_writes=1284 frame_clocks=321")
+print("PRIVATE_PPU_LATCH_CAPTURE_LUA_MOCK_PASS frames=321 hooks=72 status_reads=321 scroll_writes=1284 frame_clocks=321")

@@ -178,8 +178,13 @@ def validate_trace_bundle(
         end = int(row["end_cycle"])
         if frame != 600 + index or end <= begin or not 25_000 <= end - begin <= 40_000:
             raise ValueError("private PPU frame clock is malformed")
-        if previous_end is not None and begin != previous_end:
-            raise ValueError("private PPU frame clock has a gap or overlap")
+        if previous_end is not None:
+            boundary_gap = begin - previous_end
+            # FCEUX samples the frame-begin and frame-end hooks separately;
+            # tolerate a tiny callback-boundary gap, but never overlap or skip
+            # a meaningful section of the emulated CPU timeline.
+            if boundary_gap < 0 or boundary_gap > 64:
+                raise ValueError("private PPU frame clock has a gap or overlap")
         clocks[frame] = (begin, end)
         previous_end = end
 

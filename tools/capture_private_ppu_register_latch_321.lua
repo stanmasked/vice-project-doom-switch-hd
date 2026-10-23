@@ -63,11 +63,55 @@ for _,base in ipairs(slot_bases) do
   end
  end
 end
+-- The registerwrite callback does not provide a reliable instruction PC
+-- across FCEUX builds. Bind each observed $2005 bus write to the known
+-- pre-instruction execution hook, then record the instruction's post-PC.
+local active_scroll_writer=nil
+local writer_specs={
+ {0xE8EC,0xE8EF,'a',0x8D},
+ {0xE8F1,0xE8F4,'a',0x8D},
+ {0xE369,0xE36C,'x',0x8E},
+ {0xE36C,0xE36F,'x',0x8E},
+}
+local function register_scroll_writer(before_pc,after_pc,register_name,expected_opcode)
+ memory.registerexec(before_pc,function()
+  local frame=emu.framecount()
+  if frame<first or frame>last then active_scroll_writer=nil;return end
+  assert(memory.readbyte(before_pc)==expected_opcode and
+         memory.readbyte(before_pc+1)==0x05 and
+         memory.readbyte(before_pc+2)==0x20,
+         'original scroll-writer instruction bytes changed')
+  local value=memory.getregister(register_name)
+  local cycle=debugger.getcyclescount()
+  assert(type(value)=='number' and value==math.floor(value) and
+         value>=0 and value<=255 and
+         type(cycle)=='number' and cycle>=0,
+         'original scroll-writer execution context invalid')
+  active_scroll_writer={frame=frame,pc=after_pc,value=value,cycle=cycle}
+ end)
+end
+for _,spec in ipairs(writer_specs) do
+ register_scroll_writer(spec[1],spec[2],spec[3],spec[4])
+end
 for _,spec in ipairs({{0x2000,'W2000'},{0x2001,'W2001'},
                        {0x2002,'W2002'},{0x2005,'W2005'},{0x2006,'W2006'}}) do
  local address,kind=spec[1],spec[2]
  memory.registerwrite(address,function(a,s,v)
+  local frame=emu.framecount()
   local pc=memory.getregister('pc')
+  if kind=='W2005' then
+   local writer=active_scroll_writer
+   local cycle=debugger.getcyclescount()
+   assert(writer and writer.frame==frame and writer.value==v,
+          'actual $2005 bus write lacks matching CPU instruction witness')
+   assert(type(cycle)=='number' and cycle>=writer.cycle and
+          cycle-writer.cycle<=16,
+          'actual $2005 bus write is outside its instruction cycle window')
+   pc=writer.pc
+   active_scroll_writer=nil
+  else
+   active_scroll_writer=nil
+  end
   emit(kind,a,s,string.format('%02X',v),pc,0)
  end)
 end

@@ -20,7 +20,6 @@ from audit_private_ppu_register_latch_321 import (
     preflight_trace,
 )
 from run_private_fm2_storyboard import private_target
-from seal_private_road_ppu_321 import source_identity
 
 
 def capture(
@@ -33,13 +32,13 @@ def capture(
 ) -> dict:
     if not 30 <= timeout_seconds <= 7200:
         raise ValueError("timeout must be between 30 and 7200 seconds")
+    # Reject lexical symlinks before resolve() erases their identity.
+    if rom.is_symlink() or movie.is_symlink():
+        raise ValueError("private ROM/FM2 inputs must not be symbolic links")
     rom = rom.resolve(strict=True)
     movie = movie.resolve(strict=True)
-    target = private_target(output_dir)
-    target.mkdir(mode=0o700)
-    preflight_trace(rom, movie, target)
-    identity = source_identity(rom, movie)
 
+    # Check emulator availability before creating any private capture files.
     executable = shutil.which(fceux)
     if executable is None:
         candidate = Path(fceux)
@@ -47,6 +46,10 @@ def capture(
             executable = str(candidate.resolve())
     if executable is None:
         raise ValueError("real FCEUX executable is not available in this workspace")
+
+    target = private_target(output_dir)
+    target.mkdir(mode=0o700)
+    identity = preflight_trace(rom, movie, target)
 
     script = Path(__file__).with_name("capture_private_ppu_register_latch_321.lua").resolve()
     if not script.is_file():

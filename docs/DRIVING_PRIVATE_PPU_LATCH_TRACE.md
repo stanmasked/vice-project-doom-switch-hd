@@ -38,6 +38,13 @@ and 10,203 PPU-register events. The redacted audit reports:
   $2005 writes.
 - All 1,284 actual $2005 values matched the sealed CPU instruction trace.
 
+The PPU bus-write callback's program counter is not used as the
+instruction identity: four dedicated execution hooks validate the live
+STA/STX $2005 instruction bytes, latch the A/X value before execution, and
+bind the later actual bus write to that instruction's post-PC. The auditor
+still independently checks all 1,284 port values against the sealed CPU
+writer trace.
+
 The installed FCEUX build does not expose memory.registerread. Therefore
 the capture hooks every direct/indexed $2002 reader candidate found by a
 static scan of the original PRG banks, checks the live instruction bytes,
