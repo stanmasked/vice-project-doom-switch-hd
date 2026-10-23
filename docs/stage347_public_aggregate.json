@@ -1,0 +1,29 @@
+{
+  "format": "vpd_stage347_original_rgb_scroll_discontinuity_public_aggregate_v1",
+  "stage": 347,
+  "original_new_rgb_frame_window": [
+    470,
+    494
+  ],
+  "consecutive_new_rgb_frames": 25,
+  "native_resolution": [
+    256,
+    240
+  ],
+  "adjacent_original_image_pairs_verified": 24,
+  "four_masked_environment_marking_regions_agreed": true,
+  "actual_display_plus_two_pixel_pairs": 24,
+  "first_scroll_minus_two_and_display_plus_two_pairs": 23,
+  "first_scroll_minus_eighteen_and_display_plus_two_pairs": 1,
+  "inverse_first_scroll_image_law_matching_pairs": 23,
+  "inverse_first_scroll_image_law_mismatching_pairs": 1,
+  "first_scroll_matches_live_ram0d_and_classic_ppu_temp_all_frames": true,
+  "same_session_cpu_and_native_ppu_source_sha256_reproduced_prior_seals": true,
+  "indexed_palette_full_planes": 3,
+  "independent_rgb_palette_probes": 150,
+  "owner_private_drive_archive_verified_crc_and_32_member_sha256": true,
+  "universal_pixel_scroll_law_proven": false,
+  "exact_hardware_ppu_dot_proven": false,
+  "camera_velocity_or_vehicle_physics_proven": false,
+  "original_pixels_or_rom_in_public_ci": false
+}
