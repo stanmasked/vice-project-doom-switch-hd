@@ -76,7 +76,9 @@ for _,pc in ipairs(pcs) do
     local frame=emu.framecount()
     if frame<600 or frame>920 then return end
     local cycle=debugger.getcyclescount()
-    local value=memory.getregister("a")
+    -- E8EC/E8F1 are STA $2005; E369/E36C are STX $2005.
+    local register=(pc==0xE369 or pc==0xE36C) and "x" or "a"
+    local value=memory.getregister(register)
     assert(type(cycle)=="number" and cycle>=0 and
            cycle==math.floor(cycle),"invalid CPU clock")
     assert(type(value)=="number" and value==math.floor(value) and

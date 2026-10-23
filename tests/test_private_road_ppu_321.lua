@@ -10,7 +10,7 @@ local env={
 local getenv=os.getenv
 os.getenv=function(key)return env[key] or getenv(key)end
 local exec,write,before,after={},nil,nil,nil
-local frame,cycle,acc,ram0d=0,0,0,0
+local frame,cycle,acc,xreg,ram0d,current_pc=0,0,0,0,0,0
 rom={gethash=function(kind)assert(kind=="md5");return string.rep("f",32)end}
 movie={
  play=function(path,readonly)
@@ -24,7 +24,11 @@ debugger={getcyclescount=function()return cycle end}
 memory={
  registerexec=function(pc,fn)assert(exec[pc]==nil);exec[pc]=fn end,
  registerwrite=function(addr,fn)assert(addr==0x2005 and write==nil);write=fn end,
- getregister=function(name)assert(name=="a");return acc end,
+ getregister=function(name)
+  if current_pc==0xE369 or current_pc==0xE36C then assert(name=="x") else assert(name=="a") end
+  if name=="x" then return xreg end
+  return acc
+ end,
  readbyte=function(addr)assert(addr==0x0D);return ram0d end
 }
 emu={
@@ -50,7 +54,10 @@ for f=0,920 do
     local values={0,second,0,0}
     for k,pc in ipairs(pcs) do
       cycle=30000*f+shifts[k]
-      acc=values[k]
+      current_pc=pc
+      -- Deliberately poison A at STX sites; a broken A-only capture must fail.
+      acc=(k>=3) and 0x55 or values[k]
+      xreg=values[k]
       assert(type(exec[pc])=="function")
       exec[pc]()
       write(0x2005,1,values[k])
