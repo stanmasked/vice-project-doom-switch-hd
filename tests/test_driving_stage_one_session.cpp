@@ -9,30 +9,35 @@ static void check(bool ok,const char* why) {
 int main() {
     using Session=vpd::DrivingStageOneSession;
     static_assert(vpd::DrivingStageOneConfig::shouldRequestExit(
-                      true,5,false,false,1800,8),
+                      true,5,false,false,3197,8),
                   "complete healthy preview should request route exit");
     static_assert(!vpd::DrivingStageOneConfig::shouldRequestExit(
-                      true,0,false,true,1800,8),
+                      true,0,false,true,3197,8),
                   "dead vehicle must not request route exit");
     static_assert(!vpd::DrivingStageOneConfig::shouldRequestExit(
-                      true,5,true,true,1800,8),
+                      true,5,true,true,3197,8),
                   "active transition must not be requested twice");
     static_assert(!vpd::DrivingStageOneConfig::shouldRequestExit(
-                      false,5,false,true,1800,8),
+                      false,5,false,true,3197,8),
                   "route preview exit must be disabled outside preview");
     static_assert(vpd::DrivingStageOneConfig::shouldRequestExit(
                       true,5,false,true,0,0),
                   "manual QA escape hatch should work before route completion");
-    static_assert(vpd::DrivingStageOneConfig::routeProgressComplete(1800,8),
+    static_assert(vpd::DrivingStageOneConfig::reference_last_road_frame-
+                      vpd::DrivingStageOneConfig::reference_first_road_frame+1==3197,
+                  "reference FM2 visible-road interval changed");
+    static_assert(vpd::DrivingStageOneConfig::route_frames==3197,
+                  "default route duration must match measured Stage 1-1 playback");
+    static_assert(vpd::DrivingStageOneConfig::routeProgressComplete(3197,8),
                   "default route completion predicate should accept complete progress");
-    static_assert(!vpd::DrivingStageOneConfig::routeProgressComplete(1800,7),
+    static_assert(!vpd::DrivingStageOneConfig::routeProgressComplete(3197,7),
                   "route completion must require obstacle progress");
-    static_assert(!vpd::DrivingStageOneConfig::routeProgressComplete(1799,8),
-                  "route completion must require duration");
+    static_assert(!vpd::DrivingStageOneConfig::routeProgressComplete(3196,8),
+                  "route completion must require the full measured duration");
     static_assert(vpd::DrivingStageOneConfig::routeProgressComplete(3,1,3,1),
                   "custom route thresholds must be supported");
     static_assert(!vpd::DrivingStageOneConfig::shouldRequestExit(
-                      true,5,false,false,1800,8,5000,20),
+                      true,5,false,false,3197,8,5000,20),
                   "custom longer route must not exit at default thresholds");
     static_assert(vpd::DrivingStageOneConfig::shouldRequestExit(
                       true,5,false,false,5000,20,5000,20),
@@ -45,6 +50,19 @@ int main() {
           "driving input did not advance session simulation");
     check(session.presentFrame()==Session::Mode::Driving,
           "session left driving mode without a completion event");
+
+    // The default controller must run the measured 3,197-frame road interval.
+    // This is a replay-aligned prototype duration, not proof of original clear logic.
+    Session referenceRoute;
+    for(std::uint32_t frame=1;frame<3197;++frame) referenceRoute.tick({});
+    check(referenceRoute.mode()==Session::Mode::Driving &&
+          referenceRoute.state().frame==3196,
+          "default route ended before the measured reference duration");
+    referenceRoute.tick({});
+    check(referenceRoute.mode()==Session::Mode::Transition &&
+          referenceRoute.state().frame==3197 &&
+          referenceRoute.state().obstacles_passed>=8,
+          "default route did not transition at the measured 3,197th road frame");
 
     // A known collision fixture must enter defeat, freeze, and restart cleanly.
     vpd::DrivingState fatal;
