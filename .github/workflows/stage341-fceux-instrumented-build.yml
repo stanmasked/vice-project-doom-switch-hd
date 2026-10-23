@@ -1,0 +1,94 @@
+name: Stage341 FCEUX instrumented classic-core build
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - research/fceux-local-executable-bootstrap-stage188
+    paths:
+      - .github/workflows/stage341-fceux-instrumented-build.yml
+      - tools/generate_stage340_legacy_ppu_patch.py
+      - tools/verify_stage339_legacy_ppu_source.py
+      - tests/test_stage340_classic_ppu.py
+
+permissions:
+  contents: read
+
+concurrency:
+  group: stage341-fceux-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  instrumented-classic-core:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Checkout public research scripts (no ROM / FM2)
+        uses: actions/checkout@v4
+      - name: Install source-build dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo timeout 180s apt-get -o Acquire::Retries=2 update -qq
+          sudo timeout 420s env DEBIAN_FRONTEND=noninteractive apt-get -o DPkg::Lock::Timeout=30 -o Acquire::Retries=2 install -y \
+            build-essential cmake ninja-build pkg-config python3 \
+            qtbase5-dev libqt5opengl5-dev libsdl2-dev \
+            libminizip-dev liblua5.1-0-dev libgl1-mesa-dev \
+            libx11-dev libxkbcommon-dev zlib1g-dev xvfb xauth
+      - name: Acquire pinned FCEUX 2.6.5 upstream tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --quiet --depth 1 --branch v2.6.5 \
+            https://github.com/TASEmulators/fceux.git "$RUNNER_TEMP/fceux-2.6.5"
+          test "$(git -C "$RUNNER_TEMP/fceux-2.6.5" rev-parse HEAD)" = ea6ed69b874e3ae94072f1b4f14b9a8f0fdd774b
+          python3 tools/verify_stage339_legacy_ppu_source.py --ppu-source "$RUNNER_TEMP/fceux-2.6.5/src/ppu.cpp"
+      - name: Generate and activate opt-in classic PPU patch in ephemeral build tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/generate_stage340_legacy_ppu_patch.py \
+            --upstream-ppu "$RUNNER_TEMP/fceux-2.6.5/src/ppu.cpp" \
+            --output "$RUNNER_TEMP/ppu-stage341.cpp"
+          test "$(git -C "$RUNNER_TEMP/fceux-2.6.5" hash-object src/ppu.cpp)" = aa7502eb956595c29096856ab8beddb5eecc301b
+          cp "$RUNNER_TEMP/ppu-stage341.cpp" "$RUNNER_TEMP/fceux-2.6.5/src/ppu.cpp"
+          grep -q 'VPD_STAGE340_LEGACY_PPU_DIAGNOSTICS' "$RUNNER_TEMP/fceux-2.6.5/src/ppu.cpp"
+          echo 'VPD_STAGE341_PINNED_CLASSIC_CORE_PATCH_APPLIED'
+      - name: Compile complete instrumented FCEUX (no gameplay input)
+        shell: bash
+        run: |
+          set -euo pipefail
+          cmake -S "$RUNNER_TEMP/fceux-2.6.5" -B "$RUNNER_TEMP/fceux-build" \
+            -G Ninja -DCMAKE_BUILD_TYPE=Release -DQT6=OFF -DQHELP=OFF \
+            -DCMAKE_CXX_FLAGS=-DVPD_STAGE340_DIAGNOSTICS
+          cmake --build "$RUNNER_TEMP/fceux-build" --parallel 2
+          test -x "$RUNNER_TEMP/fceux-build/src/fceux"
+          file "$RUNNER_TEMP/fceux-build/src/fceux"
+          echo 'VPD_STAGE341_FULL_INSTRUMENTED_FCEUX_BUILD_PASS'
+      - name: Validate executable has opt-in diagnostic probe and is ROM-free
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/stage341-artifact"
+          cp "$RUNNER_TEMP/fceux-build/src/fceux" "$RUNNER_TEMP/stage341-artifact/fceux-stage341-classic"
+          chmod 755 "$RUNNER_TEMP/stage341-artifact/fceux-stage341-classic"
+          strings "$RUNNER_TEMP/stage341-artifact/fceux-stage341-classic" | grep -q -F 'VPD_STAGE340_TRACE_FILE'
+          strings "$RUNNER_TEMP/stage341-artifact/fceux-stage341-classic" | grep -q -F 'legacy_vertical_increment'
+          sha256sum "$RUNNER_TEMP/stage341-artifact/fceux-stage341-classic" > "$RUNNER_TEMP/stage341-artifact/SHA256SUMS"
+          printf '%s\n' 'FCEUX v2.6.5, pinned classic PPU diagnostic-only build.' \
+            'No ROMs, FM2, trace files or original game imagery included.' \
+            'Diagnostic logging is OFF unless VPD_STAGE340_TRACE_FILE is explicitly set.' \
+            'Do not claim that a real game PPU witness has been collected.' \
+            > "$RUNNER_TEMP/stage341-artifact/README.txt"
+          if find "$RUNNER_TEMP/stage341-artifact" -type f | grep -Ei '\.(nes|fm2|rom|iso|chd|tsv|png|bmp|jpg|sav|state)$'; then
+            echo 'Unexpected private/input artifact' >&2
+            exit 1
+          fi
+          echo 'VPD_STAGE341_BINARY_INTEGRITY_AND_PRIVACY_PASS'
+      - name: Publish ROM-free instrumented executable for PRIVATE local replay
+        uses: actions/upload-artifact@v4
+        with:
+          name: vice-stage341-fceux-2.6.5-instrumented-ubuntu2404
+          path: ${{ runner.temp }}/stage341-artifact/
+          if-no-files-found: error
+          retention-days: 3
