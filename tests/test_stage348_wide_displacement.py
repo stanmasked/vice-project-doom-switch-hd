@@ -33,7 +33,7 @@ class Stage348WideSourceFree(unittest.TestCase):
         a,b=artificial(),artificial(2)
         q=stage.wider_probe(a,b,motion.BANDS['right_environment'],
                             name='right_environment')
-        self.assertGreater(q['wrong_18_shift_mismatch_fraction'],q['runner_up_gap'])
+        self.assertGreater(q['wrong_18_shift_mismatch_fraction'],.2)
 
     def test_real_18_pixel_shift_can_be_seen_when_it_is_real(self):
         a,b=artificial(),artificial(18)
