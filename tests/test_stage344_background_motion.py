@@ -151,7 +151,7 @@ class Stage344SourceFree(unittest.TestCase):
 
     def test_rewritten_manifest_cannot_self_seal_tampered_native_source(self):
         p=self.root/'stage341_classic_refreshaddr.tsv'
-        p.write_text(p.read_text()+'421\\tother_event\\n')
+        p.write_text(p.read_text()+'421\tother_event\n')
         m=json.loads((self.root/'manifest.json').read_text())
         m['sha256'][p.name]=aud.digest(p)
         m['sealed_native_sha256']=aud.digest(p)
