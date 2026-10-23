@@ -1,9 +1,30 @@
 import sys
+import struct
+import tempfile
 import unittest
+import zlib
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
-from audit_nexium_driving_route import verify_trace
+from audit_nexium_driving_route import verify_trace, verify_evidence
+
+
+
+SCREENSHOTS = ("screen-exit-road.png", "screen-exit-black.png", "screen-exit-platform.png")
+FINGERPRINT = "29fdf781dfd4ec22"
+
+
+def png_bytes(width=1280, height=720, color=(20, 30, 40)):
+    row = b"\x00" + bytes(color) * width
+    raw = row * height
+
+    def chunk(kind, payload):
+        return (struct.pack(">I", len(payload)) + kind + payload +
+                struct.pack(">I", zlib.crc32(kind + payload) & 0xffffffff))
+
+    ihdr = struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0)
+    return (b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", ihdr) +
+            chunk(b"IDAT", zlib.compress(raw, 6)) + chunk(b"IEND", b""))
 
 
 class DrivingRouteAuditTests(unittest.TestCase):
@@ -114,6 +135,104 @@ class DrivingRouteAuditTests(unittest.TestCase):
                  for line in lines]
         with self.assertRaises(ValueError):
             verify_trace("\n".join(lines))
+
+
+    @staticmethod
+    def exit_fixture():
+        lines = []
+        for seq in range(43):
+            if seq == 0:
+                scene, black_frames, black_pixel = "last_road", 0, 0
+            elif seq <= 41:
+                scene, black_frames, black_pixel = "black", seq, 1
+            else:
+                scene, black_frames, black_pixel = "platform", 41, 0
+            lines.append(
+                f"VPD_DRIVING_EXIT_V1 seq={seq} scene={scene} road_frame=3197 "
+                f"black_frames={black_frames} black_pixel={black_pixel} "
+                f"platform_before={FINGERPRINT} platform_after={FINGERPRINT} "
+                "source=libnx_frame original_stage_clear_proven=0"
+            )
+        return lines
+
+    def write_bundle(self, directory):
+        directory = Path(directory)
+        (directory / "guest-driving-route-witness.txt").write_text(
+            "\n".join(self.fixture()) + "\n", encoding="ascii")
+        (directory / "guest-driving-exit-witness.txt").write_text(
+            "\n".join(self.exit_fixture()) + "\n", encoding="ascii")
+        (directory / "host-route-input.txt").write_text("\n".join([
+            "host_route_completion=observed manual_minus_sent=no",
+            "native_transition_last_road=yes seq=0",
+            "native_transition_black=yes seq=17",
+            "native_transition_black=yes seq=41",
+            "native_transition_platform=yes seq=42",
+            "VPD_NEXIUM_DRIVING_ROUTE_PROBE_PASS",
+        ]) + "\n", encoding="ascii")
+        for name in SCREENSHOTS:
+            (directory / name).write_bytes(png_bytes())
+
+    def test_complete_evidence_bundle_passes(self):
+        with tempfile.TemporaryDirectory() as temp:
+            self.write_bundle(temp)
+            result = verify_evidence(Path(temp))
+            self.assertEqual(result["exit_records"], 43)
+            self.assertEqual(result["screenshots"], 3)
+            self.assertEqual(result["frame"], 3197)
+
+    def test_host_manual_exit_claim_rejected(self):
+        with tempfile.TemporaryDirectory() as temp:
+            self.write_bundle(temp)
+            path = Path(temp) / "host-route-input.txt"
+            path.write_text(path.read_text().replace(
+                "manual_minus_sent=no", "manual_minus_sent=yes"))
+            with self.assertRaises(ValueError):
+                verify_evidence(Path(temp))
+
+    def test_missing_blackout_record_rejected(self):
+        with tempfile.TemporaryDirectory() as temp:
+            self.write_bundle(temp)
+            path = Path(temp) / "guest-driving-exit-witness.txt"
+            lines = path.read_text().splitlines()
+            del lines[21]
+            path.write_text("\n".join(lines) + "\n")
+            with self.assertRaises(ValueError):
+                verify_evidence(Path(temp))
+
+    def test_changed_transition_fingerprint_rejected(self):
+        with tempfile.TemporaryDirectory() as temp:
+            self.write_bundle(temp)
+            path = Path(temp) / "guest-driving-exit-witness.txt"
+            lines = path.read_text().splitlines()
+            lines[42] = lines[42].replace(
+                f"platform_after={FINGERPRINT}", "platform_after=29fdf781dfd4ec23")
+            path.write_text("\n".join(lines) + "\n")
+            with self.assertRaises(ValueError):
+                verify_evidence(Path(temp))
+
+    def test_missing_transition_screenshot_rejected(self):
+        with tempfile.TemporaryDirectory() as temp:
+            self.write_bundle(temp)
+            (Path(temp) / "screen-exit-black.png").unlink()
+            with self.assertRaises(ValueError):
+                verify_evidence(Path(temp))
+
+    def test_wrong_screenshot_dimensions_rejected(self):
+        with tempfile.TemporaryDirectory() as temp:
+            self.write_bundle(temp)
+            (Path(temp) / "screen-exit-platform.png").write_bytes(png_bytes(640, 480))
+            with self.assertRaises(ValueError):
+                verify_evidence(Path(temp))
+
+    def test_screenshot_crc_rejected(self):
+        with tempfile.TemporaryDirectory() as temp:
+            self.write_bundle(temp)
+            path = Path(temp) / "screen-exit-road.png"
+            data = bytearray(path.read_bytes())
+            data[-5] ^= 0x01
+            path.write_bytes(data)
+            with self.assertRaises(ValueError):
+                verify_evidence(Path(temp))
 
 
 if __name__ == "__main__":

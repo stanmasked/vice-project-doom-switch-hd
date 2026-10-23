@@ -7,6 +7,8 @@ the original NES clear predicate or authentic NES car physics.
 from __future__ import annotations
 
 import argparse
+import struct
+import zlib
 from pathlib import Path
 
 PREFIX = "VPD_DRIVING_ROUTE_V1"
@@ -160,17 +162,162 @@ def verify_trace(text: str) -> dict[str, int]:
             "samples": sample_count}
 
 
+
+
+def _parse_exit_record(line: str) -> dict[str, str]:
+    fields = line.split()
+    if not fields or fields[0] != "VPD_DRIVING_EXIT_V1":
+        raise ValueError("wrong exit witness marker")
+    data: dict[str, str] = {}
+    expected = {"seq", "scene", "road_frame", "black_frames", "black_pixel",
+                "platform_before", "platform_after", "source",
+                "original_stage_clear_proven"}
+    for token in fields[1:]:
+        key, sep, value = token.partition("=")
+        if not sep or not key or not value or key in data:
+            raise ValueError("malformed or duplicate exit witness field")
+        data[key] = value
+    if set(data) != expected:
+        raise ValueError("exit witness schema mismatch")
+    return data
+
+
+def verify_exit_trace(text: str, route_frame: int, platform_fp: str) -> int:
+    lines = text.splitlines()
+    if len(lines) != 43:
+        raise ValueError("exit witness must contain one road, 41 blackout, and one platform record")
+    for index, line in enumerate(lines):
+        data = _parse_exit_record(line)
+        seq = int(data["seq"])
+        road_frame = int(data["road_frame"])
+        black_frames = int(data["black_frames"])
+        black_pixel = int(data["black_pixel"])
+        if seq != index or road_frame != route_frame:
+            raise ValueError("exit witness sequence or road frame mismatch")
+        if data["source"] != "libnx_frame" or int(data["original_stage_clear_proven"]) != 0:
+            raise ValueError("exit witness has invalid source or overclaims original stage completion")
+        before, after = data["platform_before"], data["platform_after"]
+        if len(before) != 16 or len(after) != 16:
+            raise ValueError("exit witness platform fingerprint has invalid width")
+        int(before, 16)
+        int(after, 16)
+        if before != platform_fp or after != platform_fp:
+            raise ValueError("platform fingerprint changed during scene transition")
+        if index == 0:
+            if data["scene"] != "last_road" or black_frames != 0 or black_pixel != 0:
+                raise ValueError("initial road transition record malformed")
+        elif 1 <= index <= 41:
+            if data["scene"] != "black" or black_frames != index or black_pixel != 1:
+                raise ValueError("blackout witness is missing, reordered, or non-black")
+        elif data["scene"] != "platform" or black_frames != 41 or black_pixel != 0:
+            raise ValueError("final platform restoration record malformed")
+    return len(lines)
+
+
+def _png_info(path: Path) -> tuple[int, int]:
+    blob = path.read_bytes()
+    if not blob.startswith(b"\x89PNG\r\n\x1a\n"):
+        raise ValueError(f"{path.name} is not a PNG")
+    offset = 8
+    width = height = None
+    color_type = None
+    seen_idat = False
+    seen_iend = False
+    compressed = bytearray()
+    while offset < len(blob):
+        if offset + 12 > len(blob):
+            raise ValueError(f"truncated PNG chunk in {path.name}")
+        length = struct.unpack(">I", blob[offset:offset + 4])[0]
+        ctype = blob[offset + 4:offset + 8]
+        end = offset + 12 + length
+        if end > len(blob):
+            raise ValueError(f"truncated PNG data in {path.name}")
+        payload = blob[offset + 8:offset + 8 + length]
+        crc = struct.unpack(">I", blob[offset + 8 + length:end])[0]
+        if zlib.crc32(ctype + payload) & 0xffffffff != crc:
+            raise ValueError(f"PNG chunk CRC mismatch in {path.name}")
+        if offset == 8:
+            if ctype != b"IHDR" or length != 13:
+                raise ValueError(f"PNG IHDR malformed in {path.name}")
+            width, height, depth, color_type, compression, filt, interlace = struct.unpack(">IIBBBBB", payload)
+            if depth != 8 or color_type not in (2, 6) or compression or filt or interlace:
+                raise ValueError(f"unsupported PNG encoding in {path.name}")
+        elif ctype == b"IDAT":
+            if seen_iend:
+                raise ValueError(f"PNG IDAT follows IEND in {path.name}")
+            seen_idat = True
+            compressed.extend(payload)
+        elif ctype == b"IEND":
+            if length != 0 or end != len(blob):
+                raise ValueError(f"PNG IEND malformed or trailing bytes in {path.name}")
+            seen_iend = True
+            break
+        offset = end
+    if not seen_idat or not seen_iend or width is None or height is None or color_type is None:
+        raise ValueError(f"PNG incomplete in {path.name}")
+    channels = 3 if color_type == 2 else 4
+    try:
+        raw = zlib.decompress(bytes(compressed))
+    except zlib.error as exc:
+        raise ValueError(f"PNG compressed data invalid in {path.name}") from exc
+    stride = width * channels
+    if len(raw) != height * (stride + 1):
+        raise ValueError(f"PNG pixel payload size mismatch in {path.name}")
+    if any(raw[row * (stride + 1)] > 4 for row in range(height)):
+        raise ValueError(f"PNG scanline filter invalid in {path.name}")
+    return width, height
+
+
+def verify_evidence(evidence: Path) -> dict[str, int]:
+    route_path = evidence / "guest-driving-route-witness.txt"
+    route_text = route_path.read_text(encoding="ascii")
+    result = verify_trace(route_text)
+    route_lines = route_text.splitlines()
+    platform_fp = parse_line(route_lines[0])["platform_fp"]
+    exit_path = evidence / "guest-driving-exit-witness.txt"
+    exit_count = verify_exit_trace(
+        exit_path.read_text(encoding="ascii"), result["frame"], platform_fp)
+
+    host_lines = (evidence / "host-route-input.txt").read_text(
+        encoding="ascii").splitlines()
+    expected_host = [
+        "host_route_completion=observed manual_minus_sent=no",
+        "native_transition_last_road=yes seq=0",
+        "native_transition_black=yes seq=17",
+        "native_transition_black=yes seq=41",
+        "native_transition_platform=yes seq=42",
+        "VPD_NEXIUM_DRIVING_ROUTE_PROBE_PASS",
+    ]
+    if host_lines != expected_host:
+        raise ValueError("host input/transition record is incomplete or reports a manual exit")
+
+    screenshots = (
+        "screen-exit-road.png",
+        "screen-exit-black.png",
+        "screen-exit-platform.png",
+    )
+    for name in screenshots:
+        image_path = evidence / name
+        if not image_path.is_file():
+            raise ValueError(f"missing route transition screenshot: {name}")
+        width, height = _png_info(image_path)
+        if (width, height) != (1280, 720):
+            raise ValueError(f"unexpected screenshot dimensions for {name}: {width}x{height}")
+    result["exit_records"] = exit_count
+    result["screenshots"] = len(screenshots)
+    return result
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--evidence", type=Path, required=True)
     args = parser.parse_args()
-    trace = (args.evidence / "guest-driving-route-witness.txt").read_text(
-        encoding="ascii")
-    result = verify_trace(trace)
+    result = verify_evidence(args.evidence)
     print("VPD_NEXIUM_DRIVING_ROUTE_PASS "
           f"frame={result['frame']} passed={result['passed']} "
           f"health={result['health']} impacts={result['impacts']} "
           f"samples={result['samples']} manual_exit=no "
+          f"exit_records={result['exit_records']} screenshots={result['screenshots']} "
           "original_stage_clear_proven=no")
 
 
