@@ -14,7 +14,7 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
-from statistics import median_low,median_high
+from statistics import median
 import struct
 
 from audit_private_road_rgb_321 import (
@@ -61,8 +61,8 @@ def extract_report(image:Path)->list[dict]:
                 records.append({"frame":frame,"roi_valid":False,
                                 "valid_scanline_count":n})
                 continue
-            left=median_low([a for a,b in segments])
-            right=median_high([b for a,b in segments])
+            left=int(median([a for a,b in segments]))
+            right=int(median([b for a,b in segments]))
             if left>right or not MIN_WIDTH<=right-left+1<=MAX_WIDTH:
                 raise ValueError("median RGB road segment outside ROI bounds")
             records.append({

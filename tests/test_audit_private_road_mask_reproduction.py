@@ -55,6 +55,23 @@ class SameSessionRoadMaskTests(unittest.TestCase):
         self.assertEqual(r["new_original_rgb_intervals_reproduced"],37)
         self.assertEqual(r["ambiguous_source_slots_preserved"],4)
         self.assertFalse(r["old_hashless_road_report_sha256_proven"])
+    def test_even_scanline_median_uses_integer_average(self):
+        raw=bytearray(self.file.read_bytes())
+        spans=((65,189),(68,187),(65,189),(68,187))
+        first_row=SCHEMA.size+2
+        for index,(left,right) in enumerate(spans):
+            row=bytearray(BG*WIDTH)
+            for x in range(left,right+1):
+                row[3*x:3*x+3]=ROAD_GRAY
+            offset=first_row+index*WIDTH*3
+            raw[offset:offset+WIDTH*3]=row
+        self.file.write_bytes(raw)
+        first=self.extract()[0]
+        self.assertEqual(first["observed_left_edge"],66)
+        self.assertEqual(first["observed_right_edge"],188)
+        self.assertEqual(first["observed_width"],123)
+        self.assertEqual(first["observed_center_x"],127)
+
     def test_full_screen_solid_gray_not_road(self):
         self.assertIsNone(row_span(ROAD_GRAY*256))
     def test_short_scattered_gray_not_road(self):

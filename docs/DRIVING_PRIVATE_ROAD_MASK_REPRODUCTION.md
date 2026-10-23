@@ -48,5 +48,10 @@ the old artifact.
 Only **synthetic** RGB pixels and invented source dimensions are used
 by public tests. No private image data, original ROM, FM2, hash or
 unpublished 37-frame road coordinates should enter GitHub.
-The new actual original-game FCEUX run and comparison have **not**
-been executed/confirmed merely by passing CI.
+## Stage 318 — local original-source result
+
+The owner-private original ROM/FM2 pair was run twice in independent FCEUX 2.6.5 processes. Both runs produced byte-identical 41-slot RGB data, 1,284 CPU writer events, 321 post-frame RAM samples, and identical frame-relative CPU phases. The source files were SHA-256 checked before and after; raw evidence remains local.
+
+The edge aggregation now uses the integer-truncated arithmetic median of the valid scanline endpoints. This is required for even-sized row samples and is covered by a synthetic regression test. After that correction, the fresh source capture preserves the same 37 accepted / 4 ambiguous statuses and all published anchors, but three complete legacy records (frames 784, 816, and 824) still differ from the old hashless numeric report. The strict legacy comparison therefore correctly **fails closed**; no same-session road/PPU join pass is claimed. The old report remains a separate, unauthenticated comparison target and has not been overwritten.
+
+No original ROM/FM2, raw RGB pixels, unpublished road coordinates, or private source hashes were committed.
