@@ -1,0 +1,46 @@
+{
+  "format": "vpd_stage346_original_cpu_ppu_scroll_preflight_public_v1",
+  "stage": 346,
+  "stage345_original_rgb_window": [
+    420,
+    444
+  ],
+  "source_trace_window": [
+    380,
+    640
+  ],
+  "new_source_intervals": [
+    [
+      445,
+      469
+    ],
+    [
+      470,
+      494
+    ],
+    [
+      520,
+      544
+    ],
+    [
+      560,
+      584
+    ]
+  ],
+  "verified_new_trace_frames": 100,
+  "verified_new_adjacent_register_pairs": 96,
+  "verified_first_scroll_ram0d_classic_ppu_consistency_frames": 100,
+  "stationary_register_pairs": 5,
+  "minus_one_register_pairs": 18,
+  "minus_two_register_pairs": 31,
+  "minus_three_or_four_register_pairs": 25,
+  "minus_five_or_more_register_pairs": 17,
+  "later_second_phase_scroll_constant_pairs": 96,
+  "new_rgb_original_frames_captured": 0,
+  "source_preflight_passed": true,
+  "stage341_instrumented_fceux_binary_recovered": true,
+  "lua51_runtime_missing": true,
+  "actual_hardware_ppu_dot_proven": false,
+  "physical_camera_or_vehicle_speed_proven": false,
+  "original_data_github_committed": false
+}
