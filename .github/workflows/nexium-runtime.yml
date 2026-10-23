@@ -164,13 +164,8 @@ jobs:
         with:
           name: vice-nexium-guest-nro
           path: emulator-input
-      - name: Ensure headless Vulkan and display dependencies
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y \
-            xvfb xauth xdotool x11-apps imagemagick mesa-vulkan-drivers libvulkan1 vulkan-tools \
-            libgtk-3-0 libasound2t64 libudev1 libxkbcommon0 libxkbcommon-x11-0 \
-            libfontconfig1 libx11-xcb1 libegl1 libgles2 libgl1 libpulse0
+      - name: Confirm Docker runtime for NeXium GLIBC 2.43
+        run: docker version --format '{{.Server.Version}}'
       - name: Validate launcher shell syntax
         run: |
           bash -n tools/run_nexium_vice_ci.sh
@@ -198,8 +193,29 @@ jobs:
           python3 tests/test_nexium_guard_ready_x11.py
           python3 tests/test_verify_nexium_release.py
           python3 tests/test_nexium_witness_audit.py
-      - name: Install NeXium, launch graphical NRO and check real guest record
-        run: bash tools/run_nexium_vice_ci.sh emulator-input/vpd_native_scene.nro emulator-evidence
+      - name: Install NeXium in Ubuntu 26.04 and check real guest record
+        shell: bash
+        run: |
+          set -euo pipefail
+          # The current official NeXium nightly requires GLIBC_2.43.
+          # Run it in Ubuntu 26.04 while keeping artifact handling on the
+          # supported Ubuntu 24.04 Actions runner.
+          docker run --rm --pull=always \
+            --volume "$GITHUB_WORKSPACE:/work" \
+            --workdir /work \
+            ubuntu:26.04 bash -lc '
+              set -euo pipefail
+              export DEBIAN_FRONTEND=noninteractive
+              timeout --signal=TERM --kill-after=5s 180s apt-get -o Acquire::Retries=2 update -qq
+              timeout --signal=TERM --kill-after=5s 300s apt-get -o DPkg::Lock::Timeout=30 -o Acquire::Retries=2 install -y \
+                ca-certificates curl python3 python3-pil \
+                xvfb xauth xdotool x11-apps imagemagick \
+                mesa-vulkan-drivers libvulkan1 vulkan-tools \
+                libgtk-3-0t64 libasound2t64 libudev1 \
+                libxkbcommon0 libxkbcommon-x11-0 libfontconfig1 \
+                libx11-xcb1 libegl1 libgles2 libgl1 libpulse0t64
+              bash tools/run_nexium_vice_ci.sh emulator-input/vpd_native_scene.nro emulator-evidence
+            '
       - name: Save emulator logs, guest output and diagnostics even if blocked
         if: always()
         uses: actions/upload-artifact@v4
