@@ -13,7 +13,7 @@ from pathlib import Path
 from audit_private_road_ppu_latch_rgb321 import (
     PRE, POST, PRE_FIELDS, verify as verify_base_capture,
 )
-from seal_private_road_321 import _create_json, _json, private_dir, sha256_file
+from seal_private_road_ppu_321 import _create_json, _json, private_dir, sha256_file
 
 TRACE_VERSION = "vpd-private-ram0d-scroll-writer-seal-v1"
 TRACE_COMPLETE = "RAM0D_TRACE_COMPLETE.txt"
