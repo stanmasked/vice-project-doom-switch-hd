@@ -183,7 +183,7 @@ class Stage346SyntheticFullSource(unittest.TestCase):
             self.report()
     def test_source_native_t_disagreement_fails(self):
         text=self.native.read_text()
-        self.native.write_text(text.replace('legacy_line_start', 'legacy_line_fake',1))
+        self.native.write_text(text.replace('legacy_line_start', 'legacy_line_fake'))
         with self.assertRaisesRegex(ValueError,'anchors'):
             self.report()
 
