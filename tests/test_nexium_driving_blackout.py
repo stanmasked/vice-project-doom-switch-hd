@@ -37,5 +37,17 @@ class SourceBlackoutAuditTests(unittest.TestCase):
         lines=self.fixture()
         lines[10]=lines[9]
         with self.assertRaises(ValueError):verify_records(lines)
+    def test_black_frame_counter_regression_rejected(self):
+        lines=self.fixture()
+        lines[17]=lines[17].replace("black_frames=17","black_frames=16")
+        with self.assertRaises(ValueError):verify_records(lines)
+    def test_road_state_changes_during_blackout_rejected(self):
+        lines=self.fixture()
+        lines[25]=lines[25].replace("road_frame=20","road_frame=21")
+        with self.assertRaises(ValueError):verify_records(lines)
+    def test_forged_host_source_rejected(self):
+        lines=self.fixture()
+        lines[31]=lines[31].replace("source=libnx_frame","source=host_input")
+        with self.assertRaises(ValueError):verify_records(lines)
 if __name__=="__main__":
     unittest.main()
