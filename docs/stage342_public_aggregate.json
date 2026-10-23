@@ -1,0 +1,22 @@
+{
+  "classic_renderer_internal_address_observed": true,
+  "exact_ppu_hardware_dot_observed": false,
+  "first_scroll_to_classic_line0_temp_vertical_bit_matches": 253,
+  "first_second_phase_scroll_matches_live_ram0d": 253,
+  "format": "vpd_stage342_original_classic_ppu_scroll_chain_aggregate_v1",
+  "frames_with_render_transitions": 252,
+  "frames_without_render_transitions": 9,
+  "frames_without_scroll_writes": 8,
+  "native_horizontal_reload_events": 60480,
+  "native_vertical_increment_events": 60480,
+  "per_pixel_road_scroll_proven": false,
+  "private_cpu_rows_verified": 21398,
+  "private_native_rows_verified": 312189,
+  "private_ppu_or_controller_values_disclosed": false,
+  "road_geometry_or_collision_proven": false,
+  "same_session_cpu_ppu_event_clock_matches": 3048,
+  "same_session_cpu_ppu_event_clock_mismatches": 0,
+  "source_authentication_sha256_verified": true,
+  "source_frame_count": 261,
+  "stage": 342
+}
