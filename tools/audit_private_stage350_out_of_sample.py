@@ -26,7 +26,7 @@ def summarize(pairs:list[tuple[int,int,int]])->dict:
             raise ValueError('modulo-240 model fails on original RGB pair')
         shifts[display]+=1
         signed8+=int(step_8==-display)
-    if shifts[3]!=7 or shifts[4]!=17:
+    if shifts[3]!=7 or shifts[4]!=17 or signed8!=24:
         raise ValueError('Stage350 original out-of-sample motion baseline differs')
     return {
        'format':'vpd_stage350_original_out_of_sample_modulo240_scroll_v1',
