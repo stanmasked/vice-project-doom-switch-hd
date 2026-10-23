@@ -14,9 +14,9 @@ struct DrivingExitRecord {
 };
 class DrivingExitProof {
 public:
-  DrivingExitRecord begin(bool actual_pad_minus,unsigned road_frame,
+  DrivingExitRecord begin(bool valid_completion_request,unsigned road_frame,
                           std::uint64_t fp) {
-    if(active_ || done_ || !actual_pad_minus)return {};
+    if(active_ || done_ || !valid_completion_request)return {};
     active_=true;baseline_=fp;road_frame_=road_frame;
     return {true,0,"last_road",road_frame_,0,baseline_,fp,false};
   }

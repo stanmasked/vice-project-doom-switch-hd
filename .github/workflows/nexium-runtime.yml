@@ -8,6 +8,9 @@ on:
     paths:
       - ".github/workflows/nexium-runtime.yml"
       - "tools/nexium_driving_probe.sh"
+      - "tools/nexium_driving_route_probe.sh"
+      - "tools/audit_nexium_driving_route.py"
+      - "tests/test_nexium_driving_route.py"
       - "tools/audit_nexium_driving_blackout.py"
       - "tests/test_nexium_driving_blackout.py"
       - "switch_graphical/**"
@@ -98,6 +101,9 @@ on:
       - "tests/test_nexium_fourth_stage.py"
       - "tools/nexium_visual_probe.sh"
       - "tools/nexium_driving_probe.sh"
+      - "tools/nexium_driving_route_probe.sh"
+      - "tools/audit_nexium_driving_route.py"
+      - "tests/test_nexium_driving_route.py"
       - "tools/audit_nexium_driving_live.py"
       - "tests/test_nexium_driving_live.py"
       - "tools/audit_nexium_driving_raster.py"
@@ -171,6 +177,8 @@ jobs:
           bash -n tools/run_nexium_vice_ci.sh
           bash -n tools/nexium_visual_probe.sh
           bash -n tools/nexium_driving_probe.sh
+          bash -n tools/nexium_driving_route_probe.sh
+          python3 tests/test_nexium_driving_route.py
           python3 tests/test_nexium_driving_live.py
           python3 tests/test_nexium_driving_raster.py
           python3 tests/test_nexium_driving_blackout.py
@@ -224,6 +232,7 @@ jobs:
           path: |
             emulator-evidence/*.txt
             emulator-evidence/driving-run/**
+            emulator-evidence/driving-route-run/**
             emulator-evidence/*.log
             emulator-evidence/xdg-config/NeXium/logs/*.log
             emulator-evidence/vulkan.txt

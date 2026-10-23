@@ -12,6 +12,7 @@
 #include "driving_road_review_witness.hpp"
 #include "driving_guest_witness.hpp"
 #include "driving_raster_witness.hpp"
+#include "driving_route_witness.hpp"
 #include "driving_stage_exit.hpp"
 #include "driving_stage_one_config.hpp"
 #include "driving_exit_witness.hpp"
@@ -215,6 +216,7 @@ int main(int,char**) {
     vpd::DrivingGuestProof driving_proof{};
     vpd::DrivingStageExit driving_stage_exit{};
     vpd::DrivingExitProof driving_exit_proof{};
+    vpd::DrivingRouteProof driving_route_proof{};
     unsigned hd_fx_guest_seq=0;
     unsigned hd_fx_combat_seq=0;
     unsigned hd_fx_sentry_seq=0;
@@ -284,6 +286,8 @@ int main(int,char**) {
             if(driving_preview) {
                 driving_state.reset();
                 driving_stage_exit.reset();
+                driving_route_proof.reset();
+                vpd::resetDrivingRouteWitness(has_sd);
                 (void)vpd::appendDrivingGuestProof(has_sd,
                     driving_proof.enter(!demo.enabled(),true,
                                         driving_state,game.fingerprint()));
@@ -477,6 +481,8 @@ int main(int,char**) {
         if(driving_retry_pressed) {
             driving_state.reset();
             driving_stage_exit.reset();
+            driving_route_proof.reset();
+            vpd::resetDrivingRouteWitness(has_sd);
             (void)vpd::appendDrivingGuestProof(has_sd,
                 driving_proof.enter(!demo.enabled(),true,
                                     driving_state,game.fingerprint()));
@@ -533,6 +539,9 @@ int main(int,char**) {
                     if(driving_event.seq==2 || driving_event.seq==4)
                         driving_raster_event_seq=driving_event.seq;
                     (void)vpd::appendDrivingGuestProof(has_sd,driving_event);
+                    (void)vpd::appendDrivingRouteWitness(
+                        has_sd,driving_route_proof.sample(
+                            drive_input,driving_state,game.fingerprint()));
                 }
                 input=0;
             } else if(toggle_manual || driving_preview_chord) {
@@ -1242,10 +1251,18 @@ int main(int,char**) {
         framebufferEnd(&fb);
         if(!drawn)break;
         if(request_driving_exit && view.driving_stage_preview &&
-           driving_stage_exit.requestAfterDrivingFrame(true,true))
+           driving_stage_exit.requestAfterDrivingFrame(true,true)) {
+            const bool manual_exit=(pressed&HidNpadButton_Minus)!=0;
+            const bool route_complete=
+                vpd::DrivingStageOneConfig::routeProgressComplete(
+                    driving_state.frame,driving_state.obstacles_passed);
+            (void)vpd::appendDrivingRouteWitness(
+                has_sd,driving_route_proof.exitRequest(
+                    driving_state,game.fingerprint(),manual_exit,route_complete));
             (void)vpd::appendDrivingExitWitness(
                 has_sd,driving_exit_proof.begin(
                     true,driving_state.frame,game.fingerprint()));
+        }
         if(hd_fx_sentry_edge && drawn && has_sd &&
            fx_other.pixels==414000 && fx_presented.pixels==414000 &&
            fx_other.hash!=fx_presented.hash &&

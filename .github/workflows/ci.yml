@@ -36,6 +36,10 @@ jobs:
             -Igame_core tests/test_driving_stage_one_session.cpp \
             -o build/driving_stage_one_session_test
           build/driving_stage_one_session_test
+          c++ -std=c++17 -Wall -Wextra -Wpedantic -Werror \\
+            -Igame_core tests/test_driving_route_witness.cpp \\
+            -o build/driving_route_witness_test
+          build/driving_route_witness_test
       - name: Configure, build, and run graphics-core tests
         run: |
           set -euo pipefail

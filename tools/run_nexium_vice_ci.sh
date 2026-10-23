@@ -419,3 +419,13 @@ for failure in bad_crc bad_anchor truncated; do
     --evidence "$out/road-reject-$failure" \
     --kind "$failure" --input "$road_sd"
 done
+
+# Stage 315: prove automatic route completion without the manual Minus escape hatch.
+# Restore the valid synthetic bundle after negative SD tests; all route evidence remains ROM-free.
+cp "$private_ci_bundle" "$road_sd"
+cmp "$private_ci_bundle" "$road_sd"
+mkdir -p "$out/driving-route-run"
+xvfb-run -a -s "-screen 0 1280x720x24" \\
+  bash tools/nexium_driving_route_probe.sh "$emulator" "$nro" "$out/driving-route-run"
+python3 tools/audit_nexium_driving_route.py --evidence "$out/driving-route-run"
+python3 tools/audit_nexium_driving_blackout.py --evidence "$out/driving-route-run"
