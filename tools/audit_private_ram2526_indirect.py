@@ -106,6 +106,12 @@ def _event_kind(row: dict[str, str], header_map: dict[str, str], opcode: int | N
     if opcode in INDIRECT_INDEXED and operand in (0x25, 0xAA):
         return "indirect25" if operand == 0x25 else "indirectAA"
     event = (_field(row, header_map, "event") or "").lower()
+    event_key = _normal_header(event)
+    # These rows are instruction-execution markers, not memory-write callbacks.
+    # Their names contain "write"/"store" but they intentionally have no written
+    # value. Ignore them so writer attribution can coexist with actual write rows.
+    if event_key in {"writerinstruction", "storeaalow", "storeaahigh"} or event_key.startswith("decoderstore"):
+        return None
     if "write" not in event and "store" not in event and "ram" not in event:
         return None
     address_text = _field(row, header_map, "address")

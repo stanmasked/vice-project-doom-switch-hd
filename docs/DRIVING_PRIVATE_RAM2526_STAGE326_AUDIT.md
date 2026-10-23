@@ -22,8 +22,10 @@ The baseline guard requires the already reported observations: 22,146 writes to 
 
 The aggregate JSON intentionally omits raw PCs, pointer bytes, effective addresses, ROM/FM2 hashes, and local paths. The tool never changes the input trace.
 
-## Evidence boundary and next step
+## Evidence boundary and current next step
 
-CI uses only synthetic trace fixtures. The original Stage 325 raw trace is not included in the repository, so CI success does not claim that the original-source site clusters have been computed. The Stage 325 trace as described so far has no verified PRG-bank context; the auditor will say bank_context=no until a bank context is actually captured and joined to the observed sites.
+CI still uses synthetic trace fixtures; raw ROM/FM2 files and source captures remain in private Drive. The Stage 325 raw trace has now been recaptured and archived, and later private captures provide MMC3 bank context and writer attribution. These private traces are not committed to GitHub, so CI success does not mean the original-source site clusters were computed by CI.
 
-After the private site list is generated and checked against the Stage 325 baseline, the next source-side capture should instrument those exact observed sites while tracking MMC3 $8000/$8001 writes and $0B–$0D writes. Only a capture with validated ROM/FM2 identity and matching frame/cycle context can supply the missing bank labels. No inference about road scroll, camera position, or physics is made at this stage.
+Stage 327 found no $AA accesses in frames 600–920, while Stage 329 observed three in an earlier window and exactly reproduced the Stage 325 event subset in the overlapping frames 600–640. Stage 330 attributed all ten RAM $0B–$0D writes in frames 380–400 to actual instruction sites at the same FCEUX cycle. Stages 331–332 verified a $AA record/descriptor-processing call chain. This is not proof of road-scroll semantics.
+
+Next, keep the $AA descriptor path separate from the $25/$26 and RAM $0D/PPU $2005 road-scroll investigation. Use the auditor on private traces locally, preserve aggregate-only outputs, and rerun GitHub Actions after repository changes. No raw private trace, site list, ROM/FM2 file, or local path belongs in the repository.

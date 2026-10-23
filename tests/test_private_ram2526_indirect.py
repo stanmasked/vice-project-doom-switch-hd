@@ -126,5 +126,44 @@ class PrivateRam2526IndirectTests(unittest.TestCase):
         self.assertTrue(all(site["bank_context_id"] == "unknown" for site in result["top_access_sites"]))
 
 
+    def test_instruction_markers_are_not_misclassified_as_ram_writes(self):
+        rows = [
+            {"frame": 388, "cycle": 100, "event": "writer_instruction", "pc": "C90B",
+             "opcode": "84", "operand": "0C", "address": "000C", "value": "",
+             "old_value": "", "pointer_low": "", "pointer_high": "", "y": "",
+             "effective_address": "", "bank_context": "PRG:0C-0D-0E-0F"},
+            {"frame": 388, "cycle": 100, "event": "write", "pc": "C90B",
+             "opcode": "84", "operand": "0C", "address": "000C", "value": "00",
+             "old_value": "00", "pointer_low": "", "pointer_high": "", "y": "",
+             "effective_address": "", "bank_context": "PRG:0C-0D-0E-0F"},
+            {"frame": 388, "cycle": 110, "event": "indirect", "pc": "C90D",
+             "opcode": "B1", "operand": "AA", "address": "", "value": "",
+             "old_value": "", "pointer_low": "8B", "pointer_high": "83", "y": "00",
+             "effective_address": "838B", "bank_context": "PRG:0C-0D-0E-0F"},
+            {"frame": 388, "cycle": 120, "event": "decoder_store_0b", "pc": "C922",
+             "opcode": "85", "operand": "0B", "address": "", "value": "",
+             "old_value": "", "pointer_low": "", "pointer_high": "", "y": "",
+             "effective_address": "", "bank_context": "PRG:0C-0D-0E-0F"},
+            {"frame": 388, "cycle": 120, "event": "write", "pc": "C922",
+             "opcode": "85", "operand": "0B", "address": "000B", "value": "40",
+             "old_value": "00", "pointer_low": "", "pointer_high": "", "y": "",
+             "effective_address": "", "bank_context": "PRG:0C-0D-0E-0F"},
+        ]
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            trace = self.write_trace(root, rows)
+            result = analyze(trace, 388, 388)
+            sites = root / "sites.tsv"
+            self.assertEqual(extract_sites(trace, sites, 388, 388), 1)
+        self.assertEqual(result["indirect_access_counts"]["$AA"], 1)
+        self.assertEqual(result["ram_0b_0c_0d_write_counts"]["$0B"], 1)
+        self.assertEqual(result["ram_0b_0c_0d_write_counts"]["$0C"], 1)
+        self.assertEqual(result["frames_with_$AA_access_and_any_$0b_0c_0d_write"], 1)
+        self.assertEqual(sites.read_text(encoding="ascii").splitlines(),
+                         ["pc\\topcode\\toperand", "C90D\\tB1\\tAA"])
+        self.assertFalse(result["semantics_confirmed"])
+        self.assertFalse(result["raw_values_disclosed"])
+
+
 if __name__ == "__main__":
     unittest.main()
