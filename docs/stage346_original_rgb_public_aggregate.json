@@ -1,0 +1,31 @@
+{
+  "format": "vpd_stage346_original_consecutive_rgb_first_scroll_public_aggregate_v1",
+  "stage": 346,
+  "original_ntsc_classic_fceux_newppu0": true,
+  "original_new_rgb_frames": [
+    445,
+    469
+  ],
+  "native_resolution": [
+    256,
+    240
+  ],
+  "consecutive_new_original_rgb_frames": 25,
+  "adjacent_original_rgb_pairs": 24,
+  "background_regions_independent": 4,
+  "all_four_masked_regions_agreed": true,
+  "display_shift_plus_one_first_scroll_minus_one_pairs": 18,
+  "display_shift_plus_two_first_scroll_minus_two_pairs": 6,
+  "first_scroll_matching_live_ram0d_and_native_tempaddr_frames": 25,
+  "later_2005_vertical_phase_constant_pairs": 24,
+  "indexed_palette_full_planes": 3,
+  "independent_rgb_palette_sample_matches": 150,
+  "max_masked_best_shift_mismatch_fraction": 0.0022,
+  "same_session_cpu_native_original_source_hashes_byte_identical_to_prior_seals": true,
+  "private_archive_zip_crc_and_32_member_sha256_readback_verified": true,
+  "original_new_capture_in_public_ci": false,
+  "general_camera_speed_proven": false,
+  "vehicle_physics_or_road_geometry_proven": false,
+  "exact_hardware_ppu_dot_proven": false,
+  "original_source_data_in_public_repo": false
+}
