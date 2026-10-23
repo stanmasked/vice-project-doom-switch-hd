@@ -73,6 +73,7 @@ jobs:
           lua5.4 tests/test_private_ppuscroll_writer_pcs.lua
           lua5.4 tests/test_private_road_ppu_321.lua
           lua5.4 tests/test_private_ppu_register_latch_321.lua
+          lua5.4 tests/test_private_road_ppu_latch_rgb321.lua
           lua5.4 tests/test_private_fceux_frame_anchors.lua
           lua5.4 tests/test_private_late_ppu_routine.lua
           lua5.4 tests/test_private_ppumask_ab.lua

@@ -78,3 +78,8 @@ Local original-source investigation has now run two independent FCEUX 2.6.5 proc
 ## Stage 321 — PPU write-latch trace
 
 A new owner-local capture records actual writes to PPUCTRL, PPUMASK, PPUSCROLL and PPUADDR, plus direct PPUSTATUS read-instruction candidates, with 321 source-frame clocks. The auditor reconstructs the shared write toggle and compares all 1,284 actual PPUSCROLL port values against the sealed CPU writer trace. See `docs/DRIVING_PRIVATE_PPU_LATCH_TRACE.md`. The candidate-read limitation, unchanged strict legacy gate, and unproven effective raster scroll are explicit.
+
+
+## Stage 322 — single-session CPU/RAM/PPU/RGB evidence
+
+`tools/run_private_road_ppu_latch_rgb321.py` now captures the original road RGB scanlines, four CPU `$2005` writer instructions per frame, post-frame RAM `$0D`, actual PPU register events and one shared frame clock during the same read-only FCEUX 2.6.5 process. The owner-private audit validated 321 frames, 1,284 matching CPU/PPU writes and cycles, 10,203 PPU events, 321 RAM samples and 41 RGB slots. The newly sealed CPU writer, RAM and RGB artifacts reproduce the previous independent private captures byte-for-byte. Raw assets remain private; effective PPU scroll, camera speed and collision geometry are still unproven. See `docs/DRIVING_PRIVATE_ROAD_PPU_LATCH_RGB321.md`.

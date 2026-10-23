@@ -65,9 +65,10 @@ speed, world-space road geometry or collision physics. The new trace was
 captured in a separate FCEUX process from the RGB samples, so no
 within-frame RGB/raster join is claimed.
 
-Next: combine PPU-register events, CPU/RAM samples and RGB road scanlines in
-one sealed original-source FCEUX session. Keep the strict legacy report gate
-separate until its missing source identity can be established.
+Stage 322 now captures PPU-register events, CPU/RAM samples and RGB road
+scanlines in one sealed original-source FCEUX session. See
+`docs/DRIVING_PRIVATE_ROAD_PPU_LATCH_RGB321.md`. The strict legacy report gate
+remains separate until its missing source identity can be established.
 
 Public CI tests use invented mock events and do not contain or replay the
 owner's ROM/FM2.
