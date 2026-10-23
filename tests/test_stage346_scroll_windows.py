@@ -156,7 +156,9 @@ class Stage346SyntheticFullSource(unittest.TestCase):
                 write_cpu('frame_begin',cycle='100')
                 write_cpu('ppu_bus_write',cycle='110',ppu_toggle_before='1',
                           value=f'{y:02x}',ram0d_live=f'{y:02x}')
-                write_cpu('ppu_bus_write',cycle='140',ppu_toggle_before='1',\n                          value='46',ram0d_live='46')\n                write_cpu('frame_end',cycle='150')
+                write_cpu('ppu_bus_write',cycle='140',ppu_toggle_before='1',
+                          value='46',ram0d_live='46')
+                write_cpu('frame_end',cycle='150')
                 write_native('core_frame_start',cpu_timestamp='0')
                 write_native('legacy_line_start',cpu_timestamp='30',
                              legacy_scanline='0',temp_addr=f'{t:04x}')
