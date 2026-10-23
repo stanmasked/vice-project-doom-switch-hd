@@ -14,7 +14,11 @@ timeout --signal=TERM --kill-after=5s 170s "$emulator" "$nro" \
 emu_pid=$!
 cleanup() {
   if [[ -n "${held_key:-}" ]]; then xdotool keyup "$held_key" 2>/dev/null || true; fi
-  xdotool keyup a d c x n 2>/dev/null || true
+  xdotool keyup a 2>/dev/null || true
+  xdotool keyup d 2>/dev/null || true
+  xdotool keyup c 2>/dev/null || true
+  xdotool keyup x 2>/dev/null || true
+  xdotool keyup n 2>/dev/null || true
   kill "$emu_pid" 2>/dev/null || true
   wait "$emu_pid" 2>/dev/null || true
 }
