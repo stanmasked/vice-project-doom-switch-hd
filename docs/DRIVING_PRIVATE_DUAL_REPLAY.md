@@ -53,3 +53,23 @@ CPU cycles or SHA-256 file digests are ever displayed or committed.
 Public tests fabricate NES/FM2 inputs and 41×4 RGB rows; CPU timestamps
 and film frames are invented. Neither the owner-private ROM/FM2 nor
 original source has been replayed by adding these tests alone.
+
+
+## Stage 320 — fresh-source dual replay mode
+
+The existing default mode remains strict: it still requires `--legacy-numeric-report` and the exact Stage186 legacy comparison. A separate `--fresh-source-only` mode is now available for two sealed source captures when the old hashless numeric report cannot be authenticated. It validates each fresh-source join, compares all 41 RGB slots byte-for-byte, all 321 CPU-frame records, 1,284 writer values/phases, post-frame RAM samples and per-frame CPU lengths, while normalizing absolute CPU-cycle epochs.
+
+Example using two already-sealed private directories:
+
+```bash
+python3 tools/audit_private_dual_road_ppu_replay.py \
+  --rom /private/owned_original.nes \
+  --movie /private/owner_fm2.fm2 \
+  --capture-a /private/fresh_capture_a \
+  --capture-b /private/fresh_capture_b \
+  --fresh-source-only
+```
+
+Add `--execute` to have the command launch two separate local FCEUX processes into two new private directories. The output explicitly states that the legacy report was not compared and that no legacy-exact-match claim is made. This path does not replace the strict legacy-gated replay mode.
+
+Local original-source investigation has now run two independent FCEUX 2.6.5 processes and observed byte-identical RGB payloads, CPU writer values, RAM samples and frame-relative phases. The old hashless road report still differs in three complete records, so the strict legacy replay gate remains blocked. Effective PPU scroll, camera speed and collision geometry are not proven.

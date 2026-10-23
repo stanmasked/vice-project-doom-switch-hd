@@ -19,6 +19,7 @@ from audit_private_road_ppu_321_trace import rows,num
 from build_private_road_ppu_join import (
     audit as source_audit,derive_documents
 )
+from audit_private_fresh_road_ppu_join import audit as fresh_source_audit
 from run_private_road_ppu_321 import launch
 from seal_private_road_ppu_321 import private_dir
 
@@ -101,11 +102,70 @@ def run_and_compare(rom:Path,movie:Path,legacy:Path,
     return {**result,
             "two_separate_fceux_processes_launched_by_this_command":True}
 
+
+def compare_fresh(rom:Path,movie:Path,first:Path,second:Path)->dict:
+    """Compare two sealed source captures without the legacy numeric report.
+
+    This explicit alternate path does not authenticate or reproduce the
+    hashless Stage170 report. The strict default compare() remains unchanged.
+    """
+    first=private_dir(first)
+    second=private_dir(second)
+    if first==second:
+        raise ValueError("two captures must be in distinct private directories")
+    one=fresh_source_audit(rom,movie,first)
+    two=fresh_source_audit(rom,movie,second)
+    if one!=two or not one["fresh_source_same_session_join_checked"]:
+        raise ValueError("one fresh-source image/CPU alignment failed")
+    road_a,ppu_a=derive_documents(first)
+    road_b,ppu_b=derive_documents(second)
+    if road_a!=road_b:
+        raise ValueError("two fresh source image-space interval series differ")
+    if ppu_a!=ppu_b:
+        raise ValueError("two CPU writer values, RAM or relative phases differ")
+    if _durations(first)!=_durations(second):
+        raise ValueError("two recorded FCEUX frame CPU lengths differ")
+    if _digest(first/"road_321_rgb_scanlines.bin")!=_digest(
+            second/"road_321_rgb_scanlines.bin"):
+        raise ValueError("road RGB source pixels differ even when masks agree")
+    return {
+        "source_road_rgb_samples_compared":41,
+        "source_cpu_frames_compared":321,
+        "source_cpu_writer_values_and_phases_compared":1284,
+        "accepted_source_road_cross_sections":37,
+        "ambiguous_source_road_cross_sections":4,
+        "source_raw_rgb_scanline_bytes_identical":True,
+        "absolute_cpu_cycle_clock_epoch_assumed_identical":False,
+        "two_source_directories_verified":True,
+        "fresh_source_alignment_passed_for_both":True,
+        "legacy_hashless_numeric_report_compared":False,
+        "legacy_exact_reproduction_claimed":False,
+        "two_independent_fceux_processes_proven_by_existing_files":False,
+        "original_effective_ppu_scroll_proven":False,
+        "original_road_camera_speed_proven":False,
+        "original_road_collision_proven":False,
+        "source_media_or_hashes_in_report":False,
+    }
+
+def run_and_compare_fresh(rom:Path,movie:Path,first:Path,second:Path,
+                          executable:str="fceux",watchdog:int=1800)->dict:
+    """Launch two new, distinct FCEUX processes, then compare fresh-source joins."""
+    if first.resolve()==second.resolve():
+        raise ValueError("cannot run two captures into the same target")
+    launch(rom,movie,first,fceux=executable,timeout_seconds=watchdog)
+    launch(rom,movie,second,fceux=executable,timeout_seconds=watchdog)
+    result=compare_fresh(rom,movie,first,second)
+    return {**result,
+            "two_separate_fceux_processes_launched_by_this_command":True}
+
 def main()->None:
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--rom",required=True,type=Path)
     parser.add_argument("--movie",required=True,type=Path)
-    parser.add_argument("--legacy-numeric-report",required=True,type=Path)
+    parser.add_argument("--legacy-numeric-report",type=Path,
+                        help="required for the strict legacy-reproduction mode")
+    parser.add_argument("--fresh-source-only",action="store_true",
+                        help="compare sealed fresh-source joins without claiming legacy reproduction")
     parser.add_argument("--capture-a",required=True,type=Path)
     parser.add_argument("--capture-b",required=True,type=Path)
     parser.add_argument("--execute",action="store_true",
@@ -113,23 +173,46 @@ def main()->None:
     parser.add_argument("--fceux",default="fceux")
     parser.add_argument("--timeout-seconds",type=int,default=1800)
     args=parser.parse_args()
-    if args.execute:
-        result=run_and_compare(args.rom,args.movie,
-              args.legacy_numeric_report,args.capture_a,args.capture_b,
-              args.fceux,args.timeout_seconds)
+    if args.fresh_source_only:
+        if args.legacy_numeric_report is not None:
+            parser.error("--fresh-source-only deliberately omits --legacy-numeric-report")
+        if args.execute:
+            result=run_and_compare_fresh(
+                args.rom,args.movie,args.capture_a,args.capture_b,
+                args.fceux,args.timeout_seconds)
+        else:
+            result=compare_fresh(args.rom,args.movie,args.capture_a,args.capture_b)
+        print("VPD_PRIVATE_FRESH_DUAL_ROAD_PPU_REPLAY_PASS"
+              " source_rgb_slots=41 road_valid=37 road_ambiguous=4"
+              " cpu_frames=321 cpu_writer_phases=1284"
+              " fresh_source_alignment=yes legacy_report_compared=no"
+              " fresh_processes_launched_by_command=" +
+              ("yes" if result.get(
+                "two_separate_fceux_processes_launched_by_this_command")
+                 else "not_verified")
+              +" legacy_exact_match_claimed=no"
+              " effective_ppu_scroll_proven=no"
+              " private_source_data_disclosed=no")
     else:
-        result=compare(args.rom,args.movie,args.legacy_numeric_report,
-                       args.capture_a,args.capture_b)
-    print("VPD_PRIVATE_DUAL_ROAD_PPU_REPLAY_PASS"
-          " source_rgb_slots=41 road_valid=37 road_ambiguous=4"
-          " cpu_frames=321 cpu_writer_phases=1284"
-          " same_original_file_ids=yes"
-          " fresh_processes_launched_by_command=" +
-          ("yes" if result.get(
-            "two_separate_fceux_processes_launched_by_this_command")
-             else "not_verified")
-          +" effective_ppu_scroll_proven=no"
-          " original_road_camera_collision_proven=no"
-          " private_source_data_disclosed=no")
+        if args.legacy_numeric_report is None:
+            parser.error("strict mode requires --legacy-numeric-report; use --fresh-source-only for the separate research path")
+        if args.execute:
+            result=run_and_compare(args.rom,args.movie,
+                  args.legacy_numeric_report,args.capture_a,args.capture_b,
+                  args.fceux,args.timeout_seconds)
+        else:
+            result=compare(args.rom,args.movie,args.legacy_numeric_report,
+                           args.capture_a,args.capture_b)
+        print("VPD_PRIVATE_DUAL_ROAD_PPU_REPLAY_PASS"
+              " source_rgb_slots=41 road_valid=37 road_ambiguous=4"
+              " cpu_frames=321 cpu_writer_phases=1284"
+              " same_original_file_ids=yes"
+              " fresh_processes_launched_by_command=" +
+              ("yes" if result.get(
+                "two_separate_fceux_processes_launched_by_this_command")
+                 else "not_verified")
+              +" effective_ppu_scroll_proven=no"
+              " original_road_camera_collision_proven=no"
+              " private_source_data_disclosed=no")
 
 if __name__=="__main__":main()

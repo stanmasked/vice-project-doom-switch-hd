@@ -16,7 +16,7 @@ from test_audit_private_legacy_road_geometry import synthetic as old_numeric
 from test_audit_private_road_mask_reproduction import fabricated_rgb
 from test_audit_private_road_ppu_321_trace import fixture as fake_trace
 from seal_private_road_ppu_321 import preflight,finalize
-from audit_private_dual_road_ppu_replay import compare,run_and_compare
+from audit_private_dual_road_ppu_replay import compare,run_and_compare,compare_fresh,run_and_compare_fresh
 
 class DualReplaySourceFreeTests(unittest.TestCase):
     def setUp(self):
@@ -93,6 +93,73 @@ class DualReplaySourceFreeTests(unittest.TestCase):
         self.pair(absolute_epoch_delta=1000)
         result=compare(self.rom,self.movie,self.legacy,self.first,self.second)
         self.assertFalse(result["absolute_cpu_cycle_clock_epoch_assumed_identical"])
+    def test_fresh_source_dual_replay_passes_without_legacy_report(self):
+        self.pair()
+        result=compare_fresh(self.rom,self.movie,self.first,self.second)
+        self.assertEqual(result["source_road_rgb_samples_compared"],41)
+        self.assertEqual(result["source_cpu_frames_compared"],321)
+        self.assertEqual(result["source_cpu_writer_values_and_phases_compared"],1284)
+        self.assertTrue(result["source_raw_rgb_scanline_bytes_identical"])
+        self.assertTrue(result["fresh_source_alignment_passed_for_both"])
+        self.assertFalse(result["legacy_hashless_numeric_report_compared"])
+        self.assertFalse(result["legacy_exact_reproduction_claimed"])
+        self.assertFalse(result["two_independent_fceux_processes_proven_by_existing_files"])
+        self.assertNotIn("rom_sha256",result)
+        self.assertNotIn("fm2_sha256",result)
+
+    def test_fresh_source_mode_does_not_read_legacy_report(self):
+        self.pair()
+        source=json.loads(self.legacy.read_text())
+        source["frames"][0]["valid_scanline_count"]=3
+        self.legacy.write_text(json.dumps(source))
+        result=compare_fresh(self.rom,self.movie,self.first,self.second)
+        self.assertTrue(result["fresh_source_alignment_passed_for_both"])
+        self.assertFalse(result["legacy_hashless_numeric_report_compared"])
+
+    def test_fresh_source_nonroad_rgb_drift_rejected(self):
+        self.check_bad_fresh(mutate_rgb=True)
+
+    def test_fresh_source_cpu_phase_drift_rejected(self):
+        self.check_bad_fresh(early_phase_shift=1)
+
+    def test_fresh_source_ram_drift_rejected(self):
+        self.check_bad_fresh(mutate_ram=True)
+
+    def test_fresh_source_frame_duration_drift_rejected(self):
+        self.check_bad_fresh(mutate_frame_duration=True)
+
+    def test_fresh_source_wrong_rom_after_seal_rejected(self):
+        self.pair()
+        self.rom.write_bytes(self.rom.read_bytes()+b"X")
+        with self.assertRaises(ValueError):
+            compare_fresh(self.rom,self.movie,self.first,self.second)
+
+    def test_fresh_execute_triggers_two_distinct_capture_launches(self):
+        called=[]
+        def fake_launch(rom,movie,output,fceux,timeout_seconds):
+            called.append((output,fceux,timeout_seconds))
+            self.create(output)
+        with patch("audit_private_dual_road_ppu_replay.launch",
+                   side_effect=fake_launch) as run:
+            result=run_and_compare_fresh(
+                self.rom,self.movie,self.first,self.second,
+                executable="fceux",watchdog=600)
+        self.assertEqual(run.call_count,2)
+        self.assertEqual([x[0] for x in called],[self.first,self.second])
+        self.assertTrue(result["two_separate_fceux_processes_launched_by_this_command"])
+        self.assertFalse(result["legacy_hashless_numeric_report_compared"])
+
+    def test_fresh_execute_rejects_same_target_before_launch(self):
+        with patch("audit_private_dual_road_ppu_replay.launch") as run:
+            with self.assertRaises(ValueError):
+                run_and_compare_fresh(self.rom,self.movie,self.first,self.first)
+            run.assert_not_called()
+
+    def check_bad_fresh(self,**opts):
+        self.pair(**opts)
+        with self.assertRaises(ValueError):
+            compare_fresh(self.rom,self.movie,self.first,self.second)
+
     def test_nonroad_rgb_pixel_drift_rejected(self):
         self.check_bad(mutate_rgb=True)
     def test_source_cpu_phase_drift_rejected(self):
