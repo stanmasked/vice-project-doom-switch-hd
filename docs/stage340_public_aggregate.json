@@ -1,0 +1,15 @@
+{
+  "format": "vpd_stage340_classic_ppu_probe_readiness_v1",
+  "upstream_fceux_tag": "v2.6.5",
+  "owner_movie_legacy_core_required": true,
+  "original_rom_or_fm2_committed": false,
+  "pinned_source_patch_generator_added": true,
+  "source_free_probe_cpp_compile_tested": true,
+  "private_trace_validator_added": true,
+  "original_instrumented_binary_compiled": false,
+  "real_classic_ppu_transition_trace_captured": false,
+  "movie_frame_alignment_verified": false,
+  "exact_hardware_ppu_dot_observed": false,
+  "effective_raster_scroll_proven": false,
+  "road_geometry_proven": false
+}

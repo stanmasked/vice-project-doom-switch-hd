@@ -1,0 +1,59 @@
+name: Stage340 FCEUX legacy source contract
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - research/fceux-local-executable-bootstrap-stage188
+    paths:
+      - tools/generate_stage340_legacy_ppu_patch.py
+      - tools/audit_private_stage340_legacy_trace.py
+      - tests/test_stage340_classic_ppu.py
+      - .github/workflows/stage340-fceux-source-contract.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: stage340-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pinned-source-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Source-free Stage340 regression tests
+        run: python -m unittest discover -s tests -p 'test_stage340_*.py' -v
+      - name: Fetch exactly tagged upstream FCEUX source (no game assets)
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --quiet --depth 1 --branch v2.6.5 \
+            https://github.com/TASEmulators/fceux.git "$RUNNER_TEMP/fceux-2.6.5"
+          cd "$RUNNER_TEMP/fceux-2.6.5"
+          test "$(git rev-parse HEAD)" = ea6ed69b874e3ae94072f1b4f14b9a8f0fdd774b
+          test "$(git hash-object src/ppu.cpp)" = aa7502eb956595c29096856ab8beddb5eecc301b
+      - name: Generate guarded legacy PPU copy from pinned source
+        shell: bash
+        run: |
+          set -euo pipefail
+          python tools/verify_stage339_legacy_ppu_source.py \
+            --ppu-source "$RUNNER_TEMP/fceux-2.6.5/src/ppu.cpp"
+          python tools/generate_stage340_legacy_ppu_patch.py \
+            --upstream-ppu "$RUNNER_TEMP/fceux-2.6.5/src/ppu.cpp" \
+            --output "$RUNNER_TEMP/ppu-stage340.cpp"
+          test -s "$RUNNER_TEMP/ppu-stage340.cpp"
+          grep -q 'BEGIN VPD_STAGE340_LEGACY_PPU_DIAGNOSTICS' "$RUNNER_TEMP/ppu-stage340.cpp"
+          grep -q 'legacy_vertical_increment' "$RUNNER_TEMP/ppu-stage340.cpp"
+          grep -q 'legacy_horizontal_reload' "$RUNNER_TEMP/ppu-stage340.cpp"
+          grep -q 'cpu_second_2006' "$RUNNER_TEMP/ppu-stage340.cpp"
+          # Verify the original upstream file was not modified by patch generation.
+          test "$(git -C "$RUNNER_TEMP/fceux-2.6.5" hash-object src/ppu.cpp)" = aa7502eb956595c29096856ab8beddb5eecc301b
+          echo VPD_STAGE340_PINNED_UPSTREAM_SOURCE_PATCH_SMOKE_PASS
+      # Do not upload the instrumented emulator or any owner-private gameplay artifacts.
