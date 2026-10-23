@@ -1,0 +1,67 @@
+{
+  "schema": "vpd-stage335-public-aggregate-v1",
+  "frame_window": {
+    "frames": 261
+  },
+  "ppu_2005": {
+    "bus_writes": 1010,
+    "matched_instruction_witnesses": 1010,
+    "unmatched_writes": 0
+  },
+  "ppu_2006": {
+    "bus_writes": 6096
+  },
+  "ppu_status": {
+    "observed_reads": 10172
+  },
+  "ram_0d": {
+    "writes": 619,
+    "matched_instruction_witnesses": 619,
+    "unmatched_writes": 0,
+    "dec_writes": 615,
+    "sta_writes": 4,
+    "instruction_effect_mismatches": 0
+  },
+  "ppu_latch": {
+    "replay_mismatches": 0,
+    "second_write_toggle_before": 1,
+    "second_write_observations": 253,
+    "second_write_toggle_mismatches": 0
+  },
+  "dataflow": {
+    "ram_0b_load_to_first_2005_store": {
+      "observations": 253,
+      "matches": 253,
+      "mismatches": 0
+    },
+    "ram_0d_load_to_second_2005_store": {
+      "observations": 253,
+      "matches": 253,
+      "mismatches": 0,
+      "source_stable_until_store": true
+    }
+  },
+  "correlation": {
+    "second_2005_current_ram_0d_comparisons": 253,
+    "second_2005_current_ram_0d_matches": 253,
+    "second_2005_current_ram_0d_mismatches": 0,
+    "previous_frame_end_comparisons": 252,
+    "previous_frame_end_matches": 251,
+    "previous_frame_end_mismatches": 1,
+    "intra_frame_writes_explain_previous_frame_difference": true
+  },
+  "interpretation": {
+    "ram_0d_loads_to_second_2005_store_in_observed_path": true,
+    "second_2005_write_is_y_scroll_input": true,
+    "effective_raster_scroll_proven": false,
+    "camera_speed_proven": false,
+    "road_geometry_proven": false,
+    "collision_physics_proven": false
+  },
+  "privacy": {
+    "raw_trace_committed": false,
+    "raw_values_disclosed": false,
+    "source_hashes_disclosed": false,
+    "instruction_sites_disclosed": false
+  }
+}

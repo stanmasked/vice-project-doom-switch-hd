@@ -384,3 +384,14 @@ three production-Lua mock configurations pass locally.
 See [DISPATCH_EXECUTION_TRACE.md](docs/DISPATCH_EXECUTION_TRACE.md).
 **No actual first-stage emulator trace has yet been captured.**
 The native Switch NRO is unchanged.
+
+
+## Private source evidence: Stage 335–336
+
+The current research result confirms the observed RAM-to-PPU scroll-input load/store path using a private original-source FCEUX replay. Only a redacted aggregate is tracked in Git; the original ROM/FM2, raw traces, instruction sites, source hashes, and byte values remain in private storage.
+
+- [Stage 335–336 findings and limits](docs/DRIVING_PRIVATE_STAGE335_RAM0D_PPU_SCROLL_INPUT.md)
+- [Redacted public aggregate](docs/stage335_public_aggregate.json)
+- [Aggregate safety/consistency audit](tools/audit_public_stage335_aggregate.py)
+
+The audit is deliberately aggregate-only and fails if raw source identifiers or unproven camera/road semantics are published.
