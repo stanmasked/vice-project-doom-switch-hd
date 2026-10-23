@@ -155,12 +155,12 @@ class PrivateRam2526IndirectTests(unittest.TestCase):
             result = analyze(trace, 388, 388)
             sites = root / "sites.tsv"
             self.assertEqual(extract_sites(trace, sites, 388, 388), 1)
+            site_lines = sites.read_text(encoding="ascii").splitlines()
         self.assertEqual(result["indirect_access_counts"]["$AA"], 1)
         self.assertEqual(result["ram_0b_0c_0d_write_counts"]["$0B"], 1)
         self.assertEqual(result["ram_0b_0c_0d_write_counts"]["$0C"], 1)
         self.assertEqual(result["frames_with_$AA_access_and_any_$0b_0c_0d_write"], 1)
-        self.assertEqual(sites.read_text(encoding="ascii").splitlines(),
-                         ["pc\\topcode\\toperand", "C90D\\tB1\\tAA"])
+        self.assertEqual(site_lines, ["pc\topcode\toperand", "C90D\tB1\tAA"])
         self.assertFalse(result["semantics_confirmed"])
         self.assertFalse(result["raw_values_disclosed"])
 
