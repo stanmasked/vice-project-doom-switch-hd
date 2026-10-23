@@ -44,3 +44,8 @@ hashless comparison target; this stage does not retroactively authenticate it.
 
 Public Python and Lua CI fixtures use synthetic data and do not contain or
 replay the owner's ROM/FM2.
+
+
+## Stage 324 — same-session RAM $0D write trace
+
+The new owner-local capture records the actual CPU writes to zero-page RAM $0D alongside the already sealed 321-frame CPU/PPU/RGB evidence. The added trace is sealed separately and bound to the base capture seal and full ROM/FM2 file identities. It observes 1,506 writes (1,500 DEC $0D and six STA $0D). The second $2005 writer matches the previous frame's post-frame RAM sample in 319 of 320 comparisons; the sole mismatch is at the initial window boundary, frame 601. This is a reproducible temporal relationship only: the semantic role of $0D, effective PPU scroll, camera speed, world-space road geometry and collision physics remain unproven. See DRIVING_PRIVATE_RAM0D_SCROLL_RELATION.md.
