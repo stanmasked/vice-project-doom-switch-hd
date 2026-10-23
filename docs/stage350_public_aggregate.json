@@ -1,0 +1,25 @@
+{
+  "format": "vpd_stage350_original_fast_scroll_out_of_sample_public_v1",
+  "stage": 350,
+  "original_new_rgb_frames": [
+    520,
+    544
+  ],
+  "new_original_native_rgb_frames": 25,
+  "new_original_adjacent_pairs_verified": 24,
+  "new_original_3_pixel_down_pairs": 7,
+  "new_original_4_pixel_down_pairs": 17,
+  "new_original_modulo240_scroll_matches": 24,
+  "new_original_signed8_scroll_matches": 24,
+  "source_cpu_and_classic_ppu_traces_byte_identical_to_independent_previous_stage_seals": true,
+  "masked_texture_regions_agreed_all_pairs": 4,
+  "private_drive_archive_reauthenticated_sha256_and_crc": true,
+  "private_source_manifest_members_sha256_verified": 32,
+  "four_original_windows_total_verified_frames": 100,
+  "four_original_windows_total_verified_adjacent_pairs": 96,
+  "four_windows_total_modulo240_matches": 96,
+  "other_ppu_modes_and_levels_verified": false,
+  "ppu_exact_hardware_dot_proven": false,
+  "vehicle_physics_collision_and_camera_speed_proven": false,
+  "original_game_data_published_in_github": false
+}
