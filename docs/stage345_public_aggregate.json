@@ -1,0 +1,20 @@
+{
+  "format": "vpd_stage345_original_rgb_classic_scroll_correlation_public_v1",
+  "stage": 345,
+  "consecutive_authenticated_frames": 25,
+  "adjacent_pairs": 24,
+  "all_four_stage344_visual_bands_consensus": true,
+  "display_zero_and_first_2005_y_unchanged_pairs": 11,
+  "display_plus_one_and_first_2005_y_minus_one_pairs": 13,
+  "display_vs_first_2005_comparisons_matching": 24,
+  "later_2005_y_unchanged_adjacent_pairs": 24,
+  "selected_frames_with_ram0d_bus_writes": 14,
+  "selected_frames_with_no_ram0d_bus_writes": 11,
+  "original_frame_cpu_ppu_identity_reauthenticated": true,
+  "first_2005_equals_live_ram0d_all_selected_frames": true,
+  "first_2005_equals_native_classic_line0_t_all_selected_frames": true,
+  "hardware_ppu_dot_proven": false,
+  "general_camera_speed_proven": false,
+  "road_geometry_or_vehicle_physics_proven": false,
+  "raw_register_values_or_original_pixels_disclosed": false
+}
