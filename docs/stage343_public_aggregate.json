@@ -1,0 +1,23 @@
+{
+  "authentic_sampled_rgb_frames": 12,
+  "camera_speed_or_collision_proven": false,
+  "complete_indexed_palette_frame_count": 4,
+  "consecutive_sample_pairs_with_pixel_differences": 4,
+  "cpu_witness_byte_identical_to_stage335": true,
+  "effective_per_pixel_road_scroll_proven": false,
+  "exact_hardware_ppu_dot_proven": false,
+  "format": "vpd_stage343_authenticated_original_rgb_frame_aggregate_v1",
+  "max_distinct_rgb_colors_per_frame": 14,
+  "min_distinct_rgb_colors_per_frame": 1,
+  "native_resolution_height": 240,
+  "native_resolution_width": 256,
+  "native_witness_byte_identical_to_stage341": true,
+  "original_rgb_pixel_count_verified": 737280,
+  "raw_frame_or_palette_data_in_public_report": false,
+  "road_region_identified_or_geometry_proven": false,
+  "same_session_cpu_native_frame_anchors_verified": true,
+  "sampled_frames_with_multiple_rgb_colors": 4,
+  "source_full_file_sha256_verified": true,
+  "source_rgb_palette_probe_matches": 72,
+  "source_window_frames": 261
+}
