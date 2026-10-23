@@ -1,0 +1,70 @@
+name: Stage346 Lua 5.1 ROM-free runtime packaging
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - research/fceux-local-executable-bootstrap-stage188
+    paths:
+      - .github/workflows/stage346-lua51-runtime.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: stage346-lua51-runtime-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lua51-owner-runtime:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Install canonical public Lua 5.1 runtime package (no game inputs)
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo timeout 180s apt-get -o Acquire::Retries=2 update -qq
+          sudo timeout 300s env DEBIAN_FRONTEND=noninteractive apt-get -o DPkg::Lock::Timeout=30 -o Acquire::Retries=2 install -y liblua5.1-0
+          dpkg-query -W -f='${Version}\n' liblua5.1-0
+      - name: Package actual Lua 5.1 soname with license
+        shell: bash
+        run: |
+          set -euo pipefail
+          out="$RUNNER_TEMP/vice-stage346-lua51"
+          mkdir -p "$out"
+          src="$(ldconfig -p | awk '/liblua5.1\.so\.0 / {print $NF; exit}')"
+          test -n "$src" && test -f "$src"
+          cp -L "$src" "$out/liblua5.1.so.0"
+          file "$out/liblua5.1.so.0"
+          readelf -d "$out/liblua5.1.so.0" | grep -F 'Library soname: [liblua5.1.so.0]'
+          test -f /usr/share/doc/liblua5.1-0/copyright
+          cp /usr/share/doc/liblua5.1-0/copyright "$out/LUA51_PACKAGE_COPYRIGHT"
+          dpkg-query -W -f='${Version}\n' liblua5.1-0 > "$out/PACKAGE_VERSION"
+          (cd "$out" && sha256sum liblua5.1.so.0 LUA51_PACKAGE_COPYRIGHT PACKAGE_VERSION > SHA256SUMS)
+          printf '%s\n' 'Canonical Ubuntu 24.04 Lua 5.1 runtime library, no game assets.' \
+            'Redistribution governed by the included package copyright/license.' \
+            'For owner-local use with exact Stage341 FCEUX binary; not a gameplay validation.' \
+            > "$out/README.txt"
+          python3 - "$out/liblua5.1.so.0" <<'PY'
+          import ctypes,sys
+          lib=ctypes.CDLL(sys.argv[1])
+          lib.luaL_newstate.restype=ctypes.c_void_p
+          lib.luaL_newstate.argtypes=[]
+          lib.lua_close.argtypes=[ctypes.c_void_p]
+          state=lib.luaL_newstate()
+          assert state, "Lua 5.1 ABI initialization failed"
+          lib.lua_close(state)
+          print("VPD_STAGE346_PUBLIC_LUA51_ABI_SMOKE_PASS")
+          PY
+          if find "$out" -type f | grep -Ei '\.(nes|fm2|rom|iso|chd|tsv|png|bmp|jpg|sav|state)$'; then
+            echo "Unexpected original-game resource in Lua package" >&2
+            exit 1
+          fi
+      - name: Upload source-free runtime with short retention
+        uses: actions/upload-artifact@v4
+        with:
+          name: vice-stage346-lua51-runtime-ubuntu2404
+          path: ${{ runner.temp }}/vice-stage346-lua51/
+          if-no-files-found: error
+          retention-days: 3
