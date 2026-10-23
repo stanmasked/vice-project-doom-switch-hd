@@ -1,0 +1,37 @@
+{
+  "actual_ppu_v_during_rendering_known": false,
+  "camera_speed_proven": false,
+  "cpu_event_rows_processed": 21398,
+  "cpu_register_shadow_computed": true,
+  "cpu_v_assignment_from_2006_recorded": true,
+  "effective_raster_scroll_proven": false,
+  "format": "vpd_stage337_private_ppu_cpu_write_shadow_aggregate_v1",
+  "frame_window": [
+    380,
+    640
+  ],
+  "observed_ppu_status_resets": 10172,
+  "ppu_bus_events": {
+    "PPUADDR_2006_second_half_cpu_v_assignments": 3048,
+    "PPUADDR_2006_writes": 6096,
+    "PPUCTRL_2000_writes": 844,
+    "PPUMASK_2001_writes": 506,
+    "PPUSCROLL_2005_writes": 1010,
+    "PPUSTATUS_read_witnesses": 10172
+  },
+  "private_raw_values_disclosed": false,
+  "road_geometry_proven": false,
+  "scanline_and_ppu_dot_timing_captured": false,
+  "scroll_input_phase_counts": {
+    "first_2005": 505,
+    "frames_with_2005": 253,
+    "per_frame_2005_count_distribution": {
+      "0": 8,
+      "2": 1,
+      "4": 252
+    },
+    "second_2005": 505
+  },
+  "source_frames": 261,
+  "toggle_mismatches": 0
+}
