@@ -1,5 +1,17 @@
 name: NeXium Vice runtime smoke test
 on:
+  # Stage 1-1 experimental branch: request a true guest run on probe changes.
+  # Keep push triggers narrow so unrelated development does not flood NeXium.
+  push:
+    branches:
+      - "research/fceux-local-executable-bootstrap-stage188"
+    paths:
+      - ".github/workflows/nexium-runtime.yml"
+      - "tools/nexium_driving_probe.sh"
+      - "tools/audit_nexium_driving_blackout.py"
+      - "tests/test_nexium_driving_blackout.py"
+      - "switch_graphical/**"
+      - "game_core/**"
   pull_request:
     paths:
       - ".github/workflows/nexium-runtime.yml"
@@ -116,7 +128,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: vice-nexium-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: vice-nexium-${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
   cancel-in-progress: true
 
 jobs:
