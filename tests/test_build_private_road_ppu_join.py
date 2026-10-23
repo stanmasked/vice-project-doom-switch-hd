@@ -16,6 +16,7 @@ from test_audit_private_legacy_road_geometry import synthetic as old_fixture
 from test_audit_private_road_mask_reproduction import fabricated_rgb
 from seal_private_road_ppu_321 import preflight,finalize
 from build_private_road_ppu_join import audit,derive_documents
+from audit_private_fresh_road_ppu_join import audit as fresh_source_audit
 
 class OriginalFreeFullJoinTests(unittest.TestCase):
     def setUp(self):
@@ -52,6 +53,38 @@ class OriginalFreeFullJoinTests(unittest.TestCase):
         self.assertFalse(report["original_nes_ppu_effective_scroll_proven"])
         self.assertNotIn("rom_sha256",report)
         self.assertNotIn("road_x",report)
+    def test_fresh_source_join_is_separate_and_sanitized(self):
+        self.build()
+        report=fresh_source_audit(self.rom,self.movie,self.cap)
+        self.assertTrue(report["fresh_source_same_session_join_checked"])
+        self.assertEqual(report["fresh_source_road_image_slots"],41)
+        self.assertEqual(report["fresh_source_accepted_road_intervals"],37)
+        self.assertEqual(report["fresh_source_ambiguous_road_intervals"],4)
+        self.assertEqual(report["fresh_source_cpu_movie_frames"],321)
+        self.assertEqual(report["fresh_source_cpu_writer_events"],1284)
+        self.assertEqual(report["original_cross_source_anchor_pairs_checked"],4)
+        self.assertFalse(report["legacy_hashless_numeric_report_compared"])
+        self.assertFalse(report["legacy_exact_reproduction_claimed"])
+        self.assertFalse(report["strict_legacy_join_gate_replaced"])
+        self.assertFalse(report["effective_ppu_scroll_proven"])
+        for secret in ("rom_sha256","fm2_sha256","raw_rgb","road_x","written_values"):
+            self.assertNotIn(secret,report)
+
+    def test_fresh_source_join_rejects_rgb_changed_after_seal(self):
+        self.build()
+        target=self.cap/"road_321_rgb_scanlines.bin"
+        data=bytearray(target.read_bytes())
+        data[90]^=1
+        target.write_bytes(data)
+        with self.assertRaises(ValueError):
+            fresh_source_audit(self.rom,self.movie,self.cap)
+
+    def test_fresh_source_join_rejects_movie_changed_after_seal(self):
+        self.build()
+        self.movie.write_text(self.movie.read_text()+"\n")
+        with self.assertRaises(ValueError):
+            fresh_source_audit(self.rom,self.movie,self.cap)
+
     def test_ephemeral_numeric_docs_match_actual_schema(self):
         self.build()
         road,ppu=derive_documents(self.cap)

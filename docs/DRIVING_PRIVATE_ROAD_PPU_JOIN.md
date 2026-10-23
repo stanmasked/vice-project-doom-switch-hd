@@ -53,3 +53,21 @@ Those require separate PPU latch/scanline and gameplay investigations.
 The original Stage170 numeric file was created without SHA-256.
 A matching fresh source-derived mask does not retroactively
 authenticate that file; hence this distinction remains explicit.
+
+
+## Stage 319 — fresh-source alignment without legacy substitution
+
+A separate tool, `tools/audit_private_fresh_road_ppu_join.py`, verifies the **new, SHA-256-sealed same-session source baseline** without treating the old hashless road report as authenticated. It rechecks the source/capture seal, derives the 41 RGB slots and 321 CPU-frame records in memory, then runs the existing Stage169 numeric alignment validator over the 37 accepted image-space intervals and four independently published cross-source anchors.
+
+This is a distinct research result, not a relaxation of the strict Stage186 gate. The strict `tools/build_private_road_ppu_join.py` still requires exact reproduction of the legacy report and must continue to fail closed when that comparison differs. The owner-private original capture has now been repeated in two independent FCEUX 2.6.5 processes: their 41-slot RGB payloads are byte-identical, as are all CPU writer values and post-frame RAM samples. The fresh-source alignment checks all 321 CPU frames, 1,284 writer events, and four road/PPU/RAM anchor pairs. The legacy numeric report remains a separate, unauthenticated comparison target; no legacy-exact-match claim is made.
+
+Owner-local usage:
+
+```bash
+python3 tools/audit_private_fresh_road_ppu_join.py \
+  --rom /private/owned_original.nes \
+  --movie /private/owner_fm2.fm2 \
+  --private-dir /private/new_same_session_ppu_rgb
+```
+
+Only a redacted aggregate is printed. Raw RGB bytes, source hashes, private CPU cycles and numeric road coordinates remain local. Even this fresh-source alignment does not prove effective PPU scroll, camera speed or collision geometry.
