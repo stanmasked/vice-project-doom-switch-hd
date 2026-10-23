@@ -1,0 +1,28 @@
+{
+  "format": "vpd_stage351_original_rgb_motion_mask_confidence_public_v1",
+  "stage": 351,
+  "new_original_rgb_frame_window": [
+    560,
+    584
+  ],
+  "original_rgb_frames": 25,
+  "original_adjacent_pairs": 24,
+  "preregistered_stage344_four_band_qualified_pairs": 23,
+  "preregistered_stage344_four_band_inconclusive_pairs": 1,
+  "preregistered_four_band_mod240_agreement_pairs": 23,
+  "adaptive_environment_subwindows_qualified_pairs": 24,
+  "adaptive_environment_subwindows_mod240_agreement_pairs": 24,
+  "adaptive_subwindows_selected_after_prior_ambiguity": true,
+  "adaptive_mask_result_is_independently_preregistered": false,
+  "exploratory_image_shift_count_zero": 5,
+  "exploratory_image_shift_count_plus_two": 2,
+  "exploratory_image_shift_count_plus_three": 1,
+  "exploratory_image_shift_count_plus_five": 15,
+  "exploratory_image_shift_count_plus_eight": 1,
+  "same_session_cpu_native_ppu_trace_sha_verified_against_sealed_priors": true,
+  "private_drive_zip_crc_and_32_source_member_sha256_readback_verified": true,
+  "conventional_vertical_240_cycle_applies_to_all_original_game_modes_proven": false,
+  "hardware_ppu_dot_or_general_camera_speed_proven": false,
+  "vehicle_physics_or_road_geometry_proven": false,
+  "original_proprietary_data_in_public_ci": false
+}
