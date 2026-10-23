@@ -2,7 +2,14 @@ name: Native Core CI
 
 on:
   push:
+    branches: [main]
   pull_request:
+
+# Feature branches are tested by their PR, not by duplicate push runs.
+# Keep default-branch runs auditable; cancel only superseded PR revisions.
+concurrency:
+  group: vice-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref_name }}-${{ github.event_name }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   code-and-tests:
