@@ -194,25 +194,25 @@ int main() {
           "reset did not restore every driving field to canonical defaults");
 
     // Long-running sessions must saturate counters instead of wrapping to zero.
-    vpd::DrivingState saturated;
-    saturated.frame=UINT32_MAX;
-    saturated.obstacles_passed=UINT32_MAX;
-    saturated.obstacle_serial=UINT32_MAX;
-    saturated.obstacle_y=649;
-    saturated.tick({});
-    check(saturated.frame==UINT32_MAX &&
-          saturated.obstacles_passed==UINT32_MAX &&
-          saturated.obstacle_serial==UINT32_MAX &&
-          saturated.obstacle_y==-110 && saturated.obstacle_x==840,
-          "long-running counters wrapped or saturated obstacle lane became nondeterministic");
+    vpd::DrivingState saturatedCounters;
+    saturatedCounters.frame=UINT32_MAX;
+    saturatedCounters.obstacles_passed=UINT32_MAX;
+    saturatedCounters.obstacle_serial=UINT32_MAX;
+    saturatedCounters.obstacle_y=649;
+    saturatedCounters.tick({});
+    check(saturatedCounters.frame==UINT32_MAX &&
+          saturatedCounters.obstacles_passed==UINT32_MAX &&
+          saturatedCounters.obstacle_serial==UINT32_MAX &&
+          saturatedCounters.obstacle_y==-110 && saturatedCounters.obstacle_x==840,
+          "long-running counters wrapped or saturatedCounters obstacle lane became nondeterministic");
     vpd::DrivingState saturatedReplay;
     saturatedReplay.frame=UINT32_MAX;
     saturatedReplay.obstacles_passed=UINT32_MAX;
     saturatedReplay.obstacle_serial=UINT32_MAX;
     saturatedReplay.obstacle_y=649;
     saturatedReplay.tick({});
-    check(equal(saturated,saturatedReplay),
-          "saturated-counter replay diverged for identical initial states");
+    check(equal(saturatedCounters,saturatedReplay),
+          "saturatedCounters-counter replay diverged for identical initial states");
     vpd::DrivingState saturatedImpact;
     saturatedImpact.impacts=UINT32_MAX;
     saturatedImpact.obstacle_y=426;
@@ -224,7 +224,7 @@ int main() {
     saturatedImpactReplay.obstacle_y=426;
     saturatedImpactReplay.tick({});
     check(equal(saturatedImpact,saturatedImpactReplay),
-          "saturated impact replay diverged for identical initial states");
+          "saturatedCounters impact replay diverged for identical initial states");
 
     check(platform.fingerprint()==platformFingerprintBefore,
           "independent driving model changed legacy platform simulation");
