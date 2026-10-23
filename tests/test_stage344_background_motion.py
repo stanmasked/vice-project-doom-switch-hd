@@ -71,8 +71,15 @@ class Stage344SourceFree(unittest.TestCase):
         m={'format':'vpd_stage344_original_consecutive_rgb_private_manifest_v1','original_readonly':True,'newppu':0,'frames':self.samples,'palette_frames':self.samples,
            'sha256':hashes,'sealed_cpu_sha256':hashes['stage335_ppu_latch_ram0d_events.tsv'],'sealed_native_sha256':hashes['stage341_classic_refreshaddr.tsv']}
         (self.root/'manifest.json').write_text(json.dumps(m))
+        # Independent test-owned pins are kept outside the new capture manifest.
+        self.sealed_cpu_sha256=hashes['stage335_ppu_latch_ram0d_events.tsv']
+        self.sealed_native_sha256=hashes['stage341_classic_refreshaddr.tsv']
 
-    def report(self):return aud.audit(self.root,self.root/'manifest.json',first=420,last=422)
+    def report(self):
+        return aud.audit(self.root,self.root/'manifest.json',
+                         sealed_cpu_sha256=self.sealed_cpu_sha256,
+                         sealed_native_sha256=self.sealed_native_sha256,
+                         first=420,last=422)
 
     def test_background_shift_recovered_despite_sprite_hud_changes(self):
         a=self.report()
@@ -125,6 +132,9 @@ class Stage344SourceFree(unittest.TestCase):
     def test_duplicate_source_frame_anchor_rejected(self):
         p=self.root/'stage341_classic_refreshaddr.tsv';p.write_text(p.read_text()+'421\tcore_frame_start\n')
         m=json.loads((self.root/'manifest.json').read_text());m['sha256'][p.name]=aud.digest(p);m['sealed_native_sha256']=aud.digest(p);(self.root/'manifest.json').write_text(json.dumps(m))
+        # This test explicitly trusts the mutated synthetic native trace in
+        # order to reach the frame-anchor validator rather than the new pin gate.
+        self.sealed_native_sha256=aud.digest(p)
         with self.assertRaisesRegex(ValueError,'frame coverage'):self.report()
 
     def test_unexpected_original_frame_rejected(self):
@@ -139,8 +149,30 @@ class Stage344SourceFree(unittest.TestCase):
         p=self.root/'stage343_rgb_0422.gd';p.rename(self.root/'backing.gd');p.symlink_to('backing.gd')
         with self.assertRaisesRegex(ValueError,'linked'):self.report()
 
+    def test_rewritten_manifest_cannot_self_seal_tampered_native_source(self):
+        p=self.root/'stage341_classic_refreshaddr.tsv'
+        p.write_text(p.read_text()+'421\\tother_event\\n')
+        m=json.loads((self.root/'manifest.json').read_text())
+        m['sha256'][p.name]=aud.digest(p)
+        m['sealed_native_sha256']=aud.digest(p)
+        (self.root/'manifest.json').write_text(json.dumps(m))
+        # Self-rewritten session manifest is coherent, but original Stage341
+        # independent owner pin intentionally remains unchanged.
+        with self.assertRaisesRegex(ValueError,'independent prior-stage seal mismatch'):
+            self.report()
+
+    def test_independent_seal_must_be_well_formed(self):
+        with self.assertRaisesRegex(ValueError,'independent prior-stage SHA-256 pins'):
+            aud.audit(self.root,self.root/'manifest.json',
+                      sealed_cpu_sha256='not-a-hash',
+                      sealed_native_sha256=self.sealed_native_sha256,
+                      first=420,last=422)
+
     def test_displacement_scope_restrictions(self):
         with self.assertRaisesRegex(ValueError,'unsupported original source frame interval'):
-            aud.audit(self.root,self.root/'manifest.json',first=420,last=460)
+            aud.audit(self.root,self.root/'manifest.json',
+                      sealed_cpu_sha256=self.sealed_cpu_sha256,
+                      sealed_native_sha256=self.sealed_native_sha256,
+                      first=420,last=460)
 
 if __name__=='__main__':unittest.main()
