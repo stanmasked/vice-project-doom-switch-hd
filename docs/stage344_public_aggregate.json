@@ -1,0 +1,19 @@
+{
+  "format": "vpd_stage344_original_consecutive_background_motion_public_v1",
+  "stage": 344,
+  "original_ntsc_classic_fceux_replay_readonly": true,
+  "source_cpu_ppu_sealed_traces_exactly_reproduced": true,
+  "original_rgb_consecutive_frames": 25,
+  "verified_adjacent_pairs": 24,
+  "native_resolution": [256, 240],
+  "indexed_palette_frames": 3,
+  "rgb_palette_sample_matches": 150,
+  "non_sprite_non_hud_texture_bands_per_pair": 4,
+  "all_four_bands_agreed_for_every_pair": true,
+  "observed_display_vertical_delta_0_pairs": 11,
+  "observed_display_vertical_delta_plus_1_pairs": 13,
+  "actual_hardware_ppu_dot_proven": false,
+  "general_road_camera_speed_proven": false,
+  "road_perspective_or_collision_proven": false,
+  "original_pixels_rom_fm2_and_private_hashes_in_public_commit": false
+}
