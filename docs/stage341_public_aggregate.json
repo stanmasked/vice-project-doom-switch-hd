@@ -1,0 +1,15 @@
+{
+  "actual_hardware_ppu_dot_observed": false,
+  "core_frames_aligned_to_original_frame_labels": 261,
+  "cpu_second_2006_events_full_address_matches": 3048,
+  "cpu_second_2006_events_full_address_mismatches": 0,
+  "cpu_source_byte_identical_to_stage335": true,
+  "effective_raster_scroll_proven": false,
+  "format": "vpd_stage341_legacy_ppu_authentic_capture_aggregate_v1",
+  "native_legacy_ppu_event_count": 312189,
+  "owner_private_same_session_source_readonly": true,
+  "raw_original_ppu_addresses_disclosed": false,
+  "road_geometry_proven": false,
+  "stage": 341,
+  "stage341_instrumented_fceux_github_build_success": true
+}
