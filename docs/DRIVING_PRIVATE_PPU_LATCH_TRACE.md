@@ -45,6 +45,9 @@ bind the later actual bus write to that instruction's post-PC. The auditor
 still independently checks all 1,284 port values against the sealed CPU
 writer trace.
 
+Writes outside frames 600–920 are ignored before the window-specific writer
+witness is checked; the game also writes PPUSCROLL during its earlier startup.
+
 The installed FCEUX build does not expose memory.registerread. Therefore
 the capture hooks every direct/indexed $2002 reader candidate found by a
 static scan of the original PRG banks, checks the live instruction bytes,

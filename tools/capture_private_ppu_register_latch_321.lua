@@ -98,6 +98,9 @@ for _,spec in ipairs({{0x2000,'W2000'},{0x2001,'W2001'},
  local address,kind=spec[1],spec[2]
  memory.registerwrite(address,function(a,s,v)
   local frame=emu.framecount()
+  -- The source game writes these ports outside the audited window too.
+  -- Ignore those writes before enforcing the window-specific CPU witness.
+  if frame<first or frame>last then return end
   local pc=memory.getregister('pc')
   if kind=='W2005' then
    local writer=active_scroll_writer

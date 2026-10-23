@@ -67,6 +67,11 @@ for frame=0,920 do
  current_frame=frame
  current_cycle=frame*30000
  before_callback()
+ -- The real game writes PPUSCROLL outside the audited 600..920 window.
+ -- Such writes must not require a window-local execution witness.
+ if frame==10 or frame==12 then
+  write(0x2005,0x00,0xE8EF,current_cycle+800)
+ end
  if frame>=600 then
   write(0x2000,0x88,0xE69A,current_cycle+20)
   write(0x2001,0x1E,0xE6A1,current_cycle+30)
