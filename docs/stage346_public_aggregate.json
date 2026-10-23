@@ -42,5 +42,7 @@
   "lua51_runtime_missing": true,
   "actual_hardware_ppu_dot_proven": false,
   "physical_camera_or_vehicle_speed_proven": false,
-  "original_data_github_committed": false
+  "original_data_github_committed": false,
+  "phase": "trace_only_pre_capture_historical_checkpoint",
+  "later_new_original_rgb_evidence_report": "docs/stage346_original_rgb_public_aggregate.json"
 }
