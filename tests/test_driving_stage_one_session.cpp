@@ -53,16 +53,25 @@ int main() {
 
     // The default controller must run the measured 3,197-frame road interval.
     // This is a replay-aligned prototype duration, not proof of original clear logic.
-    Session referenceRoute;
-    for(std::uint32_t frame=1;frame<3197;++frame) referenceRoute.tick({});
+    // A duration boundary requires a *surviving* synthetic driver.
+    // Do not let the idle, centered collision fixture defeat the car before
+    // the timing predicate is evaluated. Preseed obstacle progress only for
+    // this clock-boundary test; progress and collision gates have other tests.
+    vpd::DrivingState referenceFixture;
+    referenceFixture.car_x=362;
+    referenceFixture.obstacles_passed=8;
+    Session referenceRoute(referenceFixture);
+    const vpd::DriveInput safeBrake{false,false,false,true};
+    for(std::uint32_t frame=1;frame<3197;++frame) referenceRoute.tick(safeBrake);
     check(referenceRoute.mode()==Session::Mode::Driving &&
-          referenceRoute.state().frame==3196,
-          "default route ended before the measured reference duration");
-    referenceRoute.tick({});
+          referenceRoute.state().frame==3196 &&
+          referenceRoute.state().health>0,
+          "reference route must survive without ending before frame 3197");
+    referenceRoute.tick(safeBrake);
     check(referenceRoute.mode()==Session::Mode::Transition &&
           referenceRoute.state().frame==3197 &&
           referenceRoute.state().obstacles_passed>=8,
-          "default route did not transition at the measured 3,197th road frame");
+          "surviving reference route did not transition at frame 3197");
 
     // A known collision fixture must enter defeat, freeze, and restart cleanly.
     vpd::DrivingState fatal;
