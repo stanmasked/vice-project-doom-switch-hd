@@ -1,5 +1,7 @@
 # Stage 346 — original-source scroll-window preflight and private RGB replay preparation
 
+**Historical pre-capture checkpoint:** this document describes the trace-only stage and its temporary Lua 5.1 blocker. The blocker was resolved and a new authentic RGB replay of frames 445–469 succeeded. For the verified later result, see [Stage346 original RGB scroll join](DRIVING_STAGE346_ORIGINAL_RGB_SCROLL_JOIN.md). The earlier statements here that no new RGB data had been captured are explicitly **superseded**, not current project status.
+
 ## Confirmed sources
 
 - Previously authenticated Stage344 read-only FCEUX 2.6.5 classic PPU (NewPPU 0), original FM2 and ROM, 261 CPU/PPU source frames 380–640.
