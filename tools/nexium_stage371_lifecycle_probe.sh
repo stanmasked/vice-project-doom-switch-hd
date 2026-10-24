@@ -21,6 +21,42 @@ convert_screens() {
     convert "$img" -strip "png:$out/$(basename "$img" .xwd).png" 2>/dev/null || true
   done
 }
+# The NRO can append its guest witness just before NeXium presents the next
+# X11 surface frame. Poll the actual screenshot so the retained start/restart
+# evidence is not a stale frame from immediately before the overlay appeared.
+capture_panel_until_visible() {
+  local name="$1" count=0 marker
+  for ((i=0;i<20;++i));do
+    if ! capture_raw "$name";then sleep 0.05;continue;fi
+    convert "$out/$name.xwd" -strip "png:$out/$name.png" 2>/dev/null || true
+    count="$(python3 - "$out/$name.png" <<'PY'
+import sys
+from PIL import Image
+try:
+    with Image.open(sys.argv[1]) as im:
+        if im.size != (1280, 720):
+            print(0)
+        else:
+            rgb = im.convert("RGB")
+            px = rgb.load()
+            print(sum(
+                1 for y in range(245, 336) for x in range(1010, 1205)
+                if px[x, y] == (102, 218, 239)
+            ))
+except Exception:
+    print(0)
+PY
+)"
+    if [[ "$count" -ge 20 ]];then break;fi
+    sleep 0.05
+  done
+  marker="${name//-/_}"
+  printf '%s_cyan_pixels=%s\n' "$marker" "$count" >>"$out/host-events.txt"
+  [[ "$count" -ge 20 ]] || {
+    echo "INCONCLUSIVE: $name screenshot never showed the DEMO panel after guest witness" >&2
+    return 1
+  }
+}
 cleanup() {
   xdotool keyup q 2>/dev/null || true
   xdotool keyup t 2>/dev/null || true
@@ -104,7 +140,7 @@ for ((i=0;i<200;++i));do
   sleep 0.03
 done
 [[ "$first_started" == yes ]] || { echo "INCONCLUSIVE: first real DEMO session did not produce six guest states" >&2;exit 1; }
-capture_raw "screen-demo-start"
+capture_panel_until_visible "screen-demo-start"
 printf 'physical_keyboard_chord_start=R+T+Q Switch=ZL+ZR+L\n' >>"$out/host-events.txt"
 # Release then send a fresh edge; this must cancel the active DEMO.
 xdotool keyup q;xdotool keyup t;xdotool keyup r
@@ -139,7 +175,7 @@ done
 # The NRO flushes the guest trace just before the X11 compositor presents the next frame.
 # Allow a few guest presentations before taking the independent host screenshot.
 sleep 0.18
-capture_raw "screen-restart"
+capture_panel_until_visible "screen-restart"
 xdotool keyup q;xdotool keyup t;xdotool keyup r
 expected=$((first_count+41))
 complete=no
