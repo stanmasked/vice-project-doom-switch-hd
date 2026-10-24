@@ -1,0 +1,71 @@
+{
+  "format": "vpd_stage361_source_safe_bounded_scroll_mode_envelope_v1",
+  "stage": 361,
+  "input_class": "reconstructed FROM previously public Stage359+Stage360 numeric aggregates only",
+  "scientific_status": "retrospective engineering model, NOT independent original experiment",
+  "window_observed_original_pair_starts": [
+    519,
+    559
+  ],
+  "only_supported_observed_shifts_px": [
+    3,
+    4,
+    5
+  ],
+  "source_safe_original_archive_member_shas_not_present": true,
+  "original_rom_fm2_pixels_cpu_ppu_rows_not_processed": true,
+  "fixed_stage355_failed_source_gate_preserved": true,
+  "fixed_stage357_five_inconclusive_pairs_preserved": true,
+  "first_observed_pair_start": 519,
+  "last_observed_pair_start": 559,
+  "observed_pair_count": 41,
+  "confirmed_pair_count": 41,
+  "unverified_or_unqualified_pair_count": 0,
+  "pair_classification_counts": {
+    "confirmed_finite_mode": 41,
+    "image_inconclusive": 0,
+    "confident_mask_conflict": 0,
+    "source_unverified": 0,
+    "register_unsupported": 0,
+    "image_register_contradiction": 0,
+    "verified_out_of_scope_shift": 0
+  },
+  "observed_mode_segments": [
+    {
+      "shift_px": 3,
+      "pair_start_first": 519,
+      "pair_start_last": 526,
+      "observed_pair_count": 8
+    },
+    {
+      "shift_px": 4,
+      "pair_start_first": 527,
+      "pair_start_last": 558,
+      "observed_pair_count": 32
+    },
+    {
+      "shift_px": 5,
+      "pair_start_first": 559,
+      "pair_start_last": 559,
+      "observed_pair_count": 1
+    }
+  ],
+  "adjacent_observed_mode_transitions": [
+    {
+      "at_pair_start_frame": 527,
+      "from_shift_px": 3,
+      "to_shift_px": 4,
+      "source_pair_witnesses_adjacent": true,
+      "universal_physics_rule_proven": false
+    },
+    {
+      "at_pair_start_frame": 559,
+      "from_shift_px": 4,
+      "to_shift_px": 5,
+      "source_pair_witnesses_adjacent": true,
+      "universal_physics_rule_proven": false
+    }
+  ],
+  "predicts_missing_or_future_frames": false,
+  "source_original_sprite_vehicle_camera_physics_or_ppu_dot_proven": false
+}
