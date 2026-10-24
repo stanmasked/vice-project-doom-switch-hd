@@ -176,12 +176,14 @@ done
 capture_raw "screen-demo-start"
 printf 'physical_keyboard_chord_start=R+T+Q Switch=ZL+ZR+L\n' >>"$out/host-events.txt"
 # Release then send a fresh edge; this must cancel the active DEMO.
+# Reuse the hold duration from the successful Stage371 run. Short 50 ms
+# chord components were not reliable enough under real NeXium/X11 scheduling.
 xdotool keyup q;xdotool keyup t;xdotool keyup r
 sleep 0.05
-xdotool keydown r;xdotool keydown t;sleep 0.05;xdotool keydown q;sleep 0.05
+xdotool keydown r;xdotool keydown t;sleep 0.07;xdotool keydown q;sleep 0.12
 xdotool keyup q;xdotool keyup t;xdotool keyup r
 printf 'physical_keyboard_chord_cancel=R+T+Q Switch=ZL+ZR+L\n' >>"$out/host-events.txt"
-sleep 0.05
+sleep 0.15
 capture_panel_until_absent "screen-cancelled"
 first_count="$(wc -l <"$guest" | tr -d ' ')"
 printf 'first_session_records_observed=%s\n' "$first_count" >>"$out/host-events.txt"
