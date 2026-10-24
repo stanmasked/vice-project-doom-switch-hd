@@ -204,5 +204,10 @@ class Stage361FiniteStateTests(unittest.TestCase):
         self.assertNotIn("stage341_classic",d)
 
 
+    def test_published_source_safe_summary_matches_bounded_model_exactly(self):
+        source360,source359=safe_archives()
+        published=json.loads((ROOT/"docs"/"stage361_public_bounded_envelope.json").read_text(encoding="utf8"))
+        self.assertEqual(published,m.bounded_model(source360,source359))
+
 if __name__=="__main__":
     unittest.main()
