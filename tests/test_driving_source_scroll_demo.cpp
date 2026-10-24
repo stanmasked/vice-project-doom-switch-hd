@@ -221,8 +221,8 @@ int main() {
     recordTransition(transitions,"drop_first",ctrl.lastTransitionReason(),
                      dropStart.source_scroll_review_pair,300);
     state.frame=302;
-    auto dropped=makeDrivingSceneView(state);
-    require(ctrl.present(true,302,dropped)==ScrollDemoState::GuestTickGap &&
+    auto droppedTick=makeDrivingSceneView(state);
+    require(ctrl.present(true,302,droppedTick)==ScrollDemoState::GuestTickGap &&
             ctrl.lastTransitionReason()==ScrollDemoTransitionReason::GuestTickGap,
             "dropped tick did not serialize a guest-tick-gap reason");
     recordTransition(transitions,"dropped_tick_rejected",ctrl.lastTransitionReason(),
