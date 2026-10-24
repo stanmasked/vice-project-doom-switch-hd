@@ -74,14 +74,13 @@ int main() {
                 "manual DEMO did not paint bounded numeric road-area panel");
         const auto proof=inspectScrollDemoRaster(
             true,true,i==0,status,actual,demoPixels.data(),w,12345);
-        if(i==0 || i==40) {
-            require(proof.valid && proof.last==(i==40) &&
-                    proof.original_pair_start==sourceFrame &&
-                    proof.guest_frame==state.frame &&
-                    proof.simulation_fingerprint==12345,
-                    "synthetic host framebuffer failed shared real NRO pixel witness");
-            if(i==0)firstGuest=proof.guest_frame;
-        } else require(!proof.valid,"spurious per-frame guest event");
+        require(proof.valid && proof.last==(i==40) &&
+                proof.original_pair_start==sourceFrame &&
+                proof.guest_frame==state.frame &&
+                proof.image_shift==stage362FiniteShift(sourceFrame) &&
+                proof.simulation_fingerprint==12345,
+                "synthetic host framebuffer failed per-frame Stage365 raster witness");
+        if(i==0)firstGuest=proof.guest_frame;
         auto bad=demoPixels;
         bad[270*w+1040]^=1u;
         require(!inspectScrollDemoRaster(true,true,i==0,status,actual,
@@ -138,11 +137,11 @@ int main() {
             true,true,true,ScrollDemoState::Preview,scene.driving,
             baseline.data(),w,12345).valid,
             "normal game frame incorrectly attested a DEMO pixel");
-    std::cout<<"VPD_STAGE363_ROMFREE_MANUAL_SCROLL_DEMO_PASS "
+    std::cout<<"VPD_STAGE365_ROMFREE_MANUAL_SCROLL_DEMO_PASS "
              <<"observed_numeric_pairs=41 sum=157 "
              <<"panel_and_demo_glyph=1 disabled_by_default=1 "
              <<"guest_skip_rejected=1 guest_duplicate_rejected=1 "
              <<"HUD_and_driving_road_phase_unchanged=1 "
-             <<"actual_NeXium_guest_witness_proven=0 "
+             <<"actual_NeXium_full_guest_sequence_proven=0 "
              <<"original_ROM_FM2_PPU_source_replayed=0\n";
 }
