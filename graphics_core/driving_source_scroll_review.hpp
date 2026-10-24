@@ -100,13 +100,15 @@ public:
              source.original_pair_start<=543u) ||
             (source.original_pair_start>=545u &&
              source.original_pair_start<=558u);
-        if(source.tier==SourceScrollTier::ArchivedQualifiedUnknown &&
-           !archive_summary_only)
+        // Join edges 519, 544 and 559 were authenticated strict 4/4;
+        // the archived 520..543 and 545..558 public numeric summaries do
+        // NOT expose the exact per-pair 4/4 vs 3/4 allocation. Never
+        // manufacture a more specific confidence label from aggregates.
+        if((archive_summary_only &&
+            source.tier!=SourceScrollTier::ArchivedQualifiedUnknown) ||
+           (!archive_summary_only &&
+            source.tier!=SourceScrollTier::StrictFour))
             return fail(SourceScrollReviewStatus::UnqualifiedSource);
-        // Historical source summary does not expose per-pair 4/4/3/4.
-        // The unknown tier is permitted only for those archived intervals.
-        // Strict/3/4 can be passed for fabricated standalone tests, but does
-        // not turn a test into an independently verified original event.
         cumulative_+=expected;
         ++next_;
         active_=true;
