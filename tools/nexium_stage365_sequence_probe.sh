@@ -81,7 +81,7 @@ sha256sum "$out/guest-scroll-demo-v2.txt" >>"$out/host-events.txt"
 cp -- "$driving" "$out/guest-driving-enter.txt"
 for img in "$out"/screen-demo-*.xwd;do
   [[ -s "$img" ]] || continue
-  convert "$img" -strip "png:\${img%.xwd}.png"
+  convert "$img" -strip "png:$out/$(basename "$img" .xwd).png"
 done
 [[ "$count" == 41 && "$first" == yes && "$last" == yes ]] || {
   echo "INCONCLUSIVE: expected exactly 41 real guest states, got $count" >&2;exit 1;
