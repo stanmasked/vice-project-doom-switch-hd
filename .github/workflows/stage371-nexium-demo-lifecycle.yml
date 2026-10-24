@@ -84,6 +84,10 @@ jobs:
         with:
           name: stage372-exact-head-romfree-nro
           path: emulator-input
+      - name: Install Pillow for synthetic screenshot audit
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-pil
       - name: Run synthetic lifecycle audit regressions
         run: |
           python3 -m unittest discover -s tests -p test_nexium_stage371_lifecycle.py -v
