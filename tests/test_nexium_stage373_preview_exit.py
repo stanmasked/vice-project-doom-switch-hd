@@ -130,6 +130,13 @@ class Stage373SyntheticNegativeTests(unittest.TestCase):
         h,m,d,g=evidence()
         with self.assertRaises(ValueError): s.audit_sequence(h,m,d,g.replace("platform_fp=0123456789abcdef","platform_fp=ffffffffffffffff",1))
 
+    def test_fingerprint_must_stay_constant_within_restart(self):
+        h,m,d,g=evidence()
+        lines=g.splitlines()
+        lines[7]=lines[7].replace("platform_fp=0123456789abcdef",
+                                  "platform_fp=ffffffffffffffff")
+        with self.assertRaises(ValueError): s.audit_sequence(h,m,d,"\\n".join(lines))
+
     def test_missing_real_manual_witness_rejected(self):
         h,m,d,g=evidence()
         with self.assertRaises(ValueError): s.audit_sequence(h,"",d,g)
