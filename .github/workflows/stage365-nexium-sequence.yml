@@ -24,7 +24,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: stage365-nexium-\${{ github.head_ref || github.ref_name }}
+  group: stage365-nexium-research-fceux-local-executable-bootstrap-stage188
   cancel-in-progress: true
 jobs:
   build-exact-nro:
