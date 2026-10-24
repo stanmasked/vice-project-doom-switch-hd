@@ -1,0 +1,36 @@
+{
+  "format": "vpd_stage352_original_preregistered_holdout_public_v1",
+  "stage": 352,
+  "preregistration_commit": "befda5b16eaebd20a7ecfcf11f9d1db374163314",
+  "original_native_rgb_frames": [
+    585,
+    609
+  ],
+  "frame_count": 25,
+  "adjacent_pixel_pairs": 24,
+  "frozen_environment_regions": 4,
+  "original_frozen_pixel_offset_search": [
+    -24,
+    24
+  ],
+  "frozen_best_mismatch_fraction_limit": 0.16,
+  "frozen_runner_up_gap_minimum": 0.045,
+  "qualified_pairs": 19,
+  "qualified_modulo240_matches": 19,
+  "qualified_modulo240_contradictions": 0,
+  "inconclusive_pairs": 5,
+  "unsupported_ppu_value_qualified_pairs": 0,
+  "qualified_shift_zero_pairs": 7,
+  "qualified_shift_plus_one_pairs": 1,
+  "qualified_shift_plus_two_pairs": 1,
+  "qualified_shift_plus_four_pairs": 1,
+  "qualified_shift_plus_five_pairs": 9,
+  "full_cpu_and_native_ppu_prior_sealed_file_hashes_matched": true,
+  "independent_full_rgb_palette_planes": 3,
+  "original_rgb_palette_probe_matches": 150,
+  "owner_private_zip_crc_and_32_member_sha256_verified": true,
+  "owner_private_google_drive_readback_sha256_verified": true,
+  "no_postcapture_mask_or_threshold_tuning": true,
+  "universal_game_camera_speed_or_vehicle_physics_proven": false,
+  "original_rom_movie_pixels_or_raw_ppu_traces_in_public_github": false
+}
