@@ -32,4 +32,4 @@ xvfb-run -a -s "-screen 0 1280x720x24" \
   bash tools/nexium_stage373_preview_exit_probe.sh "$emulator" "$nro" "$out"
 python3 tools/audit_nexium_stage373_preview_exit.py \
   --evidence "$out" --output "$out/stage373-preview-exit-verdict.json"
-echo "STAGE372_NEXIUM_REAL_CANCEL_RESTART_TERMINAL_OFF_PASS"
+echo "STAGE373_NEXIUM_REAL_PREVIEW_EXIT_RESET_TERMINAL_OFF_PASS"
