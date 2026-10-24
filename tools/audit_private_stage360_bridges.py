@@ -151,8 +151,8 @@ def source_manifest_check(archive:Path,manifest:Path,manifest_sha:str,stage:int,
         if not {"rom_identity_verified=yes","fm2_readonly=yes","frames=261",
                 "first_frame=380","last_frame=640"}<=marker:
             raise ValueError("readonly FCEUX original movie replay not sealed")
-        stream_cpu=z.read("stage335_ppu_latch_ram0d_events.tsv").decode("utf8-sig")
-        stream_ppu=z.read("stage341_classic_refreshaddr.tsv").decode("utf8-sig")
+        stream_cpu=z.read("stage335_ppu_latch_ram0d_events.tsv").decode("utf-8-sig")
+        stream_ppu=z.read("stage341_classic_refreshaddr.tsv").decode("utf-8-sig")
         for stream,col,anchor in ((stream_cpu,"frame","frame_begin"),
                                   (stream_ppu,"core_frame_ordinal","core_frame_start")):
             counts=Counter(int(r[col]) for r in csv.DictReader(io.StringIO(stream),delimiter="\t")
@@ -161,7 +161,7 @@ def source_manifest_check(archive:Path,manifest:Path,manifest_sha:str,stage:int,
                 raise ValueError("full original 261-frame CPU/PPU frame anchors missing")
         images={f:decode_gd(z.read(f"stage343_rgb_{f:04d}.gd")) for f in range(first,last+1)}
         samples=defaultdict(dict)
-        for r in csv.DictReader(io.StringIO(z.read("stage343_rgb_palette_probes.tsv").decode("utf8-sig")),delimiter="\t"):
+        for r in csv.DictReader(io.StringIO(z.read("stage343_rgb_palette_probes.tsv").decode("utf-8-sig")),delimiter="\t"):
             f,x,y=map(int,(r["frame"],r["x"],r["y"]))
             rgb=tuple(map(int,(r["r"],r["g"],r["b"])))
             idx=int(r["palette_index"])
