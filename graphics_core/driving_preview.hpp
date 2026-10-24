@@ -42,6 +42,7 @@ struct DrivingPreviewView {
     // Stage362: optional documented finite image-shift review marker only.
     // Never fed into road_phase / invented vehicle controls / HUD speed.
     bool source_scroll_review_visible=false;
+    bool source_scroll_review_demo=false; // stage363: aggregate-only, NOT authentic capture
     uint16_t source_scroll_review_pair=0;
     uint8_t source_scroll_review_shift=0;
 };
@@ -158,12 +159,31 @@ inline void drawRoad(Canvas& road,const DrivingPreviewView& view) {
        view.source_scroll_review_pair<=559 &&
        view.source_scroll_review_shift>=3 &&
        view.source_scroll_review_shift<=5) {
-        const uint32_t panel=rgba(14,24,34),edge=rgba(233,190,117);
-        road.rect(1034,260,185,68,panel);
+        const uint32_t panel=view.source_scroll_review_demo
+            ? rgba(24,65,91) : rgba(14,24,34);
+        const uint32_t edge=view.source_scroll_review_demo
+            ? rgba(102,218,239) : rgba(233,190,117);
+        road.rect(1034,260,185,83,panel);
         road.rect(1034,260,185,3,edge);
-        number(road,1050,280,view.source_scroll_review_pair,3,edge);
-        number(road,1161,280,view.source_scroll_review_shift,1,edge);
-        road.rect(1034,325,185,3,edge);
+        number(road,1050,295,view.source_scroll_review_pair,3,edge);
+        number(road,1161,295,view.source_scroll_review_shift,1,edge);
+        road.rect(1034,340,185,3,edge);
+        if(view.source_scroll_review_demo) {
+            // Four unique simple 5x7 ROM-free glyphs spell DEMO.
+            // At x1051..1111 y271..287 to distinguish source-safe
+            // numerical playback from authenticated source evidence.
+            const uint8_t glyphs[4][7]={
+                {30,17,17,17,17,17,30}, // D
+                {31,16,16,30,16,16,31}, // E
+                {17,27,21,21,17,17,17}, // M
+                {14,17,17,17,17,17,14}  // O
+            };
+            for(int chr=0;chr<4;++chr)
+                for(int gy=0;gy<7;++gy)
+                    for(int gx=0;gx<5;++gx)
+                        if(glyphs[chr][gy]&(1u<<(4-gx)))
+                            road.rect(1052+chr*19+gx*2,269+gy*2,2,2,edge);
+        }
     }
     if(observed) {
         const auto band=road_reference::toHdImageSpace(*observed);
