@@ -1,0 +1,32 @@
+{
+  "all_source_frames_have_native_classic_ppu_line_zero": true,
+  "consecutive_authenticated_source_rgb_frames": 15,
+  "first_diagnostic_attempt_failed_before_completed_rerun": true,
+  "format": "vpd_stage374_original_641_655_bounded_public_aggregate_v1",
+  "full_original_capture_cpu_native_frame_coverage": 276,
+  "full_original_model_camera_speed_or_vehicle_physics_proven": false,
+  "independent_rgb_palette_cross_probes": 90,
+  "original_raw_pixels_or_private_sha_disclosed": false,
+  "original_source_window": [
+    641,
+    655
+  ],
+  "qualified_source_register_contradictions": 0,
+  "qualified_source_register_matches": 0,
+  "qualified_source_register_unsupported": 0,
+  "scientific_gate_passed": false,
+  "source_cpu_native_380_640_prefix_byte_identical_to_independent_archive": true,
+  "source_pairs_examined": 14,
+  "source_palette_planes_verified": 3,
+  "source_rgb_flat_pairs": 0,
+  "source_rgb_guarded_three_of_four_pairs": 0,
+  "source_rgb_inconclusive_pairs": 14,
+  "source_rgb_mask_conflict_pairs": 0,
+  "source_rgb_native_resolution": [
+    256,
+    240
+  ],
+  "source_rgb_strict_four_of_four_pairs": 0,
+  "stage": 374,
+  "unqualified_original_pairs_not_relabelled": 14
+}
