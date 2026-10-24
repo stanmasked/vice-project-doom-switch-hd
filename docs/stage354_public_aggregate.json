@@ -1,0 +1,32 @@
+{
+  "format": "vpd_stage354_original_gap_495_519_public_v1",
+  "stage": 354,
+  "preregistration_commit": "daf325993bf0d93972a323401be6627f7029b559",
+  "original_untouched_rgb_frame_window": [
+    495,
+    519
+  ],
+  "native_rgb_resolution": [
+    256,
+    240
+  ],
+  "independently_captured_original_rgb_frames": 25,
+  "adjacent_original_rgb_pairs": 24,
+  "exact_preregistered_mask_and_threshold_rules_changed_after_source": false,
+  "independently_confident_masked_environment_regions": 4,
+  "strict_four_of_four_qualified_pairs": 24,
+  "three_of_four_qualified_pairs": 0,
+  "conflicting_qualified_mask_pairs": 0,
+  "ambiguous_under_three_confident_regions_pairs": 0,
+  "original_image_plus_three_pixel_pairs": 24,
+  "first_scroll_modulo240_image_motion_agreement_pairs": 24,
+  "first_scroll_modulo240_image_motion_contradictions": 0,
+  "original_complete_cpu_and_native_ppu_event_file_seals_reproduced": true,
+  "three_original_indexed_palette_planes_verified": true,
+  "original_independent_rgb_palette_probes_verified": 150,
+  "private_zip_crc_and_32_per_source_sha256_verified": true,
+  "original_private_drive_upload_readback_verified": true,
+  "extrapolation_to_other_levels_or_modes_proven": false,
+  "camera_velocity_vehicle_physics_collision_road_geometry_proven": false,
+  "original_rom_fm2_raw_rgb_or_private_source_hashes_in_public_github": false
+}
