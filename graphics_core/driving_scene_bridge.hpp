@@ -1,5 +1,6 @@
 #pragma once
 #include "driving_preview.hpp"
+#include "driving_source_scroll_review.hpp"
 #include "driving_simulation.hpp"
 
 // Single ROM-free adapter shared by the libnx NRO and host raster tests.
@@ -21,5 +22,13 @@ inline DrivingPreviewView makeDrivingSceneView(const DrivingState& drive) {
     view.speed=static_cast<uint8_t>(drive.speed);
     view.obstacles_passed=drive.obstacles_passed;
     return view;
+}
+// Stage362: explicit diagnostics-only wrapper for the real shared NRO/host
+// presentation mapping. Even an ACCEPTED observational source pair leaves
+// the synthetic vehicle simulation and invented road_phase exactly as-is.
+inline SourceScrollReviewResult makeDrivingSceneSourceScrollReview(
+    const DrivingState& drive, SourceScrollReviewGate& gate,
+    bool manual_opt_in, const SourceScrollPairWitness& witness) noexcept {
+    return gate.observe(manual_opt_in,makeDrivingSceneView(drive),witness);
 }
 } // namespace vpd
