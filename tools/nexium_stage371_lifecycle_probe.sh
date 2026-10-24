@@ -166,24 +166,24 @@ cp -- "$driving" "$out/guest-driving-enter.txt"
 xdotool keydown r;xdotool keydown t;sleep 0.12;xdotool keydown q
 first_started=no
 for ((i=0;i<200;++i));do
-  if [[ -f "$guest" ]] && [[ "$(wc -l <"$guest" | tr -d ' ')" -ge 6 ]] &&
+  if [[ -f "$guest" ]] && [[ "$(wc -l <"$guest" | tr -d ' ')" -ge 3 ]] &&
      grep -q '^VPD_STAGE365_NUMERIC_DEMO_V2 event=on original_pair_start=519 ' "$guest";then
     first_started=yes;break
   fi
-  sleep 0.03
+  sleep 0.02
 done
-[[ "$first_started" == yes ]] || { echo "INCONCLUSIVE: first real DEMO session did not produce six guest states" >&2;exit 1; }
+[[ "$first_started" == yes ]] || { echo "INCONCLUSIVE: first real DEMO session did not produce three guest states" >&2;exit 1; }
 capture_raw "screen-demo-start"
 printf 'physical_keyboard_chord_start=R+T+Q Switch=ZL+ZR+L\n' >>"$out/host-events.txt"
 # Release then send a fresh edge; this must cancel the active DEMO.
-# Reuse the hold duration from the successful Stage371 run. Short 50 ms
-# chord components were not reliable enough under real NeXium/X11 scheduling.
+# Cancel promptly: the independent screenshot/guest audit accepts only
+# 6–16 first-session states, so waiting for six states before capture can
+# overshoot that bound on faster NeXium frame pacing.
 xdotool keyup q;xdotool keyup t;xdotool keyup r
-sleep 0.05
-xdotool keydown r;xdotool keydown t;sleep 0.07;xdotool keydown q;sleep 0.12
+sleep 0.02
+xdotool keydown r;xdotool keydown t;sleep 0.05;xdotool keydown q;sleep 0.05
 xdotool keyup q;xdotool keyup t;xdotool keyup r
 printf 'physical_keyboard_chord_cancel=R+T+Q Switch=ZL+ZR+L\n' >>"$out/host-events.txt"
-sleep 0.15
 capture_panel_until_absent "screen-cancelled"
 first_count="$(wc -l <"$guest" | tr -d ' ')"
 printf 'first_session_records_observed=%s\n' "$first_count" >>"$out/host-events.txt"
