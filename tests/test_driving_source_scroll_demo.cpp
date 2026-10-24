@@ -261,7 +261,7 @@ int main() {
     };
     require(transitions==expectedTransitions,
             "Stage367 serialized lifecycle reasons differ from expected transition order");
-    for(const auto& event:transitions)std::cout<<event<<"\\n";
+    for(const auto& event:transitions)std::cout<<event<<"\n";
 
     // Default scene renderer remains identical when no manual review.
     SceneView scene{};
