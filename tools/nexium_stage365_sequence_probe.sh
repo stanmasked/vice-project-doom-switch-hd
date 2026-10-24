@@ -68,10 +68,10 @@ last=no
 for ((i=0;i<300;++i));do
   if [[ -f "$guest" ]];then
     count="$(wc -l <"$guest" | tr -d ' ')"
-    [[ "$count" -ge 1 ]] && grep -q '^VPD_STAGE365_NUMERIC_DEMO_V2 event=on ' "$guest" && first=yes
-    [[ "$count" -ge 1 ]] && grep -q '^VPD_STAGE365_NUMERIC_DEMO_V2 event=last ' "$guest" && last=yes
+    [[ "$count" -ge 1 ]] && grep -q '^VPD_STAGE365_NUMERIC_DEMO_V2 event=on ' "$guest" && first=on
+    [[ "$count" -ge 1 ]] && grep -q '^VPD_STAGE365_NUMERIC_DEMO_V2 event=last ' "$guest" && last=last
   fi
-  [[ "$count" -ge 41 && "$first" == yes && "$last" == yes ]] && break
+  [[ "$count" -ge 41 && "$first" == on && "$last" == last ]] && break
   sleep 0.06
 done
 printf 'guest_v2_records=%s\nguest_v2_first=%s\nguest_v2_last=%s\n' "$count" "$first" "$last" >>"$out/host-events.txt"
@@ -83,7 +83,7 @@ for img in "$out"/screen-demo-*.xwd;do
   [[ -s "$img" ]] || continue
   convert "$img" -strip "png:$out/$(basename "$img" .xwd).png"
 done
-[[ "$count" == 41 && "$first" == yes && "$last" == yes ]] || {
+[[ "$count" == 41 && "$first" == on && "$last" == last ]] || {
   echo "INCONCLUSIVE: expected exactly 41 real guest states, got $count" >&2;exit 1;
 }
 echo 'STAGE365_REAL_NEXIUM_FULL_SEQUENCE_OBSERVED' >>"$out/host-events.txt"
