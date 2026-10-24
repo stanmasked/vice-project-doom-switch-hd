@@ -4,6 +4,7 @@
 #include "driving_simulation.hpp"
 #include "driving_scene_bridge.hpp"
 #include "driving_source_scroll_demo.hpp"
+#include "driving_source_scroll_demo_guest.hpp"
 #include "driving_profile_review_mode.hpp"
 #include "driving_road_private_bundle.hpp"
 #include "driving_private_review_mode.hpp"
@@ -100,6 +101,7 @@ int main(int,char**) {
     vpd::resetDrivingGuestProof(has_sd);
     vpd::resetDrivingRasterProof(has_sd);
     vpd::resetRoadReviewGuest(has_sd);
+    vpd::resetScrollDemoGuest(has_sd);
     vpd::resetPrivateRoadR3Guest(has_sd);
     vpd::resetPrivateRoadRejectGuest(has_sd);
     vpd::resetDrivingExitWitness(has_sd);
@@ -1235,6 +1237,14 @@ int main(int,char**) {
             (void)vpd::appendDrivingExitWitness(
                 has_sd,driving_exit_proof.platform(game.fingerprint()));
         }
+        if(drawn && view.driving_stage_preview &&
+           (scroll_demo_chord ||
+            scroll_demo_frame==vpd::ScrollDemoState::LastFrame))
+            (void)vpd::appendScrollDemoGuest(
+                has_sd,vpd::inspectScrollDemoRaster(
+                    view.manual_controls,view.driving_stage_preview,
+                    scroll_demo_chord,scroll_demo_frame,view.driving,
+                    pixels,pixels_per_row,game.fingerprint()));
         if(drawn && view.driving_stage_preview && private_road_chord)
             (void)vpd::appendPrivateRoadRejectGuest(
                 has_sd,private_road_reject_proof.observe(
