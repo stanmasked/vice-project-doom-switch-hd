@@ -108,7 +108,8 @@ def screenshot_pixel_counts(path: Path) -> dict:
         with Image.open(p) as im:
             if im.size != (1280, 720):
                 raise ValueError("unexpected X11 screenshot dimensions: " + name)
-            px = im.convert("RGB").load()
+            rgb = im.convert("RGB")
+            px = rgb.load()
             count = 0
             # Only the fixed right-side overlay rectangle, not the road or HUD.
             for y in range(245, 336):
