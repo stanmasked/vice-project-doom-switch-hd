@@ -221,6 +221,18 @@ int main() {
     check(makeDrivingSceneSourceScrollReview(guest,gate,true,fabricated(520)).status==
           SourceScrollReviewStatus::NonContiguousGuestTick && !gate.active(),
           "duplicated guest-frame capture allowed as a new observed source state");
+    // Skipping a synthetic render tick does not justify fabricating two
+    // source-image observations as if the intermediate guest frame existed.
+    guest.frame=300;
+    check(makeDrivingSceneSourceScrollReview(
+              guest,gate,true,fabricated(519)).status==
+          SourceScrollReviewStatus::Accepted,
+          "guest skip test could not restart source interval");
+    guest.frame=302;
+    check(makeDrivingSceneSourceScrollReview(
+              guest,gate,true,fabricated(520)).status==
+          SourceScrollReviewStatus::NonContiguousGuestTick && !gate.active(),
+          "missing guest raster tick incorrectly accepted");
     guest.frame=102;
     check(makeDrivingSceneSourceScrollReview(guest,gate,true,fabricated(519)).status==
           SourceScrollReviewStatus::Accepted,"manual reviewer failed after rejected tick");
