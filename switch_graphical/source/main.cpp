@@ -1238,7 +1238,7 @@ int main(int,char**) {
                 has_sd,driving_exit_proof.platform(game.fingerprint()));
         }
         if(drawn && view.driving_stage_preview &&
-           (scroll_demo_chord ||
+           (scroll_demo_frame==vpd::ScrollDemoState::Preview ||
             scroll_demo_frame==vpd::ScrollDemoState::LastFrame))
             (void)vpd::appendScrollDemoGuest(
                 has_sd,vpd::inspectScrollDemoRaster(
