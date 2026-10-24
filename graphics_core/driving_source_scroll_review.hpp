@@ -16,7 +16,7 @@ enum class SourceScrollTier : std::uint8_t {
 enum class SourceScrollReviewStatus : std::uint8_t {
     Off, Accepted, DisabledSource, WrongFrame, UnsupportedMode,
     RegisterMissing, RegisterMismatch, NonDiscriminatingImage,
-    UnqualifiedSource, UnverifiedSource, NonContiguous
+    UnqualifiedSource, UnverifiedSource, NonContiguous, NonContiguousGuestTick
 };
 
 struct SourceScrollPairWitness {
@@ -51,7 +51,7 @@ constexpr unsigned stage362FiniteShift(std::uint32_t start) noexcept {
 
 class SourceScrollReviewGate {
 public:
-    void reset() noexcept {next_=519u;cumulative_=0u;active_=false;}
+    void reset() noexcept {next_=519u;cumulative_=0u;active_=false;last_guest_frame_=0u;}
     SourceScrollReviewGate() noexcept {reset();}
     bool active() const noexcept {return active_;}
     std::uint32_t nextExpectedPair() const noexcept {return next_;}
@@ -77,6 +77,8 @@ public:
             return fail(SourceScrollReviewStatus::WrongFrame);
         if(source.original_pair_start!=next_)
             return fail(SourceScrollReviewStatus::NonContiguous);
+        if(active_ && live_preview.frame<=last_guest_frame_)
+            return fail(SourceScrollReviewStatus::NonContiguousGuestTick);
         if(!source.source_verified)
             return fail(SourceScrollReviewStatus::UnverifiedSource);
         if(!source.first_cpu_2005_y_verified ||
@@ -108,6 +110,7 @@ public:
         cumulative_+=expected;
         ++next_;
         active_=true;
+        last_guest_frame_=live_preview.frame;
         out.status=SourceScrollReviewStatus::Accepted;
         out.has_observed_shift=true;
         out.original_pair_start=source.original_pair_start;
@@ -124,6 +127,7 @@ public:
 private:
     std::uint32_t next_=519u;
     unsigned cumulative_=0u;
+    std::uint32_t last_guest_frame_=0u;
     bool active_=false;
 };
 
