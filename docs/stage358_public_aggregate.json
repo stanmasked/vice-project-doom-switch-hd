@@ -1,0 +1,57 @@
+{
+  "format": "vpd_stage358_original_405_419_posthoc_onset_diagnostic_public_v1",
+  "stage": 358,
+  "scientific_status": "retrospective analysis of Stage357 original data, not new heldout FCEUX frames",
+  "original_authenticated_frame_window": [
+    405,
+    419
+  ],
+  "original_native_rgb_frame_size": [
+    256,
+    240
+  ],
+  "original_source_members_sha256_reauthenticated": 22,
+  "complete_original_cpu_native_ppu_261_frame_source_seals_reproduced": true,
+  "indexed_full_palettes_verified": 3,
+  "original_rgb_palette_index_probe_matches": 90,
+  "uniform_prefix_frames": 4,
+  "first_nonuniform_original_frame": 409,
+  "first_nonuniform_408_to_409_changed_pixels": 36854,
+  "second_broad_visual_change_to_frame": 417,
+  "second_broad_visual_change_416_to_417_pixels": 8312,
+  "full_screen_native_pixels_per_frame": 61440,
+  "all_four_fixed_rgb_region_change_frames": [
+    409,
+    417
+  ],
+  "cpu_ppu_extra_w2000_w2006_status_read_frames": [
+    409,
+    417
+  ],
+  "event_frequency_w2000_normal_and_transition": [
+    2,
+    4
+  ],
+  "event_frequency_w2006_normal_and_transition": [
+    10,
+    14
+  ],
+  "event_frequency_w2002_status_reads_normal_and_transition": [
+    2,
+    4
+  ],
+  "native_classic_ppu_line_zero_render_mask_nonzero_frames": 15,
+  "palette_indices_distinct_for_frames_405_412_419": [
+    1,
+    5,
+    7
+  ],
+  "stage357_prior_four_region_zero_pixel_shift_pairs_unchanged": 9,
+  "stage357_ambiguous_pairs_unchanged": 5,
+  "stage355_failed_inconclusive_motion_gate_unchanged": true,
+  "coincident_event_count_proves_causal_graphics_transition": false,
+  "zero_mask_turn_on_at_frame_409_supported": false,
+  "vehicle_speed_camera_motion_collision_or_hardware_ppu_dot_proven": false,
+  "owner_only_drive_six_file_sha256_readback_and_derived_zip_crc_five_member_hashes_verified": true,
+  "original_rom_fm2_pixels_register_trace_or_private_digests_in_public_repo": false
+}
