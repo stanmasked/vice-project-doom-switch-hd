@@ -3,7 +3,7 @@ from pathlib import Path
 import sys
 import unittest
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/"tools"))
-import audit_private_stage359_transition as s
+import audit_private_stage359_gap_holdout as s
 
 def confidence(d=3,weak=()):
     return {k:(d,.0,.01 if k in weak else .15) for k in s.REGIONS}
