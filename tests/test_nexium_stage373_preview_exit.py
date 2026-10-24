@@ -135,7 +135,7 @@ class Stage373SyntheticNegativeTests(unittest.TestCase):
         lines=g.splitlines()
         lines[7]=lines[7].replace("platform_fp=0123456789abcdef",
                                   "platform_fp=ffffffffffffffff")
-        with self.assertRaises(ValueError): s.audit_sequence(h,m,d,"\\n".join(lines))
+        with self.assertRaises(ValueError): s.audit_sequence(h,m,d,"\n".join(lines))
 
     def test_missing_real_manual_witness_rejected(self):
         h,m,d,g=evidence()
