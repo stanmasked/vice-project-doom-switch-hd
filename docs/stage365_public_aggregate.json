@@ -1,0 +1,37 @@
+{
+  "format": "vpd_stage365_public_aggregate_v1",
+  "stage": 365,
+  "tested_commit": "25c2061f11abada4ddc98a0291df98736c6f3c7e",
+  "stage365_run": 40074546986,
+  "stage365_conclusion": "success",
+  "native_core_ci_run": 40074546965,
+  "native_core_ci_conclusion": "success",
+  "nro_sha256": "5e0f1c1c7e319188a630d7c5826ce89d3c3facec8ea451e3c8890408f129e80c",
+  "nro_bytes": 487480,
+  "real_guest_rows": 41,
+  "event_counts": {
+    "on": 1,
+    "frame": 39,
+    "last": 1
+  },
+  "pair_range": [
+    519,
+    559
+  ],
+  "guest_frame_range": [
+    13,
+    53
+  ],
+  "guest_frame_delta": 40,
+  "sequence_contiguous": true,
+  "pixel_sample_every_state": true,
+  "source_free_platform_fingerprint_constant": true,
+  "x11_screenshots_with_demo": 3,
+  "synthetic_negative_tests_passed": 28,
+  "original_nes_rom_or_fm2_used": false,
+  "original_camera_or_vehicle_physics_proven": false,
+  "stage355_motion_gate_still_unresolved": true,
+  "stage357_ambiguous_pairs_still_unresolved": true,
+  "draft_pr": 99,
+  "main_branch_modified": false
+}
