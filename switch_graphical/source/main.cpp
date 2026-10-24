@@ -3,6 +3,7 @@
 #include "simulation.hpp"
 #include "driving_simulation.hpp"
 #include "driving_scene_bridge.hpp"
+#include "driving_source_scroll_demo.hpp"
 #include "driving_profile_review_mode.hpp"
 #include "driving_road_private_bundle.hpp"
 #include "driving_private_review_mode.hpp"
@@ -209,6 +210,7 @@ int main(int,char**) {
     bool driving_preview=false; // manual-only ROM-free road/HUD visual preview
     vpd::DrivingState driving_state{}; // separate from platform Simulation
     vpd::RoadProfileReviewMode road_profile_review{};
+    vpd::SourceScrollManualDemo scroll_demo{};
     vpd::PrivateRoadReviewMode private_road_review{};
     vpd::RoadReviewGuestProof road_review_guest_proof{};
     vpd::PrivateRoadR3GuestProof private_road_r3_proof{};
@@ -270,6 +272,7 @@ int main(int,char**) {
         if(driving_present==vpd::stage_transition::Scene::Platform &&
            driving_preview) {
             driving_preview=false;
+            scroll_demo.reset();
             driving_stage_exit.reset();
         }
         unsigned driving_raster_event_seq=0;
@@ -281,6 +284,7 @@ int main(int,char**) {
             (buttons&HidNpadButton_ZR);
         if(driving_preview_chord) {
             driving_preview=!driving_preview;
+            scroll_demo.reset();
             road_profile_review.reset();
             private_road_review.reset();
             if(driving_preview) {
@@ -318,6 +322,24 @@ int main(int,char**) {
         if(private_road_review.cycle(
             !demo.enabled(),driving_preview,private_road_chord,
             private_road_data))road_profile_review.reset();
+        // Stage363 manual source-safe NUMERIC DEMO (not a verified FCEUX
+        // source-stream replay): press ZL+ZR+L in manual driving view.
+        // L's normal backdrop reload is suppressed on this exact chord.
+        // It never feeds observed numbers into synthetic physics/road_phase.
+        const bool scroll_demo_chord=
+            !demo.enabled() && driving_preview &&
+            !driving_stage_exit.active() &&
+            (pressed&HidNpadButton_L) &&
+            (buttons&HidNpadButton_ZL) &&
+            (buttons&HidNpadButton_ZR) &&
+            !(buttons&HidNpadButton_R);
+        if(scroll_demo.toggle(
+              !demo.enabled() && driving_preview &&
+              !driving_stage_exit.active(),scroll_demo_chord)) {
+            // Existing swatch viewers cannot silently overlap this demo.
+            road_profile_review.reset();
+            private_road_review.reset();
+        }
         if(buttons&HidNpadButton_Plus){
             if(!demo.enabled())vpd::guardLiveDebugRecord(
                 has_sd,"plus",game,0);
@@ -357,6 +379,7 @@ int main(int,char**) {
             ((pressed&HidNpadButton_A) && (buttons&HidNpadButton_R));
         if(toggle_manual) {
             driving_preview=false;
+            scroll_demo.reset();
             road_profile_review.reset();
             private_road_review.reset();
             demo.toggle(game);
@@ -405,7 +428,8 @@ int main(int,char**) {
             terrain.reset();
             terrain_reload_failed=false;
         }
-        if((pressed&HidNpadButton_L) && !hd_fx_chord) {
+        if((pressed&HidNpadButton_L) && !hd_fx_chord &&
+           !scroll_demo_chord) {
             backdrop_reload_failed= !has_sd ||
                 backdrop.reload(kExternalBackdropPath)!=vpd::BackdropReload::Loaded;
         }
@@ -479,6 +503,7 @@ int main(int,char**) {
             driving_state.health==0 && (pressed&HidNpadButton_X) &&
             !driving_preview_chord;
         if(driving_retry_pressed) {
+            scroll_demo.reset();
             driving_state.reset();
             driving_stage_exit.reset();
             driving_route_proof.reset();
@@ -1010,6 +1035,7 @@ int main(int,char**) {
         view.replay_demo=demo.enabled();
         view.manual_controls=!demo.enabled();
         view.driving_stage_preview=driving_preview && view.manual_controls;
+        vpd::ScrollDemoState scroll_demo_frame=vpd::ScrollDemoState::Off;
         if(view.driving_stage_preview) {
             view.driving=vpd::makeDrivingSceneView(driving_state);
             view.driving.observed_road_frame=
@@ -1021,6 +1047,10 @@ int main(int,char**) {
                 view.driving.private_left=selected->left;
                 view.driving.private_right=selected->right;
             }
+            scroll_demo_frame=scroll_demo.present(
+                true,driving_state.frame,view.driving);
+        } else {
+            scroll_demo.reset();
         }
         const bool hd_effects=hd_fx_mode.activeForGameplay(
             view.manual_controls);
