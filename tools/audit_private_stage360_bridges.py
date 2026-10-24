@@ -15,7 +15,6 @@ import json
 from pathlib import Path
 import zipfile
 
-import numpy as np
 
 import audit_private_stage345_scroll_motion as scroll
 
@@ -39,6 +38,7 @@ def sha(data:bytes)->str:
 
 
 def decode_gd(data:bytes)->np.ndarray:
+    import numpy as np
     if (type(data) is not bytes or len(data)!=11+256*240*4 or
         data[:11]!=GD_HEADER or any(data[11::4])):
         raise ValueError("original native RGB/GD data invalid")
@@ -46,6 +46,7 @@ def decode_gd(data:bytes)->np.ndarray:
 
 
 def one_band(a:np.ndarray,b:np.ndarray,rect:tuple[int,int,int,int]):
+    import numpy as np
     x0,x1,y0,y1=rect
     if a.shape!=(240,256,3) or b.shape!=(240,256,3):
         raise ValueError("native original 256x240x3 image shape required")
@@ -88,6 +89,7 @@ def signed_mod240_step(before:int,after:int)->int|None:
 
 
 def classify_pair(a:np.ndarray,b:np.ndarray,ya:int|None,yb:int|None)->dict:
+    import numpy as np
     if a.shape!=(240,256,3) or b.shape!=(240,256,3):
         raise ValueError("native image shape invalid")
     flat_a=bool(np.all(a==a[0,0]))
