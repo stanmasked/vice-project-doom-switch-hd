@@ -107,7 +107,7 @@ class Stage373SyntheticNegativeTests(unittest.TestCase):
         for i in range(6,len(lines)):
             lines[i]=lines[i].replace("platform_fp=0123456789abcdef",
                                       "platform_fp=fedcba9876543210")
-        result=s.audit_sequence(h,m,d,"\\n".join(lines))
+        result=s.audit_sequence(h,m,d,"\n".join(lines))
         self.assertEqual(result["second_session_states_after_fresh_edge"],41)
 
     def test_shift_corruption_rejected(self):
