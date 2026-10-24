@@ -36,7 +36,7 @@ def audit_sequence(host: str, manual: str, driving: str, guest: str) -> dict:
         "physical_keyboard_chord_start=R+T+Q Switch=ZL+ZR+L",
         "physical_keyboard_chord_cancel=R+T+Q Switch=ZL+ZR+L",
         "physical_keyboard_chord_restart=R+T+Q Switch=ZL+ZR+L",
-        "screen_cancelled_cyan_pixels=0",
+        "cancel_screenshot_captured=yes",
         "guest_trace_stable_while_off=yes",
         "STAGE371_REAL_NEXIUM_CANCEL_RESTART_OBSERVED",
     )
@@ -59,6 +59,18 @@ def audit_sequence(host: str, manual: str, driving: str, guest: str) -> dict:
         raise ValueError("only the restarted session may reach the final state")
     first = parsed[:starts[1]]
     second = parsed[starts[1]:]
+    def host_int(key: str) -> int:
+        prefix = key + "="
+        matches = [line[len(prefix):] for line in host.splitlines()
+                   if line.startswith(prefix)]
+        if len(matches) != 1 or not matches[0].isdigit():
+            raise ValueError("missing or invalid host count: " + key)
+        return int(matches[0])
+    if (host_int("first_session_records") != len(first) or
+        host_int("guest_trace_after_off_count") != len(first) or
+        host_int("second_session_records") != len(second) or
+        host_int("total_guest_records") != len(parsed)):
+        raise ValueError("host counts do not match the actual guest trace")
     validate_session(first, complete=False)
     validate_session(second, complete=True)
     if int(second[0]["guest_frame"]) <= int(first[-1]["guest_frame"]):
