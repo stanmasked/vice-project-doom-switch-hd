@@ -57,6 +57,39 @@ PY
     return 1
   }
 }
+capture_panel_until_absent() {
+  local name="$1" count=999 marker
+  for ((i=0;i<20;++i));do
+    if ! capture_raw "$name";then sleep 0.05;continue;fi
+    convert "$out/$name.xwd" -strip "png:$out/$name.png" 2>/dev/null || true
+    count="$(python3 - "$out/$name.png" <<'PY'
+import sys
+from PIL import Image
+try:
+    with Image.open(sys.argv[1]) as im:
+        if im.size != (1280, 720):
+            print(0)
+        else:
+            rgb = im.convert("RGB")
+            px = rgb.load()
+            print(sum(
+                1 for y in range(245, 336) for x in range(1010, 1205)
+                if px[x, y] == (102, 218, 239)
+            ))
+except Exception:
+    print(0)
+PY
+)"
+    if [[ "$count" -eq 0 ]];then break;fi
+    sleep 0.05
+  done
+  marker="${name//-/_}"
+  printf '%s_cyan_pixels=%s\n' "$marker" "$count" >>"$out/host-events.txt"
+  [[ "$count" -eq 0 ]] || {
+    echo "INCONCLUSIVE: $name screenshot still showed the DEMO panel after terminal frame" >&2
+    return 1
+  }
+}
 cleanup() {
   xdotool keyup q 2>/dev/null || true
   xdotool keyup t 2>/dev/null || true
@@ -188,7 +221,20 @@ for ((i=0;i<300;++i));do
 done
 printf 'second_session_records=%s\ntotal_guest_records=%s\n' "$((count-first_count))" "$count" >>"$out/host-events.txt"
 [[ "$complete" == yes ]] || { echo "INCONCLUSIVE: restarted session did not complete exactly 41 guest states" >&2;exit 1; }
+# Pair 559 is visible for one presentation. Wait for the next real guest frame
+# and capture the X11 surface only after the panel has disappeared.
+capture_panel_until_absent "screen-completed"
+complete_count="$(wc -l <"$guest" | tr -d ' ')"
+sleep 0.20
+stable_count="$(wc -l <"$guest" | tr -d ' ')"
+printf 'guest_trace_after_complete_count=%s\\n' "$stable_count" >>"$out/host-events.txt"
+[[ "$complete_count" == "$expected" && "$stable_count" == "$expected" ]] || {
+  echo "INCONCLUSIVE: guest trace changed after SequenceComplete" >&2
+  exit 1
+}
+printf 'guest_trace_stable_after_complete=yes\\n' >>"$out/host-events.txt"
 cp -- "$guest" "$out/guest-scroll-demo-v2.txt"
 sha256sum "$out/guest-scroll-demo-v2.txt" >>"$out/host-events.txt"
 echo 'STAGE371_REAL_NEXIUM_CANCEL_RESTART_OBSERVED' >>"$out/host-events.txt"
+echo 'STAGE372_REAL_NEXIUM_TERMINAL_OFF_OBSERVED' >>"$out/host-events.txt"
 completed=yes

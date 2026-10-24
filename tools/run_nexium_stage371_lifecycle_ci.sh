@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Stage371 real NeXium cancel/restart run. The guest NRO is ROM-free.
+# Stage372 real NeXium cancel/restart/terminal-off run. The guest NRO is ROM-free.
 set -euo pipefail
 [[ $# -eq 2 ]] || { echo "Usage: $0 guest.nro output-dir" >&2;exit 2; }
 nro="$(realpath "$1")"; out="$(realpath -m "$2")"
@@ -31,5 +31,5 @@ mkdir -p "$XDG_CONFIG_HOME" "$XDG_DATA_HOME" "$XDG_CACHE_HOME" "$HOME"
 xvfb-run -a -s "-screen 0 1280x720x24" \
   bash tools/nexium_stage371_lifecycle_probe.sh "$emulator" "$nro" "$out"
 python3 tools/audit_nexium_stage371_lifecycle.py \
-  --evidence "$out" --output "$out/stage371-lifecycle-verdict.json"
-echo "STAGE371_NEXIUM_REAL_CANCEL_RESTART_PASS"
+  --evidence "$out" --output "$out/stage372-lifecycle-verdict.json"
+echo "STAGE372_NEXIUM_REAL_CANCEL_RESTART_TERMINAL_OFF_PASS"

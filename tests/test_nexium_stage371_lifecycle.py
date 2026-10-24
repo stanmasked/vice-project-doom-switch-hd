@@ -1,7 +1,9 @@
-"""Synthetic negative tests for real guest cancel/restart audit; never runtime proof."""
+"""Synthetic negative tests for real NeXium cancel/restart/terminal-off audit; never runtime proof."""
 from pathlib import Path
 import sys
 import unittest
+from tempfile import TemporaryDirectory
+from PIL import Image
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
 import audit_nexium_stage371_lifecycle as s
 
@@ -35,21 +37,25 @@ def evidence(first_count=6):
         "physical_keyboard_chord_cancel=R+T+Q Switch=ZL+ZR+L",
         "physical_keyboard_chord_restart=R+T+Q Switch=ZL+ZR+L",
         "cancel_screenshot_captured=yes", "guest_trace_stable_while_off=yes",
+        "guest_trace_stable_after_complete=yes", "screen_completed_cyan_pixels=0",
         "first_session_records=" + str(first_count),
         "guest_trace_after_off_count=" + str(first_count),
         "second_session_records=41", "total_guest_records=" + str(first_count + 41),
+        "guest_trace_after_complete_count=" + str(first_count + 41),
         "STAGE371_REAL_NEXIUM_CANCEL_RESTART_OBSERVED",
+        "STAGE372_REAL_NEXIUM_TERMINAL_OFF_OBSERVED",
     ))
     manual = "VPD_ROMFREE_MANUAL_V1 seq=1 event=enter frame=0 metric=1 mode=manual original_game_proven=no"
     driving = "VPD_DRIVING_GUEST_V1 seq=1 event=enter key=driving"
     return host, manual, driving, make_rows(first_count)
 
 
-class Stage371SyntheticNegativeTests(unittest.TestCase):
+class Stage372SyntheticNegativeTests(unittest.TestCase):
     def test_valid_cancel_and_full_restart(self):
         result = s.audit_sequence(*evidence())
         self.assertEqual(result["actual_native_guest_sessions"], 2)
         self.assertEqual(result["second_session_states_after_fresh_edge"], 41)
+        self.assertTrue(result["post_completion_guest_trace_stable"])
 
     def test_short_first_session_rejected(self):
         with self.assertRaises(ValueError): s.audit_sequence(*evidence(5))
@@ -156,6 +162,37 @@ class Stage371SyntheticNegativeTests(unittest.TestCase):
     def test_bad_schema_rejected(self):
         with self.assertRaises(ValueError): s.parse_line(row(519,100,"on").replace(s.MARKER,"VPD_STAGE363_NUMERIC_DEMO_V1"))
 
+
+
+    def test_post_completion_trace_must_remain_stable(self):
+        h,m,d,g=evidence()
+        with self.assertRaises(ValueError):
+            s.audit_sequence(h.replace("guest_trace_stable_after_complete=yes",
+                                       "guest_trace_stable_after_complete=no"),m,d,g)
+
+    def test_post_completion_count_must_match_trace(self):
+        h,m,d,g=evidence()
+        with self.assertRaises(ValueError):
+            s.audit_sequence(h.replace("guest_trace_after_complete_count=47",
+                                       "guest_trace_after_complete_count=48"),m,d,g)
+
+    def test_terminal_off_screenshot_must_have_zero_cyan_pixels(self):
+        with TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            def make_png(name, cyan_count):
+                im=Image.new("RGB",(1280,720),(0,0,0))
+                for i in range(cyan_count):
+                    im.putpixel((1010+(i%195),245+(i//195)),(102,218,239))
+                im.save(root/name)
+            make_png("screen-demo-start.png",20)
+            make_png("screen-cancelled.png",0)
+            make_png("screen-restart.png",20)
+            make_png("screen-completed.png",0)
+            counts=s.screenshot_pixel_counts(root)
+            self.assertEqual(counts["screen-completed.png"],0)
+            make_png("screen-completed.png",1)
+            with self.assertRaises(ValueError):
+                s.screenshot_pixel_counts(root)
 
 if __name__ == "__main__":
     unittest.main()

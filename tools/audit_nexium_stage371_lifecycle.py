@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fail-closed real NeXium cancel/restart audit for the source-safe numeric DEMO."""
+"""Fail-closed real NeXium cancel/restart/terminal-off audit for the source-safe numeric DEMO."""
 from __future__ import annotations
 import argparse
 import json
@@ -38,7 +38,10 @@ def audit_sequence(host: str, manual: str, driving: str, guest: str) -> dict:
         "physical_keyboard_chord_restart=R+T+Q Switch=ZL+ZR+L",
         "cancel_screenshot_captured=yes",
         "guest_trace_stable_while_off=yes",
+        "guest_trace_stable_after_complete=yes",
+        "screen_completed_cyan_pixels=0",
         "STAGE371_REAL_NEXIUM_CANCEL_RESTART_OBSERVED",
+        "STAGE372_REAL_NEXIUM_TERMINAL_OFF_OBSERVED",
     )
     if any(marker not in host for marker in required_host):
         raise ValueError("missing real host input, cancellation or off-screen witness")
@@ -69,8 +72,9 @@ def audit_sequence(host: str, manual: str, driving: str, guest: str) -> dict:
     if (host_int("first_session_records") != len(first) or
         host_int("guest_trace_after_off_count") != len(first) or
         host_int("second_session_records") != len(second) or
-        host_int("total_guest_records") != len(parsed)):
-        raise ValueError("host counts do not match the actual guest trace")
+        host_int("total_guest_records") != len(parsed) or
+        host_int("guest_trace_after_complete_count") != len(parsed)):
+        raise ValueError("host counts do not match the actual guest trace or post-completion count")
     validate_session(first, complete=False)
     validate_session(second, complete=True)
     if int(second[0]["guest_frame"]) <= int(first[-1]["guest_frame"]):
@@ -78,7 +82,7 @@ def audit_sequence(host: str, manual: str, driving: str, guest: str) -> dict:
     if len({r["platform_fp"] for r in parsed}) != 1:
         raise ValueError("source-free platform fingerprint changed during cancel/restart")
     return {
-        "format": "vpd_stage371_real_nexium_cancel_restart_v1",
+        "format": "vpd_stage372_real_nexium_cancel_restart_terminal_off_v1",
         "actual_native_guest_sessions": 2,
         "first_session_states_before_cancel": len(first),
         "first_session_cancelled_before_final_pair": True,
@@ -88,7 +92,9 @@ def audit_sequence(host: str, manual: str, driving: str, guest: str) -> dict:
         "first_session_guest_frames_contiguous": True,
         "restarted_session_guest_frames_contiguous": True,
         "guest_trace_stopped_while_demo_overlay_was_off": True,
+        "post_completion_guest_trace_stable": True,
         "off_screenshot_has_no_cyan_demo_panel_samples": True,
+        "terminal_off_screenshot_has_no_cyan_demo_panel_samples": True,
         "same_source_free_platform_fingerprint_across_both_sessions": True,
         "original_nes_rom_or_fm2_used": False,
         "original_game_camera_or_vehicle_physics_proven": False,
@@ -101,7 +107,7 @@ def screenshot_pixel_counts(path: Path) -> dict:
     except ImportError as exc:
         raise ValueError("Pillow is required for independent screenshot audit") from exc
     result = {}
-    for name in ("screen-demo-start.png", "screen-cancelled.png", "screen-restart.png"):
+    for name in ("screen-demo-start.png", "screen-cancelled.png", "screen-restart.png", "screen-completed.png"):
         p = path / name
         if p.is_symlink() or not p.is_file() or p.stat().st_size > 8_000_000:
             raise ValueError("missing, symlinked or oversized screenshot: " + name)
@@ -123,6 +129,8 @@ def screenshot_pixel_counts(path: Path) -> dict:
         raise ValueError("cancel screenshot still contains DEMO cyan panel pixels")
     if result["screen-restart.png"] < 20:
         raise ValueError("restart screenshot did not show the DEMO panel again")
+    if result["screen-completed.png"] != 0:
+        raise ValueError("terminal screenshot still contains DEMO cyan panel pixels")
     return result
 
 
@@ -152,7 +160,7 @@ def main() -> None:
         else:
             print(msg, end="")
     except (OSError, ValueError, KeyError, TypeError, UnicodeError) as exc:
-        ap.exit(1, "STAGE371_NEXIUM_CANCEL_RESTART_UNCONFIRMED: " + str(exc) + "\n")
+        ap.exit(1, "STAGE372_NEXIUM_TERMINAL_OFF_UNCONFIRMED: " + str(exc) + "\n")
 
 
 if __name__ == "__main__":

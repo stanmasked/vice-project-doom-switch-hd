@@ -1,4 +1,4 @@
-name: Stage371 NeXium DEMO cancel and restart lifecycle
+name: Stage372 NeXium DEMO cancel/restart/terminal-off lifecycle
 on:
   push:
     branches:
@@ -50,7 +50,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: stage371-nexium-lifecycle-research-fceux-local-executable-bootstrap-stage188
+  group: stage372-nexium-lifecycle-research-fceux-local-executable-bootstrap-stage188
   cancel-in-progress: true
 jobs:
   build-exact-nro:
@@ -70,7 +70,7 @@ jobs:
           sha256sum switch_graphical/vpd_native_scene.nro
       - uses: actions/upload-artifact@v4
         with:
-          name: stage371-exact-head-romfree-nro
+          name: stage372-exact-head-romfree-nro
           path: switch_graphical/vpd_native_scene.nro
           retention-days: 7
           if-no-files-found: error
@@ -82,7 +82,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
-          name: stage371-exact-head-romfree-nro
+          name: stage372-exact-head-romfree-nro
           path: emulator-input
       - name: Run synthetic lifecycle audit regressions
         run: |
@@ -90,7 +90,7 @@ jobs:
           bash -n tools/nexium_stage371_lifecycle_probe.sh
           bash -n tools/run_nexium_stage371_lifecycle_ci.sh
           python3 tests/test_verify_nexium_release.py
-      - name: Run digest-attested NeXium cancel/off/restart on exact-head NRO
+      - name: Run digest-attested NeXium cancel/off/restart/terminal-off on exact-head NRO
         run: |
           docker run --rm --pull=always \
             --volume "$GITHUB_WORKSPACE:/work" \
@@ -107,25 +107,25 @@ jobs:
                 libxkbcommon0 libxkbcommon-x11-0 libfontconfig1 \
                 libx11-xcb1 libegl1 libgles2 libgl1 libpulse0
               bash tools/run_nexium_stage371_lifecycle_ci.sh \
-                emulator-input/vpd_native_scene.nro emulator-evidence/stage371
+                emulator-input/vpd_native_scene.nro emulator-evidence/stage372
             '
-      - name: Archive real guest lifecycle trace and X11 screenshots
+      - name: Archive real guest lifecycle, terminal-off screenshot and raw X11 captures
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: stage371-nexium-demo-lifecycle-evidence
+          name: stage372-nexium-demo-lifecycle-evidence
           path: |
-            emulator-evidence/stage371/host-events.txt
-            emulator-evidence/stage371/manual-witness.txt
-            emulator-evidence/stage371/guest-driving-enter.txt
-            emulator-evidence/stage371/guest-scroll-demo-v2.txt
-            emulator-evidence/stage371/screen-*.png
-            emulator-evidence/stage371/screen-*.xwd
-            emulator-evidence/stage371/xdg-config/NeXium/logs/*.log
-            emulator-evidence/stage371/stage371-lifecycle-verdict.json
-            emulator-evidence/stage371/guest-nro-sha256.txt
-            emulator-evidence/stage371/neXium-release-attestation.txt
-            emulator-evidence/stage371/release-verification.txt
-            emulator-evidence/stage371/neXium-stdout.txt
+            emulator-evidence/stage372/host-events.txt
+            emulator-evidence/stage372/manual-witness.txt
+            emulator-evidence/stage372/guest-driving-enter.txt
+            emulator-evidence/stage372/guest-scroll-demo-v2.txt
+            emulator-evidence/stage372/screen-*.png
+            emulator-evidence/stage372/screen-*.xwd
+            emulator-evidence/stage372/xdg-config/NeXium/logs/*.log
+            emulator-evidence/stage372/stage372-lifecycle-verdict.json
+            emulator-evidence/stage372/guest-nro-sha256.txt
+            emulator-evidence/stage372/neXium-release-attestation.txt
+            emulator-evidence/stage372/release-verification.txt
+            emulator-evidence/stage372/neXium-stdout.txt
           retention-days: 7
           if-no-files-found: warn
