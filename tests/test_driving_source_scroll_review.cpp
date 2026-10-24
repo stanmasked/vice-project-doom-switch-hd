@@ -114,6 +114,11 @@ int main() {
     check(makeDrivingSceneSourceScrollReview(guest,gate,true,missing).status==
           SourceScrollReviewStatus::UnqualifiedSource,
           "boundary mandatory strict tier replaced by aggregate guess");
+    missing=fabricated(519);
+    missing.tier=SourceScrollTier::QualifiedThree;
+    check(makeDrivingSceneSourceScrollReview(guest,gate,true,missing).status==
+          SourceScrollReviewStatus::UnqualifiedSource,
+          "strict original boundary downgraded into 3 of 4 guess");
     check(makeDrivingSceneSourceScrollReview(guest,gate,true,fabricated(520)).status==
           SourceScrollReviewStatus::NonContiguous,
           "first observed frame skipped via implicit lookahead");
@@ -173,6 +178,31 @@ int main() {
     check(guest.road_phase==prior && guest.speed==snapshot.speed &&
           guest.car_x==snapshot.car_x && guest.health==snapshot.health,
           "observed source-scroll adapter illegally modified simulated car");
+    // Fabricated "strict 4/4" and "3/4" assignments from aggregate-only
+    // Stage350/359 numeric summaries must fail; precise ROI tiers were not
+    // published on a per-pair basis in these summaries.
+    gate.reset();
+    guest.frame=200;
+    check(makeDrivingSceneSourceScrollReview(
+              guest,gate,true,fabricated(519)).status==
+          SourceScrollReviewStatus::Accepted,"known join did not qualify");
+    auto tierInflated=fabricated(520);
+    tierInflated.tier=SourceScrollTier::StrictFour;
+    guest.frame=201;
+    check(makeDrivingSceneSourceScrollReview(
+              guest,gate,true,tierInflated).status==
+          SourceScrollReviewStatus::UnqualifiedSource && !gate.active(),
+          "aggregate-only pair upgraded into invented strict 4 of 4");
+    guest.frame=202;
+    check(makeDrivingSceneSourceScrollReview(
+              guest,gate,true,fabricated(519)).status==
+          SourceScrollReviewStatus::Accepted,"gate failed to reset after tier inflation");
+    tierInflated.tier=SourceScrollTier::QualifiedThree;
+    guest.frame=203;
+    check(makeDrivingSceneSourceScrollReview(
+              guest,gate,true,tierInflated).status==
+          SourceScrollReviewStatus::UnqualifiedSource && !gate.active(),
+          "aggregate-only pair upgraded into invented exact 3 of 4");
 
     gate.reset();
     guest.frame=100;
