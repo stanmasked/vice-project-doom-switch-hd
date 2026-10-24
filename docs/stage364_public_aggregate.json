@@ -1,0 +1,45 @@
+{
+  "format": "vpd_stage364_real_nexium_manual_numeric_demo_public_aggregate_v1",
+  "stage": 364,
+  "exact_original_free_code_commit": "c8ec5b46174f3759d40152e5d596582f79e3c1f9",
+  "github_run_id": 40072628961,
+  "github_run_conclusion": "success",
+  "real_guest_neXium_manual_chord_confirmed": true,
+  "real_host_keyboard_mapping": {
+    "Q": "L",
+    "R": "ZL",
+    "T": "ZR"
+  },
+  "authentic_guest_events": [
+    {
+      "event": "on",
+      "original_numeric_pair_start": 519,
+      "guest_frame": 12,
+      "shift_px": 3
+    },
+    {
+      "event": "last",
+      "original_numeric_pair_start": 559,
+      "guest_frame": 52,
+      "shift_px": 5
+    }
+  ],
+  "guest_presentation_frame_difference": 40,
+  "identical_rom_free_platform_fingerprint_at_both_guest_endpoints": true,
+  "real_guest_preview_panel_border_and_DEMO_glyph_color_verified": true,
+  "genuine_x11_host_screenshots_saved": 4,
+  "genuine_x11_host_screenshots_with_cyan_DEMO": 3,
+  "real_host_screenshot_exact_cyan_pixel_count": 1867,
+  "source_safe_previous_finite_numeric_mode_counts": {
+    "shift3": 8,
+    "shift4": 32,
+    "shift5": 1
+  },
+  "deterministic_negative_audit_synthetic_tests_passed": 17,
+  "source_nro_sha256": "af18d57ee7c2bd00613560750ab0ef4a0ca05fac9277e12d5b4f79a779e6e3c4",
+  "github_guest_evidence_artifact_archive_sha256": "480d21eb6b5de358a7299104092ecae9b6bb4c659dcba83bed63f18cafbb7b66",
+  "source_original_nes_rom_or_fm2_used": false,
+  "original_game_road_collision_camera_physics_proven": false,
+  "owner_only_drive_nine_artifacts_exact_readback_sha_verified": true,
+  "original_stage355_failed_gate_and_stage357_five_inconclusive_pairs_unchanged": true
+}
