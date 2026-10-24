@@ -76,7 +76,7 @@ class Stage373SyntheticNegativeTests(unittest.TestCase):
         h,m,d,g=evidence()
         lines=g.splitlines()
         lines[6]=lines[6].replace("original_pair_start=519","original_pair_start=520")
-        with self.assertRaises(ValueError): s.audit_sequence(h,m,d,"\\n".join(lines))
+        with self.assertRaises(ValueError): s.audit_sequence(h,m,d,"\n".join(lines))
 
     def test_restarted_session_must_have_41_states(self):
         h,m,d,g=evidence()
