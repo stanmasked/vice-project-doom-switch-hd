@@ -39,6 +39,11 @@ struct DrivingPreviewView {
     bool private_road_enabled=false;
     uint16_t private_original_frame=0;
     uint8_t private_left=0, private_right=0;
+    // Stage362: optional documented finite image-shift review marker only.
+    // Never fed into road_phase / invented vehicle controls / HUD speed.
+    bool source_scroll_review_visible=false;
+    uint16_t source_scroll_review_pair=0;
+    uint8_t source_scroll_review_shift=0;
 };
 
 namespace driving_detail {
@@ -145,6 +150,20 @@ inline void drawRoad(Canvas& road,const DrivingPreviewView& view) {
                   private_sample.width()>=30 &&
                   private_sample.width()<=200)
                   ? &private_sample:nullptr;
+    }
+    // Stage362 opt-in synthetic raster swatch in the ROAD region only.
+    // All coordinates and colors are HD inventions, not NES art or PPU dots.
+    if(view.source_scroll_review_visible &&
+       view.source_scroll_review_pair>=519 &&
+       view.source_scroll_review_pair<=559 &&
+       view.source_scroll_review_shift>=3 &&
+       view.source_scroll_review_shift<=5) {
+        const uint32_t panel=rgba(14,24,34),edge=rgba(233,190,117);
+        road.rect(1034,260,185,68,panel);
+        road.rect(1034,260,185,3,edge);
+        number(road,1050,280,view.source_scroll_review_pair,3,edge);
+        number(road,1161,280,view.source_scroll_review_shift,1,edge);
+        road.rect(1034,325,185,3,edge);
     }
     if(observed) {
         const auto band=road_reference::toHdImageSpace(*observed);
