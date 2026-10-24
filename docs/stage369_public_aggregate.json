@@ -1,0 +1,54 @@
+{
+  "format": "vpd_stage369_real_nexium_41_state_sequence_public_aggregate_v1",
+  "stage": 369,
+  "workflow_name": "Stage365 NeXium full 41-state sequence",
+  "workflow_run_id": 40078361434,
+  "conclusion": "success",
+  "tested_revision": "03d6b90c0c618f0b895e87b2b8d3d0aa6658f527",
+  "exact_head_nro_build": "success",
+  "actual_neXium_guest_execution": "success",
+  "synthetic_negative_tests_passed": 30,
+  "actual_guest_record_count": 41,
+  "first_numeric_reference_pair": 519,
+  "last_numeric_reference_pair": 559,
+  "first_guest_frame": 11,
+  "last_guest_frame": 51,
+  "guest_frame_delta": 40,
+  "guest_frames_contiguous": true,
+  "native_manual_mode_entry_witness": true,
+  "native_driving_preview_entry_witness": true,
+  "neXium_keyboard_focus_verified": true,
+  "guest_fingerprint_constant": "73663915c615b5d4",
+  "guest_framebuffer_pixels": {
+    "panel": "ff5b4118",
+    "edge": "ffefda66",
+    "demo_glyph": "ffefda66"
+  },
+  "shift_segments": [
+    {
+      "pair_start_min": 519,
+      "pair_start_max": 526,
+      "shift_px": 3
+    },
+    {
+      "pair_start_min": 527,
+      "pair_start_max": 558,
+      "shift_px": 4
+    },
+    {
+      "pair_start_min": 559,
+      "pair_start_max": 559,
+      "shift_px": 5
+    }
+  ],
+  "exact_nro_sha256": "7416c2bcb07e01e481d44f054186290d26a94d380e3f81c9efd8be6461e15ddf",
+  "exact_nro_artifact_zip_sha256": "5b7b6338b97f0acdfdd484473a72661f60784430cab5867ca35aa1e42a356070",
+  "guest_evidence_zip_sha256": "2debe1c2d930a4ca795860c67102a08689b971ec4e7f14cf657e89a3562cc880",
+  "private_drive_exact_readback_verified": true,
+  "original_nes_rom_or_fm2_used": false,
+  "original_game_camera_or_vehicle_physics_proven": false,
+  "stage355_original_image_motion_gate": "failed_or_inconclusive",
+  "stage357_ambiguous_pairs": 5,
+  "pr99": "draft",
+  "main_changed": false
+}
