@@ -77,7 +77,11 @@ public:
             return fail(SourceScrollReviewStatus::WrongFrame);
         if(source.original_pair_start!=next_)
             return fail(SourceScrollReviewStatus::NonContiguous);
-        if(active_ && live_preview.frame<=last_guest_frame_)
+        // One witness belongs to exactly one successive guest raster tick.
+        // Dropped, repeated, rewound or wrapped guest ticks never accelerate
+        // the invented driving renderer to catch up with NES reference data.
+        if(active_ && (last_guest_frame_==0xffffffffu ||
+                       live_preview.frame!=last_guest_frame_+1u))
             return fail(SourceScrollReviewStatus::NonContiguousGuestTick);
         if(!source.source_verified)
             return fail(SourceScrollReviewStatus::UnverifiedSource);
