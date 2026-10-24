@@ -54,9 +54,9 @@ def evidence(first_count=6):
 def provenance_evidence():
     nro_digest = "a" * 64
     archive_digest = "b" * 64
-    host = "nro_sha256=" + nro_digest + "\\n"
-    nro = nro_digest + "  /github/workspace/emulator-input/vpd_native_scene.nro\\n"
-    attestation = "\\n".join((
+    host = "nro_sha256=" + nro_digest + "\n"
+    nro = nro_digest + "  /github/workspace/emulator-input/vpd_native_scene.nro\n"
+    attestation = "\n".join((
         "nexium_release_id=800",
         "nexium_asset_id=801",
         "nexium_tag=nightly",
@@ -65,9 +65,9 @@ def provenance_evidence():
         "nexium_asset_size_bytes=42000000",
         "nexium_digest_source=github_release_api",
         "nexium_mutable_tag=yes",
-    )) + "\\n"
+    )) + "\n"
     verification = ("VERIFIED: official GitHub NeXium release asset SHA-256 " +
-                    archive_digest + " asset_id 801\\n")
+                    archive_digest + " asset_id 801\n")
     return host, nro, attestation, verification
 
 
@@ -102,7 +102,7 @@ class Stage373SyntheticNegativeTests(unittest.TestCase):
     def test_provenance_rejects_duplicate_attestation_fields(self):
         host, nro, attestation, verification = provenance_evidence()
         with self.assertRaises(ValueError):
-            s.audit_provenance(host, nro, attestation + "nexium_asset_id=801\\n",
+            s.audit_provenance(host, nro, attestation + "nexium_asset_id=801\n",
                                verification)
 
     def test_provenance_rejects_wrong_nro_filename(self):
