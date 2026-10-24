@@ -1,0 +1,101 @@
+name: Stage364 NeXium manual scroll DEMO
+on:
+  push:
+    branches:
+      - research/fceux-local-executable-bootstrap-stage188
+    paths:
+      - ".github/workflows/stage364-nexium-scroll.yml"
+      - "tools/nexium_stage364_scroll_probe.sh"
+      - "tools/run_nexium_stage364_scroll_ci.sh"
+      - "tools/audit_nexium_stage364_scroll.py"
+      - "tests/test_nexium_stage364_scroll.py"
+      - "graphics_core/driving_source_scroll_demo.hpp"
+      - "graphics_core/driving_source_scroll_demo_guest.hpp"
+      - "graphics_core/driving_preview.hpp"
+      - "switch_graphical/source/main.cpp"
+  pull_request:
+    paths:
+      - ".github/workflows/stage364-nexium-scroll.yml"
+      - "tools/nexium_stage364_scroll_probe.sh"
+      - "tools/run_nexium_stage364_scroll_ci.sh"
+      - "tools/audit_nexium_stage364_scroll.py"
+      - "tests/test_nexium_stage364_scroll.py"
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: stage364-nexium-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+jobs:
+  build-exact-nro:
+    runs-on: ubuntu-latest
+    container:
+      image: devkitpro/devkita64:latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Add Switch toolchain
+        run: |
+          echo "$DEVKITPRO/devkitA64/bin" >> "$GITHUB_PATH"
+          echo "$DEVKITPRO/portlibs/switch/bin" >> "$GITHUB_PATH"
+      - name: Build exact source-tree NRO
+        run: |
+          make -C switch_graphical -j2
+          python3 tests/check_nro.py switch_graphical/vpd_native_scene.nro
+          sha256sum switch_graphical/vpd_native_scene.nro
+      - uses: actions/upload-artifact@v4
+        with:
+          name: stage364-exact-head-romfree-nro
+          path: switch_graphical/vpd_native_scene.nro
+          retention-days: 7
+          if-no-files-found: error
+  run-real-nexium:
+    needs: build-exact-nro
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: stage364-exact-head-romfree-nro
+          path: emulator-input
+      - name: Test source-free negative guest audits
+        run: |
+          python3 -m unittest discover -s tests -p test_nexium_stage364_scroll.py -v
+          bash -n tools/run_nexium_stage364_scroll_ci.sh
+          bash -n tools/nexium_stage364_scroll_probe.sh
+      - name: Run current authentic NeXium nightly on fresh head NRO
+        run: |
+          docker run --rm --pull=always \
+            --volume "$GITHUB_WORKSPACE:/work" \
+            --workdir /work \
+            ubuntu:26.04 bash -lc '
+              set -euo pipefail
+              export DEBIAN_FRONTEND=noninteractive
+              timeout --signal=TERM --kill-after=5s 180s apt-get -o Acquire::Retries=2 update -qq
+              timeout --signal=TERM --kill-after=5s 300s apt-get -o DPkg::Lock::Timeout=30 -o Acquire::Retries=2 install -y \
+                ca-certificates curl python3 python3-pil \
+                xvfb xauth xdotool x11-apps imagemagick \
+                mesa-vulkan-drivers libvulkan1 vulkan-tools \
+                libgtk-3-0t64 libasound2t64 libudev1 \
+                libxkbcommon0 libxkbcommon-x11-0 libfontconfig1 \
+                libx11-xcb1 libegl1 libgles2 libgl1 libpulse0
+              bash tools/run_nexium_stage364_scroll_ci.sh \
+                emulator-input/vpd_native_scene.nro emulator-evidence/stage364
+            '
+      - name: Archive independent guest verdict and original-free host screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stage364-nexium-real-guest-evidence
+          path: |
+            emulator-evidence/stage364/host-events.txt
+            emulator-evidence/stage364/guest-driving-enter.txt
+            emulator-evidence/stage364/guest-scroll-demo.txt
+            emulator-evidence/stage364/screen-demo-*.png
+            emulator-evidence/stage364/stage364-guest-verdict.json
+            emulator-evidence/stage364/guest-nro-sha256.txt
+            emulator-evidence/stage364/neXium-release-attestation.txt
+            emulator-evidence/stage364/release-verification.txt
+            emulator-evidence/stage364/neXium-stdout.txt
+          retention-days: 7
+          if-no-files-found: warn
