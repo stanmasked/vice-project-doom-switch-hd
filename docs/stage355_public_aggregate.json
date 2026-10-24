@@ -1,0 +1,28 @@
+{
+  "format": "vpd_stage355_original_early_rgb_failed_gate_public_v1",
+  "stage": 355,
+  "preregistration_commit": "2d097054c9b6d58288639a8aa443d0067edb24a5",
+  "selected_original_rgb_frame_window": [
+    380,
+    404
+  ],
+  "original_source_rgb_frames_captured": 25,
+  "original_adjacent_rgb_pairs": 24,
+  "frames_with_required_cpu_first_vertical_2005_and_native_ppu_line0_anchor": 17,
+  "frames_without_required_first_vertical_cpu_2005": 8,
+  "adjacent_pairs_without_two_usable_first_scroll_anchors": 9,
+  "fixed_four_environment_mask_confident_pairs": 0,
+  "fixed_three_of_four_environment_mask_confident_pairs": 0,
+  "fixed_mask_conflicting_pairs": 0,
+  "fixed_mask_inconclusive_pairs": 24,
+  "image_vs_modulo240_full_24_pair_gate_passed": false,
+  "missing_first_scroll_inputs_imputed": false,
+  "frozen_pre_capture_thresholds_modified": false,
+  "source_full_cpu_ppu_trace_and_fm2_completion_sha_reproduced_prior_seals": true,
+  "original_full_paletted_index_planes_verified": 3,
+  "independent_original_rgb_palette_index_probes_verified": 150,
+  "original_source_manifest_members_sha256_verified": 32,
+  "owner_private_drive_archive_and_crc_sha256_readback_verified": true,
+  "universal_ppu_camera_or_vehicle_physics_proven": false,
+  "user_private_original_game_content_committed_publicly": false
+}
