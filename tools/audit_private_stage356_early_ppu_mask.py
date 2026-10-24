@@ -129,8 +129,9 @@ def audit(root:Path,manifest:Path,*,manifest_sha:str,cpu_pin:str,native_pin:str)
         stats['identical_consecutive_rgb_pairs']!=24 or
         stats['unique_complete_rgb_frames']!=1 or
         stats['source_frames_without_second_phase_2005_write']!=8 or
-        stats['native_line_zero_ppu_mask_zero_frames']!=8 or
-        stats['missing_second_phase_write_and_zero_line_mask_frames']!=8):
+        stats['native_line_zero_ppu_mask_zero_frames']!=9 or
+        stats['missing_second_phase_write_and_zero_line_mask_frames']!=8 or
+        stats['zero_line_mask_but_present_write_frames']!=1):
         raise ValueError('authenticated Stage355 exploratory source baseline changed')
     stats['all_32_authenticated_source_members_sha_verified']=True
     stats['cpu_and_classic_ppu_full_prior_seals_reproduced']=True
