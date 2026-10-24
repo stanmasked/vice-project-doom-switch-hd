@@ -11,6 +11,11 @@ on:
       - 'tests/**'
       - '.github/workflows/native-simulation.yml'
   workflow_dispatch:
+# Keep only the latest simulation for each branch; research commits are frequent.
+concurrency:
+  group: native-simulation-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 jobs:
