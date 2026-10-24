@@ -5,10 +5,33 @@
 #include <cstdint>
 #include <iostream>
 #include <stdexcept>
+#include <string>
 #include <vector>
 
 static void require(bool x,const char* msg) {
     if(!x)throw std::runtime_error(msg);
+}
+static const char* transitionName(vpd::ScrollDemoTransitionReason r) {
+    using R=vpd::ScrollDemoTransitionReason;
+    switch(r) {
+    case R::Off:return "off";
+    case R::Started:return "started";
+    case R::FramePresented:return "frame_presented";
+    case R::ManualExit:return "manual_exit";
+    case R::ChordCancelled:return "chord_cancelled";
+    case R::GuestTickGap:return "guest_tick_gap";
+    case R::UnsupportedPair:return "unsupported_pair";
+    case R::SequenceComplete:return "sequence_complete";
+    case R::ExplicitReset:return "explicit_reset";
+    }
+    return "unknown";
+}
+static void recordTransition(std::vector<std::string>& events,const char* event,
+        vpd::ScrollDemoTransitionReason reason,std::uint32_t pair,
+        std::uint32_t guest_frame) {
+    events.emplace_back(std::string("VPD_STAGE367_TRANSITION event=")+event+
+        " reason="+transitionName(reason)+" pair="+std::to_string(pair)+
+        " guest_frame="+std::to_string(guest_frame));
 }
 static std::uint64_t regionFingerprint(const std::vector<std::uint32_t>& p,
                                        int y0,int y1) {
@@ -125,42 +148,120 @@ int main() {
     require(ctrl.toggle(true,true),"manual input missed");
     ctrl.reset();
     require(!ctrl.enabled() && ctrl.nextPairStart()==519,"exit did not reset");
-    // Stage366: leaving the manual driving view pauses/exits the DEMO.
-    // Resuming without a fresh chord must not replay an old sequence edge.
+    // Stage367: serialize lifecycle transition reasons for deterministic audit.
+    // This is host-test evidence, not a claim of a real guest transition replay.
+    std::vector<std::string> transitions;
     ctrl.reset();
-    require(ctrl.toggle(true,true),"manual-exit lifecycle DEMO did not start");
     state.frame=200;
+    require(ctrl.toggle(true,true),"manual-exit lifecycle DEMO did not start");
+    recordTransition(transitions,"start",ctrl.lastTransitionReason(),
+                     ctrl.nextPairStart(),state.frame);
     auto lifecycleStart=makeDrivingSceneView(state);
     require(ctrl.present(true,200,lifecycleStart)==ScrollDemoState::Preview &&
-            lifecycleStart.source_scroll_review_pair==519,
-            "lifecycle start did not begin at the first supported pair");
+            lifecycleStart.source_scroll_review_pair==519 &&
+            ctrl.lastTransitionReason()==ScrollDemoTransitionReason::FramePresented,
+            "lifecycle start did not present the first supported pair");
+    recordTransition(transitions,"present_first",ctrl.lastTransitionReason(),
+                     lifecycleStart.source_scroll_review_pair,state.frame);
     state.frame=201;
     auto manualExit=makeDrivingSceneView(state);
     require(ctrl.present(false,201,manualExit)==ScrollDemoState::Off &&
             !ctrl.enabled() && ctrl.nextPairStart()==519 &&
-            !manualExit.source_scroll_review_visible,
+            !manualExit.source_scroll_review_visible &&
+            ctrl.lastTransitionReason()==ScrollDemoTransitionReason::ManualExit,
             "leaving manual driving did not clear the paused DEMO");
+    recordTransition(transitions,"manual_exit",ctrl.lastTransitionReason(),
+                     ctrl.nextPairStart(),state.frame);
     require(!ctrl.toggle(true,false) && !ctrl.enabled(),
             "DEMO resumed without a fresh controller edge");
-    require(ctrl.toggle(true,true) && ctrl.enabled(),
+    recordTransition(transitions,"no_fresh_edge_rejected",ctrl.lastTransitionReason(),
+                     ctrl.nextPairStart(),state.frame);
+    require(ctrl.toggle(true,true) && ctrl.enabled() &&
+            ctrl.lastTransitionReason()==ScrollDemoTransitionReason::Started,
             "fresh controller edge did not re-arm DEMO after manual exit");
+    recordTransition(transitions,"restart_edge",ctrl.lastTransitionReason(),
+                     ctrl.nextPairStart(),state.frame);
     state.frame=202;
     auto lifecycleRestart=makeDrivingSceneView(state);
     require(ctrl.present(true,202,lifecycleRestart)==ScrollDemoState::Preview &&
             lifecycleRestart.source_scroll_review_pair==519,
             "fresh re-arm did not restart at pair 519");
+    recordTransition(transitions,"restart_first",ctrl.lastTransitionReason(),
+                     lifecycleRestart.source_scroll_review_pair,state.frame);
     state.frame=203;
     auto lifecycleNext=makeDrivingSceneView(state);
     require(ctrl.present(true,203,lifecycleNext)==ScrollDemoState::Preview &&
             lifecycleNext.source_scroll_review_pair==520,
             "restarted sequence did not advance contiguously");
-    require(ctrl.toggle(true,true) && !ctrl.enabled(),
+    recordTransition(transitions,"restart_next",ctrl.lastTransitionReason(),
+                     lifecycleNext.source_scroll_review_pair,state.frame);
+    require(ctrl.toggle(true,true) && !ctrl.enabled() &&
+            ctrl.lastTransitionReason()==ScrollDemoTransitionReason::ChordCancelled,
             "fresh chord did not cancel an active restarted DEMO");
+    recordTransition(transitions,"chord_cancel",ctrl.lastTransitionReason(),
+                     ctrl.nextPairStart(),state.frame);
     state.frame=204;
     auto lifecycleStopped=makeDrivingSceneView(state);
     require(ctrl.present(true,204,lifecycleStopped)==ScrollDemoState::Off &&
-            !lifecycleStopped.source_scroll_review_visible,
+            !lifecycleStopped.source_scroll_review_visible &&
+            ctrl.lastTransitionReason()==ScrollDemoTransitionReason::Off,
             "cancelled DEMO leaked its overlay into a later frame");
+    recordTransition(transitions,"off_after_cancel",ctrl.lastTransitionReason(),
+                     ctrl.nextPairStart(),state.frame);
+
+    // The same serializer records distinct causes for dropped and repeated ticks.
+    ctrl.reset();
+    require(ctrl.toggle(true,true),"could not start drop-reason trace");
+    recordTransition(transitions,"drop_start",ctrl.lastTransitionReason(),
+                     ctrl.nextPairStart(),300);
+    state.frame=300;
+    auto dropStart=makeDrivingSceneView(state);
+    require(ctrl.present(true,300,dropStart)==ScrollDemoState::Preview,
+            "drop-reason trace did not start");
+    recordTransition(transitions,"drop_first",ctrl.lastTransitionReason(),
+                     dropStart.source_scroll_review_pair,300);
+    state.frame=302;
+    auto dropped=makeDrivingSceneView(state);
+    require(ctrl.present(true,302,dropped)==ScrollDemoState::GuestTickGap &&
+            ctrl.lastTransitionReason()==ScrollDemoTransitionReason::GuestTickGap,
+            "dropped tick did not serialize a guest-tick-gap reason");
+    recordTransition(transitions,"dropped_tick_rejected",ctrl.lastTransitionReason(),
+                     ctrl.nextPairStart(),302);
+    require(ctrl.toggle(true,true),"could not start repeated-tick reason trace");
+    recordTransition(transitions,"repeat_start",ctrl.lastTransitionReason(),
+                     ctrl.nextPairStart(),400);
+    state.frame=400;
+    auto repeatStart=makeDrivingSceneView(state);
+    require(ctrl.present(true,400,repeatStart)==ScrollDemoState::Preview,
+            "repeat-reason trace did not start");
+    recordTransition(transitions,"repeat_first",ctrl.lastTransitionReason(),
+                     repeatStart.source_scroll_review_pair,400);
+    auto repeated=makeDrivingSceneView(state);
+    require(ctrl.present(true,400,repeated)==ScrollDemoState::GuestTickGap &&
+            ctrl.lastTransitionReason()==ScrollDemoTransitionReason::GuestTickGap,
+            "repeated tick did not serialize a guest-tick-gap reason");
+    recordTransition(transitions,"repeated_tick_rejected",ctrl.lastTransitionReason(),
+                     ctrl.nextPairStart(),400);
+    const std::vector<std::string> expectedTransitions={
+        "VPD_STAGE367_TRANSITION event=start reason=started pair=519 guest_frame=200",
+        "VPD_STAGE367_TRANSITION event=present_first reason=frame_presented pair=519 guest_frame=200",
+        "VPD_STAGE367_TRANSITION event=manual_exit reason=manual_exit pair=519 guest_frame=201",
+        "VPD_STAGE367_TRANSITION event=no_fresh_edge_rejected reason=manual_exit pair=519 guest_frame=201",
+        "VPD_STAGE367_TRANSITION event=restart_edge reason=started pair=519 guest_frame=201",
+        "VPD_STAGE367_TRANSITION event=restart_first reason=frame_presented pair=519 guest_frame=202",
+        "VPD_STAGE367_TRANSITION event=restart_next reason=frame_presented pair=520 guest_frame=203",
+        "VPD_STAGE367_TRANSITION event=chord_cancel reason=chord_cancelled pair=519 guest_frame=203",
+        "VPD_STAGE367_TRANSITION event=off_after_cancel reason=off pair=519 guest_frame=204",
+        "VPD_STAGE367_TRANSITION event=drop_start reason=started pair=519 guest_frame=300",
+        "VPD_STAGE367_TRANSITION event=drop_first reason=frame_presented pair=519 guest_frame=300",
+        "VPD_STAGE367_TRANSITION event=dropped_tick_rejected reason=guest_tick_gap pair=519 guest_frame=302",
+        "VPD_STAGE367_TRANSITION event=repeat_start reason=started pair=519 guest_frame=400",
+        "VPD_STAGE367_TRANSITION event=repeat_first reason=frame_presented pair=519 guest_frame=400",
+        "VPD_STAGE367_TRANSITION event=repeated_tick_rejected reason=guest_tick_gap pair=519 guest_frame=400"
+    };
+    require(transitions==expectedTransitions,
+            "Stage367 serialized lifecycle reasons differ from expected transition order");
+    for(const auto& event:transitions)std::cout<<event<<"\\n";
 
     // Default scene renderer remains identical when no manual review.
     SceneView scene{};
@@ -174,7 +275,7 @@ int main() {
             true,true,true,ScrollDemoState::Preview,scene.driving,
             baseline.data(),w,12345).valid,
             "normal game frame incorrectly attested a DEMO pixel");
-    std::cout<<"VPD_STAGE366_ROMFREE_MANUAL_SCROLL_DEMO_LIFECYCLE_PASS "
+    std::cout<<"VPD_STAGE367_ROMFREE_MANUAL_SCROLL_DEMO_TRANSITIONS_PASS "
              <<"observed_numeric_pairs=41 sum=157 "
              <<"panel_and_demo_glyph=1 disabled_by_default=1 "
              <<"guest_skip_rejected=1 guest_duplicate_rejected=1 pause_exit_restart=1 fresh_edge_required=1 "
