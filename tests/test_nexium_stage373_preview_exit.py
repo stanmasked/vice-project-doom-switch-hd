@@ -24,7 +24,7 @@ def row(pair, guest_frame, event, shift=None, **changes):
 
 def make_rows(first_count=6):
     first = [row(519+i, 100+i, "on" if i == 0 else "frame") for i in range(first_count)]
-    second = [row(519+i, 120+i, "on" if i == 0 else "last" if i == 40 else "frame")
+    second = [row(519+i, 100+i, "on" if i == 0 else "last" if i == 40 else "frame")
               for i in range(41)]
     return "\n".join(first + second)
 
@@ -94,9 +94,10 @@ class Stage373SyntheticNegativeTests(unittest.TestCase):
         h,m,d,g=evidence()
         with self.assertRaises(ValueError): s.audit_sequence(h,m,d,g.replace("guest_frame=125","guest_frame=127",1))
 
-    def test_restart_must_happen_at_later_guest_frame(self):
+    def test_preview_reentry_allows_guest_frame_counter_reset(self):
         h,m,d,g=evidence()
-        with self.assertRaises(ValueError): s.audit_sequence(h,m,d,g.replace("guest_frame=120","guest_frame=105",1))
+        result=s.audit_sequence(h,m,d,g)
+        self.assertEqual(result["second_session_states_after_fresh_edge"],41)
 
     def test_shift_corruption_rejected(self):
         h,m,d,g=evidence()

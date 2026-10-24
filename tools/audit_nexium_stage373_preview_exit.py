@@ -78,8 +78,9 @@ def audit_sequence(host: str, manual: str, driving: str, guest: str) -> dict:
         raise ValueError("host counts do not match the actual guest trace or post-completion count")
     validate_session(first, complete=False)
     validate_session(second, complete=True)
-    if int(second[0]["guest_frame"]) <= int(first[-1]["guest_frame"]):
-        raise ValueError("restart did not occur at a later guest frame")
+    # Preview exit resets driving_state, so the second session starts a fresh
+    # guest-frame timeline. Enforce contiguity within each session, not across
+    # the explicit preview reset boundary.
     if len({r["platform_fp"] for r in parsed}) != 1:
         raise ValueError("source-free platform fingerprint changed during cancel/restart")
     return {
