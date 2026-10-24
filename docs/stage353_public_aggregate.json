@@ -1,0 +1,38 @@
+{
+  "format": "vpd_stage353_preregistered_original_three_of_four_public_v1",
+  "stage": 353,
+  "preregistration_commit": "1cf34a0e1e8ee4ed63ec00ade275a1e1e2eafec1",
+  "original_native_rgb_frame_window": [
+    610,
+    634
+  ],
+  "original_native_rgb_frames": 25,
+  "adjacent_original_rgb_pairs": 24,
+  "original_individual_texture_regions": 4,
+  "region_coordinate_or_threshold_modification_after_capture": false,
+  "masked_best_shift_candidate_range": [
+    -24,
+    24
+  ],
+  "minimum_best_second_best_confidence_margin": 0.045,
+  "maximum_rgb_best_mismatch_fraction": 0.16,
+  "strict_four_of_four_qualified_pairs": 18,
+  "independent_three_of_four_qualified_pairs": 6,
+  "confident_mask_disagreement_pairs": 0,
+  "inconclusive_less_than_three_masks_pairs": 0,
+  "qualified_original_image_modulo240_scroll_matched_pairs": 24,
+  "qualified_original_image_modulo240_scroll_mismatched_pairs": 0,
+  "original_shift_zero_pairs": 5,
+  "original_shift_one_pairs": 1,
+  "original_shift_two_pairs": 1,
+  "original_shift_three_pairs": 1,
+  "original_shift_four_pairs": 1,
+  "original_shift_five_pairs": 15,
+  "original_source_cpu_and_classic_ppu_prior_stage_sha_reproduced": true,
+  "three_original_full_paletted_frame_index_planes_verified": true,
+  "independent_rgb_index_palette_probes_verified": 150,
+  "owner_private_source_member_sha256_checks": 32,
+  "independent_owner_private_google_drive_download_and_zip_crc_verified": true,
+  "general_game_camera_speed_vehicle_physics_road_collision_proven": false,
+  "original_rom_fm2_frames_events_private_hashes_on_public_github": false
+}
