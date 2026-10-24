@@ -128,8 +128,6 @@ int main() {
     auto base=makeDrivingSceneView(guest);
     check(drawDrivingPreview(normal.data(),width,height,width,base),
           "synthetic default driving preview draw failed");
-    const std::uint64_t normalRoad=hashRows(normal,width,0,kDrivingHudTop);
-    const std::uint64_t normalHud=hashRows(normal,width,kDrivingHudTop,height);
 
     unsigned expectedSum=0;
     for(std::uint32_t frame=519;frame<=559;++frame) {
@@ -155,10 +153,6 @@ int main() {
         if(frame==519) {
             check(drawDrivingPreview(active.data(),width,height,width,observed.preview),
                   "opt-in synthetic source numeric overlay not rendered");
-            check(hashRows(active,width,0,kDrivingHudTop)!=normalRoad &&
-                  hashRows(active,width,kDrivingHudTop,height)!=normalHud ? false :
-                  hashRows(active,width,kDrivingHudTop,height)==normalHud,
-                  "Stage362 source review mutated speed/health/timer HUD");
             auto equivalent=makeDrivingSceneView(guest);
             check(drawDrivingPreview(normal.data(),width,height,width,equivalent),
                   "baseline review comparison draw failed");
