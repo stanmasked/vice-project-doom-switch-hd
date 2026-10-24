@@ -173,16 +173,18 @@ for ((i=0;i<200;++i));do
   sleep 0.03
 done
 [[ "$first_started" == yes ]] || { echo "INCONCLUSIVE: first real DEMO session did not produce six guest states" >&2;exit 1; }
-capture_panel_until_visible "screen-demo-start"
+capture_raw "screen-demo-start"
 printf 'physical_keyboard_chord_start=R+T+Q Switch=ZL+ZR+L\n' >>"$out/host-events.txt"
 # Release then send a fresh edge; this must cancel the active DEMO.
 xdotool keyup q;xdotool keyup t;xdotool keyup r
-xdotool keydown r;xdotool keydown t;sleep 0.07;xdotool keydown q;sleep 0.12
+sleep 0.05
+xdotool keydown r;xdotool keydown t;sleep 0.05;xdotool keydown q;sleep 0.05
 xdotool keyup q;xdotool keyup t;xdotool keyup r
 printf 'physical_keyboard_chord_cancel=R+T+Q Switch=ZL+ZR+L\n' >>"$out/host-events.txt"
-sleep 0.15
-capture_raw "screen-cancelled"
+sleep 0.05
+capture_panel_until_absent "screen-cancelled"
 first_count="$(wc -l <"$guest" | tr -d ' ')"
+printf 'first_session_records_observed=%s\n' "$first_count" >>"$out/host-events.txt"
 [[ "$first_count" -ge 6 && "$first_count" -le 16 ]] || {
   echo "INCONCLUSIVE: first DEMO was not cancelled before its terminal state" >&2;exit 1;
 }
