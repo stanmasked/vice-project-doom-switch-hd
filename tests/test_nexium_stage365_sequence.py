@@ -119,11 +119,11 @@ class Stage365SyntheticNegativeTests(unittest.TestCase):
 
     def test_controller_chord_is_required(self):
         h, m, d, g = evidence()
-        with self.assertRaises(ValueError): s.audit_sequence(h.replace("R+T+Q", "R+T+W"), d, g)
+        with self.assertRaises(ValueError): s.audit_sequence(h.replace("R+T+Q", "R+T+W"), m, d, g)
 
     def test_real_guest_driving_entry_is_required(self):
         h, m, d, g = evidence()
-        with self.assertRaises(ValueError): s.audit_sequence(h, d.replace("seq=1", "seq=2"), g)
+        with self.assertRaises(ValueError): s.audit_sequence(h, m, d.replace("seq=1", "seq=2"), g)
 
     def test_host_sequence_summary_is_not_enough(self):
         h, m, d, g = evidence()
@@ -131,7 +131,7 @@ class Stage365SyntheticNegativeTests(unittest.TestCase):
 
     def test_host_record_count_mismatch_rejected(self):
         h, m, d, g = evidence()
-        with self.assertRaises(ValueError): s.audit_sequence(h.replace("guest_v2_records=41", "guest_v2_records=40"), d, g)
+        with self.assertRaises(ValueError): s.audit_sequence(h.replace("guest_v2_records=41", "guest_v2_records=40"), m, d, g)
 
     def test_bad_fingerprint_format_rejected(self):
         h, m, d, g = evidence()
