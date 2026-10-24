@@ -6,6 +6,10 @@ on:
     paths:
       - ".github/workflows/stage365-nexium-sequence.yml"
       - "graphics_core/driving_source_scroll_demo.hpp"
+      - "graphics_core/driving_source_scroll_review.hpp"
+      - "graphics_core/driving_preview.hpp"
+      - "graphics_core/driving_scene_bridge.hpp"
+      - "graphics_core/scene_renderer.hpp"
       - "graphics_core/driving_source_scroll_demo_guest.hpp"
       - "switch_graphical/source/main.cpp"
       - "tools/nexium_stage365_sequence_probe.sh"
@@ -16,6 +20,10 @@ on:
     paths:
       - ".github/workflows/stage365-nexium-sequence.yml"
       - "graphics_core/driving_source_scroll_demo.hpp"
+      - "graphics_core/driving_source_scroll_review.hpp"
+      - "graphics_core/driving_preview.hpp"
+      - "graphics_core/driving_scene_bridge.hpp"
+      - "graphics_core/scene_renderer.hpp"
       - "graphics_core/driving_source_scroll_demo_guest.hpp"
       - "switch_graphical/source/main.cpp"
       - "tools/nexium_stage365_sequence_probe.sh"

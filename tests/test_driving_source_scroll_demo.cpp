@@ -29,7 +29,7 @@ static const char* transitionName(vpd::ScrollDemoTransitionReason r) {
 static void recordTransition(std::vector<std::string>& events,const char* event,
         vpd::ScrollDemoTransitionReason reason,std::uint32_t pair,
         std::uint32_t guest_frame) {
-    events.emplace_back(std::string("VPD_STAGE367_TRANSITION event=")+event+
+    events.emplace_back(std::string("VPD_STAGE368_TRANSITION event=")+event+
         " reason="+transitionName(reason)+" pair="+std::to_string(pair)+
         " guest_frame="+std::to_string(guest_frame));
 }
@@ -148,7 +148,7 @@ int main() {
     require(ctrl.toggle(true,true),"manual input missed");
     ctrl.reset();
     require(!ctrl.enabled() && ctrl.nextPairStart()==519,"exit did not reset");
-    // Stage367: serialize lifecycle transition reasons for deterministic audit.
+    // Stage368: serialize lifecycle transition reasons for deterministic audit.
     // This is host-test evidence, not a claim of a real guest transition replay.
     std::vector<std::string> transitions;
     ctrl.reset();
@@ -242,22 +242,72 @@ int main() {
             "repeated tick did not serialize a guest-tick-gap reason");
     recordTransition(transitions,"repeated_tick_rejected",ctrl.lastTransitionReason(),
                      ctrl.nextPairStart(),400);
+
+    // Stage368: cover terminal completion and explicit reset reasons too.
+    state.frame=450;
+    ctrl.reset();
+    require(ctrl.lastTransitionReason()==ScrollDemoTransitionReason::ExplicitReset &&
+            !ctrl.enabled() && ctrl.nextPairStart()==519,
+            "explicit reset did not expose the reset reason");
+    recordTransition(transitions,"explicit_reset",ctrl.lastTransitionReason(),
+                     ctrl.nextPairStart(),state.frame);
+    require(ctrl.toggle(true,true),"could not start terminal-reason trace");
+    recordTransition(transitions,"terminal_start",ctrl.lastTransitionReason(),
+                     ctrl.nextPairStart(),state.frame);
+    std::uint32_t completedPair=0,completedGuestFrame=0;
+    for(unsigned i=0;i<41;++i) {
+        state.frame=450u+i;
+        auto terminal=makeDrivingSceneView(state);
+        const auto terminalStatus=ctrl.present(true,state.frame,terminal);
+        const std::uint32_t expectedPair=519u+i;
+        require(terminal.source_scroll_review_pair==expectedPair &&
+                terminalStatus==(i==40?ScrollDemoState::LastFrame:
+                                       ScrollDemoState::Preview),
+                "terminal-reason trace lost a numeric pair");
+        if(i<40) {
+            require(ctrl.lastTransitionReason()==
+                        ScrollDemoTransitionReason::FramePresented,
+                    "ordinary frame exposed a non-frame transition reason");
+        } else {
+            require(!ctrl.enabled() &&
+                    ctrl.lastTransitionReason()==
+                        ScrollDemoTransitionReason::SequenceComplete,
+                    "final numeric pair did not expose sequence-complete reason");
+            completedPair=terminal.source_scroll_review_pair;
+            completedGuestFrame=state.frame;
+        }
+    }
+    recordTransition(transitions,"sequence_complete",ctrl.lastTransitionReason(),
+                     completedPair,completedGuestFrame);
+    state.frame=491;
+    auto afterComplete=makeDrivingSceneView(state);
+    require(ctrl.present(true,491,afterComplete)==ScrollDemoState::Off &&
+            !afterComplete.source_scroll_review_visible &&
+            ctrl.lastTransitionReason()==ScrollDemoTransitionReason::Off,
+            "completed sequence leaked into the next frame");
+    recordTransition(transitions,"off_after_sequence_complete",
+                     ctrl.lastTransitionReason(),ctrl.nextPairStart(),state.frame);
+
     const std::vector<std::string> expectedTransitions={
-        "VPD_STAGE367_TRANSITION event=start reason=started pair=519 guest_frame=200",
-        "VPD_STAGE367_TRANSITION event=present_first reason=frame_presented pair=519 guest_frame=200",
-        "VPD_STAGE367_TRANSITION event=manual_exit reason=manual_exit pair=519 guest_frame=201",
-        "VPD_STAGE367_TRANSITION event=no_fresh_edge_rejected reason=manual_exit pair=519 guest_frame=201",
-        "VPD_STAGE367_TRANSITION event=restart_edge reason=started pair=519 guest_frame=201",
-        "VPD_STAGE367_TRANSITION event=restart_first reason=frame_presented pair=519 guest_frame=202",
-        "VPD_STAGE367_TRANSITION event=restart_next reason=frame_presented pair=520 guest_frame=203",
-        "VPD_STAGE367_TRANSITION event=chord_cancel reason=chord_cancelled pair=519 guest_frame=203",
-        "VPD_STAGE367_TRANSITION event=off_after_cancel reason=off pair=519 guest_frame=204",
-        "VPD_STAGE367_TRANSITION event=drop_start reason=started pair=519 guest_frame=300",
-        "VPD_STAGE367_TRANSITION event=drop_first reason=frame_presented pair=519 guest_frame=300",
-        "VPD_STAGE367_TRANSITION event=dropped_tick_rejected reason=guest_tick_gap pair=519 guest_frame=302",
-        "VPD_STAGE367_TRANSITION event=repeat_start reason=started pair=519 guest_frame=400",
-        "VPD_STAGE367_TRANSITION event=repeat_first reason=frame_presented pair=519 guest_frame=400",
-        "VPD_STAGE367_TRANSITION event=repeated_tick_rejected reason=guest_tick_gap pair=519 guest_frame=400"
+        "VPD_STAGE368_TRANSITION event=start reason=started pair=519 guest_frame=200",
+        "VPD_STAGE368_TRANSITION event=present_first reason=frame_presented pair=519 guest_frame=200",
+        "VPD_STAGE368_TRANSITION event=manual_exit reason=manual_exit pair=519 guest_frame=201",
+        "VPD_STAGE368_TRANSITION event=no_fresh_edge_rejected reason=manual_exit pair=519 guest_frame=201",
+        "VPD_STAGE368_TRANSITION event=restart_edge reason=started pair=519 guest_frame=201",
+        "VPD_STAGE368_TRANSITION event=restart_first reason=frame_presented pair=519 guest_frame=202",
+        "VPD_STAGE368_TRANSITION event=restart_next reason=frame_presented pair=520 guest_frame=203",
+        "VPD_STAGE368_TRANSITION event=chord_cancel reason=chord_cancelled pair=519 guest_frame=203",
+        "VPD_STAGE368_TRANSITION event=off_after_cancel reason=off pair=519 guest_frame=204",
+        "VPD_STAGE368_TRANSITION event=drop_start reason=started pair=519 guest_frame=300",
+        "VPD_STAGE368_TRANSITION event=drop_first reason=frame_presented pair=519 guest_frame=300",
+        "VPD_STAGE368_TRANSITION event=dropped_tick_rejected reason=guest_tick_gap pair=519 guest_frame=302",
+        "VPD_STAGE368_TRANSITION event=repeat_start reason=started pair=519 guest_frame=400",
+        "VPD_STAGE368_TRANSITION event=repeat_first reason=frame_presented pair=519 guest_frame=400",
+        "VPD_STAGE368_TRANSITION event=repeated_tick_rejected reason=guest_tick_gap pair=519 guest_frame=400",
+        "VPD_STAGE368_TRANSITION event=explicit_reset reason=explicit_reset pair=519 guest_frame=450",
+        "VPD_STAGE368_TRANSITION event=terminal_start reason=started pair=519 guest_frame=450",
+        "VPD_STAGE368_TRANSITION event=sequence_complete reason=sequence_complete pair=559 guest_frame=490",
+        "VPD_STAGE368_TRANSITION event=off_after_sequence_complete reason=off pair=519 guest_frame=491"
     };
     require(transitions==expectedTransitions,
             "Stage367 serialized lifecycle reasons differ from expected transition order");
@@ -275,7 +325,7 @@ int main() {
             true,true,true,ScrollDemoState::Preview,scene.driving,
             baseline.data(),w,12345).valid,
             "normal game frame incorrectly attested a DEMO pixel");
-    std::cout<<"VPD_STAGE367_ROMFREE_MANUAL_SCROLL_DEMO_TRANSITIONS_PASS "
+    std::cout<<"VPD_STAGE368_ROMFREE_MANUAL_SCROLL_DEMO_TRANSITIONS_PASS "
              <<"observed_numeric_pairs=41 sum=157 "
              <<"panel_and_demo_glyph=1 disabled_by_default=1 "
              <<"guest_skip_rejected=1 guest_duplicate_rejected=1 pause_exit_restart=1 fresh_edge_required=1 "
