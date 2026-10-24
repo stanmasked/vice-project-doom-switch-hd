@@ -117,7 +117,7 @@ class Stage365SyntheticNegativeTests(unittest.TestCase):
 
     def test_controller_chord_is_required(self):
         h, d, g = evidence()
-        with self.assertRaises(ValueError): s.audit_sequence(h.replace("Q+R+T", "Q+R+W"), d, g)
+        with self.assertRaises(ValueError): s.audit_sequence(h.replace("R+T+Q", "R+T+W"), d, g)
 
     def test_real_guest_driving_entry_is_required(self):
         h, d, g = evidence()
