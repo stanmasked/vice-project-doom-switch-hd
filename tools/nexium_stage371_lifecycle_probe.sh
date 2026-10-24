@@ -136,6 +136,9 @@ for ((i=0;i<200;++i));do
   sleep 0.03
 done
 [[ "$second_started" == yes ]] || { echo "INCONCLUSIVE: fresh edge did not start a second session at pair 519" >&2;exit 1; }
+# The NRO flushes the guest trace just before the X11 compositor presents the next frame.
+# Allow a few guest presentations before taking the independent host screenshot.
+sleep 0.18
 capture_raw "screen-restart"
 xdotool keyup q;xdotool keyup t;xdotool keyup r
 expected=$((first_count+41))
