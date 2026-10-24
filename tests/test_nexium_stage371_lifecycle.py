@@ -34,7 +34,10 @@ def evidence(first_count=6):
         "physical_keyboard_chord_start=R+T+Q Switch=ZL+ZR+L",
         "physical_keyboard_chord_cancel=R+T+Q Switch=ZL+ZR+L",
         "physical_keyboard_chord_restart=R+T+Q Switch=ZL+ZR+L",
-        "screen_cancelled_cyan_pixels=0", "guest_trace_stable_while_off=yes",
+        "cancel_screenshot_captured=yes", "guest_trace_stable_while_off=yes",
+        "first_session_records=" + str(first_count),
+        "guest_trace_after_off_count=" + str(first_count),
+        "second_session_records=41", "total_guest_records=" + str(first_count + 41),
         "STAGE371_REAL_NEXIUM_CANCEL_RESTART_OBSERVED",
     ))
     manual = "VPD_ROMFREE_MANUAL_V1 seq=1 event=enter frame=0 metric=1 mode=manual original_game_proven=no"
