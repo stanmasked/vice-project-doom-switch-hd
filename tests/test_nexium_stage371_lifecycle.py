@@ -127,9 +127,9 @@ class Stage371SyntheticNegativeTests(unittest.TestCase):
         h,m,d,g=evidence()
         with self.assertRaises(ValueError): s.audit_sequence(h.replace("physical_keyboard_chord_restart=R+T+Q Switch=ZL+ZR+L",""),m,d,g)
 
-    def test_off_screenshot_must_be_cyan_free(self):
+    def test_cancel_screenshot_capture_marker_required(self):
         h,m,d,g=evidence()
-        with self.assertRaises(ValueError): s.audit_sequence(h.replace("screen_cancelled_cyan_pixels=0","screen_cancelled_cyan_pixels=4"),m,d,g)
+        with self.assertRaises(ValueError): s.audit_sequence(h.replace("cancel_screenshot_captured=yes","cancel_screenshot_captured=no"),m,d,g)
 
     def test_trace_must_stop_while_overlay_off(self):
         h,m,d,g=evidence()
