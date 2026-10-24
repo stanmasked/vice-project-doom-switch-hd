@@ -9,11 +9,18 @@ on:
       - "tools/run_nexium_stage371_lifecycle_ci.sh"
       - "tools/audit_nexium_stage371_lifecycle.py"
       - "tools/audit_nexium_stage365_sequence.py"
+      - "tools/verify_nexium_release.py"
+      - "tests/test_verify_nexium_release.py"
       - "tests/test_nexium_stage371_lifecycle.py"
       - "graphics_core/driving_source_scroll_demo.hpp"
+      - "graphics_core/driving_source_scroll_review.hpp"
+      - "graphics_core/driving_scene_bridge.hpp"
+      - "graphics_core/driving_simulation.hpp"
+      - "graphics_core/driving_road_reference.hpp"
       - "graphics_core/driving_source_scroll_demo_guest.hpp"
       - "graphics_core/driving_preview.hpp"
       - "graphics_core/scene_renderer.hpp"
+      - "graphics_core/scene_renderer.cpp"
       - "switch_graphical/source/main.cpp"
       - "game_core/manual_input_witness.hpp"
       - "game_core/driving_guest_witness.hpp"
@@ -24,11 +31,18 @@ on:
       - "tools/run_nexium_stage371_lifecycle_ci.sh"
       - "tools/audit_nexium_stage371_lifecycle.py"
       - "tools/audit_nexium_stage365_sequence.py"
+      - "tools/verify_nexium_release.py"
+      - "tests/test_verify_nexium_release.py"
       - "tests/test_nexium_stage371_lifecycle.py"
       - "graphics_core/driving_source_scroll_demo.hpp"
+      - "graphics_core/driving_source_scroll_review.hpp"
+      - "graphics_core/driving_scene_bridge.hpp"
+      - "graphics_core/driving_simulation.hpp"
+      - "graphics_core/driving_road_reference.hpp"
       - "graphics_core/driving_source_scroll_demo_guest.hpp"
       - "graphics_core/driving_preview.hpp"
       - "graphics_core/scene_renderer.hpp"
+      - "graphics_core/scene_renderer.cpp"
       - "switch_graphical/source/main.cpp"
       - "game_core/manual_input_witness.hpp"
       - "game_core/driving_guest_witness.hpp"
@@ -75,6 +89,7 @@ jobs:
           python3 -m unittest discover -s tests -p test_nexium_stage371_lifecycle.py -v
           bash -n tools/nexium_stage371_lifecycle_probe.sh
           bash -n tools/run_nexium_stage371_lifecycle_ci.sh
+          python3 tests/test_verify_nexium_release.py
       - name: Run digest-attested NeXium cancel/off/restart on exact-head NRO
         run: |
           docker run --rm --pull=always \
@@ -105,6 +120,8 @@ jobs:
             emulator-evidence/stage371/guest-driving-enter.txt
             emulator-evidence/stage371/guest-scroll-demo-v2.txt
             emulator-evidence/stage371/screen-*.png
+            emulator-evidence/stage371/screen-*.xwd
+            emulator-evidence/stage371/xdg-config/NeXium/logs/*.log
             emulator-evidence/stage371/stage371-lifecycle-verdict.json
             emulator-evidence/stage371/guest-nro-sha256.txt
             emulator-evidence/stage371/neXium-release-attestation.txt
