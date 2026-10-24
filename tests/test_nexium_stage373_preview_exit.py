@@ -51,7 +51,65 @@ def evidence(first_count=6):
     return host, manual, driving, make_rows(first_count)
 
 
+def provenance_evidence():
+    nro_digest = "a" * 64
+    archive_digest = "b" * 64
+    host = "nro_sha256=" + nro_digest + "\n"
+    nro = nro_digest + "  /github/workspace/emulator-input/vpd_native_scene.nro\n"
+    attestation = "\n".join((
+        "nexium_release_id=800",
+        "nexium_asset_id=801",
+        "nexium_tag=nightly",
+        "nexium_published_at=2026-10-20T07:00:00Z",
+        "nexium_archive_sha256=" + archive_digest,
+        "nexium_asset_size_bytes=42000000",
+        "nexium_digest_source=github_release_api",
+        "nexium_mutable_tag=yes",
+    )) + "\n"
+    verification = ("VERIFIED: official GitHub NeXium release asset SHA-256 " +
+                    archive_digest + " asset_id 801\n")
+    return host, nro, attestation, verification
+
+
 class Stage373SyntheticNegativeTests(unittest.TestCase):
+    def test_provenance_binds_nro_and_verified_nexium_asset(self):
+        result = s.audit_provenance(*provenance_evidence())
+        self.assertTrue(result["guest_nro_digest_matches_host_capture"])
+        self.assertTrue(result["nexium_release_attestation_verified"])
+        self.assertEqual(result["nexium_asset_id"], 801)
+        self.assertTrue(result["nexium_release_tag_is_mutable"])
+
+    def test_provenance_rejects_host_nro_digest_mismatch(self):
+        host, nro, attestation, verification = provenance_evidence()
+        with self.assertRaises(ValueError):
+            s.audit_provenance(host.replace("a" * 64, "c" * 64), nro,
+                               attestation, verification)
+
+    def test_provenance_rejects_release_digest_mismatch(self):
+        host, nro, attestation, verification = provenance_evidence()
+        with self.assertRaises(ValueError):
+            s.audit_provenance(host, nro, attestation,
+                               verification.replace("b" * 64, "c" * 64))
+
+    def test_provenance_rejects_unexpected_release_tag(self):
+        host, nro, attestation, verification = provenance_evidence()
+        with self.assertRaises(ValueError):
+            s.audit_provenance(host, nro,
+                               attestation.replace("nexium_tag=nightly",
+                                                   "nexium_tag=attacker"),
+                               verification)
+
+    def test_provenance_rejects_duplicate_attestation_fields(self):
+        host, nro, attestation, verification = provenance_evidence()
+        with self.assertRaises(ValueError):
+            s.audit_provenance(host, nro, attestation + "nexium_asset_id=801\n",
+                               verification)
+
+    def test_provenance_rejects_wrong_nro_filename(self):
+        host, nro, attestation, verification = provenance_evidence()
+        with self.assertRaises(ValueError):
+            s.audit_provenance(host, nro.replace("vpd_native_scene.nro", "other.nro"),
+                               attestation, verification)
     def test_valid_cancel_and_full_restart(self):
         result = s.audit_sequence(*evidence())
         self.assertEqual(result["actual_native_guest_sessions"], 2)

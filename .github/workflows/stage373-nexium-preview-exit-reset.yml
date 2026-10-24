@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - research/fceux-local-executable-bootstrap-stage188
+      - research/stage373-evidence-provenance-audit
     paths:
       - ".github/workflows/stage373-nexium-preview-exit-reset.yml"
       - "tools/nexium_stage373_preview_exit_probe.sh"
@@ -50,7 +51,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: stage373-nexium-preview-exit-research-fceux-local-executable-bootstrap-stage188
+  group: stage373-nexium-preview-exit-${{ github.ref }}
   cancel-in-progress: true
 jobs:
   build-exact-nro:

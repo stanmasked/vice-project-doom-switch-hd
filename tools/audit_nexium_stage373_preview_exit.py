@@ -3,6 +3,7 @@
 from __future__ import annotations
 import argparse
 import json
+import re
 from pathlib import Path
 from audit_nexium_stage365_sequence import parse_line
 
@@ -137,14 +138,89 @@ def screenshot_pixel_counts(path: Path) -> dict:
     return result
 
 
+
+def audit_provenance(host: str, nro_sha_text: str, attestation: str,
+                     release_verification: str) -> dict:
+    """Bind runtime evidence to the exact guest NRO and verified NeXium asset."""
+    nro_lines = nro_sha_text.splitlines()
+    if len(nro_lines) != 1:
+        raise ValueError("guest NRO digest file must contain exactly one sha256sum record")
+    nro_parts = nro_lines[0].split()
+    if (len(nro_parts) != 2 or
+        not re.fullmatch(r"[0-9a-f]{64}", nro_parts[0]) or
+        Path(nro_parts[1]).name != "vpd_native_scene.nro"):
+        raise ValueError("invalid exact guest NRO SHA-256 record")
+    nro_digest = nro_parts[0]
+    host_digests = [line.split("=", 1)[1] for line in host.splitlines()
+                    if line.startswith("nro_sha256=")]
+    if len(host_digests) != 1 or host_digests[0] != nro_digest:
+        raise ValueError("host capture does not bind to the exact guest NRO digest")
+
+    values = {}
+    for line in attestation.splitlines():
+        if line.count("=") != 1:
+            raise ValueError("malformed NeXium release attestation")
+        key, value = line.split("=", 1)
+        if not key or not value or key in values:
+            raise ValueError("empty or duplicate NeXium release attestation field")
+        values[key] = value
+    required = {
+        "nexium_release_id", "nexium_asset_id", "nexium_tag",
+        "nexium_published_at", "nexium_archive_sha256",
+        "nexium_asset_size_bytes", "nexium_digest_source", "nexium_mutable_tag",
+    }
+    if set(values) != required:
+        raise ValueError("wrong NeXium release attestation schema")
+    if (not values["nexium_release_id"].isdigit() or
+        not values["nexium_asset_id"].isdigit() or
+        not values["nexium_asset_size_bytes"].isdigit()):
+        raise ValueError("invalid NeXium release/asset numeric metadata")
+    archive_digest = values["nexium_archive_sha256"]
+    if not re.fullmatch(r"[0-9a-f]{64}", archive_digest):
+        raise ValueError("invalid NeXium archive SHA-256 in attestation")
+    size = int(values["nexium_asset_size_bytes"])
+    if not 40_000_000 <= size <= 350_000_000:
+        raise ValueError("implausible attested NeXium archive size")
+    if (values["nexium_tag"] != "nightly" or
+        values["nexium_digest_source"] != "github_release_api" or
+        values["nexium_mutable_tag"] != "yes"):
+        raise ValueError("NeXium release provenance is not the expected official mutable nightly")
+    verification_lines = release_verification.strip().splitlines()
+    if len(verification_lines) != 1:
+        raise ValueError("missing or ambiguous NeXium release verification result")
+    match = re.fullmatch(
+        r"VERIFIED: official GitHub NeXium release asset SHA-256 ([0-9a-f]{64}) asset_id ([0-9]+)",
+        verification_lines[0],
+    )
+    if not match:
+        raise ValueError("NeXium release verification did not report a successful official digest check")
+    if (match.group(1) != archive_digest or
+        match.group(2) != values["nexium_asset_id"]):
+        raise ValueError("NeXium release verification output disagrees with its attestation")
+    return {
+        "guest_nro_sha256": nro_digest,
+        "guest_nro_digest_matches_host_capture": True,
+        "nexium_release_attestation_verified": True,
+        "nexium_release_asset_sha256": archive_digest,
+        "nexium_release_id": int(values["nexium_release_id"]),
+        "nexium_asset_id": int(values["nexium_asset_id"]),
+        "nexium_release_tag": values["nexium_tag"],
+        "nexium_release_tag_is_mutable": True,
+    }
+
+
 def audit_dir(path: Path) -> dict:
     def read(name: str) -> str:
         p = path / name
         if p.is_symlink() or not p.is_file() or p.stat().st_size > 1_000_000:
             raise ValueError("missing, symlinked or oversized evidence: " + name)
         return p.read_text(encoding="utf-8")
-    result = audit_sequence(read("host-events.txt"), read("manual-witness.txt"),
+    host = read("host-events.txt")
+    result = audit_sequence(host, read("manual-witness.txt"),
                             read("guest-driving-enter.txt"), read("guest-scroll-demo-v2.txt"))
+    result.update(audit_provenance(
+        host, read("guest-nro-sha256.txt"),
+        read("neXium-release-attestation.txt"), read("release-verification.txt")))
     result["real_x11_exact_cyan_pixel_counts"] = screenshot_pixel_counts(path)
     return result
 
