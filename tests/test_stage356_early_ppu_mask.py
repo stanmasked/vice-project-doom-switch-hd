@@ -50,6 +50,15 @@ class Stage356OriginalStateSuitability(unittest.TestCase):
         self.assertEqual(r['native_line_zero_ppu_mask_zero_frames'],8)
         self.assertEqual(r['missing_second_phase_write_and_zero_line_mask_frames'],8)
 
+    def test_source_shaped_ninth_zero_mask_does_not_hide_present_write(self):
+        sample=registers()
+        sample[0]=(2,0)
+        r=s.classify_registers(sample)
+        self.assertEqual(r['source_frames_without_second_phase_2005_write'],8)
+        self.assertEqual(r['native_line_zero_ppu_mask_zero_frames'],9)
+        self.assertEqual(r['missing_second_phase_write_and_zero_line_mask_frames'],8)
+        self.assertEqual(r['zero_line_mask_but_present_write_frames'],1)
+
     def test_discordant_mask_and_writes_not_erased(self):
         x=registers();x[9]=(0,30);x[0]=(2,0)
         r=s.classify_registers(x)
