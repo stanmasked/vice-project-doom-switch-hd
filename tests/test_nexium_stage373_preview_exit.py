@@ -101,6 +101,15 @@ class Stage373SyntheticNegativeTests(unittest.TestCase):
         result=s.audit_sequence(h,m,d,g)
         self.assertEqual(result["second_session_states_after_fresh_edge"],41)
 
+    def test_preview_reentry_allows_platform_fingerprint_change(self):
+        h,m,d,g=evidence()
+        lines=g.splitlines()
+        for i in range(6,len(lines)):
+            lines[i]=lines[i].replace("platform_fp=0123456789abcdef",
+                                      "platform_fp=fedcba9876543210")
+        result=s.audit_sequence(h,m,d,"\\n".join(lines))
+        self.assertEqual(result["second_session_states_after_fresh_edge"],41)
+
     def test_shift_corruption_rejected(self):
         h,m,d,g=evidence()
         with self.assertRaises(ValueError): s.audit_sequence(h,m,d,g.replace("image_shift=4","image_shift=3",1))

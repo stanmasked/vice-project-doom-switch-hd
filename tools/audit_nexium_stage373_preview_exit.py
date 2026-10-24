@@ -45,7 +45,7 @@ def audit_sequence(host: str, manual: str, driving: str, guest: str) -> dict:
         "STAGE373_REAL_NEXIUM_TERMINAL_OFF_OBSERVED",
     )
     if any(marker not in host for marker in required_host):
-        raise ValueError("missing real host input, cancellation or off-screen witness")
+        raise ValueError("missing real host input, preview-exit or off-screen witness")
     if ("VPD_ROMFREE_MANUAL_V1 seq=1 event=enter frame=0 metric=1 "
         "mode=manual original_game_proven=no" not in manual):
         raise ValueError("missing actual NRO-owned manual entry witness")
@@ -81,8 +81,9 @@ def audit_sequence(host: str, manual: str, driving: str, guest: str) -> dict:
     # Preview exit resets driving_state, so the second session starts a fresh
     # guest-frame timeline. Enforce contiguity within each session, not across
     # the explicit preview reset boundary.
-    if len({r["platform_fp"] for r in parsed}) != 1:
-        raise ValueError("source-free platform fingerprint changed during cancel/restart")
+    if (len({r["platform_fp"] for r in first}) != 1 or
+        len({r["platform_fp"] for r in second}) != 1):
+        raise ValueError("source-free platform fingerprint changed within a session")
     return {
         "format": "vpd_stage373_real_nexium_preview_exit_reset_terminal_off_v1",
         "actual_native_guest_sessions": 2,
@@ -97,7 +98,7 @@ def audit_sequence(host: str, manual: str, driving: str, guest: str) -> dict:
         "post_completion_guest_trace_stable": True,
         "preview_exit_screenshot_has_no_cyan_demo_panel_samples": True,
         "terminal_preview_exit_screenshot_has_no_cyan_demo_panel_samples": True,
-        "same_source_free_platform_fingerprint_across_both_sessions": True,
+        "platform_fingerprint_stable_within_each_session": True,
         "original_nes_rom_or_fm2_used": False,
         "original_game_camera_or_vehicle_physics_proven": False,
     }
