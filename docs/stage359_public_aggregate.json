@@ -1,0 +1,43 @@
+{
+  "format": "vpd_stage359_preregistered_original_545_559_holdout_public_v1",
+  "stage": 359,
+  "source_protocol_frozen_pre_capture_commit": "caad7b85b06b5857f39625a5c021e9b4c3c8cde8",
+  "original_fceux_classic_ppu_readonly_replay": true,
+  "original_source_frames": [
+    545,
+    559
+  ],
+  "native_rgb_image_dimensions": [
+    256,
+    240
+  ],
+  "authentic_native_rgb_frames": 15,
+  "adjacent_source_image_pairs": 14,
+  "unique_complete_original_rgb_images": 15,
+  "source_uniform_color_rgb_frames": 0,
+  "identical_adjacent_rgb_pairs": 0,
+  "strict_four_environment_band_confident_image_shift_pairs": 9,
+  "qualified_three_environment_band_confident_image_shift_pairs": 5,
+  "conflicting_confident_band_pairs": 0,
+  "image_inconclusive_pairs": 0,
+  "all_qualified_image_source_vertical_shift_pixels": 4,
+  "all_qualified_independent_first_ppu_2005_vertical_mod240_step": -4,
+  "qualified_image_source_register_matches": 14,
+  "qualified_image_source_register_contradictions": 0,
+  "qualified_without_authenticated_source_register_pair": 0,
+  "frames_with_first_vertical_cpu_2005_anchor_and_native_line0_ppu_witness": 15,
+  "native_line_zero_ppu_mask_zero_frames": 0,
+  "complete_original_cpu_and_classic_ppu_261_frame_source_sha_matches_independent_prior": true,
+  "original_source_members_individually_sha_verified": 22,
+  "complete_original_indexed_palette_planes_verified": 3,
+  "original_rgb_palette_index_probes_verified": 90,
+  "owner_private_drive_source_zip_size_bytes": 2108558,
+  "owner_private_drive_source_zip_member_count": 27,
+  "owner_private_original_nes_rom_and_fm2_excluded": true,
+  "owner_private_drive_six_file_independent_sha_redownload_verified": true,
+  "owner_private_drive_original_zip_crc_and_22_member_source_sha_verified": true,
+  "previous_stage355_failed_source_motion_gate_unchanged": true,
+  "previous_stage357_five_inconclusive_image_pairs_unchanged": true,
+  "all_game_levels_camera_vehicle_physics_hardware_ppu_dots_proven": false,
+  "copyrighted_original_data_or_private_source_sha_public": false
+}
