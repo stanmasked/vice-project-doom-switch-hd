@@ -162,7 +162,7 @@ def main() -> None:
         else:
             print(msg, end="")
     except (OSError, ValueError, KeyError, TypeError, UnicodeError) as exc:
-        ap.exit(1, "STAGE372_NEXIUM_TERMINAL_OFF_UNCONFIRMED: " + str(exc) + "\n")
+        ap.exit(1, "STAGE373_NEXIUM_PREVIEW_EXIT_UNCONFIRMED: " + str(exc) + "\n")
 
 
 if __name__ == "__main__":

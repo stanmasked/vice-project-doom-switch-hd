@@ -43,8 +43,8 @@ def evidence(first_count=6):
         "guest_trace_after_preview_exit_count=" + str(first_count),
         "second_session_records=41", "total_guest_records=" + str(first_count + 41),
         "guest_trace_after_complete_count=" + str(first_count + 41),
-        "STAGE371_REAL_NEXIUM_CANCEL_RESTART_OBSERVED",
-        "STAGE372_REAL_NEXIUM_TERMINAL_OFF_OBSERVED",
+        "STAGE373_REAL_NEXIUM_PREVIEW_EXIT_RESET_OBSERVED",
+        "STAGE373_REAL_NEXIUM_TERMINAL_OFF_OBSERVED",
     ))
     manual = "VPD_ROMFREE_MANUAL_V1 seq=1 event=enter frame=0 metric=1 mode=manual original_game_proven=no"
     driving = "VPD_DRIVING_GUEST_V1 seq=1 event=enter key=driving"
@@ -74,7 +74,9 @@ class Stage373SyntheticNegativeTests(unittest.TestCase):
 
     def test_restart_requires_fresh_pair_519(self):
         h,m,d,g=evidence()
-        with self.assertRaises(ValueError): s.audit_sequence(h,m,d,g.replace("event=on original_pair_start=519 guest_frame=120","event=on original_pair_start=520 guest_frame=120",1))
+        lines=g.splitlines()
+        lines[6]=lines[6].replace("original_pair_start=519","original_pair_start=520")
+        with self.assertRaises(ValueError): s.audit_sequence(h,m,d,"\\n".join(lines))
 
     def test_restarted_session_must_have_41_states(self):
         h,m,d,g=evidence()
