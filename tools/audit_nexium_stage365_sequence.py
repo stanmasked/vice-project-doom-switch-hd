@@ -58,8 +58,10 @@ def parse_line(line: str) -> dict:
     return parsed
 
 
-def audit_sequence(host: str, driving: str, guest: str) -> dict:
+def audit_sequence(host: str, manual: str, driving: str, guest: str) -> dict:
     required_host = (
+        "guest_sd_witness_files_ready=yes",
+        "native_manual_entry=yes",
         "physical_keyboard_chord=R+T+Q Switch=ZL+ZR+L",
         "native_driving_enter=yes",
         "guest_v2_records=41",
@@ -69,6 +71,9 @@ def audit_sequence(host: str, driving: str, guest: str) -> dict:
     )
     if any(marker not in host for marker in required_host):
         raise ValueError("missing actual NeXium controller/sequence host witness")
+    if ("VPD_ROMFREE_MANUAL_V1 seq=1 event=enter frame=0 metric=1 "
+        "mode=manual original_game_proven=no" not in manual):
+        raise ValueError("missing NRO-owned manual-mode entry witness")
     if "VPD_DRIVING_GUEST_V1 seq=1 event=enter " not in driving:
         raise ValueError("missing actual native manual driving guest entry")
     rows = guest.splitlines()
@@ -151,8 +156,8 @@ def audit_dir(path: Path) -> dict:
         if p.is_symlink() or not p.is_file() or p.stat().st_size > 1_000_000:
             raise ValueError("missing, symlinked or oversized evidence: " + name)
         return p.read_text(encoding="utf-8")
-    result = audit_sequence(read("host-events.txt"), read("guest-driving-enter.txt"),
-                            read("guest-scroll-demo-v2.txt"))
+    result = audit_sequence(read("host-events.txt"), read("manual-witness.txt"),
+                            read("guest-driving-enter.txt"), read("guest-scroll-demo-v2.txt"))
     return audit_screenshots(path, result)
 
 
