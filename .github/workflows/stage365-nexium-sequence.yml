@@ -10,9 +10,13 @@ on:
       - "graphics_core/driving_preview.hpp"
       - "graphics_core/driving_scene_bridge.hpp"
       - "graphics_core/scene_renderer.hpp"
+      - "graphics_core/scene_renderer.cpp"
+      - "graphics_core/driving_simulation.hpp"
+      - "graphics_core/driving_road_reference.hpp"
       - "graphics_core/driving_source_scroll_demo_guest.hpp"
       - "switch_graphical/source/main.cpp"
       - "tools/nexium_stage365_sequence_probe.sh"
+      - "game_core/driving_guest_witness.hpp"
       - "game_core/manual_input_witness.hpp"
       - "tools/run_nexium_stage365_sequence_ci.sh"
       - "tools/audit_nexium_stage365_sequence.py"
@@ -25,9 +29,14 @@ on:
       - "graphics_core/driving_preview.hpp"
       - "graphics_core/driving_scene_bridge.hpp"
       - "graphics_core/scene_renderer.hpp"
+      - "graphics_core/scene_renderer.cpp"
+      - "graphics_core/driving_simulation.hpp"
+      - "graphics_core/driving_road_reference.hpp"
       - "graphics_core/driving_source_scroll_demo_guest.hpp"
       - "switch_graphical/source/main.cpp"
       - "tools/nexium_stage365_sequence_probe.sh"
+      - "game_core/driving_guest_witness.hpp"
+      - "game_core/manual_input_witness.hpp"
       - "tools/run_nexium_stage365_sequence_ci.sh"
       - "tools/audit_nexium_stage365_sequence.py"
       - "tests/test_nexium_stage365_sequence.py"
@@ -103,12 +112,7 @@ jobs:
             emulator-evidence/stage365/guest-driving-enter.txt
             emulator-evidence/stage365/manual-witness.txt
             emulator-evidence/stage365/guest-scroll-demo-v2.txt
-            emulator-evidence/stage365/screen-demo-*.png
-            emulator-evidence/stage365/screen-startup*.png
-            emulator-evidence/stage365/screen-manual*.png
-            emulator-evidence/stage365/screen-driving*.png
-            emulator-evidence/stage365/screen-no-guest*.png
-            emulator-evidence/stage365/screen-incomplete*.png
+            emulator-evidence/stage365/screen-*.png
             emulator-evidence/stage365/stage365-guest-verdict.json
             emulator-evidence/stage365/guest-nro-sha256.txt
             emulator-evidence/stage365/neXium-release-attestation.txt
