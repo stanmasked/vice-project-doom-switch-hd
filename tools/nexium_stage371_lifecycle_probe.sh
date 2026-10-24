@@ -227,12 +227,12 @@ capture_panel_until_absent "screen-completed"
 complete_count="$(wc -l <"$guest" | tr -d ' ')"
 sleep 0.20
 stable_count="$(wc -l <"$guest" | tr -d ' ')"
-printf 'guest_trace_after_complete_count=%s\\n' "$stable_count" >>"$out/host-events.txt"
+printf 'guest_trace_after_complete_count=%s\n' "$stable_count" >>"$out/host-events.txt"
 [[ "$complete_count" == "$expected" && "$stable_count" == "$expected" ]] || {
   echo "INCONCLUSIVE: guest trace changed after SequenceComplete" >&2
   exit 1
 }
-printf 'guest_trace_stable_after_complete=yes\\n' >>"$out/host-events.txt"
+printf 'guest_trace_stable_after_complete=yes\n' >>"$out/host-events.txt"
 cp -- "$guest" "$out/guest-scroll-demo-v2.txt"
 sha256sum "$out/guest-scroll-demo-v2.txt" >>"$out/host-events.txt"
 echo 'STAGE371_REAL_NEXIUM_CANCEL_RESTART_OBSERVED' >>"$out/host-events.txt"
