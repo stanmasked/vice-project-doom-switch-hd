@@ -125,6 +125,43 @@ int main() {
     require(ctrl.toggle(true,true),"manual input missed");
     ctrl.reset();
     require(!ctrl.enabled() && ctrl.nextPairStart()==519,"exit did not reset");
+    // Stage366: leaving the manual driving view pauses/exits the DEMO.
+    // Resuming without a fresh chord must not replay an old sequence edge.
+    ctrl.reset();
+    require(ctrl.toggle(true,true),"manual-exit lifecycle DEMO did not start");
+    state.frame=200;
+    auto lifecycleStart=makeDrivingSceneView(state);
+    require(ctrl.present(true,200,lifecycleStart)==ScrollDemoState::Preview &&
+            lifecycleStart.source_scroll_review_pair==519,
+            "lifecycle start did not begin at the first supported pair");
+    state.frame=201;
+    auto manualExit=makeDrivingSceneView(state);
+    require(ctrl.present(false,201,manualExit)==ScrollDemoState::Off &&
+            !ctrl.enabled() && ctrl.nextPairStart()==519 &&
+            !manualExit.source_scroll_review_visible,
+            "leaving manual driving did not clear the paused DEMO");
+    require(!ctrl.toggle(true,false) && !ctrl.enabled(),
+            "DEMO resumed without a fresh controller edge");
+    require(ctrl.toggle(true,true) && ctrl.enabled(),
+            "fresh controller edge did not re-arm DEMO after manual exit");
+    state.frame=202;
+    auto lifecycleRestart=makeDrivingSceneView(state);
+    require(ctrl.present(true,202,lifecycleRestart)==ScrollDemoState::Preview &&
+            lifecycleRestart.source_scroll_review_pair==519,
+            "fresh re-arm did not restart at pair 519");
+    state.frame=203;
+    auto lifecycleNext=makeDrivingSceneView(state);
+    require(ctrl.present(true,203,lifecycleNext)==ScrollDemoState::Preview &&
+            lifecycleNext.source_scroll_review_pair==520,
+            "restarted sequence did not advance contiguously");
+    require(ctrl.toggle(true,true) && !ctrl.enabled(),
+            "fresh chord did not cancel an active restarted DEMO");
+    state.frame=204;
+    auto lifecycleStopped=makeDrivingSceneView(state);
+    require(ctrl.present(true,204,lifecycleStopped)==ScrollDemoState::Off &&
+            !lifecycleStopped.source_scroll_review_visible,
+            "cancelled DEMO leaked its overlay into a later frame");
+
     // Default scene renderer remains identical when no manual review.
     SceneView scene{};
     scene.driving_stage_preview=true;
@@ -137,10 +174,10 @@ int main() {
             true,true,true,ScrollDemoState::Preview,scene.driving,
             baseline.data(),w,12345).valid,
             "normal game frame incorrectly attested a DEMO pixel");
-    std::cout<<"VPD_STAGE365_ROMFREE_MANUAL_SCROLL_DEMO_PASS "
+    std::cout<<"VPD_STAGE366_ROMFREE_MANUAL_SCROLL_DEMO_LIFECYCLE_PASS "
              <<"observed_numeric_pairs=41 sum=157 "
              <<"panel_and_demo_glyph=1 disabled_by_default=1 "
-             <<"guest_skip_rejected=1 guest_duplicate_rejected=1 "
+             <<"guest_skip_rejected=1 guest_duplicate_rejected=1 pause_exit_restart=1 fresh_edge_required=1 "
              <<"HUD_and_driving_road_phase_unchanged=1 "
              <<"actual_NeXium_full_guest_sequence_proven=0 "
              <<"original_ROM_FM2_PPU_source_replayed=0\n";
