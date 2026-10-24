@@ -287,6 +287,15 @@ int main() {
             "completed sequence leaked into the next frame");
     recordTransition(transitions,"off_after_sequence_complete",
                      ctrl.lastTransitionReason(),ctrl.nextPairStart(),state.frame);
+    // Stage371: verify the actual raster, not only the view flag, after the
+    // last supported frame. A clean frame and the post-completion frame must
+    // be pixel-identical across the full surface.
+    auto cleanAfterComplete=makeDrivingSceneView(state);
+    require(drawDrivingPreview(baseline.data(),w,h,w,cleanAfterComplete) &&
+            drawDrivingPreview(demoPixels.data(),w,h,w,afterComplete),
+            "post-completion pixel frames did not render");
+    require(baseline==demoPixels,
+            "source-scroll panel pixels persisted after SequenceComplete");
 
     const std::vector<std::string> expectedTransitions={
         "VPD_STAGE368_TRANSITION event=start reason=started pair=519 guest_frame=200",
@@ -313,6 +322,37 @@ int main() {
             "Stage367 serialized lifecycle reasons differ from expected transition order");
     for(const auto& event:transitions)std::cout<<event<<"\n";
 
+    // Stage371: explicitly reset an active visible overlay and prove that the
+    // next rendered guest frame is pixel-identical to the clean scene.
+    require(ctrl.toggle(true,true),"could not start explicit-reset pixel test");
+    state.frame=500;
+    auto beforeReset=makeDrivingSceneView(state);
+    require(ctrl.present(true,500,beforeReset)==ScrollDemoState::Preview &&
+            beforeReset.source_scroll_review_visible,
+            "explicit-reset pixel fixture did not enable overlay");
+    auto cleanBeforeReset=makeDrivingSceneView(state);
+    require(drawDrivingPreview(baseline.data(),w,h,w,cleanBeforeReset) &&
+            drawDrivingPreview(demoPixels.data(),w,h,w,beforeReset),
+            "explicit-reset pixel fixture did not draw");
+    require(baseline!=demoPixels,
+            "explicit-reset fixture had no visible overlay");
+    ctrl.reset();
+    require(ctrl.lastTransitionReason()==ScrollDemoTransitionReason::ExplicitReset &&
+            !ctrl.enabled() && ctrl.nextPairStart()==519,
+            "explicit reset did not expose reset reason or clear controller state");
+    state.frame=501;
+    auto afterExplicitReset=makeDrivingSceneView(state);
+    require(ctrl.present(true,501,afterExplicitReset)==ScrollDemoState::Off &&
+            !afterExplicitReset.source_scroll_review_visible &&
+            !afterExplicitReset.source_scroll_review_demo,
+            "explicit reset did not clear the next frame's review state");
+    auto cleanAfterReset=makeDrivingSceneView(state);
+    require(drawDrivingPreview(baseline.data(),w,h,w,cleanAfterReset) &&
+            drawDrivingPreview(demoPixels.data(),w,h,w,afterExplicitReset),
+            "post-reset pixel frames did not render");
+    require(baseline==demoPixels,
+            "source-scroll panel pixels persisted after ExplicitReset");
+
     // Default scene renderer remains identical when no manual review.
     SceneView scene{};
     scene.driving_stage_preview=true;
@@ -332,4 +372,6 @@ int main() {
              <<"HUD_and_driving_road_phase_unchanged=1 "
              <<"actual_NeXium_full_guest_sequence_proven=0 "
              <<"original_ROM_FM2_PPU_source_replayed=0\n";
+    std::cout<<"VPD_STAGE371_PANEL_PIXELS_HIDDEN_AFTER_TERMINAL_RESET_PASS "
+             <<"sequence_complete_pixels_equal=1 explicit_reset_pixels_equal=1\n";
 }
